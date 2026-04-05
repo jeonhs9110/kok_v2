@@ -1,19 +1,18 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import { SUPPORTED_LANGS } from '@/lib/i18n/types';
 
 export default function StorefrontLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  
-  // These routes have their own layouts and don't need the global header/footer
+
   const isAdmin = pathname.startsWith('/admin');
   const isAuth = pathname.startsWith('/login') || pathname.startsWith('/register');
-  // /kr/* and /gl/* routes have their own layouts via the route group layout files
-  const isRegionRoute = pathname.startsWith('/kr/') || pathname.startsWith('/gl/');
+  // /[lang]/ routes have their own layouts via the [lang]/layout.tsx
+  const firstSeg = pathname.split('/')[1];
+  const isLangRoute = SUPPORTED_LANGS.includes(firstSeg as typeof SUPPORTED_LANGS[number]);
 
-  if (isAdmin || isAuth || isRegionRoute) return <>{children}</>;
+  if (isAdmin || isAuth || isLangRoute) return <>{children}</>;
 
   return (
     <div className="flex flex-col min-h-screen font-sans">

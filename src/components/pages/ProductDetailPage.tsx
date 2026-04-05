@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import ProductActionButtons from '@/components/ProductActionButtons';
+import RecentViewTracker from '@/components/RecentViewTracker';
 import { getProducts } from '@/lib/api/products';
 import { translateProduct } from '@/lib/openai';
 
@@ -10,20 +11,15 @@ const labels: Record<string, {
 }> = {
   kr: { home: '홈', shop: '상품', details: '상품 상세', notFound: '상품을 찾을 수 없습니다', detailView: '상품 상세', unavailable: '', visitKr: '' },
   en: { home: 'HOME', shop: 'SHOP', details: 'PRODUCT DETAILS', notFound: 'PRODUCT NOT FOUND', detailView: 'DETAIL VIEW', unavailable: 'This product is available for purchase in South Korea only.', visitKr: 'Visit Korean Store →' },
-  cn: { home: '首页', shop: '商店', details: '商品详情', notFound: '未找到商品', detailView: '商品详细图片', unavailable: '此产品仅在韩国销售。', visitKr: '访问韩国商店 →' },
-  jp: { home: 'ホーム', shop: 'ショップ', details: '商品詳細', notFound: '商品が見つかりません', detailView: '詳細画像', unavailable: 'この商品は韓国のみでご購入いただけます。', visitKr: '韓国ストアへ →' },
-  vn: { home: 'TRANG CHỦ', shop: 'CỬA HÀNG', details: 'CHI TIẾT SẢN PHẨM', notFound: 'KHÔNG TÌM THẤY SẢN PHẨM', detailView: 'ẢNH CHI TIẾT', unavailable: 'Sản phẩm này chỉ có thể mua tại Hàn Quốc.', visitKr: 'Đến Cửa Hàng Hàn Quốc →' },
-  th: { home: 'หน้าหลัก', shop: 'ร้านค้า', details: 'รายละเอียดสินค้า', notFound: 'ไม่พบสินค้า', detailView: 'ภาพรายละเอียด', unavailable: 'สินค้านี้วางจำหน่ายในเกาหลีใต้เท่านั้น', visitKr: 'ไปที่ร้านค้าเกาหลี →' },
 };
 
 interface Props {
   lang: string;
-  region: 'kr' | 'gl';
   canPurchase: boolean;
   id: string;
 }
 
-export default async function ProductDetailPage({ lang, region, canPurchase, id }: Props) {
+export default async function ProductDetailPage({ lang, canPurchase, id }: Props) {
   const lb = labels[lang] ?? labels['en'];
 
   const allProducts = await getProducts();
@@ -33,7 +29,7 @@ export default async function ProductDetailPage({ lang, region, canPurchase, id 
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
         <p className="text-neutral-500 tracking-widest text-sm">{lb.notFound}</p>
-        <Link href={`/${region}/${lang}/products`} className="text-xs font-bold tracking-widest underline underline-offset-4 hover:text-black transition-colors">
+        <Link href={`/${lang}/products`} className="text-xs font-bold tracking-widest underline underline-offset-4 hover:text-black transition-colors">
           ← {lb.shop}
         </Link>
       </div>
@@ -64,11 +60,12 @@ export default async function ProductDetailPage({ lang, region, canPurchase, id 
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 animate-in fade-in duration-500 bg-white">
+      <RecentViewTracker productId={id} name={productData.name} price={productData.price} originalPrice={productData.originalPrice} imageUrl={productData.imageUrl} />
       {/* Breadcrumb */}
       <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-10 tracking-widest flex-wrap gap-y-1">
-        <Link href={`/${region}/${lang}`} className="hover:text-black transition-colors">{lb.home}</Link>
+        <Link href={`/${lang}`} className="hover:text-black transition-colors">{lb.home}</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
-        <Link href={`/${region}/${lang}/products`} className="hover:text-black transition-colors">{lb.shop}</Link>
+        <Link href={`/${lang}/products`} className="hover:text-black transition-colors">{lb.shop}</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
         <span className="text-[#111111]">{translated.ingredient || translated.name}</span>
       </div>
@@ -119,7 +116,7 @@ export default async function ProductDetailPage({ lang, region, canPurchase, id 
           )}
 
           {canPurchase ? (
-            <ProductActionButtons productId={id} price={productData.price} />
+            <ProductActionButtons productId={id} productName={productData.name} price={productData.price} originalPrice={productData.originalPrice} imageUrl={productData.imageUrl} naverStoreUrl={productData.naver_store_url} />
           ) : lb.unavailable ? (
             <div className="pt-8 mt-8 border-t border-neutral-100 space-y-4">
               <p className="text-sm text-neutral-500">{lb.unavailable}</p>

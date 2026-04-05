@@ -14,6 +14,9 @@ export interface Product {
   originalPrice: number;
   imageUrl: string;
   is_active: boolean;
+  naver_store_url?: string;
+  category_id?: string;
+  subcategory_id?: string;
 }
 
 export const MOCK_PRODUCTS: Product[] = [
@@ -26,7 +29,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 23400,
     originalPrice: 26000,
     imageUrl: "https://plus.unsplash.com/premium_photo-1681996500858-ff9cc3f28203?w=800&q=80&auto=format&fit=crop",
-    is_active: true
+    is_active: true,
+    naver_store_url: "https://smartstore.naver.com/kokkok-garden"
   },
   {
     id: "2",
@@ -37,7 +41,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 23400,
     originalPrice: 26000,
     imageUrl: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=800&q=80&auto=format&fit=crop",
-    is_active: true
+    is_active: true,
+    naver_store_url: "https://smartstore.naver.com/kokkok-garden"
   },
   {
     id: "3",
@@ -48,7 +53,8 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 23400,
     originalPrice: 26000,
     imageUrl: "https://plus.unsplash.com/premium_photo-1675842663249-a8b70126afbc?w=800&q=80&auto=format&fit=crop",
-    is_active: true
+    is_active: true,
+    naver_store_url: "https://smartstore.naver.com/kokkok-garden"
   },
   {
     id: "4",
@@ -79,7 +85,10 @@ export async function getProducts(): Promise<Product[]> {
       price: Number(d.price),
       originalPrice: Number(d.original_price || d.price),
       imageUrl: (d.images && d.images.length > 0) ? d.images[0] : '',
-      is_active: d.is_active
+      is_active: d.is_active,
+      naver_store_url: d.naver_store_url || undefined,
+      category_id: d.category_id || undefined,
+      subcategory_id: d.subcategory_id || undefined,
     }));
   } catch (err) {
     console.warn("DB Products Fetch Failed. Returning Mock Data.");

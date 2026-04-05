@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, Package, Video, LayoutDashboard, LogOut } from 'lucide-react';
+import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -10,14 +10,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navItems = [
     { name: '대시보드', href: '/admin', icon: LayoutDashboard },
     { name: '사용자', href: '/admin/users', icon: Users },
+    { name: '카테고리', href: '/admin/categories', icon: Tag },
     { name: '상품 관리', href: '/admin/products', icon: Package },
+    { name: '캐러셀', href: '/admin/carousel', icon: Image },
+    { name: '메뉴 관리', href: '/admin/menus', icon: MenuSquare },
     { name: '숏츠', href: '/admin/shorts', icon: Video },
   ];
 
   const pageTitle: Record<string, string> = {
     '/admin': '대시보드 개요',
     '/admin/users': '사용자 관리',
+    '/admin/categories': '카테고리 관리',
     '/admin/products': '상품 관리',
+    '/admin/carousel': '캐러셀 관리',
+    '/admin/menus': '메뉴 관리',
     '/admin/shorts': '숏츠 관리',
   };
 
@@ -48,8 +54,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        <div className="p-4 border-t border-gray-800">
-          <button 
+        <div className="p-4 border-t border-gray-800 space-y-1">
+          <Link
+            href="/kr"
+            className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+          >
+            <ExternalLink className="w-5 h-5" />
+            스토어 보기
+          </Link>
+          <button
             onClick={() => {
               document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
               window.location.href = '/';

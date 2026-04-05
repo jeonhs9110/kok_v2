@@ -46,6 +46,7 @@ export default function LanguagePicker() {
               onClick={() => {
                 setLang(l);
                 setIsOpen(false);
+                document.cookie = `kokkok_lang=${l}; path=/; max-age=31536000; SameSite=Lax`;
               }}
               className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm text-left hover:bg-gray-50 transition-colors ${
                 l === lang ? 'font-semibold text-black bg-gray-50' : 'text-gray-700'

@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Noto_Sans_KR } from 'next/font/google';
 import './globals.css';
 import StorefrontLayoutWrapper from '@/components/StorefrontLayoutWrapper';
 
-const inter = Inter({ subsets: ['latin'] });
+const notoSans = Noto_Sans_KR({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800', '900'] });
 
 export const metadata: Metadata = {
   title: 'Kokkok Garden',
@@ -17,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className={`${inter.className} bg-white text-neutral-950 font-sans antialiased min-h-screen`}>
+      <body className={`${notoSans.className} bg-white text-neutral-950 antialiased min-h-screen`}>
         <StorefrontLayoutWrapper>
           {children}
         </StorefrontLayoutWrapper>

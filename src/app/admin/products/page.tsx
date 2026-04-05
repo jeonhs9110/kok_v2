@@ -1,8 +1,9 @@
 'use client';
 
-import { Plus, Trash2, Upload, X, ImageIcon } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Upload, X, ImageIcon, Pencil } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Product, supabase, MOCK_PRODUCTS } from '@/lib/api/products';
+import type { Category } from '@/lib/api/categories';
 
 const BUCKET = 'product-images';
 
@@ -10,11 +11,13 @@ export default function ProductsAdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     summary: '',
@@ -23,12 +26,22 @@ export default function ProductsAdminPage() {
     originalPrice: '',
     imageUrl: '',       // final URL after upload or manual entry
     imageFile: null as File | null,
-    description: ''
+    description: '',
+    naverStoreUrl: '',
+    categoryId: '',
+    subcategoryId: '',
   });
+
+  const fetchCategories = useCallback(async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order');
+    if (data) setCategories(data);
+  }, []);
 
   useEffect(() => {
     fetchAll();
-  }, []);
+    fetchCategories();
+  }, [fetchCategories]);
 
   async function fetchAll() {
     setIsLoading(true);
@@ -48,7 +61,10 @@ export default function ProductsAdminPage() {
         price: Number(d.price),
         originalPrice: Number(d.original_price || d.price),
         imageUrl: (d.images && d.images.length > 0) ? d.images[0] : '',
-        is_active: d.is_active
+        is_active: d.is_active,
+        naver_store_url: d.naver_store_url || '',
+        category_id: d.category_id || undefined,
+        subcategory_id: d.subcategory_id || undefined,
       })));
     } catch {
       console.warn('DB 연결 실패. 목업 데이터로 전환.');
@@ -116,10 +132,30 @@ export default function ProductsAdminPage() {
 
   const resetModal = () => {
     setIsModalOpen(false);
-    setFormData({ name: '', summary: '', ingredient: '', price: '', originalPrice: '', imageUrl: '', imageFile: null, description: '' });
+    setEditingId(null);
+    setFormData({ name: '', summary: '', ingredient: '', price: '', originalPrice: '', imageUrl: '', imageFile: null, description: '', naverStoreUrl: '', categoryId: '', subcategoryId: '' });
     setPreviewUrl('');
     setUploadProgress('idle');
     setIsSubmitting(false);
+  };
+
+  const openEdit = (item: Product) => {
+    setEditingId(item.id);
+    setFormData({
+      name: item.name,
+      summary: item.summary,
+      ingredient: item.ingredient,
+      price: String(item.price),
+      originalPrice: String(item.originalPrice),
+      imageUrl: item.imageUrl,
+      imageFile: null,
+      description: item.description,
+      naverStoreUrl: item.naver_store_url || '',
+      categoryId: item.category_id || '',
+      subcategoryId: item.subcategory_id || '',
+    });
+    setPreviewUrl(item.imageUrl);
+    setIsModalOpen(true);
   };
 
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -129,9 +165,14 @@ export default function ProductsAdminPage() {
     try {
       let finalImageUrl = formData.imageUrl;
 
-      // If a file was selected, upload it first
+      // If a file was selected, try to upload (skip on failure)
       if (formData.imageFile) {
-        finalImageUrl = await uploadImageToSupabase(formData.imageFile);
+        try {
+          finalImageUrl = await uploadImageToSupabase(formData.imageFile);
+        } catch (uploadErr) {
+          console.warn('이미지 업로드 실패, 상품은 이미지 없이 저장합니다:', uploadErr);
+          finalImageUrl = '';
+        }
       }
 
       const newProduct: Product = {
@@ -143,26 +184,39 @@ export default function ProductsAdminPage() {
         originalPrice: Number(formData.originalPrice || formData.price),
         imageUrl: finalImageUrl,
         description: formData.description,
-        is_active: true
+        is_active: true,
+        naver_store_url: formData.naverStoreUrl || undefined
       };
 
-      // Optimistic UI update
-      setProducts(prev => [newProduct, ...prev]);
+      const dbPayload = {
+        name: formData.name,
+        summary: formData.summary,
+        ingredient: formData.ingredient,
+        price: Number(formData.price),
+        original_price: Number(formData.originalPrice || formData.price),
+        description: formData.description,
+        images: finalImageUrl ? [finalImageUrl] : [],
+        naver_store_url: formData.naverStoreUrl || null,
+        category_id: formData.categoryId || null,
+        subcategory_id: formData.subcategoryId || null,
+      };
 
-      if (supabase) {
-        const { error } = await supabase.from('products').insert([{
-          name: formData.name,
-          summary: formData.summary,
-          ingredient: formData.ingredient,
-          price: Number(formData.price),
-          original_price: Number(formData.originalPrice || formData.price),
-          description: formData.description,
-          images: [finalImageUrl],
-          is_active: true
-        }]);
-        if (error) throw error;
-        // Refresh from DB to get proper ID
-        await fetchAll();
+      if (editingId) {
+        // UPDATE existing product
+        setProducts(prev => prev.map(p => p.id === editingId ? { ...p, ...newProduct } : p));
+        if (supabase) {
+          const { error } = await supabase.from('products').update(dbPayload).eq('id', editingId);
+          if (error) throw error;
+          await fetchAll();
+        }
+      } else {
+        // INSERT new product
+        setProducts(prev => [newProduct, ...prev]);
+        if (supabase) {
+          const { error } = await supabase.from('products').insert([{ ...dbPayload, is_active: true }]);
+          if (error) throw error;
+          await fetchAll();
+        }
       }
 
       resetModal();
@@ -206,6 +260,7 @@ export default function ProductsAdminPage() {
                 <th className="p-4">상품 개요</th>
                 <th className="p-4">가격</th>
                 <th className="p-4">성분</th>
+                <th className="p-4">구매 링크</th>
                 <th className="p-4">상태</th>
                 <th className="p-4 pr-6 text-right">작업</th>
               </tr>
@@ -231,6 +286,15 @@ export default function ProductsAdminPage() {
                   <td className="p-4 text-gray-600 text-sm font-bold">{item.price.toLocaleString()}원</td>
                   <td className="p-4 text-gray-600 font-mono text-[11px]">{item.ingredient}</td>
                   <td className="p-4">
+                    {item.naver_store_url ? (
+                      <a href={item.naver_store_url} target="_blank" rel="noopener noreferrer" className="inline-flex px-2 py-0.5 bg-green-50 text-green-700 text-[10px] font-bold rounded tracking-wide hover:bg-green-100 transition-colors">
+                        네이버
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-gray-300">미설정</span>
+                    )}
+                  </td>
+                  <td className="p-4">
                     <button
                       onClick={() => handleToggle(item.id, item.is_active)}
                       className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase transition-colors ${
@@ -240,7 +304,10 @@ export default function ProductsAdminPage() {
                       {item.is_active ? '게시중' : '숨김'}
                     </button>
                   </td>
-                  <td className="p-4 pr-6 text-right">
+                  <td className="p-4 pr-6 text-right flex gap-1.5 justify-end">
+                    <button onClick={() => openEdit(item)} className="text-gray-400 hover:text-blue-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100">
+                      <Pencil className="w-4 h-4 inline" />
+                    </button>
                     <button onClick={() => handleDelete(item.id)} className="text-gray-400 hover:text-red-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100">
                       <Trash2 className="w-4 h-4 inline" />
                     </button>
@@ -257,7 +324,7 @@ export default function ProductsAdminPage() {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh]">
             <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-lg">새 상품 추가</h3>
+              <h3 className="font-bold text-lg">{editingId ? '상품 수정' : '새 상품 추가'}</h3>
               <button onClick={resetModal} className="text-gray-400 hover:text-black transition-colors p-1 rounded hover:bg-gray-100">
                 <X className="w-5 h-5" />
               </button>
@@ -370,6 +437,37 @@ export default function ProductsAdminPage() {
                 </div>
               </div>
 
+              {/* Category + Subcategory */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">카테고리</label>
+                  <select
+                    value={formData.categoryId}
+                    onChange={e => setFormData(prev => ({ ...prev, categoryId: e.target.value, subcategoryId: '' }))}
+                    className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
+                  >
+                    <option value="">선택 안 함</option>
+                    {categories.filter(c => !c.parent_id).map(c => (
+                      <option key={c.id} value={c.id}>{c.name?.kr || c.slug}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">서브카테고리</label>
+                  <select
+                    value={formData.subcategoryId}
+                    onChange={e => setFormData(prev => ({ ...prev, subcategoryId: e.target.value }))}
+                    disabled={!formData.categoryId}
+                    className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none disabled:opacity-40"
+                  >
+                    <option value="">선택 안 함</option>
+                    {categories.filter(c => c.parent_id === formData.categoryId).map(c => (
+                      <option key={c.id} value={c.id}>{c.name?.kr || c.slug}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               {/* Summary */}
               <div className="space-y-1">
                 <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">한 줄 요약 *</label>
@@ -422,6 +520,19 @@ export default function ProductsAdminPage() {
                 />
               </div>
 
+              {/* Naver Store URL */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">네이버 스토어 URL</label>
+                <input
+                  type="url"
+                  value={formData.naverStoreUrl}
+                  onChange={e => setFormData(prev => ({ ...prev, naverStoreUrl: e.target.value }))}
+                  className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
+                  placeholder="https://smartstore.naver.com/kokkok-garden/products/..."
+                />
+                <p className="text-[10px] text-gray-400 mt-1">입력하면 고객이 구매하기 클릭 시 네이버 스토어로 이동합니다. 비워두면 자체 결제(추후 KCP)로 연결됩니다.</p>
+              </div>
+
               <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
                 <button
                   type="button"
@@ -432,7 +543,7 @@ export default function ProductsAdminPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || (!formData.imageFile && !formData.imageUrl)}
+                  disabled={isSubmitting}
                   className="bg-[#111111] text-white px-8 py-2.5 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isSubmitting ? (
@@ -440,7 +551,7 @@ export default function ProductsAdminPage() {
                       <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       저장 중...
                     </>
-                  ) : '상품 저장'}
+                  ) : editingId ? '수정 저장' : '상품 저장'}
                 </button>
               </div>
             </form>

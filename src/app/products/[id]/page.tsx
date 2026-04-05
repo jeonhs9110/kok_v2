@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import ProductActionButtons from '@/components/ProductActionButtons';
+import RecentViewTracker from '@/components/RecentViewTracker';
 import { getProducts } from '@/lib/api/products';
 
 export default async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -24,6 +25,7 @@ export default async function ProductDetail({ params }: { params: Promise<{ id: 
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 animate-in fade-in duration-500 bg-white">
+      <RecentViewTracker productId={baseId} name={productData.name} price={productData.price} originalPrice={productData.originalPrice} imageUrl={productData.imageUrl} />
       {/* Breadcrumb */}
       <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-10 tracking-widest">
         <Link href="/" className="hover:text-black transition-colors">HOME</Link>
@@ -72,7 +74,7 @@ export default async function ProductDetail({ params }: { params: Promise<{ id: 
             </p>
           </div>
 
-          <ProductActionButtons productId={id} price={productData.price} />
+          <ProductActionButtons productId={id} productName={name} price={productData.price} originalPrice={productData.originalPrice} imageUrl={productData.imageUrl} naverStoreUrl={productData.naver_store_url} />
         </div>
       </div>
       

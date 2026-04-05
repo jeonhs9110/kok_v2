@@ -1,83 +1,71 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, ShoppingBag, User, Menu, X, ChevronDown, Globe } from 'lucide-react';
+import { Search, ShoppingBag, User, Menu, X, Globe } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
 import LanguagePicker from '@/components/LanguagePicker';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { supabase } from '@/lib/api/products';
+import { getCategoriesTree, type CategoryWithChildren } from '@/lib/api/categories';
+import { getMenuTree, type MenuWithChildren } from '@/lib/api/menus';
+import { useCart } from '@/lib/cart/CartContext';
 
 interface HeaderProps {
   canPurchase?: boolean;
-  region?: 'gl' | 'kr';
 }
 
 /* ── i18n utility strings ───────────────────────────────────────────── */
-const UTILITY: Record<string, { join: string; login: string; order: string; recent: string; cs: string }> = {
-  kr: { join: '회원가입', login: '로그인', order: '주문조회', recent: '최근본상품', cs: '고객센터' },
-  en: { join: 'Sign Up', login: 'Login', order: 'Order', recent: 'Recently Viewed', cs: 'Support' },
-  cn: { join: '注册', login: '登录', order: '订单查询', recent: '最近浏览', cs: '客服' },
-  jp: { join: '会員登録', login: 'ログイン', order: '注文照会', recent: '最近見た商品', cs: 'サポート' },
-  vn: { join: 'Đăng ký', login: 'Đăng nhập', order: 'Đơn hàng', recent: 'Đã xem', cs: 'Hỗ trợ' },
-  th: { join: 'สมัครสมาชิก', login: 'เข้าสู่ระบบ', order: 'ติดตามออเดอร์', recent: 'ดูล่าสุด', cs: 'ช่วยเหลือ' },
-};
-
-const PRODUCT_MEGA: Record<string, { label: string; items: { name: string; slug: string }[] }[]> = {
-  kr: [
-    { label: '유형별', items: [{ name: '세럼/앰플', slug: 'serum' }, { name: '크림/로션', slug: 'cream' }, { name: '클렌징', slug: 'cleansing' }, { name: '선케어', slug: 'suncare' }, { name: '마스크', slug: 'mask' }] },
-    { label: '성분별', items: [{ name: 'PDRN', slug: 'pdrn' }, { name: 'EGF/펩타이드', slug: 'egf' }, { name: 'CICA', slug: 'cica' }, { name: '레티놀', slug: 'retinol' }, { name: '어성초', slug: 'heartleaf' }] },
-    { label: '피부고민', items: [{ name: '수분/보습', slug: 'moisture' }, { name: '진정/트러블', slug: 'soothing' }, { name: '미백/광채', slug: 'brightening' }, { name: '탄력/안티에이징', slug: 'antiaging' }, { name: '모공/피지', slug: 'pore' }] },
-    { label: '기획전', items: [{ name: '신상품', slug: 'new' }, { name: '베스트셀러', slug: 'best' }, { name: '세일', slug: 'sale' }, { name: '세트/기프트', slug: 'set' }] },
-  ],
-  en: [
-    { label: 'By Type', items: [{ name: 'Serum / Ampoule', slug: 'serum' }, { name: 'Cream / Lotion', slug: 'cream' }, { name: 'Cleansing', slug: 'cleansing' }, { name: 'Sun Care', slug: 'suncare' }, { name: 'Mask', slug: 'mask' }] },
-    { label: 'By Ingredient', items: [{ name: 'PDRN', slug: 'pdrn' }, { name: 'EGF / Peptide', slug: 'egf' }, { name: 'CICA', slug: 'cica' }, { name: 'Retinol', slug: 'retinol' }, { name: 'Heartleaf', slug: 'heartleaf' }] },
-    { label: 'By Concern', items: [{ name: 'Hydration', slug: 'moisture' }, { name: 'Soothing', slug: 'soothing' }, { name: 'Brightening', slug: 'brightening' }, { name: 'Anti-Aging', slug: 'antiaging' }, { name: 'Pore Care', slug: 'pore' }] },
-    { label: 'Collections', items: [{ name: 'New Arrivals', slug: 'new' }, { name: 'Best Sellers', slug: 'best' }, { name: 'Sale', slug: 'sale' }, { name: 'Gifts & Sets', slug: 'set' }] },
-  ],
-  cn: [
-    { label: '按类型', items: [{ name: '精华/安瓶', slug: 'serum' }, { name: '面霜/乳液', slug: 'cream' }, { name: '洁肤', slug: 'cleansing' }, { name: '防晒', slug: 'suncare' }, { name: '面膜', slug: 'mask' }] },
-    { label: '按成分', items: [{ name: 'PDRN', slug: 'pdrn' }, { name: 'EGF/肽', slug: 'egf' }, { name: 'CICA', slug: 'cica' }, { name: '视黄醇', slug: 'retinol' }, { name: '鱼腥草', slug: 'heartleaf' }] },
-    { label: '按肌肤需求', items: [{ name: '保湿补水', slug: 'moisture' }, { name: '舒缓镇定', slug: 'soothing' }, { name: '美白亮肤', slug: 'brightening' }, { name: '抗衰老', slug: 'antiaging' }, { name: '毛孔护理', slug: 'pore' }] },
-    { label: '精选系列', items: [{ name: '新品', slug: 'new' }, { name: '畅销榜', slug: 'best' }, { name: '特惠', slug: 'sale' }, { name: '礼盒套装', slug: 'set' }] },
-  ],
-  jp: [
-    { label: 'タイプ別', items: [{ name: 'セラム/アンプル', slug: 'serum' }, { name: 'クリーム/ローション', slug: 'cream' }, { name: 'クレンジング', slug: 'cleansing' }, { name: 'サンケア', slug: 'suncare' }, { name: 'マスク', slug: 'mask' }] },
-    { label: '成分別', items: [{ name: 'PDRN', slug: 'pdrn' }, { name: 'EGF/ペプチド', slug: 'egf' }, { name: 'CICA', slug: 'cica' }, { name: 'レチノール', slug: 'retinol' }, { name: 'ドクダミ', slug: 'heartleaf' }] },
-    { label: '悩み別', items: [{ name: '保湿', slug: 'moisture' }, { name: '鎮静', slug: 'soothing' }, { name: '美白/ツヤ', slug: 'brightening' }, { name: '抗老化', slug: 'antiaging' }, { name: '毛穴', slug: 'pore' }] },
-    { label: 'コレクション', items: [{ name: '新着', slug: 'new' }, { name: 'ベストセラー', slug: 'best' }, { name: 'セール', slug: 'sale' }, { name: 'ギフトセット', slug: 'set' }] },
-  ],
-  vn: [
-    { label: 'Theo Loại', items: [{ name: 'Serum/Ampoule', slug: 'serum' }, { name: 'Kem/Lotion', slug: 'cream' }, { name: 'Tẩy Trang', slug: 'cleansing' }, { name: 'Chống Nắng', slug: 'suncare' }, { name: 'Mặt Nạ', slug: 'mask' }] },
-    { label: 'Theo Thành Phần', items: [{ name: 'PDRN', slug: 'pdrn' }, { name: 'EGF/Peptide', slug: 'egf' }, { name: 'CICA', slug: 'cica' }, { name: 'Retinol', slug: 'retinol' }, { name: 'Diếp Cá', slug: 'heartleaf' }] },
-    { label: 'Theo Vấn Đề Da', items: [{ name: 'Dưỡng Ẩm', slug: 'moisture' }, { name: 'Làm Dịu Da', slug: 'soothing' }, { name: 'Làm Sáng Da', slug: 'brightening' }, { name: 'Chống Lão Hoá', slug: 'antiaging' }, { name: 'Se Lỗ Chân Lông', slug: 'pore' }] },
-    { label: 'Bộ Sưu Tập', items: [{ name: 'Hàng Mới', slug: 'new' }, { name: 'Bán Chạy', slug: 'best' }, { name: 'Khuyến Mãi', slug: 'sale' }, { name: 'Bộ Quà Tặng', slug: 'set' }] },
-  ],
-  th: [
-    { label: 'ตามประเภท', items: [{ name: 'เซรั่ม/แอมพูล', slug: 'serum' }, { name: 'ครีม/โลชั่น', slug: 'cream' }, { name: 'คลีนซิ่ง', slug: 'cleansing' }, { name: 'ครีมกันแดด', slug: 'suncare' }, { name: 'มาสก์', slug: 'mask' }] },
-    { label: 'ตามส่วนผสม', items: [{ name: 'PDRN', slug: 'pdrn' }, { name: 'EGF/เปปไทด์', slug: 'egf' }, { name: 'CICA', slug: 'cica' }, { name: 'เรตินอล', slug: 'retinol' }, { name: 'พลูคาว', slug: 'heartleaf' }] },
-    { label: 'ตามปัญหาผิว', items: [{ name: 'มอยส์เจอไรซิ่ง', slug: 'moisture' }, { name: 'บรรเทาผิว', slug: 'soothing' }, { name: 'ผิวกระจ่างใส', slug: 'brightening' }, { name: 'ต้านริ้วรอย', slug: 'antiaging' }, { name: 'รูขุมขน', slug: 'pore' }] },
-    { label: 'คอลเลคชัน', items: [{ name: 'สินค้าใหม่', slug: 'new' }, { name: 'ขายดี', slug: 'best' }, { name: 'ลดราคา', slug: 'sale' }, { name: 'เซ็ตของขวัญ', slug: 'set' }] },
-  ],
+const UTILITY: Record<string, { join: string; login: string; logout: string; order: string; recent: string; cs: string }> = {
+  kr: { join: '회원가입', login: '로그인', logout: '로그아웃', order: '주문조회', recent: '최근본상품', cs: '고객센터' },
+  en: { join: 'Sign Up', login: 'Login', logout: 'Logout', order: 'Order', recent: 'Recently Viewed', cs: 'Support' },
 };
 
 const NAV_LABELS: Record<string, { product: string; event: string; brand: string; review: string; global: string; worldwide: string; contact: string }> = {
-  kr: { product: 'Product', event: 'EVENT & NOTICE', brand: 'BRAND STORY', review: 'REVIEW & COMMUNITY', global: 'Global & CS', worldwide: 'SHOP Worldwide', contact: '고객센터' },
-  en: { product: 'Product', event: 'EVENT & NOTICE', brand: 'BRAND STORY', review: 'REVIEWS', global: 'Global & CS', worldwide: 'SHOP Worldwide', contact: 'Contact' },
-  cn: { product: '商品', event: '活动 & 通知', brand: '品牌故事', review: '评价社区', global: '全球 & 服务', worldwide: '全球购物', contact: '联系我们' },
-  jp: { product: '商品', event: 'イベント & お知らせ', brand: 'ブランドストーリー', review: 'レビュー', global: 'グローバル & CS', worldwide: 'ショップ全世界', contact: 'お問い合わせ' },
-  vn: { product: 'Sản Phẩm', event: 'SỰ KIỆN & TIN TỨC', brand: 'CÂU CHUYỆN THƯƠNG HIỆU', review: 'ĐÁNH GIÁ', global: 'Toàn Cầu & CS', worldwide: 'MUA HÀNG TOÀN CẦU', contact: 'Liên Hệ' },
-  th: { product: 'สินค้า', event: 'อีเวนต์ & ข่าวสาร', brand: 'เรื่องราวแบรนด์', review: 'รีวิว', global: 'ทั่วโลก & CS', worldwide: 'ช้อปทั่วโลก', contact: 'ติดต่อเรา' },
+  kr: { product: 'Product', event: 'EVENT & NOTICE', brand: 'BRAND STORY', review: 'REVIEW & COMMUNITY', global: 'SHOP Worldwide', worldwide: 'SHOP Worldwide', contact: '고객센터' },
+  en: { product: 'Product', event: 'EVENT & NOTICE', brand: 'BRAND STORY', review: 'REVIEWS', global: 'SHOP Worldwide', worldwide: 'SHOP Worldwide', contact: 'Contact' },
 };
 
-export default function Header({ canPurchase = true, region = 'kr' }: HeaderProps) {
+export default function Header({ canPurchase = true }: HeaderProps) {
   const { lang } = useI18n();
+  const { totalCount } = useCart();
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [navMenus, setNavMenus] = useState<MenuWithChildren[]>([]);
+  const [megaCategories, setMegaCategories] = useState<CategoryWithChildren[]>([]);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const isLoggedIn = useMemo(() => typeof document !== 'undefined' && document.cookie.includes('kokkok_auth=true'), []);
+  const isAdmin = useMemo(() => typeof document !== 'undefined' && document.cookie.includes('kokkok_admin_auth=true'), []);
+
+  const fetchNavMenus = useCallback(async () => {
+    try {
+      const tree = await getMenuTree();
+      setNavMenus(tree.filter(m => m.show_in_nav));
+    } catch { /* ignore */ }
+  }, []);
+
+  const fetchCategories = useCallback(async () => {
+    try {
+      const tree = await getCategoriesTree();
+      setMegaCategories(tree);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { fetchNavMenus(); fetchCategories(); }, [fetchNavMenus, fetchCategories]);
   const util = UTILITY[lang] ?? UTILITY['en'];
   const nav = NAV_LABELS[lang] ?? NAV_LABELS['en'];
-  const productMega = PRODUCT_MEGA[lang] ?? PRODUCT_MEGA['en'];
+
+  const productMega = megaCategories.map(cat => ({
+    label: cat.name[lang] || cat.name['en'] || cat.slug,
+    slug: cat.slug,
+    items: cat.children.map(sub => ({
+      name: sub.name[lang] || sub.name['en'] || sub.slug,
+      slug: sub.slug,
+    })),
+  }));
 
   const openMenu = (name: string) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
@@ -92,16 +80,45 @@ export default function Header({ canPurchase = true, region = 'kr' }: HeaderProp
 
   useEffect(() => () => { if (hoverTimer.current) clearTimeout(hoverTimer.current); }, []);
 
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) searchInputRef.current.focus();
+  }, [searchOpen]);
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setSearchOpen(false);
+    window.location.href = `/${lang}/products?q=${encodeURIComponent(searchQuery.trim())}`;
+  };
+
   return (
     <>
       {/* ── UTILITY BAR ─────────────────────────────────────────────── */}
       <div className="bg-white border-b border-neutral-100 hidden lg:block">
         <div className="max-w-[1600px] mx-auto px-8 flex justify-end items-center h-9 gap-5 text-[11px] text-neutral-500 font-medium tracking-wide">
-          <Link href="/register" className="hover:text-black transition-colors">{util.join}</Link>
-          <Link href="/login" className="hover:text-black transition-colors">{util.login}</Link>
-          <Link href={`/${region}/${lang}/orders`} className="hover:text-black transition-colors">{util.order}</Link>
-          <Link href={`/${region}/${lang}/recent`} className="hover:text-black transition-colors">{util.recent}</Link>
-          <Link href={`/${region}/${lang}/support`} className="hover:text-black transition-colors">{util.cs} ›</Link>
+          {isAdmin && (
+            <Link href="/admin" className="hover:text-black transition-colors text-[#4a7a3e] font-bold">ADMIN</Link>
+          )}
+          {!isLoggedIn && (
+            <Link href="/register" className="hover:text-black transition-colors">{util.join}</Link>
+          )}
+          {isLoggedIn ? (
+            <button
+              onClick={() => {
+                document.cookie = "kokkok_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                window.location.reload();
+              }}
+              className="hover:text-black transition-colors"
+            >
+              {util.logout}
+            </button>
+          ) : (
+            <Link href="/login" className="hover:text-black transition-colors">{util.login}</Link>
+          )}
+          <Link href={`/${lang}/orders`} className="hover:text-black transition-colors">{util.order}</Link>
+          <Link href={`/${lang}/recent`} className="hover:text-black transition-colors">{util.recent}</Link>
+          <Link href={`/${lang}/support`} className="hover:text-black transition-colors">{util.cs} ›</Link>
         </div>
       </div>
 
@@ -121,7 +138,7 @@ export default function Header({ canPurchase = true, region = 'kr' }: HeaderProp
 
             {/* Logo */}
             <Link
-              href={`/${region}/${lang}`}
+              href={`/${lang}`}
               className="text-[22px] font-black tracking-[0.12em] text-[#111111] uppercase flex-shrink-0 mr-8"
             >
               KOKKOK<br className="hidden" /> GARDEN
@@ -130,122 +147,70 @@ export default function Header({ canPurchase = true, region = 'kr' }: HeaderProp
             {/* ── Desktop Nav ─────────────────────────────────────────── */}
             <nav className="hidden lg:flex items-center flex-1 h-full">
 
-              {/* Product — mega menu */}
+              {/* Product — slim submenu bar (reference style) */}
               <div
                 className="relative h-full flex items-center"
                 onMouseEnter={() => openMenu('product')}
                 onMouseLeave={closeMenu}
               >
-                <button className={`flex items-center gap-1 px-4 h-full text-[13.5px] font-semibold tracking-wide transition-colors ${activeMenu === 'product' ? 'text-black border-b-2 border-black' : 'text-neutral-800 hover:text-black'}`}>
-                  {nav.product} <ChevronDown className={`w-3.5 h-3.5 transition-transform ${activeMenu === 'product' ? 'rotate-180' : ''}`} />
+                <button className={`flex items-center gap-1 px-4 h-full text-[13.5px] font-semibold tracking-wide transition-colors ${activeMenu === 'product' ? 'text-black' : 'text-neutral-800 hover:text-black'}`}>
+                  {nav.product}
                 </button>
-
+                {/* Green underline indicator */}
                 {activeMenu === 'product' && (
-                  <div
-                    className="absolute top-full left-0 bg-white border-t-2 border-black shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150"
-                    style={{ width: '580px' }}
-                    onMouseEnter={keepMenu}
-                    onMouseLeave={closeMenu}
-                  >
-                    <div className="grid grid-cols-4 gap-0 p-6">
-                      {productMega.map(col => (
-                        <div key={col.label} className="pr-4">
-                          <p className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase mb-3">{col.label}</p>
-                          <ul className="space-y-2">
-                            {col.items.map(item => (
-                              <li key={item.slug}>
-                                <Link
-                                  href={`/${region}/${lang}/products?category=${item.slug}`}
-                                  className="text-[13px] text-neutral-700 hover:text-black hover:font-semibold transition-all block"
-                                  onClick={() => setActiveMenu(null)}
-                                >
-                                  {item.name}
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="border-t border-neutral-100 px-6 py-3 bg-neutral-50 flex gap-4">
-                      <Link href={`/${region}/${lang}/products`} className="text-[11px] font-bold tracking-widest text-neutral-500 hover:text-black transition-colors uppercase" onClick={() => setActiveMenu(null)}>
-                        → View All Products
-                      </Link>
-                    </div>
-                  </div>
+                  <span className="absolute bottom-0 left-4 right-4 h-[2.5px] bg-[#4a7a3e] rounded-full" />
                 )}
               </div>
 
-              {/* EVENT & NOTICE */}
-              <Link href={`/${region}/${lang}/events`} className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors">
-                {nav.event}
-              </Link>
+              {/* Dynamic menus from DB */}
+              {navMenus.map(menu => {
+                const hasChildren = menu.children.length > 0;
+                const menuLabel = menu.title?.[lang] || menu.title?.kr || menu.title?.en || menu.slug;
+                if (!hasChildren) {
+                  return (
+                    <Link key={menu.slug} href={`/${lang}/menus/${menu.slug}`} className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors">
+                      {menuLabel}
+                    </Link>
+                  );
+                }
+                return (
+                  <div key={menu.slug} className="relative h-full flex items-center" onMouseEnter={() => openMenu(`menu-${menu.slug}`)} onMouseLeave={closeMenu}>
+                    <Link href={`/${lang}/menus/${menu.slug}`} className={`flex items-center gap-1 px-4 h-full text-[13.5px] font-semibold tracking-wide transition-colors ${activeMenu === `menu-${menu.slug}` ? 'text-black' : 'text-neutral-800 hover:text-black'}`}>
+                      {menuLabel}
+                    </Link>
+                    {activeMenu === `menu-${menu.slug}` && (
+                      <span className="absolute bottom-0 left-4 right-4 h-[2.5px] bg-[#4a7a3e] rounded-full" />
+                    )}
+                  </div>
+                );
+              })}
 
-              {/* BRAND STORY */}
-              <Link href={`/${region}/${lang}/brand`} className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors">
-                {nav.brand}
-              </Link>
-
-              {/* REVIEW */}
-              <Link href={`/${region}/${lang}/reviews`} className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors">
-                {nav.review}
-              </Link>
-
-              {/* Global & CS — dropdown */}
-              <div
-                className="relative h-full flex items-center"
-                onMouseEnter={() => openMenu('global')}
-                onMouseLeave={closeMenu}
+              {/* Shop Worldwide — direct link */}
+              <Link
+                href={`/${lang}/worldwide`}
+                className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors"
               >
-                <button className={`flex items-center gap-1 px-4 h-full text-[13.5px] font-semibold tracking-wide transition-colors ${activeMenu === 'global' ? 'text-black border-b-2 border-black' : 'text-neutral-800 hover:text-black'}`}>
-                  {nav.global} <ChevronDown className={`w-3.5 h-3.5 transition-transform ${activeMenu === 'global' ? 'rotate-180' : ''}`} />
-                </button>
-
-                {activeMenu === 'global' && (
-                  <div
-                    className="absolute top-full left-0 bg-white border-t-2 border-black shadow-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150 min-w-[200px]"
-                    onMouseEnter={keepMenu}
-                    onMouseLeave={closeMenu}
-                  >
-                    <ul className="py-2">
-                      {[
-                        { label: nav.worldwide, href: `/${region}/${lang}/worldwide`, icon: '🌍' },
-                        { label: nav.contact, href: `/${region}/${lang}/support`, icon: '💬' },
-                      ].map(item => (
-                        <li key={item.label}>
-                          <Link
-                            href={item.href}
-                            className="flex items-center gap-3 px-5 py-3 text-[13px] text-neutral-700 hover:bg-neutral-50 hover:text-black transition-colors"
-                            onClick={() => setActiveMenu(null)}
-                          >
-                            <span className="text-base">{item.icon}</span>
-                            {item.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+                {nav.global}
+              </Link>
             </nav>
 
             {/* ── Right Icons ──────────────────────────────────────────── */}
             <div className="ml-auto flex items-center gap-2">
-              <button className="p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Search">
+              <button onClick={() => setSearchOpen(v => !v)} className="p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Search">
                 <Search className="w-[21px] h-[21px]" />
               </button>
-              <Link href="/login" className="hidden sm:flex p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Account">
+              <Link href={isLoggedIn ? `/${lang}/mypage` : '/login'} className="hidden sm:flex p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Account">
                 <User className="w-[21px] h-[21px]" />
               </Link>
               {canPurchase && (
-                <div className="relative group">
-                  <Link href="/cart" className="p-2 text-neutral-900 hover:opacity-60 transition-opacity flex" aria-label="Cart">
-                    <ShoppingBag className="w-[21px] h-[21px]" />
-                  </Link>
-                  <div className="absolute top-10 right-0 hidden group-hover:block whitespace-nowrap bg-[#8eaad9] text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow z-50 animate-in fade-in duration-150">
-                    신규회원 5,000원 쿠폰
-                  </div>
-                </div>
+                <Link href="/cart" className="relative p-2 text-neutral-900 hover:opacity-60 transition-opacity flex" aria-label="Cart">
+                  <ShoppingBag className="w-[21px] h-[21px]" />
+                  {totalCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-[#111] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {totalCount > 99 ? '99' : totalCount}
+                    </span>
+                  )}
+                </Link>
               )}
               <LanguagePicker />
             </div>
@@ -253,21 +218,106 @@ export default function Header({ canPurchase = true, region = 'kr' }: HeaderProp
           </div>
         </div>
 
-        {/* ── Mobile Menu Drawer ───────────────────────────────────────── */}
+          {/* ── Product Mega Menu ─────────────────────────────────────── */}
+        {activeMenu === 'product' && productMega.length > 0 && (
+          <div
+            className="absolute top-full left-0 w-full bg-white border-t border-neutral-100 shadow-lg z-30"
+            onMouseEnter={keepMenu}
+            onMouseLeave={closeMenu}
+          >
+            <div className="max-w-[1600px] mx-auto px-8 py-6 flex gap-12">
+              {productMega.map(col => (
+                <div key={col.slug}>
+                  <Link
+                    href={`/${lang}/products?category=${col.slug}`}
+                    className="text-[13px] font-bold text-neutral-900 hover:text-[#4a7a3e] tracking-wide transition-colors"
+                    onClick={() => setActiveMenu(null)}
+                  >
+                    {col.label}
+                  </Link>
+                  {col.items.length > 0 && (
+                    <ul className="mt-2.5 space-y-1.5">
+                      {col.items.map(item => (
+                        <li key={item.slug}>
+                          <Link
+                            href={`/${lang}/products?sub=${item.slug}`}
+                            className="text-[12.5px] text-neutral-500 hover:text-black transition-colors"
+                            onClick={() => setActiveMenu(null)}
+                          >
+                            {item.name}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      {/* ── Menu Mega Menus ─────────────────────────────────────────── */}
+        {navMenus.filter(m => m.children.length > 0).map(menu => (
+          activeMenu === `menu-${menu.slug}` && (
+            <div
+              key={menu.slug}
+              className="absolute top-full left-0 w-full bg-white border-t border-neutral-100 shadow-lg z-30"
+              onMouseEnter={keepMenu}
+              onMouseLeave={closeMenu}
+            >
+              <div className="max-w-[1600px] mx-auto px-8 py-6 flex gap-12">
+                {menu.children.map(child => (
+                  <Link
+                    key={child.slug}
+                    href={`/${lang}/menus/${child.slug}`}
+                    className="text-[13px] font-bold text-neutral-900 hover:text-[#4a7a3e] tracking-wide transition-colors"
+                    onClick={() => setActiveMenu(null)}
+                  >
+                    {child.title?.[lang] || child.title?.kr || child.title?.en || child.slug}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )
+        ))}
+
+      {/* ── Mobile Menu Drawer ───────────────────────────────────────── */}
         {mobileOpen && (
           <div className="lg:hidden bg-white border-t border-neutral-100 px-6 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
-            <Link href={`/${region}/${lang}/products`} className="block text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{nav.product}</Link>
-            <Link href={`/${region}/${lang}/events`} className="block text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{nav.event}</Link>
-            <Link href={`/${region}/${lang}/brand`} className="block text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{nav.brand}</Link>
-            <Link href={`/${region}/${lang}/reviews`} className="block text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{nav.review}</Link>
-            <Link href={`/${region}/${lang}/worldwide`} className="flex items-center gap-2 text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>
+            <Link href={`/${lang}/products`} className="block text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{nav.product}</Link>
+            {navMenus.map(menu => (
+              <Link key={menu.slug} href={`/${lang}/menus/${menu.slug}`} className="block text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{menu.title?.[lang] || menu.title?.kr || menu.title?.en || ''}</Link>
+            ))}
+            <Link href={`/${lang}/worldwide`} className="flex items-center gap-2 text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>
               <Globe className="w-4 h-4" /> {nav.worldwide}
             </Link>
-            <Link href={`/${region}/${lang}/support`} className="block text-sm font-bold text-neutral-800 py-2" onClick={() => setMobileOpen(false)}>{nav.contact}</Link>
+            <Link href={`/${lang}/support`} className="block text-sm font-bold text-neutral-800 py-2" onClick={() => setMobileOpen(false)}>{nav.contact}</Link>
             <div className="pt-2 flex gap-4 text-[12px] text-neutral-400">
               <Link href="/login" onClick={() => setMobileOpen(false)}>{util.login}</Link>
               <Link href="/register" onClick={() => setMobileOpen(false)}>{util.join}</Link>
             </div>
+          </div>
+        )}
+        {/* ── Search Overlay ─────────────────────────────────────────── */}
+        {searchOpen && (
+          <div className="absolute top-full left-0 w-full bg-white border-t border-neutral-100 shadow-lg z-40 animate-in fade-in slide-in-from-top-1 duration-150">
+            <form onSubmit={handleSearch} className="max-w-[1600px] mx-auto px-4 sm:px-8 py-4 flex items-center gap-3">
+              <Search className="w-5 h-5 text-neutral-400 flex-shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder={lang === 'kr' ? '상품명, 성분, 키워드 검색...' : 'Search products...'}
+                className="flex-1 text-sm bg-transparent outline-none placeholder:text-neutral-400"
+              />
+              <button type="submit" className="px-4 py-2 bg-[#111111] text-white text-xs font-bold tracking-widest rounded hover:bg-black transition-colors">
+                {lang === 'kr' ? '검색' : 'Search'}
+              </button>
+              <button type="button" onClick={() => { setSearchOpen(false); setSearchQuery(''); }} className="p-1.5 text-neutral-400 hover:text-black transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </form>
           </div>
         )}
       </header>

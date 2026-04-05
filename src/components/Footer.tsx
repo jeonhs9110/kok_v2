@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useI18n } from '@/lib/i18n/context';
 
 export default function Footer() {
-  const { t, lang, region } = useI18n();
+  const { t, lang } = useI18n();
 
   return (
     <footer className="bg-white border-t border-neutral-200 py-16 text-[#333]">
@@ -22,9 +22,9 @@ export default function Footer() {
               <p className="mt-4 pt-4 border-t border-neutral-100">{t('footer.copyright')}</p>
             </div>
             <div className="flex space-x-4 mt-6 text-[12px] font-semibold flex-wrap gap-y-2">
-              <Link href={`/${region}/${lang}/about`} className="hover:underline">{t('footer.about')}</Link>
-              <Link href={`/${region}/${lang}/terms`} className="hover:underline">{t('footer.terms')}</Link>
-              <Link href={`/${region}/${lang}/privacy`} className="hover:underline text-black font-bold">{t('footer.privacy')}</Link>
+              <Link href={`/${lang}/about`} className="hover:underline">{t('footer.about')}</Link>
+              <Link href={`/${lang}/terms`} className="hover:underline">{t('footer.terms')}</Link>
+              <Link href={`/${lang}/privacy`} className="hover:underline text-black font-bold">{t('footer.privacy')}</Link>
             </div>
           </div>
 
