@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Trash2, Upload, X, ImageIcon, Pencil, GripVertical } from 'lucide-react';
+import { Plus, Trash2, Upload, X, ImageIcon, Pencil, GripVertical, Link as LinkIcon } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/api/products';
 import type { CarouselSlide } from '@/lib/api/carousel';
@@ -17,11 +17,15 @@ interface FormData {
   is_active: boolean;
   imageUrl: string;
   imageFile: File | null;
+  link_url: string;
+  display_mode: 'default' | 'fullpage';
+  media_type: 'image' | 'video' | 'gif';
 }
 
 const emptyForm: FormData = {
   badge: {}, title: {}, subtitle: {},
-  bg_color: '#eef4f7', sort_order: '0', is_active: true, imageUrl: '', imageFile: null,
+  bg_color: '#eef4f7', sort_order: '0', is_active: true, imageUrl: '', imageFile: null, link_url: '',
+  display_mode: 'default', media_type: 'image',
 };
 
 export default function CarouselAdminPage() {
@@ -52,11 +56,20 @@ export default function CarouselAdminPage() {
     }
   }
 
+  const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > MAX_FILE_SIZE) {
+      alert('파일 크기가 20MB를 초과합니다.');
+      return;
+    }
+    const isVideo = file.type.startsWith('video/');
+    const isGif = file.type === 'image/gif';
+    const mediaType = isVideo ? 'video' : isGif ? 'gif' : 'image';
     setPreviewUrl(URL.createObjectURL(file));
-    setFormData(prev => ({ ...prev, imageFile: file, imageUrl: '' }));
+    setFormData(prev => ({ ...prev, imageFile: file, imageUrl: '', media_type: mediaType }));
     setUploadProgress('idle');
   };
 
@@ -88,7 +101,8 @@ export default function CarouselAdminPage() {
     setFormData({
       badge: { ...s.badge }, title: { ...s.title }, subtitle: { ...s.subtitle },
       bg_color: s.bg_color || '#eef4f7', sort_order: String(s.sort_order),
-      is_active: s.is_active, imageUrl: s.image_url || '', imageFile: null,
+      is_active: s.is_active, imageUrl: s.image_url || '', imageFile: null, link_url: s.link_url || '',
+      display_mode: s.display_mode || 'default', media_type: s.media_type || 'image',
     });
     setPreviewUrl(s.image_url || '');
     setActiveLang('kr');
@@ -123,6 +137,9 @@ export default function CarouselAdminPage() {
         badge: formData.badge, title: formData.title, subtitle: formData.subtitle,
         image_url: finalImageUrl || null, bg_color: formData.bg_color,
         sort_order: parseInt(formData.sort_order) || 0, is_active: formData.is_active,
+        link_url: formData.link_url || null,
+        display_mode: formData.display_mode,
+        media_type: formData.media_type,
       };
       if (!supabase) throw new Error('클라이언트 없음');
       if (editingId) {
@@ -170,6 +187,7 @@ export default function CarouselAdminPage() {
                 <th className="p-4 pl-6 w-12">순서</th>
                 <th className="p-4 w-20">이미지</th>
                 <th className="p-4">뱃지 / 제목</th>
+                <th className="p-4 w-20">모드</th>
                 <th className="p-4 w-24">배경색</th>
                 <th className="p-4 w-20">상태</th>
                 <th className="p-4 pr-6 text-right w-24">작업</th>
@@ -181,13 +199,40 @@ export default function CarouselAdminPage() {
                   <td className="p-4 pl-6"><div className="flex items-center gap-1 text-gray-400"><GripVertical className="w-4 h-4" /><span className="text-sm font-mono">{s.sort_order}</span></div></td>
                   <td className="p-4">
                     <div className="w-16 h-12 rounded overflow-hidden bg-gray-100 border border-gray-200">
-                      {s.image_url ? <img src={s.image_url} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-4 h-4 text-gray-300" /></div>}
+                      {s.image_url ? (
+                        s.media_type === 'video' ? (
+                          <video src={s.image_url} muted className="w-full h-full object-cover" />
+                        ) : (
+                          <img src={s.image_url} className="w-full h-full object-cover" alt="" />
+                        )
+                      ) : <div className="w-full h-full flex items-center justify-center"><ImageIcon className="w-4 h-4 text-gray-300" /></div>}
                     </div>
                   </td>
                   <td className="p-4">
                     <p className="text-[10px] text-gray-400 font-semibold">{s.badge?.kr || ''}</p>
                     <p className="text-sm font-bold text-gray-900 line-clamp-1">{(s.title?.kr || '').replace(/\n/g, ' ')}</p>
                     <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{s.subtitle?.kr || ''}</p>
+                    {s.link_url && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-blue-500 mt-1">
+                        <LinkIcon className="w-3 h-3" />{s.link_url}
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold w-fit ${
+                        s.display_mode === 'fullpage' ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {s.display_mode === 'fullpage' ? '풀페이지' : '기본'}
+                      </span>
+                      {s.media_type && s.media_type !== 'image' && (
+                        <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold w-fit ${
+                          s.media_type === 'video' ? 'bg-blue-50 text-blue-700' : 'bg-orange-50 text-orange-700'
+                        }`}>
+                          {s.media_type === 'video' ? 'MP4' : 'GIF'}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="p-4"><div className="flex items-center gap-2"><div className="w-6 h-6 rounded border border-gray-200" style={{ backgroundColor: s.bg_color }} /><span className="text-xs text-gray-400 font-mono">{s.bg_color}</span></div></td>
                   <td className="p-4">
@@ -219,13 +264,57 @@ export default function CarouselAdminPage() {
 
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
 
+              {/* Display Mode Toggle */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">배너 표시 모드</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, display_mode: 'default' }))}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                      formData.display_mode === 'default'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-8 h-5 rounded border border-gray-300 bg-gray-100 flex">
+                        <div className="w-1/2 flex items-center justify-center text-[6px] text-gray-400">T</div>
+                        <div className="w-1/2 bg-gray-300 rounded-r" />
+                      </div>
+                      <span className="text-sm font-semibold text-gray-800">기본형</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500">텍스트 + 이미지 분리 레이아웃</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, display_mode: 'fullpage' }))}
+                    className={`p-3 rounded-lg border-2 text-left transition-all ${
+                      formData.display_mode === 'fullpage'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-8 h-5 rounded border border-gray-300 bg-gray-400 flex items-center justify-center text-[6px] text-white font-bold">FULL</div>
+                      <span className="text-sm font-semibold text-gray-800">풀페이지</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500">이미지 전체 배너 (텍스트 오버레이)</p>
+                  </button>
+                </div>
+              </div>
+
               {/* Image upload */}
               <div className="space-y-2">
                 <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">슬라이드 이미지</label>
                 <div className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer group ${previewUrl ? 'border-gray-200' : 'border-gray-200 hover:border-gray-400'}`} onClick={() => fileInputRef.current?.click()}>
                   {previewUrl ? (
                     <div className="relative">
-                      <img src={previewUrl} alt="미리보기" className="w-full h-44 object-contain rounded-xl bg-gray-50" />
+                      {formData.media_type === 'video' ? (
+                        <video src={previewUrl} autoPlay muted loop playsInline className="w-full h-44 object-contain rounded-xl bg-gray-50" />
+                      ) : (
+                        <img src={previewUrl} alt="미리보기" className="w-full h-44 object-contain rounded-xl bg-gray-50" />
+                      )}
                       <button type="button" onClick={(e) => { e.stopPropagation(); setPreviewUrl(''); setFormData(prev => ({ ...prev, imageFile: null, imageUrl: '' })); setUploadProgress('idle'); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"><X className="w-4 h-4" /></button>
                       {uploadProgress === 'uploading' && <div className="absolute inset-0 bg-white/70 rounded-xl flex items-center justify-center"><div className="text-sm text-gray-700 font-semibold animate-pulse">업로드 중...</div></div>}
                       {uploadProgress === 'done' && <div className="absolute bottom-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded-md">업로드 완료</div>}
@@ -234,11 +323,11 @@ export default function CarouselAdminPage() {
                     <div className="h-36 flex flex-col items-center justify-center text-gray-400 group-hover:text-gray-600 transition-colors">
                       <Upload className="w-8 h-8 mb-2" />
                       <p className="text-sm font-semibold">클릭하여 이미지 업로드</p>
-                      <p className="text-xs mt-1">JPG, PNG, WEBP — 최대 10MB</p>
+                      <p className="text-xs mt-1">JPG, PNG, WEBP, GIF, MP4 — 최대 20MB</p>
                     </div>
                   )}
                 </div>
-                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleFileSelect} />
+                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" className="hidden" onChange={handleFileSelect} />
                 {!formData.imageFile && (
                   <>
                     <div className="flex items-center gap-2 mt-2"><div className="h-px flex-1 bg-gray-100" /><span className="text-[10px] text-gray-400 font-semibold">또는 URL 직접 입력</span><div className="h-px flex-1 bg-gray-100" /></div>
@@ -275,6 +364,19 @@ export default function CarouselAdminPage() {
                   <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">부제목 ({LANG_LABELS[activeLang as keyof typeof LANG_LABELS]})</label>
                   <input type="text" value={formData.subtitle[activeLang] || ''} onChange={e => updateField('subtitle', activeLang, e.target.value)} placeholder={activeLang === 'kr' ? '사계절 + 속수분 + 윤광 + 모공쫀쫀' : 'All-season + Deep hydration + Glow'} className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none" />
                 </div>
+              </div>
+
+              {/* Click Link URL */}
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">클릭 링크 URL (선택)</label>
+                <input
+                  type="text"
+                  value={formData.link_url}
+                  onChange={e => setFormData(prev => ({ ...prev, link_url: e.target.value }))}
+                  placeholder="예: /kr/products 또는 https://example.com"
+                  className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
+                />
+                <p className="text-[10px] text-gray-400">입력하면 슬라이드 클릭 시 해당 링크로 이동합니다. 비워두면 클릭 비활성.</p>
               </div>
 
               {/* Bg color + Sort order + Active */}

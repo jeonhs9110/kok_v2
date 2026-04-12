@@ -1,4 +1,5 @@
 'use client';
+
 import { UserPlus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -8,57 +9,188 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
-const L: Record<string, { title: string; subtitle: string; email: string; password: string; register: string; creating: string; login: string; minChars: string; failMsg: string; successTitle: string; successMsg: string; backToLogin: string }> = {
-  kr: { title: '회원가입', subtitle: '콕콕가든 계정을 만드세요.', email: '이메일 주소', password: '비밀번호 (6자 이상)', register: '회원가입', creating: '생성 중...', login: '로그인으로 돌아가기', minChars: '비밀번호는 6자 이상이어야 합니다.', failMsg: '회원가입에 실패했습니다. 다시 시도해주세요.', successTitle: '가입 완료', successMsg: '계정이 생성되었습니다. 이제 로그인할 수 있습니다.', backToLogin: '로그인하기' },
-  en: { title: 'Create Account', subtitle: 'Register for Kokkok Garden.', email: 'Email Address', password: 'Password (min 6 chars)', register: 'REGISTER', creating: 'CREATING...', login: 'Back to login', minChars: 'Password must be at least 6 characters.', failMsg: 'Registration failed. Please try again.', successTitle: 'Account Created', successMsg: 'Your account has been created. You can now log in.', backToLogin: 'GO TO LOGIN' },
+interface RegField {
+  key: string;
+  label_kr: string;
+  label_en: string;
+  type: string;
+  required: boolean;
+  enabled: boolean;
+  options_kr?: string[];
+  options_en?: string[];
+}
+
+interface AuthProviderInfo {
+  provider: string;
+  is_enabled: boolean;
+}
+
+interface RegConfig {
+  fields: RegField[];
+  require_marketing_consent: boolean;
+  require_privacy_consent: boolean;
+  terms_url: string;
+  privacy_url: string;
+}
+
+const L: Record<string, {
+  title: string; subtitle: string; register: string; creating: string;
+  login: string; failMsg: string; successTitle: string; successMsg: string; backToLogin: string;
+  privacyConsent: string; marketingConsent: string; required: string; optional: string;
+  orSocialLogin: string; minChars: string; agreeAll: string;
+}> = {
+  kr: {
+    title: '회원가입', subtitle: '콕콕가든 계정을 만드세요.',
+    register: '회원가입', creating: '생성 중...',
+    login: '이미 계정이 있으신가요? 로그인', failMsg: '회원가입에 실패했습니다.',
+    successTitle: '가입 완료', successMsg: '계정이 생성되었습니다. 이제 로그인할 수 있습니다.',
+    backToLogin: '로그인하기',
+    privacyConsent: '(필수) 개인정보 처리방침에 동의합니다.',
+    marketingConsent: '(선택) 마케팅 정보 수신에 동의합니다.',
+    required: '필수', optional: '선택',
+    orSocialLogin: '또는 소셜 계정으로 가입',
+    minChars: '비밀번호는 6자 이상이어야 합니다.',
+    agreeAll: '전체 동의',
+  },
+  en: {
+    title: 'Create Account', subtitle: 'Register for Kokkok Garden.',
+    register: 'REGISTER', creating: 'CREATING...',
+    login: 'Already have an account? Sign in', failMsg: 'Registration failed. Please try again.',
+    successTitle: 'Account Created', successMsg: 'Your account has been created. You can now log in.',
+    backToLogin: 'GO TO LOGIN',
+    privacyConsent: '(Required) I agree to the Privacy Policy.',
+    marketingConsent: '(Optional) I agree to receive marketing communications.',
+    required: 'Required', optional: 'Optional',
+    orSocialLogin: 'or sign up with',
+    minChars: 'Password must be at least 6 characters.',
+    agreeAll: 'Agree to all',
+  },
+};
+
+const SOCIAL_BUTTONS: Record<string, { label: string; bg: string; text: string; icon: string }> = {
+  google: { label: 'Google', bg: 'bg-white border border-gray-300 hover:bg-gray-50', text: 'text-gray-700', icon: 'G' },
+  kakao: { label: 'Kakao', bg: 'bg-[#FEE500] hover:bg-[#FDD800]', text: 'text-[#391B1B]', icon: 'K' },
+  naver: { label: 'Naver', bg: 'bg-[#03C75A] hover:bg-[#02b350]', text: 'text-white', icon: 'N' },
+  apple: { label: 'Apple', bg: 'bg-black hover:bg-gray-900', text: 'text-white', icon: '' },
 };
 
 function detectLang(): string {
   if (typeof window === 'undefined') return 'kr';
   const cookie = document.cookie.match(/kokkok_lang=(\w+)/);
-  if (cookie && ['kr','en'].includes(cookie[1])) return cookie[1];
+  if (cookie && ['kr', 'en'].includes(cookie[1])) return cookie[1];
   const nav = navigator.language.toLowerCase();
-  if (nav.startsWith('ko')) return 'kr';
-  if (nav.startsWith('zh')) return 'cn';
-  if (nav.startsWith('ja')) return 'jp';
-  if (nav.startsWith('vi')) return 'vn';
-  if (nav.startsWith('th')) return 'th';
-  return 'en';
+  return nav.startsWith('ko') ? 'kr' : 'en';
 }
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [lang, setLang] = useState('kr');
+  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [privacyChecked, setPrivacyChecked] = useState(false);
+  const [marketingChecked, setMarketingChecked] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [lang, setLang] = useState('kr');
+  const [config, setConfig] = useState<RegConfig | null>(null);
+  const [socialProviders, setSocialProviders] = useState<AuthProviderInfo[]>([]);
+  const [configLoading, setConfigLoading] = useState(true);
+
   const t = L[lang] ?? L['en'];
 
   useEffect(() => { setLang(detectLang()); }, []);
 
-  const handleRegister = async (e: React.FormEvent) => {
+  useEffect(() => {
+    async function load() {
+      if (!supabase) { setConfigLoading(false); return; }
+      try {
+        const [regRes, authRes] = await Promise.all([
+          supabase.from('registration_config').select('*').single(),
+          supabase.from('auth_providers_config').select('provider, is_enabled').eq('is_enabled', true),
+        ]);
+        if (regRes.data) {
+          setConfig({
+            fields: regRes.data.fields || [],
+            require_marketing_consent: regRes.data.require_marketing_consent ?? true,
+            require_privacy_consent: regRes.data.require_privacy_consent ?? true,
+            terms_url: regRes.data.terms_url || '/terms',
+            privacy_url: regRes.data.privacy_url || '/privacy',
+          });
+        }
+        if (authRes.data) setSocialProviders(authRes.data);
+      } catch { /* tables may not exist, use defaults */ }
+      setConfigLoading(false);
+    }
+    load();
+  }, []);
+
+  const enabledFields = config?.fields.filter(f => f.enabled) ?? [
+    { key: 'email', label_kr: '이메일', label_en: 'Email', type: 'email', required: true, enabled: true },
+    { key: 'password', label_kr: '비밀번호', label_en: 'Password', type: 'password', required: true, enabled: true },
+  ];
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    if (password.length < 6) {
+    // Validate required fields
+    for (const f of enabledFields) {
+      if (f.required && !formData[f.key]?.trim()) {
+        setError(`${lang === 'kr' ? f.label_kr : f.label_en} ${lang === 'kr' ? '을(를) 입력해주세요.' : 'is required.'}`);
+        setIsLoading(false);
+        return;
+      }
+    }
+
+    if ((formData.password?.length || 0) < 6) {
       setError(t.minChars);
+      setIsLoading(false);
+      return;
+    }
+
+    if (config?.require_privacy_consent && !privacyChecked) {
+      setError(lang === 'kr' ? '개인정보 처리방침에 동의해주세요.' : 'Please agree to the Privacy Policy.');
       setIsLoading(false);
       return;
     }
 
     try {
       if (!supabase) throw new Error('No client');
-      const { error: authError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password: password.trim(),
+
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email?.trim(),
+        password: formData.password?.trim(),
       });
-      if (authError) {
-        setError(authError.message);
-      } else {
-        setSuccess(true);
+      if (authError) { setError(authError.message); setIsLoading(false); return; }
+
+      // 2. Save profile
+      if (authData.user) {
+        const profile: Record<string, unknown> = {
+          id: authData.user.id,
+          email: formData.email?.trim(),
+          name: formData.name?.trim() || null,
+          phone: formData.phone?.trim() || null,
+          gender: formData.gender || null,
+          birthday: formData.birthday || null,
+          country: formData.country?.trim() || null,
+          skin_type: formData.skin_type || null,
+          marketing_consent: marketingChecked,
+          privacy_consent: privacyChecked,
+          auth_provider: 'email',
+        };
+
+        // Save custom fields
+        const standardKeys = ['email', 'password', 'name', 'phone', 'gender', 'birthday', 'age_range', 'country', 'skin_type'];
+        const customFields: Record<string, string> = {};
+        for (const [k, v] of Object.entries(formData)) {
+          if (!standardKeys.includes(k) && v) customFields[k] = v;
+        }
+        if (Object.keys(customFields).length > 0) profile.custom_fields = customFields;
+
+        await supabase.from('customer_profiles').upsert(profile);
       }
+
+      setSuccess(true);
     } catch {
       setError(t.failMsg);
     } finally {
@@ -66,58 +198,162 @@ export default function RegisterPage() {
     }
   };
 
+  const handleSocialLogin = async (provider: string) => {
+    if (!supabase) return;
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: provider as 'google' | 'kakao' | 'apple',
+        options: { redirectTo: `${window.location.origin}/register/callback` },
+      });
+    } catch {
+      setError(`${provider} login failed.`);
+    }
+  };
+
+  const handleAgreeAll = () => {
+    const allChecked = privacyChecked && marketingChecked;
+    setPrivacyChecked(!allChecked);
+    setMarketingChecked(!allChecked);
+  };
+
   if (success) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center font-sans px-4 animate-in fade-in duration-500">
         <div className="w-full max-w-sm text-center">
-          <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 font-extrabold text-2xl">
-            ✓
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#111111] mb-4">{t.successTitle}</h1>
-          <p className="text-sm text-gray-500 mb-8 leading-relaxed">{t.successMsg}</p>
-          <Link href="/login" className="px-8 py-3 bg-[#111111] text-white tracking-widest text-xs font-bold w-full block">
-            {t.backToLogin}
-          </Link>
+          <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 font-extrabold text-2xl">✓</div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#111] mb-4">{t.successTitle}</h1>
+          <p className="text-sm text-gray-500 mb-8">{t.successMsg}</p>
+          <Link href="/login" className="px-8 py-3 bg-[#111] text-white tracking-widest text-xs font-bold w-full block">{t.backToLogin}</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center font-sans px-4 animate-in fade-in duration-500">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-10">
-          <div className="w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-6 bg-gray-50">
-            <UserPlus className="w-5 h-5 text-[#111111]" />
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center font-sans px-4 py-12 animate-in fade-in duration-500">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-5 bg-gray-50">
+            <UserPlus className="w-5 h-5 text-[#111]" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#111111] mb-2">{t.title}</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight text-[#111] mb-2">{t.title}</h1>
           <p className="text-sm text-gray-500">{t.subtitle}</p>
         </div>
 
-        <form onSubmit={handleRegister} className="space-y-6">
-          <div className="space-y-4">
-            <input
-              type="email" value={email} onChange={e => setEmail(e.target.value)}
-              placeholder={t.email} required
-              className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-[#111111] placeholder:text-gray-400"
-            />
-            <input
-              type="password" value={password} onChange={e => setPassword(e.target.value)}
-              placeholder={t.password} required
-              className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-[#111111] placeholder:text-gray-400"
-            />
+        {/* Social Login Buttons */}
+        {socialProviders.length > 0 && (
+          <>
+            <div className="space-y-2.5 mb-6">
+              {socialProviders.map(sp => {
+                const btn = SOCIAL_BUTTONS[sp.provider];
+                if (!btn) return null;
+                return (
+                  <button
+                    key={sp.provider}
+                    onClick={() => handleSocialLogin(sp.provider)}
+                    className={`w-full flex items-center justify-center gap-3 py-3 rounded-lg font-semibold text-sm transition-all ${btn.bg} ${btn.text}`}
+                  >
+                    <span className="w-5 h-5 flex items-center justify-center font-bold text-sm">{btn.icon}</span>
+                    {btn.label}{lang === 'kr' ? '로 가입' : ''}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-px flex-1 bg-gray-200" />
+              <span className="text-xs text-gray-400">{t.orSocialLogin}</span>
+              <div className="h-px flex-1 bg-gray-200" />
+            </div>
+          </>
+        )}
+
+        {/* Registration Form */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {configLoading ? (
+            <div className="py-8 text-center text-sm text-gray-400">로딩 중...</div>
+          ) : (
+            enabledFields.map(f => {
+              const label = lang === 'kr' ? f.label_kr : f.label_en;
+              const options = lang === 'kr' ? f.options_kr : f.options_en;
+
+              if (f.type === 'select' && options) {
+                return (
+                  <div key={f.key}>
+                    <label className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 mb-1">
+                      {label}
+                      {f.required ? <span className="text-red-400">*</span> : <span className="text-gray-300">({t.optional})</span>}
+                    </label>
+                    <select
+                      value={formData[f.key] || ''}
+                      onChange={e => setFormData(p => ({ ...p, [f.key]: e.target.value }))}
+                      required={f.required}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-[#111] outline-none focus:border-black transition"
+                    >
+                      <option value="">{lang === 'kr' ? '선택해주세요' : 'Select...'}</option>
+                      {options.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={f.key}>
+                  <label className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 mb-1">
+                    {label}
+                    {f.required ? <span className="text-red-400">*</span> : <span className="text-gray-300">({t.optional})</span>}
+                  </label>
+                  <input
+                    type={f.type}
+                    value={formData[f.key] || ''}
+                    onChange={e => setFormData(p => ({ ...p, [f.key]: e.target.value }))}
+                    required={f.required}
+                    placeholder={label}
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-[#111] placeholder:text-gray-400 outline-none focus:border-black transition"
+                  />
+                </div>
+              );
+            })
+          )}
+
+          {/* Legal Consents */}
+          <div className="border-t border-gray-100 pt-4 space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer" onClick={handleAgreeAll}>
+              <input type="checkbox" checked={privacyChecked && marketingChecked} readOnly className="w-4 h-4 rounded border-gray-300" />
+              <span className="text-sm font-semibold text-gray-800">{t.agreeAll}</span>
+            </label>
+            <div className="ml-6 space-y-2">
+              {config?.require_privacy_consent !== false && (
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" checked={privacyChecked} onChange={() => setPrivacyChecked(!privacyChecked)} className="w-4 h-4 rounded border-gray-300 mt-0.5" />
+                  <span className="text-xs text-gray-600">
+                    {t.privacyConsent}{' '}
+                    <Link href={config?.privacy_url || '/privacy'} className="text-blue-500 underline" target="_blank">보기</Link>
+                  </span>
+                </label>
+              )}
+              {config?.require_marketing_consent !== false && (
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input type="checkbox" checked={marketingChecked} onChange={() => setMarketingChecked(!marketingChecked)} className="w-4 h-4 rounded border-gray-300 mt-0.5" />
+                  <span className="text-xs text-gray-600">{t.marketingConsent}</span>
+                </label>
+              )}
+            </div>
           </div>
 
           {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
 
-          <button type="submit" disabled={isLoading}
-            className="w-full bg-[#111111] text-white py-4 font-bold tracking-widest text-[13px] hover:bg-black hover:shadow-lg transition-all mt-8 disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-[#111] text-white py-3.5 font-bold tracking-widest text-[13px] rounded-lg hover:bg-black hover:shadow-lg transition-all disabled:opacity-50"
+          >
             {isLoading ? t.creating : t.register}
           </button>
         </form>
 
-        <div className="mt-8 text-center text-sm">
-          <Link href="/login" className="text-gray-500 hover:text-black transition-colors font-medium underline underline-offset-4">
+        <div className="mt-6 text-center">
+          <Link href="/login" className="text-sm text-gray-500 hover:text-black transition-colors underline underline-offset-4">
             {t.login}
           </Link>
         </div>

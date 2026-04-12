@@ -30,6 +30,7 @@ export default function ProductsAdminPage() {
     naverStoreUrl: '',
     categoryId: '',
     subcategoryId: '',
+    isBestSeller: false,
   });
 
   const fetchCategories = useCallback(async () => {
@@ -133,7 +134,7 @@ export default function ProductsAdminPage() {
   const resetModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ name: '', summary: '', ingredient: '', price: '', originalPrice: '', imageUrl: '', imageFile: null, description: '', naverStoreUrl: '', categoryId: '', subcategoryId: '' });
+    setFormData({ name: '', summary: '', ingredient: '', price: '', originalPrice: '', imageUrl: '', imageFile: null, description: '', naverStoreUrl: '', categoryId: '', subcategoryId: '', isBestSeller: false });
     setPreviewUrl('');
     setUploadProgress('idle');
     setIsSubmitting(false);
@@ -153,6 +154,7 @@ export default function ProductsAdminPage() {
       naverStoreUrl: item.naver_store_url || '',
       categoryId: item.category_id || '',
       subcategoryId: item.subcategory_id || '',
+      isBestSeller: item.is_best_seller ?? false,
     });
     setPreviewUrl(item.imageUrl);
     setIsModalOpen(true);
@@ -199,6 +201,7 @@ export default function ProductsAdminPage() {
         naver_store_url: formData.naverStoreUrl || null,
         category_id: formData.categoryId || null,
         subcategory_id: formData.subcategoryId || null,
+        is_best_seller: formData.isBestSeller,
       };
 
       if (editingId) {
@@ -278,7 +281,12 @@ export default function ProductsAdminPage() {
                         }
                       </div>
                       <div>
-                        <p className="font-bold text-gray-900 text-sm">{item.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-gray-900 text-sm">{item.name}</p>
+                          {item.is_best_seller && (
+                            <span className="px-1.5 py-0.5 bg-amber-50 text-amber-700 text-[9px] font-bold rounded tracking-wide uppercase">Best</span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-400 mt-0.5 line-clamp-1">{item.summary}</p>
                       </div>
                     </div>
@@ -531,6 +539,20 @@ export default function ProductsAdminPage() {
                   placeholder="https://smartstore.naver.com/kokkok-garden/products/..."
                 />
                 <p className="text-[10px] text-gray-400 mt-1">입력하면 고객이 구매하기 클릭 시 네이버 스토어로 이동합니다. 비워두면 자체 결제(추후 KCP)로 연결됩니다.</p>
+              </div>
+
+              {/* Best Seller toggle */}
+              <div className="flex items-center gap-3 pt-2">
+                <input
+                  type="checkbox"
+                  id="isBestSeller"
+                  checked={formData.isBestSeller}
+                  onChange={e => setFormData(prev => ({ ...prev, isBestSeller: e.target.checked }))}
+                  className="w-4 h-4 accent-[#4a7a3e] cursor-pointer"
+                />
+                <label htmlFor="isBestSeller" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
+                  Best Seller로 홈페이지에 노출 (최대 3개)
+                </label>
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">

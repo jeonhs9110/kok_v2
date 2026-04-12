@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Video, Trash2, Plus } from 'lucide-react';
+import { Video, Trash2, Plus, Link as LinkIcon } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -10,76 +10,103 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 interface Short {
   id: string;
   youtubeId: string;
+  productId: string | null;
+  productName: string | null;
   addedAt: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
 }
 
 export default function ShortsAdminPage() {
   const [shorts, setShorts] = useState<Short[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [newUrl, setNewUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchShorts() {
-      try {
-        if (!supabase) throw new Error("클라이언트 없음");
-        const { data, error } = await supabase.from('shorts').select('*').order('created_at', { ascending: false });
-        if (error || !data) throw error;
-        setShorts(data.map(d => ({ id: d.id, youtubeId: d.youtube_id, addedAt: new Date(d.created_at).toISOString().split('T')[0] })));
-      } catch (e) {
-        console.error("Supabase 연결 실패. 목업 데이터로 전환.", e);
-        setShorts([
-          { id: '1', youtubeId: 'ho0EhuO3RNs', addedAt: '2026-04-01' },
-          { id: '2', youtubeId: 'lD1VId0ec2s', addedAt: '2026-04-01' },
-          { id: '3', youtubeId: 'mkBTUDxMKtU', addedAt: '2026-04-02' },
-          { id: '4', youtubeId: 'yPRcriD4FcM', addedAt: '2026-04-02' },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
     fetchShorts();
+    fetchProducts();
   }, []);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  async function fetchProducts() {
+    if (!supabase) return;
+    const { data } = await supabase.from('products').select('id, name').eq('is_active', true).order('name');
+    if (data) setProducts(data);
+  }
+
+  async function fetchShorts() {
+    try {
+      if (!supabase) throw new Error('클라이언트 없음');
+      const { data, error } = await supabase
+        .from('shorts')
+        .select('id, youtube_id, product_id, created_at, products(name)')
+        .order('created_at', { ascending: false });
+      if (error || !data) throw error;
+      setShorts(data.map((d: any) => ({
+        id: d.id,
+        youtubeId: d.youtube_id,
+        productId: d.product_id || null,
+        productName: d.products?.name || null,
+        addedAt: new Date(d.created_at).toISOString().split('T')[0],
+      })));
+    } catch {
+      setShorts([
+        { id: '1', youtubeId: 'ho0EhuO3RNs', productId: null, productName: null, addedAt: '2026-04-01' },
+        { id: '2', youtubeId: 'lD1VId0ec2s', productId: null, productName: null, addedAt: '2026-04-01' },
+        { id: '3', youtubeId: 'mkBTUDxMKtU', productId: null, productName: null, addedAt: '2026-04-02' },
+        { id: '4', youtubeId: 'yPRcriD4FcM', productId: null, productName: null, addedAt: '2026-04-02' },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newUrl) return;
-    
+
     const match = newUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|shorts\/)([^"&?\/\s]{11})/);
     const videoId = match ? match[1] : (newUrl.length === 11 ? newUrl : null);
 
     if (videoId) {
       const tempId = Date.now().toString();
-      const newShort = { id: tempId, youtubeId: videoId, addedAt: new Date().toISOString().split('T')[0] };
-      setShorts([newShort, ...shorts]);
+      setShorts(prev => [{ id: tempId, youtubeId: videoId, productId: null, productName: null, addedAt: new Date().toISOString().split('T')[0] }, ...prev]);
       setNewUrl('');
-
       try {
-        if (!supabase) throw new Error("클라이언트 없음");
+        if (!supabase) throw new Error('클라이언트 없음');
         const { error } = await supabase.from('shorts').insert([{ youtube_id: videoId }]);
-        if (error) {
-          console.warn("DB 삽입 실패. 목업 모드로 동작 중.");
-        } else {
-           alert(`[관리자] 성공! YouTube ID '${videoId}' 가 홈페이지에 게시되었습니다.`);
+        if (!error) {
+          alert(`YouTube ID '${videoId}' 가 홈페이지에 추가되었습니다.`);
+          fetchShorts();
         }
-      } catch (e) {
-         console.warn("목업 모드로 동작 중");
-      }
+      } catch { /* mock mode */ }
     } else {
       alert('유효하지 않은 YouTube URL 또는 ID입니다.');
     }
   };
 
   const handleDelete = async (id: string) => {
-    setShorts(shorts.filter(s => s.id !== id));
+    setShorts(prev => prev.filter(s => s.id !== id));
     try {
-      if (!supabase) throw new Error("클라이언트 없음");
-      const { error } = await supabase.from('shorts').delete().eq('id', id);
-      if (error) {
-         console.warn("DB 삭제 실패. 목업 모드로 동작 중.");
+      if (!supabase) throw new Error('클라이언트 없음');
+      await supabase.from('shorts').delete().eq('id', id);
+    } catch { /* ignore */ }
+  };
+
+  const handleLinkProduct = async (shortId: string, productId: string | null) => {
+    setLinkingId(shortId);
+    try {
+      if (supabase) {
+        await supabase.from('shorts').update({ product_id: productId || null }).eq('id', shortId);
       }
-    } catch {
-       console.warn("DB 삭제 실패.");
-    }
+      const prod = products.find(p => p.id === productId);
+      setShorts(prev => prev.map(s => s.id === shortId ? { ...s, productId: productId, productName: prod?.name || null } : s));
+    } catch { /* ignore */ }
+    finally { setLinkingId(null); }
   };
 
   if (isLoading) return (
@@ -96,8 +123,8 @@ export default function ShortsAdminPage() {
           <Video className="w-5 h-5 text-purple-500" /> 새 브랜드 숏츠 추가
         </h2>
         <form onSubmit={handleAdd} className="flex gap-4">
-          <input 
-            type="text" 
+          <input
+            type="text"
             value={newUrl}
             onChange={(e) => setNewUrl(e.target.value)}
             placeholder="YouTube Shorts URL 또는 영상 ID 붙여넣기 (예: ho0EhuO3RNs)"
@@ -116,27 +143,49 @@ export default function ShortsAdminPage() {
           <h2 className="text-lg font-bold text-gray-800">현재 스토어에 게시 중</h2>
           <span className="text-sm font-medium text-gray-500">{shorts.length}개 항목</span>
         </div>
-        
+
         <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
           {shorts.map((short) => (
             <div key={short.id} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
               <div className="aspect-[9/16] w-full">
-                <img 
-                  src={`https://i.ytimg.com/vi/${short.youtubeId}/hqdefault.jpg`} 
-                  alt="썸네일" 
+                <img
+                  src={`https://i.ytimg.com/vi/${short.youtubeId}/hqdefault.jpg`}
+                  alt="썸네일"
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/60 to-transparent flex justify-between items-start">
                 <span className="text-[10px] text-white font-mono bg-black/50 px-2 py-1 rounded backdrop-blur-sm">{short.youtubeId}</span>
-                <button 
+                <button
                   onClick={() => handleDelete(short.id)}
                   className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-3 text-xs text-gray-500 font-medium">추가일: {short.addedAt}</div>
+
+              {/* Product link selector */}
+              <div className="p-2 border-t border-gray-100">
+                <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1 mb-1">
+                  <LinkIcon className="w-2.5 h-2.5" /> 연결 제품
+                </label>
+                <select
+                  value={short.productId || ''}
+                  onChange={e => handleLinkProduct(short.id, e.target.value || null)}
+                  disabled={linkingId === short.id}
+                  className="w-full text-[11px] border border-gray-200 rounded px-1.5 py-1 bg-white focus:outline-none focus:border-black transition disabled:opacity-50"
+                >
+                  <option value="">연결 없음</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                {short.productName && (
+                  <p className="text-[10px] text-green-600 font-semibold mt-1 truncate">✓ {short.productName}</p>
+                )}
+              </div>
+
+              <div className="px-3 pb-2 text-xs text-gray-500 font-medium">추가일: {short.addedAt}</div>
             </div>
           ))}
         </div>

@@ -14,6 +14,7 @@ export interface Product {
   originalPrice: number;
   imageUrl: string;
   is_active: boolean;
+  is_best_seller?: boolean;
   naver_store_url?: string;
   category_id?: string;
   subcategory_id?: string;
@@ -86,6 +87,7 @@ export async function getProducts(): Promise<Product[]> {
       originalPrice: Number(d.original_price || d.price),
       imageUrl: (d.images && d.images.length > 0) ? d.images[0] : '',
       is_active: d.is_active,
+      is_best_seller: d.is_best_seller ?? false,
       naver_store_url: d.naver_store_url || undefined,
       category_id: d.category_id || undefined,
       subcategory_id: d.subcategory_id || undefined,

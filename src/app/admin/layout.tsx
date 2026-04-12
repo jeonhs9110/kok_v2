@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image } from 'lucide-react';
+import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard, Scale } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -13,8 +13,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: '카테고리', href: '/admin/categories', icon: Tag },
     { name: '상품 관리', href: '/admin/products', icon: Package },
     { name: '캐러셀', href: '/admin/carousel', icon: Image },
+    { name: '프로모 배너', href: '/admin/promo-banners', icon: GalleryHorizontal },
+    { name: '서브 히어로', href: '/admin/sub-hero', icon: PanelTop },
     { name: '메뉴 관리', href: '/admin/menus', icon: MenuSquare },
     { name: '숏츠', href: '/admin/shorts', icon: Video },
+    { name: '인스타그램', href: '/admin/instagram', icon: Heart },
+    { name: '챗봇', href: '/admin/chatbot', icon: MessageCircle },
+    { name: '회원가입 관리', href: '/admin/registration', icon: UserPlus },
+    { name: '결제 시스템', href: '/admin/payments', icon: CreditCard },
+    { name: '법적 사항', href: '/admin/legal', icon: Scale },
   ];
 
   const pageTitle: Record<string, string> = {
@@ -23,8 +30,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     '/admin/categories': '카테고리 관리',
     '/admin/products': '상품 관리',
     '/admin/carousel': '캐러셀 관리',
+    '/admin/promo-banners': '프로모 배너 관리',
+    '/admin/sub-hero': '서브 히어로 배너 관리',
     '/admin/menus': '메뉴 관리',
     '/admin/shorts': '숏츠 관리',
+    '/admin/instagram': '인스타그램 관리',
+    '/admin/chatbot': '챗봇 관리',
+    '/admin/registration': '회원가입 관리',
+    '/admin/payments': '결제 시스템 관리',
+    '/admin/legal': '법적 사항 관리',
   };
 
   return (

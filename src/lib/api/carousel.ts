@@ -9,6 +9,9 @@ export interface CarouselSlide {
   bg_color: string;
   sort_order: number;
   is_active: boolean;
+  link_url: string | null;
+  display_mode: 'default' | 'fullpage';
+  media_type: 'image' | 'video' | 'gif';
   created_at: string;
 }
 

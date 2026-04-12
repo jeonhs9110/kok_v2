@@ -1,5 +1,15 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '')
+    .replace(/<iframe\b[^>]*>/gi, '')
+    .replace(/<object\b[^>]*>/gi, '')
+    .replace(/<embed\b[^>]*>/gi, '')
+    .replace(/javascript\s*:/gi, '');
+}
 import { getMenuBySlug, getPostsByMenuPaginated } from '@/lib/api/menus';
 import { notFound } from 'next/navigation';
 import Pagination from '@/components/Pagination';
@@ -30,7 +40,7 @@ export default async function MenuPage({ slug, lang, page }: Props) {
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight mb-8">{title}</h1>
         {content ? (
-          <div className="prose prose-neutral max-w-none" dangerouslySetInnerHTML={{ __html: content }} />
+          <div className="prose prose-neutral max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
         ) : (
           <p className="text-neutral-400 text-sm">콘텐츠가 없습니다.</p>
         )}

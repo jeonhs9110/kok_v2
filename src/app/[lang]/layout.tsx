@@ -5,6 +5,7 @@ import { I18nProvider } from '@/lib/i18n/context';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import AIChatbot from '@/components/AIChatbot';
+import CookieConsent from '@/components/CookieConsent';
 import PageTracker from '@/components/PageTracker';
 import { CartProvider } from '@/lib/cart/CartContext';
 
@@ -40,7 +41,8 @@ export default async function LangLayout({
           <Header canPurchase={isKorea} />
           <main className="flex-1 w-full bg-white">{children}</main>
           <Footer />
-          {!isKorea && <AIChatbot />}
+          <AIChatbot isKorea={isKorea} />
+          <CookieConsent />
           <PageTracker />
         </div>
       </CartProvider>

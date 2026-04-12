@@ -49,15 +49,17 @@ export default function LoginPage() {
         });
         if (!authError) {
           document.cookie = "kokkok_auth=true; path=/; max-age=86400; Secure; SameSite=Lax";
-          // Check if user is admin
+          // Check if user is admin → redirect to /admin, else to store
           const { data: { user } } = await supabase.auth.getUser();
+          let isAdmin = false;
           if (user) {
             const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
             if (profile?.role === 'admin') {
               document.cookie = "kokkok_admin_auth=true; path=/; max-age=86400; Secure; SameSite=Lax";
+              isAdmin = true;
             }
           }
-          window.location.href = `/${lang}`;
+          window.location.href = isAdmin ? '/admin' : `/${lang}`;
           return;
         }
       }
