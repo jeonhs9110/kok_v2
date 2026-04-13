@@ -32,7 +32,6 @@ const emptyPost = (i: number): IgPost => ({ id: null, image_url: '', link_url: '
 export default function InstagramAdminPage() {
   const [handle, setHandle] = useState('rdrd_official');
   const [description, setDescription] = useState('인스타그램에서 최신 소식을 확인하세요');
-  const [widgetUrl, setWidgetUrl] = useState('');
   const [posts, setPosts] = useState<IgPost[]>(Array.from({ length: SLOTS }, (_, i) => emptyPost(i)));
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
@@ -54,7 +53,6 @@ export default function InstagramAdminPage() {
       if (configRes.data) {
         setHandle(configRes.data.handle || 'rdrd_official');
         setDescription(configRes.data.description || '');
-        setWidgetUrl(configRes.data.widget_url || '');
       }
       const fetched = postsRes.data || [];
       const filled = Array.from({ length: SLOTS }, (_, i) => fetched[i] ? {
@@ -72,7 +70,7 @@ export default function InstagramAdminPage() {
     if (!supabase) return;
     setIsSavingConfig(true);
     try {
-      await supabase.from('instagram_config').upsert({ id: 1, handle, description, widget_url: widgetUrl, updated_at: new Date().toISOString() });
+      await supabase.from('instagram_config').upsert({ id: 1, handle, description, updated_at: new Date().toISOString() });
       alert('인스타그램 설정이 저장되었습니다.');
     } catch { alert('저장에 실패했습니다.'); }
     finally { setIsSavingConfig(false); }
@@ -177,43 +175,9 @@ export default function InstagramAdminPage() {
         </div>
       </div>
 
-      {/* Auto-feed widget (Option B) */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">🔗</span>
-          <h2 className="text-lg font-bold text-gray-800">자동 피드 (위젯 URL)</h2>
-          {widgetUrl && <span className="text-[10px] font-bold bg-green-500 text-white px-2 py-0.5 rounded-full">활성</span>}
-        </div>
-        <p className="text-sm text-gray-500 mb-3">
-          아래에 위젯 URL을 입력하면 홈페이지에 <strong>실시간 인스타그램 피드</strong>가 표시됩니다. 비워두면 아래 수동 업로드 이미지를 사용합니다.
-        </p>
-
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800 space-y-1">
-          <p className="font-bold">위젯 URL 받는 방법:</p>
-          <ol className="list-decimal ml-4 space-y-0.5">
-            <li>
-              <a href="https://lightwidget.com/" target="_blank" rel="noopener noreferrer" className="underline font-semibold">LightWidget.com</a> 무료 가입 (Instagram Basic 플랜은 무료)
-            </li>
-            <li>&quot;Create a widget&quot; → Instagram 계정 선택 → <code className="bg-amber-100 px-1 rounded">{handle}</code> 연결</li>
-            <li>생성된 iframe 코드에서 <code className="bg-amber-100 px-1 rounded">src=&quot;...&quot;</code> 안의 URL만 복사 (예: <code className="bg-amber-100 px-1 rounded">https://cdn.lightwidget.com/widgets/xxxx.html</code>)</li>
-            <li>아래에 붙여넣고 저장</li>
-          </ol>
-          <p className="pt-1 text-[11px]">대안: <a href="https://snapwidget.com/" target="_blank" rel="noopener noreferrer" className="underline">SnapWidget</a>, <a href="https://elfsight.com/instagram-feed-instashow/" target="_blank" rel="noopener noreferrer" className="underline">Elfsight</a></p>
-        </div>
-
-        <input
-          type="url"
-          value={widgetUrl}
-          onChange={e => setWidgetUrl(e.target.value)}
-          placeholder="https://cdn.lightwidget.com/widgets/xxxxxxxx.html"
-          className="w-full border border-gray-200 rounded px-3 py-2.5 text-sm bg-gray-50 focus:bg-white focus:border-black outline-none transition font-mono"
-        />
-        <p className="text-[11px] text-gray-400 mt-1">위젯 URL을 비워두면 수동 업로드 이미지가 사용됩니다 (아래 참고)</p>
-      </div>
-
       {/* Posts grid */}
-      <div className={`bg-white rounded-xl shadow-sm border border-gray-100 p-6 ${widgetUrl ? 'opacity-60' : ''}`}>
-        <h2 className="text-lg font-bold text-gray-800 mb-1">피드 이미지 (최대 6개) {widgetUrl && <span className="text-xs font-normal text-gray-400">— 위젯 URL 활성 시 미사용</span>}</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h2 className="text-lg font-bold text-gray-800 mb-1">피드 이미지 (최대 6개)</h2>
         <p className="text-sm text-gray-500 mb-6">홈페이지에 표시될 인스타그램 피드 이미지를 업로드하세요. 각 이미지에 클릭 링크를 설정할 수 있습니다.</p>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

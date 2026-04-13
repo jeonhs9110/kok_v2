@@ -112,7 +112,6 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
         instagramData = {
           handle: configRes.data.handle || 'rdrd_official',
           description: configRes.data.description || '',
-          widget_url: configRes.data.widget_url || '',
           posts: postsRes.data || [],
         };
       }
