@@ -116,13 +116,18 @@ export default function InstagramAdminPage() {
     try {
       const payload = { image_url: post.image_url, link_url: post.link_url, post_url: post.post_url, sort_order: slot, is_active: true };
       if (post.id) {
-        await supabase.from('instagram_posts').update(payload).eq('id', post.id);
+        const { error } = await supabase.from('instagram_posts').update(payload).eq('id', post.id);
+        if (error) throw error;
       } else {
         const { data, error } = await supabase.from('instagram_posts').insert([payload]).select().single();
         if (error) throw error;
         setPosts(prev => prev.map((p, i) => i === slot ? { ...p, id: data.id } : p));
       }
-    } catch { alert('저장에 실패했습니다.'); }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+      console.error('Instagram save error:', err);
+      alert(`저장 실패:\n${msg}\n\n"post_url" 컬럼 오류라면 Supabase SQL Editor에서 다음을 실행하세요:\nALTER TABLE public.instagram_posts ADD COLUMN IF NOT EXISTS post_url text DEFAULT '';`);
+    }
     finally { setSavingSlot(null); }
   };
 
