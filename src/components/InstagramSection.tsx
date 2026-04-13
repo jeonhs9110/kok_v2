@@ -11,6 +11,7 @@ export interface InstagramData {
   handle: string;
   description: string;
   posts: InstagramPost[];
+  widget_url?: string;
 }
 
 interface Props {
@@ -33,6 +34,7 @@ export default function InstagramSection({ data }: Props) {
   const handle = data?.handle || 'rdrd_official';
   const description = data?.description || '인스타그램에서 최신 소식을 확인하세요';
   const posts = data?.posts || [];
+  const widgetUrl = data?.widget_url;
   const profileUrl = `https://www.instagram.com/${handle}/`;
 
   // Build 6 slots — filled posts first, then empty placeholders
@@ -56,34 +58,48 @@ export default function InstagramSection({ data }: Props) {
           <p className="mt-2 text-sm text-neutral-400">{description}</p>
         </div>
 
-        {/* Feed grid — 6 slots */}
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
-          {slots.map((post, i) => {
-            const href = post?.link_url || profileUrl;
-            return (
-              <a
-                key={i}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="aspect-square block overflow-hidden group relative bg-neutral-100"
-              >
-                {post?.image_url ? (
-                  <img
-                    src={post.image_url}
-                    alt=""
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-neutral-100" />
-                )}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
-                  <IgIcon className="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-              </a>
-            );
-          })}
-        </div>
+        {/* Live widget (if widget_url set) OR manual feed grid */}
+        {widgetUrl ? (
+          <div className="w-full">
+            <iframe
+              src={widgetUrl}
+              scrolling="no"
+              allowTransparency
+              className="w-full border-0 overflow-hidden"
+              style={{ width: '100%', border: 0, overflow: 'hidden', minHeight: '400px' }}
+              height={500}
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-1.5">
+            {slots.map((post, i) => {
+              const href = post?.link_url || profileUrl;
+              return (
+                <a
+                  key={i}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="aspect-square block overflow-hidden group relative bg-neutral-100"
+                >
+                  {post?.image_url ? (
+                    <img
+                      src={post.image_url}
+                      alt=""
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-neutral-100" />
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
+                    <IgIcon className="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </a>
+              );
+            })}
+          </div>
+        )}
 
         {/* CTA */}
         <div className="flex justify-center mt-8">
