@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Upload, Trash2, ImageIcon, Save } from 'lucide-react';
+import { Upload, Trash2, ImageIcon, Save, RefreshCw, ExternalLink } from 'lucide-react';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -39,7 +39,10 @@ const emptyPost = (i: number): IgPost => ({ id: null, image_url: '', link_url: '
 export default function InstagramAdminPage() {
   const [handle, setHandle] = useState('rdrd_official');
   const [description, setDescription] = useState('인스타그램에서 최신 소식을 확인하세요');
+  const [rssFeedUrl, setRssFeedUrl] = useState('');
   const [posts, setPosts] = useState<IgPost[]>(Array.from({ length: SLOTS }, (_, i) => emptyPost(i)));
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
@@ -60,6 +63,7 @@ export default function InstagramAdminPage() {
       if (configRes.data) {
         setHandle(configRes.data.handle || 'rdrd_official');
         setDescription(configRes.data.description || '');
+        setRssFeedUrl(configRes.data.rss_feed_url || '');
       }
       const fetched = postsRes.data || [];
       const filled = Array.from({ length: SLOTS }, (_, i) => fetched[i] ? {
@@ -78,7 +82,7 @@ export default function InstagramAdminPage() {
     if (!supabase) return;
     setIsSavingConfig(true);
     try {
-      await supabase.from('instagram_config').upsert({ id: 1, handle, description, updated_at: new Date().toISOString() });
+      await supabase.from('instagram_config').upsert({ id: 1, handle, description, rss_feed_url: rssFeedUrl, updated_at: new Date().toISOString() });
       alert('인스타그램 설정이 저장되었습니다.');
     } catch { alert('저장에 실패했습니다.'); }
     finally { setIsSavingConfig(false); }
@@ -128,6 +132,37 @@ export default function InstagramAdminPage() {
       await supabase.from('instagram_posts').delete().eq('id', post.id);
     }
     setPosts(prev => prev.map((p, i) => i === slot ? emptyPost(i) : p));
+  };
+
+  const handleRefresh = async () => {
+    if (!rssFeedUrl.trim()) {
+      setRefreshMessage({ type: 'error', text: 'RSS 피드 URL을 먼저 입력하고 설정을 저장해주세요.' });
+      return;
+    }
+    setIsRefreshing(true);
+    setRefreshMessage(null);
+    try {
+      const res = await fetch('/api/instagram/refresh', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setRefreshMessage({ type: 'error', text: data.error || '새로고침 실패' });
+        return;
+      }
+      const urls: string[] = data.urls || [];
+      setPosts(prev => prev.map((p, i) => ({
+        ...p,
+        post_url: urls[i] || p.post_url,
+      })));
+      const { added, removed, unchanged } = data.stats || {};
+      setRefreshMessage({
+        type: 'success',
+        text: `✓ ${urls.length}개 포스트 가져옴 — 신규 ${added}, 동일 ${unchanged}, 제거 ${removed}. "저장" 버튼을 눌러 확정하세요.`,
+      });
+    } catch {
+      setRefreshMessage({ type: 'error', text: '새로고침 중 오류가 발생했습니다.' });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   if (isLoading) return (
@@ -187,6 +222,60 @@ export default function InstagramAdminPage() {
             {isSavingConfig ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />저장 중...</> : <><Save className="w-4 h-4" />설정 저장</>}
           </button>
         </div>
+      </div>
+
+      {/* RSS Auto-Refresh card */}
+      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-sm border border-purple-200 p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <RefreshCw className="w-5 h-5 text-purple-600" />
+          <h2 className="text-lg font-bold text-gray-800">RSS 자동 새로고침</h2>
+          {rssFeedUrl && <span className="text-[10px] font-bold bg-green-500 text-white px-2 py-0.5 rounded-full">설정됨</span>}
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          RSS.app에서 생성한 Instagram RSS 피드 URL을 입력하면 <strong>새로고침 버튼 한 번으로</strong> 최신 포스트 6개를 자동으로 가져옵니다.
+        </p>
+
+        <div className="bg-white/80 border border-purple-200 rounded-lg p-3 mb-4 text-xs text-gray-700 space-y-1">
+          <p className="font-bold text-purple-800">RSS.app 설정 방법 (5분):</p>
+          <ol className="list-decimal ml-4 space-y-0.5">
+            <li><a href="https://rss.app/new-rss-feed" target="_blank" rel="noopener noreferrer" className="text-purple-600 underline font-semibold inline-flex items-center gap-0.5">rss.app/new-rss-feed <ExternalLink className="w-2.5 h-2.5" /></a>에서 무료 가입</li>
+            <li>&quot;Instagram&quot; 선택 → Instagram 프로필 URL 입력: <code className="bg-purple-100 px-1 rounded">https://www.instagram.com/{handle}/</code></li>
+            <li>Generate Feed → RSS URL 복사 (예: <code className="bg-purple-100 px-1 rounded">https://rss.app/feeds/ABC123.xml</code>)</li>
+            <li>아래에 붙여넣고 <strong>설정 저장</strong> 후 <strong>새로고침</strong> 버튼 클릭</li>
+          </ol>
+          <p className="pt-1 text-[11px] text-gray-500">💡 무료 플랜: 6시간마다 자동 업데이트, 피드 2개까지. 관리자가 수동으로 새로고침 버튼을 누를 때마다 최신화됩니다.</p>
+        </div>
+
+        <div className="flex gap-2 mb-3">
+          <input
+            type="url"
+            value={rssFeedUrl}
+            onChange={e => setRssFeedUrl(e.target.value)}
+            placeholder="https://rss.app/feeds/xxxxxxxx.xml"
+            className="flex-1 border border-purple-200 rounded px-3 py-2.5 text-sm bg-white focus:border-purple-500 outline-none transition font-mono"
+          />
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing || !rssFeedUrl.trim()}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-5 py-2.5 rounded font-bold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
+          >
+            {isRefreshing ? (
+              <><RefreshCw className="w-4 h-4 animate-spin" />가져오는 중...</>
+            ) : (
+              <><RefreshCw className="w-4 h-4" />새로고침</>
+            )}
+          </button>
+        </div>
+
+        {refreshMessage && (
+          <div className={`text-xs px-3 py-2 rounded-lg font-medium ${
+            refreshMessage.type === 'success'
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
+            {refreshMessage.text}
+          </div>
+        )}
       </div>
 
       {/* Posts grid */}
