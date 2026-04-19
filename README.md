@@ -2,24 +2,16 @@
 <h3 align="center">K-Beauty Multi-Region E-Commerce Platform</h3>
 
 <p align="center">
-  <em>A production-deployed, dual-storefront Next.js platform for a Korean cosmetics brand that sells at home and showcases abroad.</em><br>
-  <sub>Next.js 16 App Router · React 19 · Supabase · GPT-4o-mini Translation · Tiptap · Embla · Vercel Edge</sub>
+  <em>Dual-storefront Next.js platform — Korean checkout + global view-only + AI concierge, in one codebase.</em><br>
+  <sub>Next.js 16 · React 19 · Supabase · GPT-4o-mini · Tiptap · Vercel Edge</sub>
 </p>
 
 <p align="center">
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16.2-000000?logo=nextdotjs&logoColor=white">
-  <img alt="React" src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white">
-  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white">
-  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Postgres%20%2B%20Auth%20%2B%20Storage-3ECF8E?logo=supabase&logoColor=white">
-  <img alt="OpenAI" src="https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991?logo=openai&logoColor=white">
-  <img alt="Vercel" src="https://img.shields.io/badge/Vercel-deployed-000000?logo=vercel&logoColor=white">
-  <img alt="Status" src="https://img.shields.io/badge/status-live-brightgreen">
-  <img alt="License" src="https://img.shields.io/badge/source-public-blue">
-</p>
-
-<p align="center">
-  <b>Live demo:</b> <a href="https://kokv2.vercel.app/">https://kokv2.vercel.app/</a><br>
-  <sub>(Auto geo-split — KR visitors → checkout-enabled storefront · everyone else → view-only storefront with AI concierge)</sub>
+  <img alt="Supabase" src="https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white">
+  <img alt="OpenAI" src="https://img.shields.io/badge/GPT--4o--mini-412991?logo=openai&logoColor=white">
+  <img alt="Vercel" src="https://img.shields.io/badge/Vercel-live-000000?logo=vercel&logoColor=white">
+  <a href="https://kokv2.vercel.app/"><img alt="Demo" src="https://img.shields.io/badge/demo-kokv2.vercel.app-brightgreen"></a>
 </p>
 
 ---
