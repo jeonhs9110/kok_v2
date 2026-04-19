@@ -131,13 +131,23 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
         </div>
       </div>
 
-      {/* Detail image area */}
-      <div className="mt-24 pt-16 border-t border-neutral-100 text-center">
-        <h2 className="text-lg font-extrabold tracking-widest mb-12 uppercase">{lb.detailView}</h2>
-        <div className="w-full max-w-3xl mx-auto aspect-video bg-[#f8f8f8] flex items-center justify-center text-neutral-400 text-sm rounded-lg">
-          <span className="tracking-widest text-[11px] font-semibold">DETAIL IMAGE AREA</span>
+      {/* Detail body — HTML content authored by admin via Tiptap */}
+      {productData.detailBody ? (
+        <div className="mt-24 pt-16 border-t border-neutral-100">
+          <h2 className="text-lg font-extrabold tracking-widest mb-12 uppercase text-center">{lb.detailView}</h2>
+          <div
+            className="detail-body max-w-3xl mx-auto"
+            dangerouslySetInnerHTML={{ __html: productData.detailBody }}
+          />
         </div>
-      </div>
+      ) : (
+        <div className="mt-24 pt-16 border-t border-neutral-100 text-center">
+          <h2 className="text-lg font-extrabold tracking-widest mb-12 uppercase">{lb.detailView}</h2>
+          <div className="w-full max-w-3xl mx-auto aspect-video bg-[#f8f8f8] flex items-center justify-center text-neutral-400 text-sm rounded-lg">
+            <span className="tracking-widest text-[11px] font-semibold">DETAIL IMAGE AREA</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

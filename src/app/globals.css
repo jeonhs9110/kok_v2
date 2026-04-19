@@ -21,3 +21,68 @@ select:disabled,
 textarea:disabled {
   cursor: not-allowed;
 }
+
+/* ──────────────────────────────────────────────────────────
+   Rich detail body — shared by admin editor + public page.
+   Handles the common Korean e-commerce "long stitched image
+   with optional text paragraphs" layout.
+   ────────────────────────────────────────────────────────── */
+.detail-body {
+  color: #2a2a2a;
+  line-height: 1.75;
+  font-size: 15px;
+  word-break: keep-all;
+}
+.detail-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.5rem auto;
+  border-radius: 4px;
+}
+.detail-body p {
+  margin: 0.9rem 0;
+}
+.detail-body p:empty {
+  margin: 0.5rem 0;
+}
+.detail-body h2 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 2rem 0 0.75rem;
+  color: #111;
+}
+.detail-body h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.5rem;
+  color: #111;
+}
+.detail-body strong { font-weight: 700; color: #111; }
+.detail-body em { font-style: italic; }
+.detail-body ul, .detail-body ol {
+  margin: 1rem 0 1rem 1.5rem;
+  padding-left: 0.5rem;
+}
+.detail-body ul { list-style: disc; }
+.detail-body ol { list-style: decimal; }
+.detail-body li { margin: 0.3rem 0; }
+.detail-body blockquote {
+  border-left: 3px solid #e5e5e5;
+  padding: 0.25rem 0 0.25rem 1rem;
+  margin: 1.25rem 0;
+  color: #666;
+  font-style: italic;
+}
+.detail-body a {
+  color: #111;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.detail-body a:hover { color: #000; }
+
+/* Tiptap placeholder-ish look when empty in the admin editor */
+.detail-body.ProseMirror-focused {
+  outline: none;
+}

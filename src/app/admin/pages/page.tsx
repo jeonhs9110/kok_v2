@@ -3,10 +3,7 @@
 import { Plus, Trash2, Pencil, X, Eye, EyeOff, Menu as MenuIcon } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/api/products';
-import { useEditor, EditorContent } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import TiptapLink from '@tiptap/extension-link';
-import TiptapImage from '@tiptap/extension-image';
+import RichEditor from '@/components/admin/RichEditor';
 
 /* ── Constants ─────────────────────────────────────────────────────── */
 import { SUPPORTED_LANGS, LANG_LABELS, type Lang } from '@/lib/i18n/types';
@@ -23,68 +20,6 @@ interface Page {
   show_in_nav: boolean;
   nav_order: number;
   created_at: string;
-}
-
-/* ── TipTap Editor Wrapper ─────────────────────────────────────────── */
-function RichEditor({ content, onChange }: { content: string; onChange: (html: string) => void }) {
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      TiptapLink.configure({ openOnClick: false }),
-      TiptapImage,
-    ],
-    content,
-    onUpdate: ({ editor }) => onChange(editor.getHTML()),
-    editorProps: {
-      attributes: {
-        class: 'prose prose-sm max-w-none min-h-[250px] p-4 focus:outline-none',
-      },
-    },
-  });
-
-  useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content);
-    }
-  }, [content]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (!editor) return null;
-
-  return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-      <div className="flex flex-wrap gap-1 p-2 border-b border-gray-100 bg-gray-50">
-        <button type="button" onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`px-2.5 py-1.5 text-xs font-bold rounded transition-colors ${editor.isActive('bold') ? 'bg-black text-white' : 'hover:bg-gray-200'}`}>B</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`px-2.5 py-1.5 text-xs italic rounded transition-colors ${editor.isActive('italic') ? 'bg-black text-white' : 'hover:bg-gray-200'}`}>I</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleStrike().run()}
-          className={`px-2.5 py-1.5 text-xs line-through rounded transition-colors ${editor.isActive('strike') ? 'bg-black text-white' : 'hover:bg-gray-200'}`}>S</button>
-        <div className="w-px bg-gray-200 mx-1" />
-        <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={`px-2.5 py-1.5 text-xs font-bold rounded transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-black text-white' : 'hover:bg-gray-200'}`}>H2</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={`px-2.5 py-1.5 text-xs font-bold rounded transition-colors ${editor.isActive('heading', { level: 3 }) ? 'bg-black text-white' : 'hover:bg-gray-200'}`}>H3</button>
-        <div className="w-px bg-gray-200 mx-1" />
-        <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={`px-2.5 py-1.5 text-xs rounded transition-colors ${editor.isActive('bulletList') ? 'bg-black text-white' : 'hover:bg-gray-200'}`}>&#8226; List</button>
-        <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={`px-2.5 py-1.5 text-xs rounded transition-colors ${editor.isActive('orderedList') ? 'bg-black text-white' : 'hover:bg-gray-200'}`}>1. List</button>
-        <div className="w-px bg-gray-200 mx-1" />
-        <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          className={`px-2.5 py-1.5 text-xs rounded transition-colors ${editor.isActive('blockquote') ? 'bg-black text-white' : 'hover:bg-gray-200'}`}>&#8220;</button>
-        <button type="button" onClick={() => {
-          const url = window.prompt('이미지 URL:');
-          if (url) editor.chain().focus().setImage({ src: url }).run();
-        }} className="px-2.5 py-1.5 text-xs rounded hover:bg-gray-200 transition-colors">Img</button>
-        <button type="button" onClick={() => {
-          const url = window.prompt('링크 URL:');
-          if (url) editor.chain().focus().setLink({ href: url }).run();
-          else editor.chain().focus().unsetLink().run();
-        }} className={`px-2.5 py-1.5 text-xs rounded transition-colors ${editor.isActive('link') ? 'bg-black text-white' : 'hover:bg-gray-200'}`}>Link</button>
-      </div>
-      <EditorContent editor={editor} />
-    </div>
-  );
 }
 
 /* ── Main Page ─────────────────────────────────────────────────────── */
@@ -415,6 +350,7 @@ export default function PagesAdminPage() {
                         ...prev,
                         contents: { ...prev.contents, [activeLang]: html },
                       }))}
+                      uploadPath="pages"
                     />
                   </div>
                 </div>

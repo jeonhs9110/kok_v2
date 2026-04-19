@@ -4,6 +4,7 @@ import { Plus, Trash2, Upload, X, ImageIcon, Pencil } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Product, supabase, MOCK_PRODUCTS } from '@/lib/api/products';
 import type { Category } from '@/lib/api/categories';
+import RichEditor from '@/components/admin/RichEditor';
 
 const BUCKET = 'product-images';
 
@@ -27,6 +28,7 @@ export default function ProductsAdminPage() {
     imageUrl: '',       // final URL after upload or manual entry
     imageFile: null as File | null,
     description: '',
+    detailBody: '',
     naverStoreUrl: '',
     categoryId: '',
     subcategoryId: '',
@@ -59,10 +61,12 @@ export default function ProductsAdminPage() {
         summary: d.summary || '',
         ingredient: d.ingredient || '',
         description: d.description || '',
+        detailBody: d.detail_body || '',
         price: Number(d.price),
         originalPrice: Number(d.original_price || d.price),
         imageUrl: (d.images && d.images.length > 0) ? d.images[0] : '',
         is_active: d.is_active,
+        is_best_seller: d.is_best_seller ?? false,
         naver_store_url: d.naver_store_url || '',
         category_id: d.category_id || undefined,
         subcategory_id: d.subcategory_id || undefined,
@@ -134,7 +138,7 @@ export default function ProductsAdminPage() {
   const resetModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ name: '', summary: '', ingredient: '', price: '', originalPrice: '', imageUrl: '', imageFile: null, description: '', naverStoreUrl: '', categoryId: '', subcategoryId: '', isBestSeller: false });
+    setFormData({ name: '', summary: '', ingredient: '', price: '', originalPrice: '', imageUrl: '', imageFile: null, description: '', detailBody: '', naverStoreUrl: '', categoryId: '', subcategoryId: '', isBestSeller: false });
     setPreviewUrl('');
     setUploadProgress('idle');
     setIsSubmitting(false);
@@ -151,6 +155,7 @@ export default function ProductsAdminPage() {
       imageUrl: item.imageUrl,
       imageFile: null,
       description: item.description,
+      detailBody: item.detailBody || '',
       naverStoreUrl: item.naver_store_url || '',
       categoryId: item.category_id || '',
       subcategoryId: item.subcategory_id || '',
@@ -186,8 +191,10 @@ export default function ProductsAdminPage() {
         originalPrice: Number(formData.originalPrice || formData.price),
         imageUrl: finalImageUrl,
         description: formData.description,
+        detailBody: formData.detailBody,
         is_active: true,
-        naver_store_url: formData.naverStoreUrl || undefined
+        is_best_seller: formData.isBestSeller,
+        naver_store_url: formData.naverStoreUrl || undefined,
       };
 
       const dbPayload = {
@@ -197,6 +204,7 @@ export default function ProductsAdminPage() {
         price: Number(formData.price),
         original_price: Number(formData.originalPrice || formData.price),
         description: formData.description,
+        detail_body: formData.detailBody,
         images: finalImageUrl ? [finalImageUrl] : [],
         naver_store_url: formData.naverStoreUrl || null,
         category_id: formData.categoryId || null,
@@ -518,14 +526,29 @@ export default function ProductsAdminPage() {
 
               {/* Description */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">상세 설명</label>
+                <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">한 줄 설명</label>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={formData.description}
                   onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none resize-none"
                   placeholder="상품의 주요 특징과 성분을 설명해주세요..."
                 />
+              </div>
+
+              {/* Detail body (rich content for the product detail page) */}
+              <div className="space-y-1">
+                <div className="flex items-baseline justify-between">
+                  <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">상세페이지 콘텐츠</label>
+                  <span className="text-[10px] text-gray-400">이미지 · 텍스트 섞어서 작성 (붙여넣기 / 드래그 지원)</span>
+                </div>
+                <RichEditor
+                  content={formData.detailBody}
+                  onChange={html => setFormData(prev => ({ ...prev, detailBody: html }))}
+                  uploadPath="product-detail"
+                  minHeight={320}
+                />
+                <p className="text-[10px] text-gray-400 mt-1">상세페이지 하단에 렌더링됩니다. 긴 이미지 한 장만 올리셔도 되고, 중간에 설명 글을 섞어 작성해도 됩니다.</p>
               </div>
 
               {/* Naver Store URL */}

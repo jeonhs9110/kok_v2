@@ -10,6 +10,7 @@ export interface Product {
   summary: string;
   ingredient: string;
   description: string;
+  detailBody: string;
   price: number;
   originalPrice: number;
   imageUrl: string;
@@ -27,6 +28,7 @@ export const MOCK_PRODUCTS: Product[] = [
     summary: "끈적임없이 촉촉한 기능성 세럼",
     ingredient: "RETINOL",
     description: "순수 레티놀을 안정화하여 민감한 피부도 안심하고 사용할 수 있는 데일리 기능성 탄력 세럼입니다.",
+    detailBody: "",
     price: 23400,
     originalPrice: 26000,
     imageUrl: "https://plus.unsplash.com/premium_photo-1681996500858-ff9cc3f28203?w=800&q=80&auto=format&fit=crop",
@@ -39,6 +41,7 @@ export const MOCK_PRODUCTS: Product[] = [
     summary: "탱글한 젤리로 피부 탄성 회복 케어",
     ingredient: "EGF & PEPTIDE",
     description: "고순도 EGF 성분이 피부 본연의 힘을 길러주고, 촉촉한 젤리 제형이 빈틈없이 수분을 채워줍니다.",
+    detailBody: "",
     price: 23400,
     originalPrice: 26000,
     imageUrl: "https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=800&q=80&auto=format&fit=crop",
@@ -51,6 +54,7 @@ export const MOCK_PRODUCTS: Product[] = [
     summary: "트러블 부터 자극 진정까지 하나로!",
     ingredient: "CICA & PANTHENOL",
     description: "시카와 판테놀이 배합되어 예민해진 피부를 빠르게 진정시키고 장벽을 탄탄하게 회복시켜 줍니다.",
+    detailBody: "",
     price: 23400,
     originalPrice: 26000,
     imageUrl: "https://plus.unsplash.com/premium_photo-1675842663249-a8b70126afbc?w=800&q=80&auto=format&fit=crop",
@@ -63,6 +67,7 @@ export const MOCK_PRODUCTS: Product[] = [
     summary: "블랙헤드를 녹이는 클렌징 오일",
     ingredient: "JOJOBA OIL",
     description: "부드럽게 롤링되어 모공 속 화이트헤드와 블랙헤드를 깨끗하게 녹여내는 산뜻한 포뮬러의 클렌징 오일입니다.",
+    detailBody: "",
     price: 26000,
     originalPrice: 38000,
     imageUrl: "https://images.unsplash.com/photo-1608248593842-b062b0afdf93?w=800&q=80&auto=format&fit=crop",
@@ -83,6 +88,7 @@ export async function getProducts(): Promise<Product[]> {
       summary: d.summary || '',
       ingredient: d.ingredient || '',
       description: d.description || '',
+      detailBody: d.detail_body || '',
       price: Number(d.price),
       originalPrice: Number(d.original_price || d.price),
       imageUrl: (d.images && d.images.length > 0) ? d.images[0] : '',
