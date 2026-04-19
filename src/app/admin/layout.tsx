@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard, Scale } from 'lucide-react';
+import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard, Scale, Globe } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -15,6 +15,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: '캐러셀', href: '/admin/carousel', icon: Image },
     { name: '프로모 배너', href: '/admin/promo-banners', icon: GalleryHorizontal },
     { name: '서브 히어로', href: '/admin/sub-hero', icon: PanelTop },
+    { name: '쇼핑 월드와이드', href: '/admin/worldwide', icon: Globe },
     { name: '메뉴 관리', href: '/admin/menus', icon: MenuSquare },
     { name: '숏츠', href: '/admin/shorts', icon: Video },
     { name: '인스타그램', href: '/admin/instagram', icon: Heart },
@@ -32,6 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     '/admin/carousel': '캐러셀 관리',
     '/admin/promo-banners': '프로모 배너 관리',
     '/admin/sub-hero': '서브 히어로 배너 관리',
+    '/admin/worldwide': '쇼핑 월드와이드 관리',
     '/admin/menus': '메뉴 관리',
     '/admin/shorts': '숏츠 관리',
     '/admin/instagram': '인스타그램 관리',
