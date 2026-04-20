@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import BoardWriteButton from '@/components/BoardWriteButton';
 
 function sanitizeHtml(html: string): string {
   return html
@@ -75,11 +76,11 @@ export default async function MenuPage({ slug, lang, page }: Props) {
             <p className="text-xs text-neutral-400 mt-2">{l.total} {totalCount.toLocaleString()}</p>
           )}
         </div>
-        {canWrite && (
-          <Link href={`/${lang}/menus/${slug}/write`} className="px-5 py-2.5 bg-[#111] text-white text-[13px] font-bold tracking-wider hover:bg-black transition-colors">
-            {l.write}
-          </Link>
-        )}
+        <BoardWriteButton
+          href={`/${lang}/menus/${slug}/write`}
+          label={l.write}
+          alwaysShow={canWrite}
+        />
       </div>
 
       {posts.length === 0 ? (

@@ -4,6 +4,7 @@ import { Plus, Trash2, Upload, X, ImageIcon, Pencil } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Product, supabase, MOCK_PRODUCTS } from '@/lib/api/products';
 import type { Category } from '@/lib/api/categories';
+import { getAllTags, getProductTags, setProductTags, TAG_CATEGORIES, type IngredientTag } from '@/lib/api/ingredient-tags';
 import RichEditor from '@/components/admin/RichEditor';
 
 const BUCKET = 'product-images';
@@ -19,6 +20,8 @@ export default function ProductsAdminPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [allTags, setAllTags] = useState<IngredientTag[]>([]);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     summary: '',
@@ -33,6 +36,8 @@ export default function ProductsAdminPage() {
     categoryId: '',
     subcategoryId: '',
     isBestSeller: false,
+    showCartButton: false,
+    showBuyButton: false,
   });
 
   const fetchCategories = useCallback(async () => {
@@ -44,6 +49,7 @@ export default function ProductsAdminPage() {
   useEffect(() => {
     fetchAll();
     fetchCategories();
+    getAllTags().then(setAllTags).catch(() => {});
   }, [fetchCategories]);
 
   async function fetchAll() {
@@ -70,6 +76,8 @@ export default function ProductsAdminPage() {
         naver_store_url: d.naver_store_url || '',
         category_id: d.category_id || undefined,
         subcategory_id: d.subcategory_id || undefined,
+        show_cart_button: d.show_cart_button ?? false,
+        show_buy_button: d.show_buy_button ?? false,
       })));
     } catch {
       console.warn('DB 연결 실패. 목업 데이터로 전환.');
@@ -138,14 +146,21 @@ export default function ProductsAdminPage() {
   const resetModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ name: '', summary: '', ingredient: '', price: '', originalPrice: '', imageUrl: '', imageFile: null, description: '', detailBody: '', naverStoreUrl: '', categoryId: '', subcategoryId: '', isBestSeller: false });
+    setFormData({ name: '', summary: '', ingredient: '', price: '', originalPrice: '', imageUrl: '', imageFile: null, description: '', detailBody: '', naverStoreUrl: '', categoryId: '', subcategoryId: '', isBestSeller: false, showCartButton: false, showBuyButton: false });
+    setSelectedTagIds([]);
     setPreviewUrl('');
     setUploadProgress('idle');
     setIsSubmitting(false);
   };
 
-  const openEdit = (item: Product) => {
+  const openEdit = async (item: Product) => {
     setEditingId(item.id);
+    try {
+      const tags = await getProductTags(item.id);
+      setSelectedTagIds(tags);
+    } catch {
+      setSelectedTagIds([]);
+    }
     setFormData({
       name: item.name,
       summary: item.summary,
@@ -160,6 +175,8 @@ export default function ProductsAdminPage() {
       categoryId: item.category_id || '',
       subcategoryId: item.subcategory_id || '',
       isBestSeller: item.is_best_seller ?? false,
+      showCartButton: item.show_cart_button ?? false,
+      showBuyButton: item.show_buy_button ?? false,
     });
     setPreviewUrl(item.imageUrl);
     setIsModalOpen(true);
@@ -195,6 +212,8 @@ export default function ProductsAdminPage() {
         is_active: true,
         is_best_seller: formData.isBestSeller,
         naver_store_url: formData.naverStoreUrl || undefined,
+        show_cart_button: formData.showCartButton,
+        show_buy_button: formData.showBuyButton,
       };
 
       const dbPayload = {
@@ -210,25 +229,42 @@ export default function ProductsAdminPage() {
         category_id: formData.categoryId || null,
         subcategory_id: formData.subcategoryId || null,
         is_best_seller: formData.isBestSeller,
+        show_cart_button: formData.showCartButton,
+        show_buy_button: formData.showBuyButton,
       };
 
+      let persistedId = editingId;
       if (editingId) {
         // UPDATE existing product
         setProducts(prev => prev.map(p => p.id === editingId ? { ...p, ...newProduct } : p));
         if (supabase) {
           const { error } = await supabase.from('products').update(dbPayload).eq('id', editingId);
           if (error) throw error;
-          await fetchAll();
         }
       } else {
         // INSERT new product
         setProducts(prev => [newProduct, ...prev]);
         if (supabase) {
-          const { error } = await supabase.from('products').insert([{ ...dbPayload, is_active: true }]);
+          const { data, error } = await supabase
+            .from('products')
+            .insert([{ ...dbPayload, is_active: true }])
+            .select('id')
+            .single();
           if (error) throw error;
-          await fetchAll();
+          persistedId = (data as { id: string } | null)?.id ?? null;
         }
       }
+
+      // Persist ingredient-tag associations
+      if (persistedId) {
+        try {
+          await setProductTags(persistedId, selectedTagIds);
+        } catch (tagErr) {
+          console.warn('태그 저장 실패 (상품은 저장됨):', tagErr);
+        }
+      }
+
+      if (supabase) await fetchAll();
 
       resetModal();
     } catch (err) {
@@ -576,6 +612,80 @@ export default function ProductsAdminPage() {
                 <label htmlFor="isBestSeller" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
                   Best Seller로 홈페이지에 노출 (최대 3개)
                 </label>
+              </div>
+
+              {/* Ingredient tag picker */}
+              <div className="pt-4 border-t border-gray-100 space-y-3">
+                <div>
+                  <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">성분 태그</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    상품 상세 페이지에 표시됩니다. 관리 → &ldquo;성분 태그&rdquo;에서 태그를 먼저 추가하세요.
+                  </p>
+                </div>
+                {allTags.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic">등록된 태그가 없습니다.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {TAG_CATEGORIES.map(cat => {
+                      const catTags = allTags.filter(t => t.category === cat.value && t.is_active);
+                      if (catTags.length === 0) return null;
+                      return (
+                        <div key={cat.value} className="bg-gray-50/50 rounded p-3">
+                          <p className="text-[10px] font-bold tracking-wider text-gray-600 mb-2">{cat.label_kr}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {catTags.map(t => {
+                              const checked = selectedTagIds.includes(t.id);
+                              return (
+                                <button
+                                  type="button"
+                                  key={t.id}
+                                  onClick={() => setSelectedTagIds(prev => checked ? prev.filter(id => id !== t.id) : [...prev, t.id])}
+                                  className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition ${
+                                    checked
+                                      ? 'bg-[#111] text-white border-[#111]'
+                                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {t.name.kr || t.name.en || '—'}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Purchase button visibility toggles */}
+              <div className="pt-4 border-t border-gray-100 space-y-3">
+                <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">구매 버튼 노출 설정</p>
+                <p className="text-[11px] text-gray-400">기본값: 네이버 스토어 버튼만 노출됩니다. 아래를 켜면 추가로 노출됩니다.</p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="showCartButton"
+                    checked={formData.showCartButton}
+                    onChange={e => setFormData(prev => ({ ...prev, showCartButton: e.target.checked }))}
+                    className="w-4 h-4 accent-[#4a7a3e] cursor-pointer"
+                  />
+                  <label htmlFor="showCartButton" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
+                    장바구니 버튼 노출
+                  </label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="showBuyButton"
+                    checked={formData.showBuyButton}
+                    onChange={e => setFormData(prev => ({ ...prev, showBuyButton: e.target.checked }))}
+                    className="w-4 h-4 accent-[#4a7a3e] cursor-pointer"
+                  />
+                  <label htmlFor="showBuyButton" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
+                    구매하기 버튼 노출
+                  </label>
+                </div>
               </div>
 
               <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">

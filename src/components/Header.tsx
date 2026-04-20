@@ -8,6 +8,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/api/products';
 import { getCategoriesTree, type CategoryWithChildren } from '@/lib/api/categories';
 import { getMenuTree, type MenuWithChildren } from '@/lib/api/menus';
+import { getSiteSetting } from '@/lib/api/site-settings';
 import { useCart } from '@/lib/cart/CartContext';
 
 interface HeaderProps {
@@ -35,6 +36,7 @@ export default function Header({ canPurchase = true }: HeaderProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [navMenus, setNavMenus] = useState<MenuWithChildren[]>([]);
   const [megaCategories, setMegaCategories] = useState<CategoryWithChildren[]>([]);
+  const [logoUrl, setLogoUrl] = useState<string>('');
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoggedIn = useMemo(() => typeof document !== 'undefined' && document.cookie.includes('kokkok_auth=true'), []);
@@ -54,7 +56,11 @@ export default function Header({ canPurchase = true }: HeaderProps) {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { fetchNavMenus(); fetchCategories(); }, [fetchNavMenus, fetchCategories]);
+  useEffect(() => {
+    fetchNavMenus();
+    fetchCategories();
+    getSiteSetting('logo_url').then(url => { if (url) setLogoUrl(url); }).catch(() => {});
+  }, [fetchNavMenus, fetchCategories]);
   const util = UTILITY[lang] ?? UTILITY['en'];
   const nav = NAV_LABELS[lang] ?? NAV_LABELS['en'];
 
@@ -118,7 +124,6 @@ export default function Header({ canPurchase = true }: HeaderProps) {
           )}
           <Link href={`/${lang}/orders`} className="hover:text-black transition-colors">{util.order}</Link>
           <Link href={`/${lang}/recent`} className="hover:text-black transition-colors">{util.recent}</Link>
-          <Link href={`/${lang}/support`} className="hover:text-black transition-colors">{util.cs} ›</Link>
         </div>
       </div>
 
@@ -139,9 +144,21 @@ export default function Header({ canPurchase = true }: HeaderProps) {
             {/* Logo */}
             <Link
               href={`/${lang}`}
-              className="text-[22px] font-black tracking-[0.12em] text-[#111111] uppercase flex-shrink-0 mr-8"
+              className="flex-shrink-0 mr-8 flex items-center"
+              aria-label="Kokkok Garden"
             >
-              KOKKOK<br className="hidden" /> GARDEN
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={logoUrl}
+                  alt="KOKKOK GARDEN"
+                  className="h-8 md:h-10 w-auto object-contain"
+                />
+              ) : (
+                <span className="text-[22px] font-black tracking-[0.12em] text-[#111111] uppercase">
+                  KOKKOK<br className="hidden" /> GARDEN
+                </span>
+              )}
             </Link>
 
             {/* ── Desktop Nav ─────────────────────────────────────────── */}
@@ -191,6 +208,14 @@ export default function Header({ canPurchase = true }: HeaderProps) {
                 className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors"
               >
                 {nav.global}
+              </Link>
+
+              {/* Contact — direct link */}
+              <Link
+                href={`/${lang}/contact`}
+                className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors"
+              >
+                {nav.contact}
               </Link>
             </nav>
 
@@ -291,7 +316,7 @@ export default function Header({ canPurchase = true }: HeaderProps) {
             <Link href={`/${lang}/worldwide`} className="flex items-center gap-2 text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>
               <Globe className="w-4 h-4" /> {nav.worldwide}
             </Link>
-            <Link href={`/${lang}/support`} className="block text-sm font-bold text-neutral-800 py-2" onClick={() => setMobileOpen(false)}>{nav.contact}</Link>
+            <Link href={`/${lang}/contact`} className="block text-sm font-bold text-neutral-800 py-2" onClick={() => setMobileOpen(false)}>{nav.contact}</Link>
             <div className="pt-2 flex gap-4 text-[12px] text-neutral-400">
               <Link href="/login" onClick={() => setMobileOpen(false)}>{util.login}</Link>
               <Link href="/register" onClick={() => setMobileOpen(false)}>{util.join}</Link>

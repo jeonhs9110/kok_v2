@@ -6,9 +6,11 @@ import ShortsFeed, { type ShortItem } from '@/components/ShortsFeed';
 import PromoBannersSection, { type PromoBanner } from '@/components/PromoBannersSection';
 import SubHeroBanner, { type SubHeroBannerData } from '@/components/SubHeroBanner';
 import InstagramSection, { type InstagramData } from '@/components/InstagramSection';
+import ReviewShowcase from '@/components/ReviewShowcase';
 import { createClient } from '@supabase/supabase-js';
 import { getProducts } from '@/lib/api/products';
 import { getActiveSlides } from '@/lib/api/carousel';
+import { getActiveReviewCards } from '@/lib/api/reviews';
 import type { Lang } from '@/lib/i18n/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -39,7 +41,11 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     original > price ? Math.round(((original - price) / original) * 100) : 0;
 
   // Fetch all data in parallel
-  const [allProducts, carouselSlides] = await Promise.all([getProducts(), getActiveSlides()]);
+  const [allProducts, carouselSlides, reviewCards] = await Promise.all([
+    getProducts(),
+    getActiveSlides(),
+    getActiveReviewCards(),
+  ]);
   const activeProducts = allProducts.filter(p => p.is_active);
 
   const formattedProducts = activeProducts.map(p => ({
@@ -177,7 +183,10 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
       {/* 5. Sub Hero Banner */}
       <SubHeroBanner banner={subHeroBanner} />
 
-      {/* 6. Instagram feed */}
+      {/* 6. Review Showcase — admin-uploaded review cards, click to expand */}
+      <ReviewShowcase cards={reviewCards} title={lang === 'kr' ? 'REVIEW & COMMUNITY' : 'REVIEWS'} />
+
+      {/* 7. Instagram feed */}
       <InstagramSection data={instagramData} />
     </div>
   );

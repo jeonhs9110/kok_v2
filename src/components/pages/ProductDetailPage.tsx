@@ -3,6 +3,8 @@ import { ChevronRight } from 'lucide-react';
 import ProductActionButtons from '@/components/ProductActionButtons';
 import RecentViewTracker from '@/components/RecentViewTracker';
 import { getProducts } from '@/lib/api/products';
+import { getAllCategories } from '@/lib/api/categories';
+import { getAllTags, getProductTags, TAG_CATEGORIES } from '@/lib/api/ingredient-tags';
 import { translateProduct } from '@/lib/openai';
 
 const labels: Record<string, {
@@ -22,7 +24,12 @@ interface Props {
 export default async function ProductDetailPage({ lang, canPurchase, id }: Props) {
   const lb = labels[lang] ?? labels['en'];
 
-  const allProducts = await getProducts();
+  const [allProducts, allCategories, allTags, productTagIds] = await Promise.all([
+    getProducts(),
+    getAllCategories(),
+    getAllTags(),
+    getProductTags(id),
+  ]);
   const productData = allProducts.find(p => p.id === id);
 
   if (!productData) {
@@ -54,6 +61,21 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
         ingredient:  productData.ingredient,
       };
 
+  const productTags = allTags.filter(t => t.is_active && productTagIds.includes(t.id));
+  const tagsByCategory = TAG_CATEGORIES.map(cat => ({
+    cat,
+    tags: productTags.filter(t => t.category === cat.value),
+  })).filter(g => g.tags.length > 0);
+
+  const categoryName = (() => {
+    const c = allCategories.find(c => c.id === productData.category_id);
+    return c ? (c.name?.[lang] || c.name?.kr || '') : '';
+  })();
+  const subcategoryName = (() => {
+    const c = allCategories.find(c => c.id === productData.subcategory_id);
+    return c ? (c.name?.[lang] || c.name?.kr || '') : '';
+  })();
+
   const discountPct = productData.originalPrice > productData.price
     ? Math.round((productData.originalPrice - productData.price) / productData.originalPrice * 100)
     : 0;
@@ -66,8 +88,18 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
         <Link href={`/${lang}`} className="hover:text-black transition-colors">{lb.home}</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
         <Link href={`/${lang}/products`} className="hover:text-black transition-colors">{lb.shop}</Link>
-        <ChevronRight className="w-3 h-3 mx-2" />
-        <span className="text-[#111111]">{translated.ingredient || translated.name}</span>
+        {categoryName && (
+          <>
+            <ChevronRight className="w-3 h-3 mx-2" />
+            <span className="text-[#111111]">{categoryName}</span>
+          </>
+        )}
+        {subcategoryName && (
+          <>
+            <ChevronRight className="w-3 h-3 mx-2" />
+            <span className="text-[#111111]">{subcategoryName}</span>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
@@ -92,7 +124,33 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
             <p className="text-[11px] font-bold tracking-widest text-neutral-400 mb-3 uppercase">{translated.ingredient}</p>
           )}
           <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-[#111111] mb-4">{translated.name}</h1>
-          <p className="text-neutral-500 text-sm font-medium mb-8 leading-relaxed">{translated.summary}</p>
+          <p className="text-neutral-500 text-sm font-medium mb-6 leading-relaxed">{translated.summary}</p>
+
+          {tagsByCategory.length > 0 && (
+            <div className="mb-8 space-y-3">
+              {tagsByCategory.map(({ cat, tags }) => (
+                <div key={cat.value} className="flex items-start flex-wrap gap-2">
+                  <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase shrink-0 pt-1.5 min-w-[84px]">
+                    {lang === 'kr' ? cat.label_kr : cat.label_en}
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map(t => (
+                      <span
+                        key={t.id}
+                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-full border ${
+                          cat.value === 'allergen'
+                            ? 'border-amber-300 bg-amber-50 text-amber-800'
+                            : 'border-neutral-200 bg-neutral-50 text-neutral-700'
+                        }`}
+                      >
+                        {t.name[lang] || t.name.kr || t.name.en || '—'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-end gap-3 mb-10 pb-8 border-b border-neutral-100">
             {discountPct > 0 && (
@@ -116,7 +174,7 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
           )}
 
           {canPurchase ? (
-            <ProductActionButtons productId={id} productName={productData.name} price={productData.price} originalPrice={productData.originalPrice} imageUrl={productData.imageUrl} naverStoreUrl={productData.naver_store_url} />
+            <ProductActionButtons productId={id} productName={productData.name} price={productData.price} originalPrice={productData.originalPrice} imageUrl={productData.imageUrl} naverStoreUrl={productData.naver_store_url} showCartButton={productData.show_cart_button} showBuyButton={productData.show_buy_button} />
           ) : lb.unavailable ? (
             <div className="pt-8 mt-8 border-t border-neutral-100 space-y-4">
               <p className="text-sm text-neutral-500">{lb.unavailable}</p>

@@ -31,6 +31,8 @@ interface RetailerRow {
   region: string;
   store_name: string | null;
   store_url: string | null;
+  store_logo_url: string | null;
+  country_image_url: string | null;
   banner_color: string | null;
   is_active: boolean;
   sort_order: number;
@@ -77,12 +79,15 @@ export async function fetchWorldwideData(lang: string): Promise<WorldwidePageDat
     if (retailersRes.data && retailersRes.data.length > 0) {
       const rows = retailersRes.data as RetailerRow[];
       retailers = rows.map(r => ({
-        id: r.country_code,
+        id: String(r.id),
+        countryCode: r.country_code,
         country: r.country_native,
         countryEn: r.country_en,
         region: (r.region as Region) ?? 'ASIA',
         storeName: r.store_name ?? '',
         storeUrl: r.store_url ?? '#',
+        storeLogoUrl: r.store_logo_url ?? '',
+        countryImageUrl: r.country_image_url ?? '',
         bannerColor: r.banner_color ?? '#111111',
       }));
     }

@@ -42,9 +42,16 @@ export default async function PostDetailPage({ slug, postId, lang }: Props) {
           </div>
         </div>
 
-        <div className="prose prose-neutral max-w-none min-h-[200px] text-[14px] leading-relaxed whitespace-pre-wrap">
-          {post.content || (lang === 'kr' ? '내용이 없습니다.' : 'No content.')}
-        </div>
+        {post.content ? (
+          <div
+            className="detail-body min-h-[200px]"
+            dangerouslySetInnerHTML={{ __html: post.content }}
+          />
+        ) : (
+          <div className="min-h-[200px] text-sm text-neutral-400">
+            {lang === 'kr' ? '내용이 없습니다.' : 'No content.'}
+          </div>
+        )}
       </article>
 
       <div className="mt-12 pt-8 border-t border-neutral-200">

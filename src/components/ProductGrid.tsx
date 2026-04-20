@@ -14,9 +14,14 @@ export default function ProductGrid({ title, products, canPurchase = true }: Pro
         {title && (
           <h2 className="text-2xl font-extrabold text-center mb-12 text-[#111]">{title}</h2>
         )}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-12 lg:gap-x-8">
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-12 lg:gap-x-8">
           {products.map((p) => (
-            <ProductCard key={p.id} {...p} canPurchase={canPurchase} />
+            <div
+              key={p.id}
+              className="w-[calc(50%-0.5rem)] lg:w-[calc(25%-1.5rem)]"
+            >
+              <ProductCard {...p} canPurchase={canPurchase} />
+            </div>
           ))}
         </div>
       </div>

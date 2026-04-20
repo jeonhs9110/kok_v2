@@ -56,6 +56,8 @@ interface RetailerRow {
   region: string;
   store_name: string;
   store_url: string;
+  store_logo_url: string;
+  country_image_url: string;
   banner_color: string;
   is_active: boolean;
   sort_order: number;
@@ -63,9 +65,22 @@ interface RetailerRow {
 
 const EMPTY_RETAILER: RetailerRow = {
   id: null, country_code: '', country_native: '', country_en: '',
-  region: 'ASIA', store_name: '', store_url: '#', banner_color: '#111111',
-  is_active: true, sort_order: 0,
+  region: 'ASIA', store_name: '', store_url: '#',
+  store_logo_url: '', country_image_url: '',
+  banner_color: '#111111', is_active: true, sort_order: 0,
 };
+
+const ASSETS_BUCKET = 'site-assets';
+
+async function uploadWorldwideAsset(file: File, prefix: 'vendor-logo' | 'country-image'): Promise<string> {
+  if (!supabase) throw new Error('No Supabase client');
+  const ext = file.name.split('.').pop() ?? 'png';
+  const path = `worldwide/${prefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from(ASSETS_BUCKET).upload(path, file, { upsert: false });
+  if (error) throw error;
+  const { data } = supabase.storage.from(ASSETS_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
 
 function buildDefaultLabelRow(key: keyof WorldwideLabels): LabelRow {
   const row: LabelRow = { label_key: key, kr: '', en: '', cn: '', jp: '', vn: '', th: '' };
@@ -94,8 +109,9 @@ export default function WorldwideAdminPage() {
     if (!supabase) {
       setLabels(defaultLabels);
       setRetailers(DEFAULT_RETAILERS.map((r, i) => ({
-        id: null, country_code: r.id, country_native: r.country, country_en: r.countryEn,
+        id: null, country_code: r.countryCode, country_native: r.country, country_en: r.countryEn,
         region: r.region, store_name: r.storeName, store_url: r.storeUrl,
+        store_logo_url: '', country_image_url: '',
         banner_color: r.bannerColor, is_active: true, sort_order: (i + 1) * 10,
       })));
       setLoading(false);
@@ -115,8 +131,9 @@ export default function WorldwideAdminPage() {
         setRetailers(rRes.data as RetailerRow[]);
       } else {
         setRetailers(DEFAULT_RETAILERS.map((r, i) => ({
-          id: null, country_code: r.id, country_native: r.country, country_en: r.countryEn,
+          id: null, country_code: r.countryCode, country_native: r.country, country_en: r.countryEn,
           region: r.region, store_name: r.storeName, store_url: r.storeUrl,
+          store_logo_url: '', country_image_url: '',
           banner_color: r.bannerColor, is_active: true, sort_order: (i + 1) * 10,
         })));
       }
@@ -167,13 +184,16 @@ export default function WorldwideAdminPage() {
       return;
     }
     setSavingKey(`retailer-${index}`);
+    const code = r.country_code.toLowerCase().trim();
     const payload = {
-      country_code: r.country_code.toLowerCase().trim(),
+      country_code: code,
       country_native: r.country_native,
       country_en: r.country_en,
       region: r.region,
       store_name: r.store_name,
       store_url: r.store_url || '#',
+      store_logo_url: r.store_logo_url || '',
+      country_image_url: r.country_image_url || '',
       banner_color: r.banner_color || '#111111',
       is_active: r.is_active,
       sort_order: r.sort_order,
@@ -182,11 +202,76 @@ export default function WorldwideAdminPage() {
     const res = r.id
       ? await supabase.from('worldwide_retailers').update(payload).eq('id', r.id).select().single()
       : await supabase.from('worldwide_retailers').insert(payload).select().single();
-    setSavingKey(null);
-    if (res.error) { alert(`저장 실패: ${res.error.message}`); return; }
+    if (res.error) {
+      setSavingKey(null);
+      alert(`저장 실패: ${res.error.message}`);
+      return;
+    }
     if (res.data) updateRetailer(index, { id: (res.data as RetailerRow).id });
+
+    // Sync country_image_url + banner_color across all rows of the same country_code
+    if (code) {
+      await supabase.from('worldwide_retailers')
+        .update({ country_image_url: r.country_image_url || '', banner_color: r.banner_color || '#111111' })
+        .eq('country_code', code);
+      setRetailers(prev => prev.map(row => row.country_code.toLowerCase() === code
+        ? { ...row, country_image_url: r.country_image_url || '', banner_color: r.banner_color || '#111111' }
+        : row));
+    }
+
+    setSavingKey(null);
     setSavedKey(`retailer-${index}`);
     setTimeout(() => setSavedKey(null), 1500);
+  }
+
+  async function handleFileUpload(
+    index: number,
+    file: File,
+    field: 'store_logo_url' | 'country_image_url',
+  ) {
+    const prefix = field === 'store_logo_url' ? 'vendor-logo' : 'country-image';
+    setSavingKey(`upload-${index}-${field}`);
+    try {
+      const url = await uploadWorldwideAsset(file, prefix);
+      updateRetailer(index, { [field]: url });
+      // If this is a country image, mirror it into every row that shares the country_code
+      if (field === 'country_image_url') {
+        const code = retailers[index].country_code.toLowerCase().trim();
+        if (code) {
+          setRetailers(prev => prev.map(row => row.country_code.toLowerCase() === code
+            ? { ...row, country_image_url: url }
+            : row));
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert('이미지 업로드 실패. Supabase Storage 설정을 확인하세요.');
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  function addVendorForCountry(sourceIndex: number) {
+    const src = retailers[sourceIndex];
+    const nextSort = (src.sort_order || 0) + 1;
+    const newRow: RetailerRow = {
+      ...EMPTY_RETAILER,
+      country_code: src.country_code,
+      country_native: src.country_native,
+      country_en: src.country_en,
+      region: src.region,
+      banner_color: src.banner_color,
+      country_image_url: src.country_image_url,
+      store_name: '',
+      store_url: '#',
+      store_logo_url: '',
+      sort_order: nextSort,
+    };
+    setRetailers(prev => {
+      const next = [...prev];
+      next.splice(sourceIndex + 1, 0, newRow);
+      return next;
+    });
   }
 
   async function deleteRetailer(index: number) {
@@ -240,7 +325,7 @@ export default function WorldwideAdminPage() {
           }`}
         >
           <List className="w-4 h-4" />
-          판매 국가 ({retailers.length})
+          판매처 ({retailers.length}개 벤더)
         </button>
       </div>
 
@@ -321,11 +406,16 @@ export default function WorldwideAdminPage() {
 
       {tab === 'retailers' && (
         <div className="space-y-3">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-1.5">
+            <p className="font-semibold">💡 한 국가에 여러 벤더를 등록할 수 있습니다</p>
+            <p>같은 <code className="bg-white px-1 rounded">국가 코드</code>를 가진 여러 행을 만들면 프론트에서 해당 국가 카드를 누를 때 벤더 목록이 함께 노출됩니다. (예: 중국 → Taobao, Shopee, Tmall)</p>
+            <p><strong>국가 이미지</strong>는 같은 국가 코드의 모든 벤더 행에 자동 동기화됩니다. <strong>스토어 로고</strong>는 벤더별로 개별 설정됩니다.</p>
+          </div>
           <button
             onClick={addRetailer}
             className="flex items-center gap-2 px-4 py-2 bg-[#111] text-white rounded-lg text-sm font-semibold hover:bg-black transition"
           >
-            <Plus className="w-4 h-4" /> 국가 추가
+            <Plus className="w-4 h-4" /> 새 국가 추가
           </button>
 
           {retailers.map((r, index) => (
@@ -430,6 +520,66 @@ export default function WorldwideAdminPage() {
                     className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 font-mono"
                   />
                 </div>
+
+                {/* Vendor logo upload */}
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">스토어 로고 (벤더 로고)</label>
+                  <div className="flex gap-2 mt-1 items-center">
+                    {r.store_logo_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.store_logo_url} alt="" className="w-12 h-12 object-contain bg-white rounded border border-gray-200" />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(index, f, 'store_logo_url'); }}
+                      className="flex-1 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                    />
+                    {r.store_logo_url && (
+                      <button
+                        type="button"
+                        onClick={() => updateRetailer(index, { store_logo_url: '' })}
+                        className="text-xs text-red-500 hover:underline px-2"
+                      >
+                        제거
+                      </button>
+                    )}
+                  </div>
+                  {savingKey === `upload-${index}-store_logo_url` && (
+                    <p className="text-[10px] text-blue-500 mt-1">업로드 중...</p>
+                  )}
+                </div>
+
+                {/* Country image upload — applies to all vendors sharing this country_code */}
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">
+                    국가 이미지 (같은 국가코드의 모든 벤더에 공통 적용)
+                  </label>
+                  <div className="flex gap-2 mt-1 items-center">
+                    {r.country_image_url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.country_image_url} alt="" className="w-20 h-12 object-cover rounded border border-gray-200" />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(index, f, 'country_image_url'); }}
+                      className="flex-1 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                    />
+                    {r.country_image_url && (
+                      <button
+                        type="button"
+                        onClick={() => updateRetailer(index, { country_image_url: '' })}
+                        className="text-xs text-red-500 hover:underline px-2"
+                      >
+                        제거
+                      </button>
+                    )}
+                  </div>
+                  {savingKey === `upload-${index}-country_image_url` && (
+                    <p className="text-[10px] text-blue-500 mt-1">업로드 중...</p>
+                  )}
+                </div>
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase">배너 색상</label>
                   <div className="flex gap-2 mt-1">
@@ -469,7 +619,7 @@ export default function WorldwideAdminPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+              <div className="flex items-center gap-3 pt-2 border-t border-gray-100 flex-wrap">
                 <button
                   onClick={() => saveRetailer(index)}
                   disabled={savingKey === `retailer-${index}`}
@@ -481,6 +631,15 @@ export default function WorldwideAdminPage() {
                   {savingKey === `retailer-${index}` ? '저장 중...'
                     : savedKey === `retailer-${index}` ? '✓ 저장 완료'
                     : (r.id ? '저장' : '추가')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addVendorForCountry(index)}
+                  disabled={!r.country_code}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2 disabled:opacity-40"
+                  title="같은 국가에 다른 벤더 추가 (예: 중국 → Taobao, Shopee, Tmall)"
+                >
+                  <Plus className="w-4 h-4" /> 이 국가에 벤더 추가
                 </button>
                 <span className="text-xs text-gray-400">
                   {r.id ? `ID: ${r.id}` : '저장되지 않음'}

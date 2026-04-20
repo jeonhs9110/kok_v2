@@ -19,6 +19,8 @@ export interface Product {
   naver_store_url?: string;
   category_id?: string;
   subcategory_id?: string;
+  show_cart_button?: boolean;
+  show_buy_button?: boolean;
 }
 
 export const MOCK_PRODUCTS: Product[] = [
@@ -97,6 +99,8 @@ export async function getProducts(): Promise<Product[]> {
       naver_store_url: d.naver_store_url || undefined,
       category_id: d.category_id || undefined,
       subcategory_id: d.subcategory_id || undefined,
+      show_cart_button: d.show_cart_button ?? false,
+      show_buy_button: d.show_buy_button ?? false,
     }));
   } catch (err) {
     console.warn("DB Products Fetch Failed. Returning Mock Data.");

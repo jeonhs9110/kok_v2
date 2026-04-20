@@ -10,9 +10,11 @@ interface ProductActionButtonsProps {
   originalPrice: number;
   imageUrl: string;
   naverStoreUrl?: string;
+  showCartButton?: boolean;
+  showBuyButton?: boolean;
 }
 
-export default function ProductActionButtons({ productId, productName, price, originalPrice, imageUrl, naverStoreUrl }: ProductActionButtonsProps) {
+export default function ProductActionButtons({ productId, productName, price, originalPrice, imageUrl, naverStoreUrl, showCartButton = false, showBuyButton = false }: ProductActionButtonsProps) {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const { t } = useI18n();
@@ -51,22 +53,28 @@ export default function ProductActionButtons({ productId, productName, price, or
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={handleAddToCart}
-          className={`flex-1 border py-4.5 font-bold tracking-widest text-[13px] transition-colors ${
-            added ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-[#111111] text-[#111111] hover:bg-neutral-50'
-          }`}
-        >
-          {added ? '✓ 담았습니다' : t('product.addToCart')}
-        </button>
-        <button
-          onClick={handleBuyNow}
-          className="flex-1 bg-[#111111] text-white py-4.5 font-bold tracking-widest text-[13px] hover:bg-black transition-colors shadow-lg shadow-black/10"
-        >
-          {t('product.buyNow')}
-        </button>
-      </div>
+      {(showCartButton || showBuyButton) && (
+        <div className="flex gap-2">
+          {showCartButton && (
+            <button
+              onClick={handleAddToCart}
+              className={`flex-1 border py-4.5 font-bold tracking-widest text-[13px] transition-colors ${
+                added ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-[#111111] text-[#111111] hover:bg-neutral-50'
+              }`}
+            >
+              {added ? '✓ 담았습니다' : t('product.addToCart')}
+            </button>
+          )}
+          {showBuyButton && (
+            <button
+              onClick={handleBuyNow}
+              className="flex-1 bg-[#111111] text-white py-4.5 font-bold tracking-widest text-[13px] hover:bg-black transition-colors shadow-lg shadow-black/10"
+            >
+              {t('product.buyNow')}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Naver Store button */}
       {naverStoreUrl && (

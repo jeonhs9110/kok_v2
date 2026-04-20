@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ChevronRight, LogIn } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useI18n } from '@/lib/i18n/context';
+import RichEditor from '@/components/admin/RichEditor';
 import type { Post } from '@/lib/api/menus';
 
 interface Props {
@@ -160,7 +161,13 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
         </div>
         <div>
           <label className="block text-xs font-semibold text-neutral-600 mb-1.5">{lang === 'kr' ? '내용' : 'Content'}</label>
-          <textarea rows={12} value={content} onChange={e => setContent(e.target.value)} placeholder={lang === 'kr' ? '내용을 입력하세요...' : 'Write your post...'} className="w-full border border-neutral-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 resize-none" />
+          <RichEditor
+            content={content}
+            onChange={setContent}
+            uploadPath={`posts/${menuSlug}`}
+            minHeight={320}
+          />
+          <p className="text-[11px] text-neutral-400 mt-2">{lang === 'kr' ? '이미지는 드래그 또는 붙여넣기, 동영상/유튜브/HTML은 상단 버튼을 사용하세요.' : 'Drag or paste images. Use the toolbar for videos, YouTube, and raw HTML.'}</p>
         </div>
         <div className="flex gap-3 pt-4">
           <Link href={`/${lang}/menus/${menuSlug}`} className="px-6 py-3 border border-neutral-200 text-neutral-600 text-sm font-semibold hover:bg-neutral-50 transition-colors">

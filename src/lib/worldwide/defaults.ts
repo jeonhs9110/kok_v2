@@ -31,13 +31,50 @@ export const REGION_LABEL_KEY: Record<Region, string> = {
 };
 
 export interface RetailerEntry {
-  id: string;
+  id: string;           // unique row id (country_code_row or db id)
+  countryCode: string;  // country ISO (lowercase), shared across vendors for same country
   country: string;      // native spelling (what shows on the card)
   countryEn: string;    // English spelling (uppercase row)
   region: Region;
   storeName: string;
   storeUrl: string;
+  storeLogoUrl: string;    // vendor logo (optional)
+  countryImageUrl: string; // country-card image (optional)
   bannerColor: string;
+}
+
+export interface CountryGroup {
+  countryCode: string;
+  country: string;
+  countryEn: string;
+  region: Region;
+  bannerColor: string;
+  countryImageUrl: string;
+  vendors: RetailerEntry[];
+}
+
+/** Group retailers by country_code, preserving insertion order. */
+export function groupByCountry(retailers: RetailerEntry[]): CountryGroup[] {
+  const map = new Map<string, CountryGroup>();
+  for (const r of retailers) {
+    const existing = map.get(r.countryCode);
+    if (existing) {
+      existing.vendors.push(r);
+      // Prefer a non-empty country image if any row has one
+      if (!existing.countryImageUrl && r.countryImageUrl) existing.countryImageUrl = r.countryImageUrl;
+    } else {
+      map.set(r.countryCode, {
+        countryCode: r.countryCode,
+        country: r.country,
+        countryEn: r.countryEn,
+        region: r.region,
+        bannerColor: r.bannerColor,
+        countryImageUrl: r.countryImageUrl,
+        vendors: [r],
+      });
+    }
+  }
+  return Array.from(map.values());
 }
 
 export interface WorldwideLabels {
@@ -212,37 +249,52 @@ export const DEFAULT_LABELS: Record<WorldwideLang, WorldwideLabels> = {
   },
 };
 
-export const DEFAULT_RETAILERS: RetailerEntry[] = [
-  { id: 'kr', country: '한국', countryEn: 'South Korea', region: 'ASIA', storeName: 'Kokkok Garden Official', storeUrl: 'https://kokv2.vercel.app/kr', bannerColor: '#4a7ab5' },
-  { id: 'jp', country: '日本', countryEn: 'Japan', region: 'ASIA', storeName: 'Kokkok Garden Japan', storeUrl: '#', bannerColor: '#bc002d' },
-  { id: 'cn', country: '中国', countryEn: 'China', region: 'ASIA', storeName: 'Kokkok Garden China', storeUrl: '#', bannerColor: '#de2910' },
-  { id: 'tw', country: '台灣', countryEn: 'Taiwan', region: 'ASIA', storeName: 'Kokkok Garden Taiwan', storeUrl: '#', bannerColor: '#003070' },
-  { id: 'hk', country: '香港', countryEn: 'Hong Kong', region: 'ASIA', storeName: 'Kokkok Garden HK', storeUrl: '#', bannerColor: '#de2910' },
-  { id: 'sg', country: 'Singapore', countryEn: 'Singapore', region: 'ASIA', storeName: 'Kokkok Garden SG', storeUrl: '#', bannerColor: '#ef3340' },
-  { id: 'my', country: 'Malaysia', countryEn: 'Malaysia', region: 'ASIA', storeName: 'Kokkok Garden Malaysia', storeUrl: '#', bannerColor: '#cc0001' },
-  { id: 'th', country: 'ประเทศไทย', countryEn: 'Thailand', region: 'ASIA', storeName: 'Kokkok Garden Thailand', storeUrl: '#', bannerColor: '#2d2a4a' },
-  { id: 'vn', country: 'Việt Nam', countryEn: 'Vietnam', region: 'ASIA', storeName: 'Kokkok Garden Vietnam', storeUrl: '#', bannerColor: '#da251d' },
-  { id: 'id', country: 'Indonesia', countryEn: 'Indonesia', region: 'ASIA', storeName: 'Kokkok Garden Indonesia', storeUrl: '#', bannerColor: '#ce1126' },
-  { id: 'ph', country: 'Philippines', countryEn: 'Philippines', region: 'ASIA', storeName: 'Kokkok Garden Philippines', storeUrl: '#', bannerColor: '#0038a8' },
-  { id: 'us', country: 'United States', countryEn: 'United States', region: 'NORTH AMERICA', storeName: 'Kokkok Garden USA', storeUrl: '#', bannerColor: '#3c3b6e' },
-  { id: 'ca', country: 'Canada', countryEn: 'Canada', region: 'NORTH AMERICA', storeName: 'Kokkok Garden Canada', storeUrl: '#', bannerColor: '#ff0000' },
-  { id: 'mx', country: 'México', countryEn: 'Mexico', region: 'NORTH AMERICA', storeName: 'Kokkok Garden Mexico', storeUrl: '#', bannerColor: '#006847' },
-  { id: 'gb', country: 'United Kingdom', countryEn: 'United Kingdom', region: 'EUROPE', storeName: 'Kokkok Garden UK', storeUrl: '#', bannerColor: '#012169' },
-  { id: 'de', country: 'Deutschland', countryEn: 'Germany', region: 'EUROPE', storeName: 'Kokkok Garden Germany', storeUrl: '#', bannerColor: '#2a2a2a' },
-  { id: 'fr', country: 'France', countryEn: 'France', region: 'EUROPE', storeName: 'Kokkok Garden France', storeUrl: '#', bannerColor: '#002395' },
-  { id: 'it', country: 'Italia', countryEn: 'Italy', region: 'EUROPE', storeName: 'Kokkok Garden Italy', storeUrl: '#', bannerColor: '#009246' },
-  { id: 'es', country: 'España', countryEn: 'Spain', region: 'EUROPE', storeName: 'Kokkok Garden Spain', storeUrl: '#', bannerColor: '#aa151b' },
-  { id: 'nl', country: 'Nederland', countryEn: 'Netherlands', region: 'EUROPE', storeName: 'Kokkok Garden NL', storeUrl: '#', bannerColor: '#ae1c28' },
-  { id: 'pl', country: 'Polska', countryEn: 'Poland', region: 'EUROPE', storeName: 'Kokkok Garden Poland', storeUrl: '#', bannerColor: '#dc143c' },
-  { id: 'ae', country: 'UAE', countryEn: 'UAE', region: 'MIDDLE EAST', storeName: 'Kokkok Garden UAE', storeUrl: '#', bannerColor: '#00732f' },
-  { id: 'sa', country: 'Saudi Arabia', countryEn: 'Saudi Arabia', region: 'MIDDLE EAST', storeName: 'Kokkok Garden KSA', storeUrl: '#', bannerColor: '#006c35' },
-  { id: 'au', country: 'Australia', countryEn: 'Australia', region: 'OCEANIA', storeName: 'Kokkok Garden Australia', storeUrl: '#', bannerColor: '#00008b' },
-  { id: 'nz', country: 'New Zealand', countryEn: 'New Zealand', region: 'OCEANIA', storeName: 'Kokkok Garden NZ', storeUrl: '#', bannerColor: '#00247d' },
-  { id: 'br', country: 'Brasil', countryEn: 'Brazil', region: 'SOUTH AMERICA', storeName: 'Kokkok Garden Brazil', storeUrl: '#', bannerColor: '#009c3b' },
-  { id: 'cl', country: 'Chile', countryEn: 'Chile', region: 'SOUTH AMERICA', storeName: 'Kokkok Garden Chile', storeUrl: '#', bannerColor: '#d52b1e' },
-  { id: 'ru', country: 'Россия', countryEn: 'Russia', region: 'CIS', storeName: 'Kokkok Garden Russia', storeUrl: '#', bannerColor: '#cc0000' },
-  { id: 'kz', country: 'Қазақстан', countryEn: 'Kazakhstan', region: 'CIS', storeName: 'Kokkok Garden Kazakhstan', storeUrl: '#', bannerColor: '#00AFCA' },
+type SeedRow = [id: string, country: string, countryEn: string, region: Region, storeName: string, storeUrl: string, bannerColor: string];
+
+const SEED_ROWS: SeedRow[] = [
+  ['kr', '한국', 'South Korea', 'ASIA', 'Kokkok Garden Official', 'https://kokv2.vercel.app/kr', '#4a7ab5'],
+  ['jp', '日本', 'Japan', 'ASIA', 'Kokkok Garden Japan', '#', '#bc002d'],
+  ['cn', '中国', 'China', 'ASIA', 'Kokkok Garden China', '#', '#de2910'],
+  ['tw', '台灣', 'Taiwan', 'ASIA', 'Kokkok Garden Taiwan', '#', '#003070'],
+  ['hk', '香港', 'Hong Kong', 'ASIA', 'Kokkok Garden HK', '#', '#de2910'],
+  ['sg', 'Singapore', 'Singapore', 'ASIA', 'Kokkok Garden SG', '#', '#ef3340'],
+  ['my', 'Malaysia', 'Malaysia', 'ASIA', 'Kokkok Garden Malaysia', '#', '#cc0001'],
+  ['th', 'ประเทศไทย', 'Thailand', 'ASIA', 'Kokkok Garden Thailand', '#', '#2d2a4a'],
+  ['vn', 'Việt Nam', 'Vietnam', 'ASIA', 'Kokkok Garden Vietnam', '#', '#da251d'],
+  ['id', 'Indonesia', 'Indonesia', 'ASIA', 'Kokkok Garden Indonesia', '#', '#ce1126'],
+  ['ph', 'Philippines', 'Philippines', 'ASIA', 'Kokkok Garden Philippines', '#', '#0038a8'],
+  ['us', 'United States', 'United States', 'NORTH AMERICA', 'Kokkok Garden USA', '#', '#3c3b6e'],
+  ['ca', 'Canada', 'Canada', 'NORTH AMERICA', 'Kokkok Garden Canada', '#', '#ff0000'],
+  ['mx', 'México', 'Mexico', 'NORTH AMERICA', 'Kokkok Garden Mexico', '#', '#006847'],
+  ['gb', 'United Kingdom', 'United Kingdom', 'EUROPE', 'Kokkok Garden UK', '#', '#012169'],
+  ['de', 'Deutschland', 'Germany', 'EUROPE', 'Kokkok Garden Germany', '#', '#2a2a2a'],
+  ['fr', 'France', 'France', 'EUROPE', 'Kokkok Garden France', '#', '#002395'],
+  ['it', 'Italia', 'Italy', 'EUROPE', 'Kokkok Garden Italy', '#', '#009246'],
+  ['es', 'España', 'Spain', 'EUROPE', 'Kokkok Garden Spain', '#', '#aa151b'],
+  ['nl', 'Nederland', 'Netherlands', 'EUROPE', 'Kokkok Garden NL', '#', '#ae1c28'],
+  ['pl', 'Polska', 'Poland', 'EUROPE', 'Kokkok Garden Poland', '#', '#dc143c'],
+  ['ae', 'UAE', 'UAE', 'MIDDLE EAST', 'Kokkok Garden UAE', '#', '#00732f'],
+  ['sa', 'Saudi Arabia', 'Saudi Arabia', 'MIDDLE EAST', 'Kokkok Garden KSA', '#', '#006c35'],
+  ['au', 'Australia', 'Australia', 'OCEANIA', 'Kokkok Garden Australia', '#', '#00008b'],
+  ['nz', 'New Zealand', 'New Zealand', 'OCEANIA', 'Kokkok Garden NZ', '#', '#00247d'],
+  ['br', 'Brasil', 'Brazil', 'SOUTH AMERICA', 'Kokkok Garden Brazil', '#', '#009c3b'],
+  ['cl', 'Chile', 'Chile', 'SOUTH AMERICA', 'Kokkok Garden Chile', '#', '#d52b1e'],
+  ['ru', 'Россия', 'Russia', 'CIS', 'Kokkok Garden Russia', '#', '#cc0000'],
+  ['kz', 'Қазақстан', 'Kazakhstan', 'CIS', 'Kokkok Garden Kazakhstan', '#', '#00AFCA'],
 ];
+
+export const DEFAULT_RETAILERS: RetailerEntry[] = SEED_ROWS.map(([id, country, countryEn, region, storeName, storeUrl, bannerColor]) => ({
+  id,
+  countryCode: id,
+  country,
+  countryEn,
+  region,
+  storeName,
+  storeUrl,
+  storeLogoUrl: '',
+  countryImageUrl: '',
+  bannerColor,
+}));
 
 export function resolveLabels(lang: string): WorldwideLabels {
   return DEFAULT_LABELS[lang as WorldwideLang] ?? DEFAULT_LABELS.en;
