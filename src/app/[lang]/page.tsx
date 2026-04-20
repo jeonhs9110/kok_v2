@@ -183,8 +183,8 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
       {/* 5. Sub Hero Banner */}
       <SubHeroBanner banner={subHeroBanner} />
 
-      {/* 6. Review Showcase — admin-uploaded review cards, click to expand */}
-      <ReviewShowcase cards={reviewCards} title={lang === 'kr' ? 'REVIEW & COMMUNITY' : 'REVIEWS'} />
+      {/* 6. Review Showcase — admin-uploaded review cards, click → /[lang]/reviews/[id] */}
+      <ReviewShowcase cards={reviewCards} lang={lang} title={lang === 'kr' ? 'REVIEW & COMMUNITY' : 'REVIEWS'} />
 
       {/* 7. Instagram feed */}
       <InstagramSection data={instagramData} />

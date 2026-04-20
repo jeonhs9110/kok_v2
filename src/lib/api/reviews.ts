@@ -43,6 +43,30 @@ export async function getActiveReviewCards(): Promise<ReviewCard[]> {
   }
 }
 
+export async function getReviewCard(id: string): Promise<ReviewCard | null> {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase
+      .from('review_cards')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error || !data) return null;
+    const r = data as ReviewCardRow;
+    return {
+      id: r.id,
+      image_url: r.image_url ?? '',
+      title: r.title ?? '',
+      content_html: r.content_html ?? '',
+      link_url: r.link_url,
+      sort_order: r.sort_order,
+      is_active: r.is_active,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function getAllReviewCards(): Promise<ReviewCard[]> {
   if (!supabase) return [];
   try {
