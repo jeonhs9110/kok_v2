@@ -19,7 +19,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       items: [
         { name: '로고 관리', href: '/admin/logo', icon: ImagePlus },
         { name: '메인 배너 (캐러셀)', href: '/admin/carousel', icon: Image },
-        { name: '서브 히어로 (1:1)', href: '/admin/sub-hero', icon: PanelTop },
+        { name: '서브 히어로 (와이드)', href: '/admin/sub-hero', icon: PanelTop },
         { name: '프로모 배너', href: '/admin/promo-banners', icon: GalleryHorizontal },
         { name: '숏츠', href: '/admin/shorts', icon: Video },
         { name: '인스타그램', href: '/admin/instagram', icon: Heart },
