@@ -8,8 +8,8 @@ const LABELS: Record<string, {
   empty: string;
 }> = {
   kr: {
-    title: '고객센터', subtitle: 'Contact',
-    home: '홈', contact: '고객센터',
+    title: 'Contact', subtitle: '문의',
+    home: '홈', contact: 'Contact',
     hours: '운영 시간', address: '주소', phone: '대표 번호',
     email: '대표 이메일', overseas: '해외 문의',
     empty: '정보가 아직 등록되지 않았습니다.',

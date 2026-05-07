@@ -27,6 +27,12 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       subtitle: s.subtitle?.[lang] || s.subtitle?.kr || s.subtitle?.en || '',
       image: s.image_url || '',
       bgColor: s.bg_color || '#eef4f7',
+      textColor: s.text_color || '',
+      badgeBgColor: s.badge_bg_color || '',
+      badgeTextColor: s.badge_text_color || '',
+      titleSizeOffset: s.title_size_offset ?? 0,
+      subtitleSizeOffset: s.subtitle_size_offset ?? 0,
+      badgeSizeOffset: s.badge_size_offset ?? 0,
       linkUrl: s.link_url || null,
       displayMode: s.display_mode || 'default',
       mediaType,
@@ -89,17 +95,36 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                     <div className="max-w-[1400px] mx-auto w-full px-8">
                       <div className="max-w-lg">
                         {slide.badge && (
-                          <span className="inline-block bg-black/70 text-white text-xs font-semibold px-3 py-1.5 rounded-full mb-4 backdrop-blur-sm">
+                          <span
+                            className="inline-block text-xs font-semibold px-3 py-1.5 rounded-full mb-4 backdrop-blur-sm"
+                            style={{
+                              backgroundColor: slide.badgeBgColor || 'rgba(0,0,0,0.7)',
+                              color: slide.badgeTextColor || '#ffffff',
+                              ...(slide.badgeSizeOffset !== 0 && { fontSize: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
+                            }}
+                          >
                             {slide.badge}
                           </span>
                         )}
                         {slide.title && (
-                          <h2 className="text-3xl sm:text-5xl font-bold text-white leading-[1.3] whitespace-pre-line mb-3 drop-shadow-lg">
+                          <h2
+                            className="text-3xl sm:text-5xl font-bold leading-[1.3] whitespace-pre-line mb-3 drop-shadow-lg"
+                            style={{
+                              color: slide.textColor || '#ffffff',
+                              ...(slide.titleSizeOffset !== 0 && { fontSize: `calc(3rem + ${slide.titleSizeOffset}px)` }),
+                            }}
+                          >
                             {slide.title}
                           </h2>
                         )}
                         {slide.subtitle && (
-                          <p className="text-sm sm:text-base text-white/90 drop-shadow-md">
+                          <p
+                            className="text-sm sm:text-base drop-shadow-md"
+                            style={{
+                              color: slide.textColor ? slide.textColor : 'rgba(255,255,255,0.9)',
+                              ...(slide.subtitleSizeOffset !== 0 && { fontSize: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
+                            }}
+                          >
                             {slide.subtitle}
                           </p>
                         )}
@@ -112,13 +137,32 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
               /* ── Default mode: text left + image right ── */
               <div className="max-w-[1400px] mx-auto h-full px-8 flex items-center justify-between">
                 <div className="z-10 max-w-lg mb-10 sm:mb-0">
-                  <span className="inline-block bg-[#333333] text-white text-xs font-semibold px-3 py-1.5 rounded-full mb-6 relative">
+                  <span
+                    className="inline-block text-xs font-semibold px-3 py-1.5 rounded-full mb-6 relative"
+                    style={{
+                      backgroundColor: slide.badgeBgColor || '#333333',
+                      color: slide.badgeTextColor || '#ffffff',
+                      ...(slide.badgeSizeOffset !== 0 && { fontSize: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
+                    }}
+                  >
                     {slide.badge}
                   </span>
-                  <h2 className="text-3xl sm:text-5xl font-bold text-gray-900 leading-[1.3] whitespace-pre-line mb-4 relative">
+                  <h2
+                    className="text-3xl sm:text-5xl font-bold leading-[1.3] whitespace-pre-line mb-4 relative"
+                    style={{
+                      color: slide.textColor || '#111827',
+                      ...(slide.titleSizeOffset !== 0 && { fontSize: `calc(3rem + ${slide.titleSizeOffset}px)` }),
+                    }}
+                  >
                     {slide.title}
                   </h2>
-                  <p className="text-sm sm:text-base text-gray-700 relative">
+                  <p
+                    className="text-sm sm:text-base relative"
+                    style={{
+                      color: slide.textColor || '#374151',
+                      ...(slide.subtitleSizeOffset !== 0 && { fontSize: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
+                    }}
+                  >
                     {slide.subtitle}
                   </p>
                 </div>

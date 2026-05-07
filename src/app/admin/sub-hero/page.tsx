@@ -199,7 +199,7 @@ export default function SubHeroAdminPage() {
             id="subHeroActive"
             checked={banner.is_active}
             onChange={e => setBanner(prev => ({ ...prev, is_active: e.target.checked }))}
-            className="w-4 h-4 accent-[#4a7a3e] cursor-pointer"
+            className="w-4 h-4 accent-[#00693A] cursor-pointer"
           />
           <label htmlFor="subHeroActive" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
             홈페이지에 표시

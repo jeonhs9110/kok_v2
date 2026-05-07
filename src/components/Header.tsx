@@ -21,9 +21,9 @@ const UTILITY: Record<string, { join: string; login: string; logout: string; ord
   en: { join: 'Sign Up', login: 'Login', logout: 'Logout', order: 'Order', recent: 'Recently Viewed', cs: 'Support' },
 };
 
-const NAV_LABELS: Record<string, { product: string; event: string; brand: string; review: string; global: string; worldwide: string; contact: string }> = {
-  kr: { product: 'Product', event: 'EVENT & NOTICE', brand: 'BRAND STORY', review: 'REVIEW & COMMUNITY', global: 'SHOP Worldwide', worldwide: 'SHOP Worldwide', contact: '고객센터' },
-  en: { product: 'Product', event: 'EVENT & NOTICE', brand: 'BRAND STORY', review: 'REVIEWS', global: 'SHOP Worldwide', worldwide: 'SHOP Worldwide', contact: 'Contact' },
+const NAV_LABELS: Record<string, { product: string; event: string; brand: string; review: string; global: string; worldwide: string }> = {
+  kr: { product: 'Product', event: 'EVENT & NOTICE', brand: 'BRAND STORY', review: 'REVIEW & COMMUNITY', global: 'SHOP Worldwide', worldwide: 'SHOP Worldwide' },
+  en: { product: 'Product', event: 'EVENT & NOTICE', brand: 'BRAND STORY', review: 'REVIEWS', global: 'SHOP Worldwide', worldwide: 'SHOP Worldwide' },
 };
 
 export default function Header({ canPurchase = true }: HeaderProps) {
@@ -36,7 +36,7 @@ export default function Header({ canPurchase = true }: HeaderProps) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [navMenus, setNavMenus] = useState<MenuWithChildren[]>([]);
   const [megaCategories, setMegaCategories] = useState<CategoryWithChildren[]>([]);
-  const [logoUrl, setLogoUrl] = useState<string>('');
+  const [logoUrl, setLogoUrl] = useState<string>('/kokkokgarden_primary.svg');
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isLoggedIn = useMemo(() => typeof document !== 'undefined' && document.cookie.includes('kokkok_auth=true'), []);
@@ -103,7 +103,7 @@ export default function Header({ canPurchase = true }: HeaderProps) {
       <div className="bg-white border-b border-neutral-100 hidden lg:block">
         <div className="max-w-[1600px] mx-auto px-8 flex justify-end items-center h-9 gap-5 text-[11px] text-neutral-500 font-medium tracking-wide">
           {isAdmin && (
-            <Link href="/admin" className="hover:text-black transition-colors text-[#4a7a3e] font-bold">ADMIN</Link>
+            <Link href="/admin" className="hover:text-black transition-colors text-[#00693A] font-bold">ADMIN</Link>
           )}
           {!isLoggedIn && (
             <Link href="/register" className="hover:text-black transition-colors">{util.join}</Link>
@@ -175,7 +175,7 @@ export default function Header({ canPurchase = true }: HeaderProps) {
                 </button>
                 {/* Green underline indicator */}
                 {activeMenu === 'product' && (
-                  <span className="absolute bottom-0 left-4 right-4 h-[2.5px] bg-[#4a7a3e] rounded-full" />
+                  <span className="absolute bottom-0 left-4 right-4 h-[2.5px] bg-[#00693A] rounded-full" />
                 )}
               </div>
 
@@ -196,7 +196,7 @@ export default function Header({ canPurchase = true }: HeaderProps) {
                       {menuLabel}
                     </Link>
                     {activeMenu === `menu-${menu.slug}` && (
-                      <span className="absolute bottom-0 left-4 right-4 h-[2.5px] bg-[#4a7a3e] rounded-full" />
+                      <span className="absolute bottom-0 left-4 right-4 h-[2.5px] bg-[#00693A] rounded-full" />
                     )}
                   </div>
                 );
@@ -208,14 +208,6 @@ export default function Header({ canPurchase = true }: HeaderProps) {
                 className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors"
               >
                 {nav.global}
-              </Link>
-
-              {/* Contact — direct link */}
-              <Link
-                href={`/${lang}/contact`}
-                className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors"
-              >
-                {nav.contact}
               </Link>
             </nav>
 
@@ -255,7 +247,7 @@ export default function Header({ canPurchase = true }: HeaderProps) {
                 <div key={col.slug}>
                   <Link
                     href={`/${lang}/products?category=${col.slug}`}
-                    className="text-[13px] font-bold text-neutral-900 hover:text-[#4a7a3e] tracking-wide transition-colors"
+                    className="text-[13px] font-bold text-neutral-900 hover:text-[#00693A] tracking-wide transition-colors"
                     onClick={() => setActiveMenu(null)}
                   >
                     {col.label}
@@ -295,7 +287,7 @@ export default function Header({ canPurchase = true }: HeaderProps) {
                   <Link
                     key={child.slug}
                     href={`/${lang}/menus/${child.slug}`}
-                    className="text-[13px] font-bold text-neutral-900 hover:text-[#4a7a3e] tracking-wide transition-colors"
+                    className="text-[13px] font-bold text-neutral-900 hover:text-[#00693A] tracking-wide transition-colors"
                     onClick={() => setActiveMenu(null)}
                   >
                     {child.title?.[lang] || child.title?.kr || child.title?.en || child.slug}
@@ -316,7 +308,6 @@ export default function Header({ canPurchase = true }: HeaderProps) {
             <Link href={`/${lang}/worldwide`} className="flex items-center gap-2 text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>
               <Globe className="w-4 h-4" /> {nav.worldwide}
             </Link>
-            <Link href={`/${lang}/contact`} className="block text-sm font-bold text-neutral-800 py-2" onClick={() => setMobileOpen(false)}>{nav.contact}</Link>
             <div className="pt-2 flex gap-4 text-[12px] text-neutral-400">
               <Link href="/login" onClick={() => setMobileOpen(false)}>{util.login}</Link>
               <Link href="/register" onClick={() => setMobileOpen(false)}>{util.join}</Link>

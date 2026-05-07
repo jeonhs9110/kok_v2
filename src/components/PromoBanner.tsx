@@ -28,7 +28,7 @@ export default function PromoBanner() {
   if (!visible) return null;
 
   return (
-    <div className="bg-[#4a7a3e] text-white text-[12.5px] font-medium tracking-wide py-2.5 px-4 z-50 flex items-center justify-center relative">
+    <div className="bg-[#00693A] text-white text-[12.5px] font-medium tracking-wide py-2.5 px-4 z-50 flex items-center justify-center relative">
       <div className="flex items-center gap-2">
         <span>{t('promo.message')}</span>
       </div>

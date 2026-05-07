@@ -607,7 +607,7 @@ export default function ProductsAdminPage() {
                   id="isBestSeller"
                   checked={formData.isBestSeller}
                   onChange={e => setFormData(prev => ({ ...prev, isBestSeller: e.target.checked }))}
-                  className="w-4 h-4 accent-[#4a7a3e] cursor-pointer"
+                  className="w-4 h-4 accent-[#00693A] cursor-pointer"
                 />
                 <label htmlFor="isBestSeller" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
                   Best Seller로 홈페이지에 노출 (최대 3개)
@@ -668,7 +668,7 @@ export default function ProductsAdminPage() {
                     id="showCartButton"
                     checked={formData.showCartButton}
                     onChange={e => setFormData(prev => ({ ...prev, showCartButton: e.target.checked }))}
-                    className="w-4 h-4 accent-[#4a7a3e] cursor-pointer"
+                    className="w-4 h-4 accent-[#00693A] cursor-pointer"
                   />
                   <label htmlFor="showCartButton" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
                     장바구니 버튼 노출
@@ -680,7 +680,7 @@ export default function ProductsAdminPage() {
                     id="showBuyButton"
                     checked={formData.showBuyButton}
                     onChange={e => setFormData(prev => ({ ...prev, showBuyButton: e.target.checked }))}
-                    className="w-4 h-4 accent-[#4a7a3e] cursor-pointer"
+                    className="w-4 h-4 accent-[#00693A] cursor-pointer"
                   />
                   <label htmlFor="showBuyButton" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
                     구매하기 버튼 노출
