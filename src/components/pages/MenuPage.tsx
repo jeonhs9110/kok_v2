@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import BoardWriteButton from '@/components/BoardWriteButton';
+import ReviewShowcase from '@/components/ReviewShowcase';
+import { getActiveReviewCards } from '@/lib/api/reviews';
+import { getSiteSettings } from '@/lib/api/site-settings';
 
 function sanitizeHtml(html: string): string {
   return html
@@ -17,6 +20,111 @@ import Pagination from '@/components/Pagination';
 
 const PAGE_SIZE = 20;
 
+const CONTACT_SLUGS = new Set(['contact', '문의', 'cs', 'support', 'customer-service']);
+const REVIEW_SLUGS = new Set([
+  'review', 'reviews', 'review-community', 'reviews-community',
+  'review_community', 'review-and-community', 'community',
+]);
+
+const CONTACT_LABELS: Record<string, {
+  home: string; contact: string; subtitle: string;
+  hours: string; address: string; phone: string; email: string; overseas: string;
+  empty: string;
+}> = {
+  kr: {
+    home: '홈', contact: 'Contact', subtitle: '문의',
+    hours: '운영 시간', address: '주소', phone: '대표 번호',
+    email: '대표 이메일', overseas: '해외 문의',
+    empty: '정보가 아직 등록되지 않았습니다.',
+  },
+  en: {
+    home: 'HOME', contact: 'CONTACT', subtitle: 'Customer Service',
+    hours: 'Operating Hours', address: 'Address', phone: 'Phone',
+    email: 'Email', overseas: 'Overseas Inquiries',
+    empty: 'Contact information has not been configured yet.',
+  },
+  cn: {
+    home: '首页', contact: '联系我们', subtitle: 'Contact',
+    hours: '营业时间', address: '地址', phone: '电话',
+    email: '邮箱', overseas: '海外咨询',
+    empty: '联系信息尚未配置。',
+  },
+  jp: {
+    home: 'ホーム', contact: 'お問い合わせ', subtitle: 'Contact',
+    hours: '営業時間', address: '住所', phone: 'お電話',
+    email: 'メール', overseas: '海外のお問い合わせ',
+    empty: '連絡先情報はまだ登録されていません。',
+  },
+  vn: {
+    home: 'TRANG CHỦ', contact: 'LIÊN HỆ', subtitle: 'Contact',
+    hours: 'Giờ làm việc', address: 'Địa chỉ', phone: 'Điện thoại',
+    email: 'Email', overseas: 'Yêu cầu nước ngoài',
+    empty: 'Thông tin liên hệ chưa được cấu hình.',
+  },
+  th: {
+    home: 'หน้าหลัก', contact: 'ติดต่อเรา', subtitle: 'Contact',
+    hours: 'เวลาทำการ', address: 'ที่อยู่', phone: 'โทรศัพท์',
+    email: 'อีเมล', overseas: 'สอบถามจากต่างประเทศ',
+    empty: 'ยังไม่ได้ตั้งค่าข้อมูลการติดต่อ',
+  },
+};
+
+async function ContactInfoView({ lang, displayTitle }: { lang: string; displayTitle: string }) {
+  const lb = CONTACT_LABELS[lang] ?? CONTACT_LABELS['en'];
+  const values = await getSiteSettings([
+    'contact_hours', 'contact_address', 'contact_phone',
+    'contact_email', 'contact_overseas_email',
+  ]);
+  const rows: { label: string; value: string; href?: string }[] = [
+    { label: lb.hours, value: values.contact_hours },
+    { label: lb.address, value: values.contact_address },
+    { label: lb.phone, value: values.contact_phone, href: values.contact_phone ? `tel:${values.contact_phone.replace(/\s+/g, '')}` : undefined },
+    { label: lb.email, value: values.contact_email, href: values.contact_email ? `mailto:${values.contact_email}` : undefined },
+    { label: lb.overseas, value: values.contact_overseas_email, href: values.contact_overseas_email ? `mailto:${values.contact_overseas_email}` : undefined },
+  ].filter(r => r.value);
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 animate-in fade-in duration-500 bg-white">
+      <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-10 tracking-widest flex-wrap gap-y-1">
+        <Link href={`/${lang}`} className="hover:text-black transition-colors">{lb.home}</Link>
+        <ChevronRight className="w-3 h-3 mx-2" />
+        <span className="text-[#111111]">{lb.contact}</span>
+      </div>
+      <div className="mb-12 border-b border-neutral-200 pb-8">
+        <p className="text-[11px] font-bold tracking-[0.25em] text-neutral-400 uppercase mb-2">{lb.subtitle}</p>
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#111111]">{displayTitle}</h1>
+      </div>
+      {rows.length === 0 ? (
+        <div className="text-center py-24 text-neutral-400 text-sm">{lb.empty}</div>
+      ) : (
+        <div className="border border-neutral-200">
+          <table className="w-full">
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i} className={i !== rows.length - 1 ? 'border-b border-neutral-200' : ''}>
+                  <th
+                    scope="row"
+                    className="text-[11px] font-bold tracking-widest text-neutral-500 uppercase text-left px-4 md:px-6 py-4 md:py-5 bg-neutral-50 w-36 md:w-52 align-top"
+                  >
+                    {r.label}
+                  </th>
+                  <td className="px-4 md:px-6 py-4 md:py-5 text-sm text-[#111111] whitespace-pre-line align-top">
+                    {r.href ? (
+                      <a href={r.href} className="hover:underline underline-offset-4 break-all">{r.value}</a>
+                    ) : (
+                      r.value
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface Props {
   slug: string;
   lang: string;
@@ -24,6 +132,43 @@ interface Props {
 }
 
 export default async function MenuPage({ slug, lang, page }: Props) {
+  const slugLower = slug.toLowerCase();
+
+  // Special case 1: Contact-style menus render the site_settings contact table
+  // instead of an empty board/page. Boss requested unifying contact UX here.
+  if (CONTACT_SLUGS.has(slugLower)) {
+    const menu = await getMenuBySlug(slug);
+    const displayTitle = menu?.title?.[lang] || menu?.title?.kr || menu?.title?.en || 'Contact';
+    return <ContactInfoView lang={lang} displayTitle={displayTitle} />;
+  }
+
+  // Special case 2: Review/community menus surface the curated review_cards
+  // showcase (admin-managed) instead of a plain post list.
+  if (REVIEW_SLUGS.has(slugLower)) {
+    const [menu, cards] = await Promise.all([
+      getMenuBySlug(slug),
+      getActiveReviewCards(),
+    ]);
+    const displayTitle = menu?.title?.[lang] || menu?.title?.kr || menu?.title?.en || 'Review & Community';
+    const lbEmpty = lang === 'kr' ? '등록된 리뷰가 없습니다.' : 'No reviews yet.';
+    return (
+      <div className="animate-in fade-in duration-500">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 pt-12">
+          <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
+            <Link href={`/${lang}`} className="hover:text-black transition-colors">HOME</Link>
+            <ChevronRight className="w-3 h-3 mx-2" />
+            <span className="text-[#111]">{displayTitle}</span>
+          </div>
+        </div>
+        {cards.length === 0 ? (
+          <div className="max-w-[1240px] mx-auto px-4 py-20 text-center text-neutral-400 text-sm">{lbEmpty}</div>
+        ) : (
+          <ReviewShowcase cards={cards} title={displayTitle} lang={lang} />
+        )}
+      </div>
+    );
+  }
+
   const menu = await getMenuBySlug(slug);
   if (!menu) notFound();
 
