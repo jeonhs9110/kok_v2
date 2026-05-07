@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import ProductActionButtons from '@/components/ProductActionButtons';
+import ProductReviewSection from '@/components/ProductReviewSection';
 import RecentViewTracker from '@/components/RecentViewTracker';
 import { getProducts } from '@/lib/api/products';
 import { getAllCategories } from '@/lib/api/categories';
@@ -206,6 +207,9 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
           </div>
         </div>
       )}
+
+      {/* User reviews — separate area from board posts */}
+      <ProductReviewSection productId={id} lang={lang} />
     </div>
   );
 }

@@ -185,7 +185,7 @@ function CartContent() {
               )}
               <div className="flex justify-between">
                 <span className="text-neutral-500">배송비</span>
-                <span className="font-semibold text-[#4a7a3e]">무료</span>
+                <span className="font-semibold text-[#00693A]">무료</span>
               </div>
             </div>
 

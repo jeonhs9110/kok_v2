@@ -13,6 +13,12 @@ interface FormData {
   title: Record<string, string>;
   subtitle: Record<string, string>;
   bg_color: string;
+  text_color: string;
+  badge_bg_color: string;
+  badge_text_color: string;
+  title_size_offset: number;
+  subtitle_size_offset: number;
+  badge_size_offset: number;
   sort_order: string;
   is_active: boolean;
   imageUrl: string;
@@ -24,7 +30,14 @@ interface FormData {
 
 const emptyForm: FormData = {
   badge: {}, title: {}, subtitle: {},
-  bg_color: '#eef4f7', sort_order: '0', is_active: true, imageUrl: '', imageFile: null, link_url: '',
+  bg_color: '#eef4f7',
+  text_color: '#111111',
+  badge_bg_color: '#333333',
+  badge_text_color: '#FFFFFF',
+  title_size_offset: 0,
+  subtitle_size_offset: 0,
+  badge_size_offset: 0,
+  sort_order: '0', is_active: true, imageUrl: '', imageFile: null, link_url: '',
   display_mode: 'default', media_type: 'image',
 };
 
@@ -100,7 +113,14 @@ export default function CarouselAdminPage() {
     setEditingId(s.id);
     setFormData({
       badge: { ...s.badge }, title: { ...s.title }, subtitle: { ...s.subtitle },
-      bg_color: s.bg_color || '#eef4f7', sort_order: String(s.sort_order),
+      bg_color: s.bg_color || '#eef4f7',
+      text_color: s.text_color || '#111111',
+      badge_bg_color: s.badge_bg_color || '#333333',
+      badge_text_color: s.badge_text_color || '#FFFFFF',
+      title_size_offset: s.title_size_offset ?? 0,
+      subtitle_size_offset: s.subtitle_size_offset ?? 0,
+      badge_size_offset: s.badge_size_offset ?? 0,
+      sort_order: String(s.sort_order),
       is_active: s.is_active, imageUrl: s.image_url || '', imageFile: null, link_url: s.link_url || '',
       display_mode: s.display_mode || 'default', media_type: s.media_type || 'image',
     });
@@ -136,6 +156,12 @@ export default function CarouselAdminPage() {
       const payload = {
         badge: formData.badge, title: formData.title, subtitle: formData.subtitle,
         image_url: finalImageUrl || null, bg_color: formData.bg_color,
+        text_color: formData.text_color,
+        badge_bg_color: formData.badge_bg_color,
+        badge_text_color: formData.badge_text_color,
+        title_size_offset: formData.title_size_offset,
+        subtitle_size_offset: formData.subtitle_size_offset,
+        badge_size_offset: formData.badge_size_offset,
         sort_order: parseInt(formData.sort_order) || 0, is_active: formData.is_active,
         link_url: formData.link_url || null,
         display_mode: formData.display_mode,
@@ -379,15 +405,65 @@ export default function CarouselAdminPage() {
                 <p className="text-[10px] text-gray-400">입력하면 슬라이드 클릭 시 해당 링크로 이동합니다. 비워두면 클릭 비활성.</p>
               </div>
 
-              {/* Bg color + Sort order + Active */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">배경색</label>
-                  <div className="flex items-center gap-2">
-                    <input type="color" value={formData.bg_color} onChange={e => setFormData(prev => ({ ...prev, bg_color: e.target.value }))} className="w-10 h-9 rounded border border-gray-200 cursor-pointer" />
-                    <input type="text" value={formData.bg_color} onChange={e => setFormData(prev => ({ ...prev, bg_color: e.target.value }))} className="flex-1 border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none font-mono" />
+              {/* Color settings */}
+              <div className="space-y-3 pt-2 border-t border-gray-100">
+                <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">색상 설정</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-gray-500">배경색</label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={formData.bg_color} onChange={e => setFormData(prev => ({ ...prev, bg_color: e.target.value }))} className="w-14 h-10 rounded border border-gray-200 cursor-pointer p-0" />
+                      <input type="text" value={formData.bg_color} onChange={e => setFormData(prev => ({ ...prev, bg_color: e.target.value }))} className="flex-1 border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none font-mono" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-gray-500">제목·부제목 색상</label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={formData.text_color} onChange={e => setFormData(prev => ({ ...prev, text_color: e.target.value }))} className="w-14 h-10 rounded border border-gray-200 cursor-pointer p-0" />
+                      <input type="text" value={formData.text_color} onChange={e => setFormData(prev => ({ ...prev, text_color: e.target.value }))} className="flex-1 border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none font-mono" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-gray-500">뱃지 배경색</label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={formData.badge_bg_color} onChange={e => setFormData(prev => ({ ...prev, badge_bg_color: e.target.value }))} className="w-14 h-10 rounded border border-gray-200 cursor-pointer p-0" />
+                      <input type="text" value={formData.badge_bg_color} onChange={e => setFormData(prev => ({ ...prev, badge_bg_color: e.target.value }))} className="flex-1 border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none font-mono" />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-gray-500">뱃지 폰트 색상</label>
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={formData.badge_text_color} onChange={e => setFormData(prev => ({ ...prev, badge_text_color: e.target.value }))} className="w-14 h-10 rounded border border-gray-200 cursor-pointer p-0" />
+                      <input type="text" value={formData.badge_text_color} onChange={e => setFormData(prev => ({ ...prev, badge_text_color: e.target.value }))} className="flex-1 border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none font-mono" />
+                    </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Font size offsets */}
+              <div className="space-y-3 pt-2 border-t border-gray-100">
+                <div>
+                  <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">폰트 크기 조절</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">기본 크기 대비 ± px 단위로 조정 (예: -4 = 작게, +4 = 크게)</p>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-gray-500">뱃지</label>
+                    <input type="number" value={formData.badge_size_offset} onChange={e => setFormData(prev => ({ ...prev, badge_size_offset: parseInt(e.target.value) || 0 }))} placeholder="0" className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-gray-500">제목</label>
+                    <input type="number" value={formData.title_size_offset} onChange={e => setFormData(prev => ({ ...prev, title_size_offset: parseInt(e.target.value) || 0 }))} placeholder="0" className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-semibold text-gray-500">부제목</label>
+                    <input type="number" value={formData.subtitle_size_offset} onChange={e => setFormData(prev => ({ ...prev, subtitle_size_offset: parseInt(e.target.value) || 0 }))} placeholder="0" className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sort order + Active */}
+              <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">표시 순서</label>
                   <input type="number" value={formData.sort_order} onChange={e => setFormData(prev => ({ ...prev, sort_order: e.target.value }))} className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none" />

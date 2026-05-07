@@ -7,6 +7,12 @@ export interface CarouselSlide {
   subtitle: Record<string, string>;
   image_url: string | null;
   bg_color: string;
+  text_color?: string;
+  badge_bg_color?: string;
+  badge_text_color?: string;
+  title_size_offset?: number;
+  subtitle_size_offset?: number;
+  badge_size_offset?: number;
   sort_order: number;
   is_active: boolean;
   link_url: string | null;

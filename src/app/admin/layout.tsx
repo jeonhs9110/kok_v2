@@ -110,6 +110,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-4 border-t border-gray-800 space-y-1">
           <Link
             href="/kr"
+            target="_blank"
+            rel="noopener noreferrer"
             className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
           >
             <ExternalLink className="w-5 h-5" />
