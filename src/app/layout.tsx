@@ -1,9 +1,21 @@
 import type { Metadata } from 'next';
-import { Noto_Sans_KR } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 import StorefrontLayoutWrapper from '@/components/StorefrontLayoutWrapper';
 
-const notoSans = Noto_Sans_KR({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700', '800', '900'] });
+const freesentation = localFont({
+  src: [
+    { path: '../../public/fonts/Freesentation-3Light.ttf',     weight: '300', style: 'normal' },
+    { path: '../../public/fonts/Freesentation-4Regular.ttf',   weight: '400', style: 'normal' },
+    { path: '../../public/fonts/Freesentation-5Medium.ttf',    weight: '500', style: 'normal' },
+    { path: '../../public/fonts/Freesentation-6SemiBold.ttf',  weight: '600', style: 'normal' },
+    { path: '../../public/fonts/Freesentation-7Bold.ttf',      weight: '700', style: 'normal' },
+    { path: '../../public/fonts/Freesentation-8ExtraBold.ttf', weight: '800', style: 'normal' },
+    { path: '../../public/fonts/Freesentation-9Black.ttf',     weight: '900', style: 'normal' },
+  ],
+  variable: '--font-freesentation',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Kokkok Garden',
@@ -16,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko">
-      <body className={`${notoSans.className} bg-white text-neutral-950 antialiased min-h-screen`}>
+    <html lang="ko" className={freesentation.variable}>
+      <body className={`${freesentation.className} bg-white text-neutral-950 antialiased min-h-screen`}>
         <StorefrontLayoutWrapper>
           {children}
         </StorefrontLayoutWrapper>
