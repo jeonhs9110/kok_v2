@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import BoardWriteButton from '@/components/BoardWriteButton';
-import ReviewShowcase from '@/components/ReviewShowcase';
 import { getActiveReviewCards } from '@/lib/api/reviews';
 import { getSiteSettings } from '@/lib/api/site-settings';
 
@@ -152,18 +151,55 @@ export default async function MenuPage({ slug, lang, page }: Props) {
     const displayTitle = menu?.title?.[lang] || menu?.title?.kr || menu?.title?.en || 'Review & Community';
     const lbEmpty = lang === 'kr' ? '등록된 리뷰가 없습니다.' : 'No reviews yet.';
     return (
-      <div className="animate-in fade-in duration-500">
-        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 pt-12">
-          <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
-            <Link href={`/${lang}`} className="hover:text-black transition-colors">HOME</Link>
-            <ChevronRight className="w-3 h-3 mx-2" />
-            <span className="text-[#111]">{displayTitle}</span>
-          </div>
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-in fade-in duration-500">
+        <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
+          <Link href={`/${lang}`} className="hover:text-black transition-colors">HOME</Link>
+          <ChevronRight className="w-3 h-3 mx-2" />
+          <span className="text-[#111]">{displayTitle}</span>
         </div>
         {cards.length === 0 ? (
-          <div className="max-w-[1240px] mx-auto px-4 py-20 text-center text-neutral-400 text-sm">{lbEmpty}</div>
+          <div className="py-20 text-center text-neutral-400 text-sm">{lbEmpty}</div>
         ) : (
-          <ReviewShowcase cards={cards} title={displayTitle} lang={lang} />
+          <div
+            className="grid gap-6 md:gap-8 pb-8"
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
+          >
+            {cards.map(card => {
+              const externalHref = card.link_url && card.link_url.trim() !== '' ? card.link_url : null;
+              const href = externalHref ?? `/${lang}/reviews/${card.id}`;
+              const cardInner = (
+                <>
+                  {card.image_url ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={card.image_url}
+                      alt={card.title || 'review'}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-sm">
+                      {card.title || 'REVIEW'}
+                    </div>
+                  )}
+                  {card.title && (
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                      <p className="text-white text-[13px] font-bold line-clamp-2">{card.title}</p>
+                    </div>
+                  )}
+                </>
+              );
+              const cls = 'group relative aspect-square overflow-hidden rounded-lg border border-neutral-100 hover:shadow-lg transition-all hover:-translate-y-0.5 block';
+              return externalHref ? (
+                <a key={card.id} href={externalHref} target="_blank" rel="noopener noreferrer" className={cls}>
+                  {cardInner}
+                </a>
+              ) : (
+                <Link key={card.id} href={href} className={cls}>
+                  {cardInner}
+                </Link>
+              );
+            })}
+          </div>
         )}
       </div>
     );
