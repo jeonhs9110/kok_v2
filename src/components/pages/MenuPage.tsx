@@ -160,45 +160,31 @@ export default async function MenuPage({ slug, lang, page }: Props) {
         {cards.length === 0 ? (
           <div className="py-20 text-center text-neutral-400 text-sm">{lbEmpty}</div>
         ) : (
-          <div
-            className="grid gap-6 md:gap-8 pb-8"
-            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}
-          >
-            {cards.map(card => {
-              const externalHref = card.link_url && card.link_url.trim() !== '' ? card.link_url : null;
-              const href = externalHref ?? `/${lang}/reviews/${card.id}`;
-              const cardInner = (
-                <>
-                  {card.image_url ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={card.image_url}
-                      alt={card.title || 'review'}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-sm">
-                      {card.title || 'REVIEW'}
-                    </div>
-                  )}
-                  {card.title && (
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                      <p className="text-white text-[13px] font-bold line-clamp-2">{card.title}</p>
-                    </div>
-                  )}
-                </>
-              );
-              const cls = 'group relative aspect-square overflow-hidden rounded-lg border border-neutral-100 hover:shadow-lg transition-all hover:-translate-y-0.5 block';
-              return externalHref ? (
-                <a key={card.id} href={externalHref} target="_blank" rel="noopener noreferrer" className={cls}>
-                  {cardInner}
-                </a>
-              ) : (
-                <Link key={card.id} href={href} className={cls}>
-                  {cardInner}
-                </Link>
-              );
-            })}
+          <div className="flex flex-wrap justify-center gap-6 md:gap-8 pb-8">
+            {cards.map(card => (
+              <div
+                key={card.id}
+                className="relative w-full max-w-[420px] sm:w-[calc(50%-1rem)] md:w-[calc(33.333%-1.333rem)] lg:w-[calc(25%-1.5rem)] aspect-square overflow-hidden rounded-lg border border-neutral-100"
+              >
+                {card.image_url ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={card.image_url}
+                    alt={card.title || 'review'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-sm">
+                    {card.title || 'REVIEW'}
+                  </div>
+                )}
+                {card.title && (
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                    <p className="text-white text-[13px] font-bold line-clamp-2">{card.title}</p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
