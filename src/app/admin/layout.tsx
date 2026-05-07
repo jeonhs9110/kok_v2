@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard, Scale, Globe, ImagePlus, Phone, Star } from 'lucide-react';
+import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard, Scale, Globe, ImagePlus, Phone, Star, FileText } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -30,6 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       title: '운영 및 발행 관리',
       items: [
         { name: '메뉴 관리', href: '/admin/menus', icon: MenuSquare },
+        { name: '게시글 관리', href: '/admin/posts', icon: FileText },
         { name: '카테고리', href: '/admin/categories', icon: Tag },
         { name: '성분 태그', href: '/admin/ingredient-tags', icon: Tag },
         { name: '상품 관리', href: '/admin/products', icon: Package },
@@ -63,6 +64,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     '/admin/sub-hero': '서브 히어로 배너 관리',
     '/admin/worldwide': '쇼핑 월드와이드 관리',
     '/admin/menus': '메뉴 관리',
+    '/admin/posts': '전체 게시글 관리',
     '/admin/shorts': '숏츠 관리',
     '/admin/instagram': '인스타그램 관리',
     '/admin/chatbot': '챗봇 관리',

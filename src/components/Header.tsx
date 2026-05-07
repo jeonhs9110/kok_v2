@@ -16,9 +16,9 @@ interface HeaderProps {
 }
 
 /* ── i18n utility strings ───────────────────────────────────────────── */
-const UTILITY: Record<string, { join: string; login: string; logout: string; order: string; recent: string; cs: string }> = {
-  kr: { join: '회원가입', login: '로그인', logout: '로그아웃', order: '주문조회', recent: '최근본상품', cs: '고객센터' },
-  en: { join: 'Sign Up', login: 'Login', logout: 'Logout', order: 'Order', recent: 'Recently Viewed', cs: 'Support' },
+const UTILITY: Record<string, { join: string; login: string; logout: string; order: string; recent: string }> = {
+  kr: { join: '회원가입', login: '로그인', logout: '로그아웃', order: '주문조회', recent: '최근본상품' },
+  en: { join: 'Sign Up', login: 'Login', logout: 'Logout', order: 'Order', recent: 'Recently Viewed' },
 };
 
 const NAV_LABELS: Record<string, { product: string; event: string; brand: string; review: string; global: string; worldwide: string }> = {
