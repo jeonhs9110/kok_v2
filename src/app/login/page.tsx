@@ -3,6 +3,10 @@ import { Lock } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { I18nProvider } from '@/lib/i18n/context';
+import { isValidLang, type Lang } from '@/lib/i18n/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -53,7 +57,7 @@ export default function LoginPage() {
           const { data: { user } } = await supabase.auth.getUser();
           let isAdmin = false;
           if (user) {
-            const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single();
+            const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).maybeSingle();
             if (profile?.role === 'admin') {
               document.cookie = "kokkok_admin_auth=true; path=/; max-age=86400; Secure; SameSite=Lax";
               isAdmin = true;
@@ -72,45 +76,53 @@ export default function LoginPage() {
     }
   };
 
+  const i18nLang: Lang = isValidLang(lang) ? lang : 'kr';
+
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center font-sans px-4 animate-in fade-in duration-500">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-10">
-          <div className="w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-6 bg-gray-50">
-            <Lock className="w-5 h-5 text-[#111111]" />
+    <I18nProvider isKorea={i18nLang === 'kr'} lang={i18nLang}>
+      <div className="flex flex-col min-h-screen bg-white font-sans">
+        <Header canPurchase={true} />
+        <main className="flex-1 w-full flex items-center justify-center px-4 py-16 animate-in fade-in duration-500">
+          <div className="w-full max-w-sm">
+            <div className="text-center mb-10">
+              <div className="w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-6 bg-gray-50">
+                <Lock className="w-5 h-5 text-[#111111]" />
+              </div>
+              <h1 className="text-2xl font-extrabold tracking-tight text-[#111111] mb-2">{t.title}</h1>
+              <p className="text-sm text-gray-500">{t.subtitle}</p>
+            </div>
+
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div className="space-y-4">
+                <input
+                  type="text" value={id} onChange={e => setId(e.target.value)}
+                  placeholder={t.email}
+                  className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-[#111111] placeholder:text-gray-400"
+                />
+                <input
+                  type="password" value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder={t.password}
+                  className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-[#111111] placeholder:text-gray-400"
+                />
+              </div>
+
+              {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
+
+              <button type="submit" disabled={isLoading}
+                className="w-full bg-[#111111] text-white py-4 font-bold tracking-widest text-[13px] hover:bg-black hover:shadow-lg transition-all mt-8 disabled:opacity-50">
+                {isLoading ? t.verifying : t.signin}
+              </button>
+            </form>
+
+            <div className="mt-8 text-center text-sm">
+              <Link href="/register" className="text-gray-500 hover:text-black transition-colors font-medium underline underline-offset-4">
+                {t.register}
+              </Link>
+            </div>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-[#111111] mb-2">{t.title}</h1>
-          <p className="text-sm text-gray-500">{t.subtitle}</p>
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-4">
-            <input
-              type="text" value={id} onChange={e => setId(e.target.value)}
-              placeholder={t.email}
-              className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-[#111111] placeholder:text-gray-400"
-            />
-            <input
-              type="password" value={password} onChange={e => setPassword(e.target.value)}
-              placeholder={t.password}
-              className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-[#111111] placeholder:text-gray-400"
-            />
-          </div>
-
-          {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
-
-          <button type="submit" disabled={isLoading}
-            className="w-full bg-[#111111] text-white py-4 font-bold tracking-widest text-[13px] hover:bg-black hover:shadow-lg transition-all mt-8 disabled:opacity-50">
-            {isLoading ? t.verifying : t.signin}
-          </button>
-        </form>
-
-        <div className="mt-8 text-center text-sm">
-          <Link href="/register" className="text-gray-500 hover:text-black transition-colors font-medium underline underline-offset-4">
-            {t.register}
-          </Link>
-        </div>
+        </main>
+        <Footer />
       </div>
-    </div>
+    </I18nProvider>
   );
 }

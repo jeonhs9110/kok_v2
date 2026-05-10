@@ -4,6 +4,10 @@ import { UserPlus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { createClient } from '@supabase/supabase-js';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { I18nProvider } from '@/lib/i18n/context';
+import { isValidLang, type Lang } from '@/lib/i18n/types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -216,21 +220,35 @@ export default function RegisterPage() {
     setMarketingChecked(!allChecked);
   };
 
+  const i18nLang: Lang = isValidLang(lang) ? lang : 'kr';
+
+  const Wrap = ({ children }: { children: React.ReactNode }) => (
+    <I18nProvider isKorea={i18nLang === 'kr'} lang={i18nLang}>
+      <div className="flex flex-col min-h-screen bg-white font-sans">
+        <Header canPurchase={true} />
+        <main className="flex-1 w-full flex items-center justify-center px-4 py-16 animate-in fade-in duration-500">
+          {children}
+        </main>
+        <Footer />
+      </div>
+    </I18nProvider>
+  );
+
   if (success) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center font-sans px-4 animate-in fade-in duration-500">
+      <Wrap>
         <div className="w-full max-w-sm text-center">
           <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 font-extrabold text-2xl">✓</div>
           <h1 className="text-2xl font-extrabold tracking-tight text-[#111] mb-4">{t.successTitle}</h1>
           <p className="text-sm text-gray-500 mb-8">{t.successMsg}</p>
           <Link href="/login" className="px-8 py-3 bg-[#111] text-white tracking-widest text-xs font-bold w-full block">{t.backToLogin}</Link>
         </div>
-      </div>
+      </Wrap>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center font-sans px-4 py-12 animate-in fade-in duration-500">
+    <Wrap>
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -358,6 +376,6 @@ export default function RegisterPage() {
           </Link>
         </div>
       </div>
-    </div>
+    </Wrap>
   );
 }

@@ -69,12 +69,13 @@ export default function MyPage({ lang }: { lang: string }) {
         setUserCreated(new Date(user.created_at).toLocaleDateString('ko-KR'));
         setUserId(user.id);
 
-        // Fetch customer profile
+        // Fetch customer profile (maybeSingle so a brand-new user with no
+        // customer_profiles row doesn't throw — they just see empty fields)
         const { data: profileData } = await supabase
           .from('customer_profiles')
           .select('*')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (profileData) {
           const p = {
