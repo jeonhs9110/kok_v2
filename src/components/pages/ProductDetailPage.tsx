@@ -158,11 +158,15 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
               <span className="text-[#f15a24] font-bold text-lg mb-0.5 tracking-tight">{discountPct}%</span>
             )}
             <span className="text-3xl font-extrabold tracking-tight text-[#111111]">
-              {productData.price.toLocaleString()}<span className="text-xl font-bold ml-1">원</span>
+              {lang === 'kr' ? (
+                <>{productData.price.toLocaleString()}<span className="text-xl font-bold ml-1">원</span></>
+              ) : (
+                <><span className="text-xl font-bold mr-1">KRW</span>{productData.price.toLocaleString()}</>
+              )}
             </span>
             {productData.originalPrice > productData.price && (
               <span className="text-neutral-400 line-through text-sm font-medium mb-1 ml-1">
-                {productData.originalPrice.toLocaleString()}원
+                {lang === 'kr' ? `${productData.originalPrice.toLocaleString()}원` : `KRW ${productData.originalPrice.toLocaleString()}`}
               </span>
             )}
           </div>

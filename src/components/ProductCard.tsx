@@ -109,12 +109,14 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
             {discountRate > 0 && (
               <span className="text-[15px] font-extrabold text-[#f15a24]">{discountRate}%</span>
             )}
-            <span className="text-[15px] font-extrabold text-[#111]">{price.toLocaleString()}원</span>
+            <span className="text-[15px] font-extrabold text-[#111]">
+              {lang === 'kr' ? `${price.toLocaleString()}원` : `KRW ${price.toLocaleString()}`}
+            </span>
           </div>
 
           {originalPrice > price && (
             <span className="text-[13px] text-[#b5b5b5] line-through block mt-0.5">
-              {originalPrice.toLocaleString()}원
+              {lang === 'kr' ? `${originalPrice.toLocaleString()}원` : `KRW ${originalPrice.toLocaleString()}`}
             </span>
           )}
 

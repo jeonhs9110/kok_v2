@@ -17,8 +17,15 @@ interface ProductActionButtonsProps {
 export default function ProductActionButtons({ productId, productName, price, originalPrice, imageUrl, naverStoreUrl, showCartButton = false, showBuyButton = false }: ProductActionButtonsProps) {
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { addItem } = useCart();
+  const isKr = lang === 'kr';
+  const lb = {
+    qty: isKr ? '수량' : 'Quantity',
+    total: isKr ? '총 상품금액' : 'Total',
+    added: isKr ? '✓ 담았습니다' : '✓ Added',
+    naver: isKr ? '네이버 스토어에서 구매 ↗' : 'Buy on Naver Store ↗',
+  };
 
   const increase = () => setQuantity(prev => prev + 1);
   const decrease = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
@@ -38,7 +45,7 @@ export default function ProductActionButtons({ productId, productName, price, or
     <div className="space-y-6 pt-8 mt-8 border-t border-neutral-100">
       {/* Quantity Selector */}
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-neutral-800 tracking-wider">수량</span>
+        <span className="text-sm font-semibold text-neutral-800 tracking-wider">{lb.qty}</span>
         <div className="flex items-center border border-neutral-200">
           <button onClick={decrease} className="px-4 py-2.5 text-lg text-neutral-400 hover:bg-neutral-50 hover:text-black transition-colors" disabled={quantity <= 1}>−</button>
           <span className="w-12 text-center text-sm font-semibold">{quantity}</span>
@@ -48,8 +55,10 @@ export default function ProductActionButtons({ productId, productName, price, or
 
       {/* Total Price preview */}
       <div className="flex justify-between items-end pb-4 pt-2">
-         <span className="text-sm font-semibold text-neutral-500">총 상품금액</span>
-         <span className="text-2xl font-extrabold text-[#111111]">{(price * quantity).toLocaleString()}원</span>
+         <span className="text-sm font-semibold text-neutral-500">{lb.total}</span>
+         <span className="text-2xl font-extrabold text-[#111111]">
+           {isKr ? `${(price * quantity).toLocaleString()}원` : `KRW ${(price * quantity).toLocaleString()}`}
+         </span>
       </div>
 
       {/* Action Buttons */}
@@ -62,7 +71,7 @@ export default function ProductActionButtons({ productId, productName, price, or
                 added ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-[#111111] text-[#111111] hover:bg-neutral-50'
               }`}
             >
-              {added ? '✓ 담았습니다' : t('product.addToCart')}
+              {added ? lb.added : t('product.addToCart')}
             </button>
           )}
           {showBuyButton && (
@@ -84,7 +93,7 @@ export default function ProductActionButtons({ productId, productName, price, or
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#03C75A] text-white font-bold text-[13px] tracking-wider hover:bg-[#02b351] transition-colors"
         >
-          네이버 스토어에서 구매 ↗
+          {lb.naver}
         </a>
       )}
     </div>

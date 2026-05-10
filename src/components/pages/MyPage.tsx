@@ -327,7 +327,9 @@ export default function MyPage({ lang }: { lang: string }) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm text-[#111] truncate">{item.product_name}</p>
-                        <p className="text-sm text-neutral-500 mt-0.5">{item.product_price.toLocaleString()}원</p>
+                        <p className="text-sm text-neutral-500 mt-0.5">
+                          {lang === 'kr' ? `${item.product_price.toLocaleString()}원` : `KRW ${item.product_price.toLocaleString()}`}
+                        </p>
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
                         <Link href={`/${lang}/products/${item.product_id}`} className="px-3 py-1.5 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded hover:bg-neutral-100 transition-colors">
