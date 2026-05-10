@@ -61,24 +61,27 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
   if (slides.length === 0) return null;
 
   return (
-    <div className="relative w-full h-[500px] sm:h-[600px] overflow-hidden group">
+    <div className="relative w-full h-[440px] sm:h-[600px] overflow-hidden group">
       <div className="overflow-hidden h-full" ref={emblaRef}>
         <div className="flex h-full">
-          {slides.map((slide) => {
+          {slides.map((slide, slideIdx) => {
             const isFullpage = slide.displayMode === 'fullpage';
+            const isFirst = slideIdx === 0;
 
             const MediaEl = slide.image ? (
               slide.mediaType === 'video' ? (
                 <video
                   src={slide.image}
                   autoPlay muted loop playsInline
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-center"
                 />
               ) : (
                 <img
                   src={slide.image}
                   alt={slide.title.replace('\n', ' ')}
-                  className="w-full h-full object-cover"
+                  loading={isFirst ? 'eager' : 'lazy'}
+                  fetchPriority={isFirst ? 'high' : 'auto'}
+                  className="w-full h-full object-cover object-center"
                 />
               )
             ) : (
@@ -134,52 +137,94 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                 )}
               </div>
             ) : (
-              /* ── Default mode: text left + image right ── */
-              <div className="max-w-[1400px] mx-auto h-full px-8 flex items-center justify-between">
-                <div className="z-10 max-w-lg mb-10 sm:mb-0">
-                  <span
-                    className="inline-block text-xs font-semibold px-3 py-1.5 rounded-full mb-6 relative"
-                    style={{
-                      backgroundColor: slide.badgeBgColor || '#333333',
-                      color: slide.badgeTextColor || '#ffffff',
-                      ...(slide.badgeSizeOffset !== 0 && { fontSize: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
-                    }}
-                  >
-                    {slide.badge}
-                  </span>
-                  <h2
-                    className="text-3xl sm:text-5xl font-bold leading-[1.3] whitespace-pre-line mb-4 relative"
-                    style={{
-                      color: slide.textColor || '#111827',
-                      ...(slide.titleSizeOffset !== 0 && { fontSize: `calc(3rem + ${slide.titleSizeOffset}px)` }),
-                    }}
-                  >
-                    {slide.title}
-                  </h2>
-                  <p
-                    className="text-sm sm:text-base relative"
-                    style={{
-                      color: slide.textColor || '#374151',
-                      ...(slide.subtitleSizeOffset !== 0 && { fontSize: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
-                    }}
-                  >
-                    {slide.subtitle}
-                  </p>
-                </div>
-                <div className="absolute right-0 bottom-0 top-0 w-1/2 flex justify-end items-center sm:relative sm:w-auto h-full p-4 sm:p-12 opacity-80 sm:opacity-100">
-                  <div className="relative h-[80%] aspect-[5/6] mr-8 shadow-2xl overflow-hidden rounded-md">
-                    {slide.image ? (
-                      slide.mediaType === 'video' ? (
-                        <video src={slide.image} autoPlay muted loop playsInline className="object-cover w-full h-full" />
-                      ) : (
-                        <img src={slide.image} alt={slide.title.replace('\n', ' ')} className="object-cover w-full h-full" />
-                      )
+              /* ── Default mode ──
+                 Mobile (< sm): media as full-bleed background + text overlaid bottom-left
+                                (avoids the cramped half-width image-on-right look).
+                 Desktop (≥ sm): text left + framed image right (original look). */
+              <>
+                {/* Mobile background media + overlay */}
+                <div className="absolute inset-0 sm:hidden">
+                  {slide.image ? (
+                    slide.mediaType === 'video' ? (
+                      <video
+                        src={slide.image}
+                        autoPlay muted loop playsInline
+                        className="w-full h-full object-cover object-center"
+                      />
                     ) : (
-                      <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-sm">No Image</div>
+                      <img
+                        src={slide.image}
+                        alt={slide.title.replace('\n', ' ')}
+                        loading={isFirst ? 'eager' : 'lazy'}
+                        fetchPriority={isFirst ? 'high' : 'auto'}
+                        className="w-full h-full object-cover object-center"
+                      />
+                    )
+                  ) : (
+                    <div className="w-full h-full bg-gray-200" />
+                  )}
+                  {/* Subtle bottom gradient so the text stays legible regardless of image */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-white/85 via-white/30 to-transparent" />
+                </div>
+
+                {/* Text + (desktop) framed image */}
+                <div className="relative max-w-[1400px] mx-auto h-full px-6 sm:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-end sm:justify-between pb-10 sm:pb-0">
+                  <div className="z-10 max-w-lg">
+                    {slide.badge && (
+                      <span
+                        className="inline-block text-xs font-semibold px-3 py-1.5 rounded-full mb-4 sm:mb-6"
+                        style={{
+                          backgroundColor: slide.badgeBgColor || '#333333',
+                          color: slide.badgeTextColor || '#ffffff',
+                          ...(slide.badgeSizeOffset !== 0 && { fontSize: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
+                        }}
+                      >
+                        {slide.badge}
+                      </span>
+                    )}
+                    <h2
+                      className="text-2xl sm:text-5xl font-bold leading-[1.3] whitespace-pre-line mb-3 sm:mb-4"
+                      style={{
+                        color: slide.textColor || '#111827',
+                        ...(slide.titleSizeOffset !== 0 && { fontSize: `calc(3rem + ${slide.titleSizeOffset}px)` }),
+                      }}
+                    >
+                      {slide.title}
+                    </h2>
+                    {slide.subtitle && (
+                      <p
+                        className="text-[13px] sm:text-base"
+                        style={{
+                          color: slide.textColor || '#374151',
+                          ...(slide.subtitleSizeOffset !== 0 && { fontSize: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
+                        }}
+                      >
+                        {slide.subtitle}
+                      </p>
                     )}
                   </div>
+                  {/* Desktop-only framed image on right */}
+                  <div className="hidden sm:flex relative w-auto h-full p-12 justify-end items-center">
+                    <div className="relative h-[80%] aspect-[5/6] mr-8 shadow-2xl overflow-hidden rounded-md">
+                      {slide.image ? (
+                        slide.mediaType === 'video' ? (
+                          <video src={slide.image} autoPlay muted loop playsInline className="object-cover w-full h-full" />
+                        ) : (
+                          <img
+                            src={slide.image}
+                            alt={slide.title.replace('\n', ' ')}
+                            loading={isFirst ? 'eager' : 'lazy'}
+                            fetchPriority={isFirst ? 'high' : 'auto'}
+                            className="object-cover w-full h-full"
+                          />
+                        )
+                      ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-sm">No Image</div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </>
             );
 
             return (

@@ -106,10 +106,14 @@ export default function RecentPage() {
                       {discount > 0 && (
                         <span className="text-[14px] font-extrabold text-[#f15a24]">{discount}%</span>
                       )}
-                      <span className="text-[14px] font-extrabold text-[#111]">{item.price.toLocaleString()}원</span>
+                      <span className="text-[14px] font-extrabold text-[#111]">
+                        {lang === 'kr' ? `${item.price.toLocaleString()}원` : `KRW ${item.price.toLocaleString()}`}
+                      </span>
                     </div>
                     {item.originalPrice > item.price && (
-                      <span className="text-[12px] text-[#b5b5b5] line-through block">{item.originalPrice.toLocaleString()}원</span>
+                      <span className="text-[12px] text-[#b5b5b5] line-through block">
+                        {lang === 'kr' ? `${item.originalPrice.toLocaleString()}원` : `KRW ${item.originalPrice.toLocaleString()}`}
+                      </span>
                     )}
                     <span className="text-[11px] text-neutral-400 block mt-1">{formatTimeAgo(item.viewedAt, lang)}</span>
                   </div>

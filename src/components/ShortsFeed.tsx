@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { Play } from 'lucide-react';
 import Link from 'next/link';
+import { useI18n } from '@/lib/i18n/context';
 
 export interface ShortItem {
   embedUrl: string;
@@ -10,6 +11,8 @@ export interface ShortItem {
 }
 
 export default function ShortsFeed({ shorts }: { shorts: ShortItem[] }) {
+  const { lang } = useI18n();
+  const viewLabel = lang === 'kr' ? '사용 제품 보기 →' : 'View product →';
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -76,7 +79,7 @@ export default function ShortsFeed({ shorts }: { shorts: ShortItem[] }) {
                         onClick={(e) => e.stopPropagation()}
                         className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 hover:bg-white text-black text-[11px] font-bold px-4 py-1.5 rounded-full tracking-wide transition-colors whitespace-nowrap shadow-lg"
                       >
-                        사용 제품 보기 →
+                        {viewLabel}
                       </Link>
                     )}
                   </div>
@@ -97,7 +100,7 @@ export default function ShortsFeed({ shorts }: { shorts: ShortItem[] }) {
                         href={short.productUrl}
                         className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 hover:bg-white text-black text-[11px] font-bold px-4 py-1.5 rounded-full tracking-wide transition-colors whitespace-nowrap shadow-lg z-10"
                       >
-                        사용 제품 보기 →
+                        {viewLabel}
                       </Link>
                     )}
                   </div>

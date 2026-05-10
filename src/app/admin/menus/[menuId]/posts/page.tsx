@@ -19,7 +19,7 @@ export default function PostsAdminPage() {
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     if (!supabase) return;
-    const { data: menuData } = await supabase.from('menus').select('*').eq('id', menuId).single();
+    const { data: menuData } = await supabase.from('menus').select('*').eq('id', menuId).maybeSingle();
     if (menuData) setMenu(menuData);
     const { data: postsData } = await supabase.from('posts').select('*').eq('menu_id', menuId).order('created_at', { ascending: false });
     setPosts(postsData ?? []);
