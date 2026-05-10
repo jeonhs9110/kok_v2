@@ -18,12 +18,13 @@ export default function SubHeroBanner({ banner }: Props) {
   if (!banner) return null;
 
   const inner = (
-    <div className="relative w-full h-[420px] md:h-[560px] overflow-hidden group">
+    <div className="relative w-full h-[360px] md:h-[560px] overflow-hidden group">
       {banner.image_url ? (
         <img
           src={banner.image_url}
           alt={banner.title || ''}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+          loading="lazy"
+          className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
         />
       ) : (
         <div className="w-full h-full bg-neutral-200" />
