@@ -27,7 +27,7 @@ export default function LegalAdminPage() {
     try {
       const [pagesRes, bizRes] = await Promise.all([
         supabase.from('legal_pages').select('*').order('id'),
-        supabase.from('business_info').select('*').single(),
+        supabase.from('business_info').select('*').maybeSingle(),
       ]);
       if (pagesRes.data) setPages(pagesRes.data);
       if (bizRes.data) setBiz(bizRes.data as BusinessInfo);
