@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Required for Docker deploy on EC2 — bundles app + node_modules into
+  // .next/standalone so the container doesn't need npm install at runtime.
+  output: 'standalone',
   async redirects() {
     return [
       // Legacy /kr/kr/... → /kr/...
