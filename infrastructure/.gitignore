@@ -9,3 +9,7 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+# Plan files contain env var values (incl. secrets) when generated via TF_VAR_*
+tfplan
+tfplan-*

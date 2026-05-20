@@ -56,12 +56,34 @@ variable "db_username" {
 
 # ---- EC2 ----
 variable "ec2_instance_type" {
+  # t4g.small temporarily — account on AWS Free Plan, only free-tier-eligible
+  # instance types can be launched. Will switch to t3a.small after Dynamic
+  # Solution upgrades account out of Free Plan (via reseller billing setup).
   type    = string
   default = "t4g.small"
 }
 
 variable "ec2_ami_owner" {
-  description = "Amazon Linux 2023 arm64 latest AMI lookup owner"
-  type        = string
-  default     = "amazon"
+  type    = string
+  default = "amazon"
+}
+
+# ---- Phase 1 app env vars (passed into EC2 user-data) ----
+# These are baked into /etc/kokkok/env on the instance and read by systemd.
+# Once Phase 2 IAM is wired, these should move to Secrets Manager.
+variable "next_public_supabase_url" {
+  type    = string
+  default = ""
+}
+
+variable "next_public_supabase_anon_key" {
+  type      = string
+  sensitive = true
+  default   = ""
+}
+
+variable "openai_api_key" {
+  type      = string
+  sensitive = true
+  default   = ""
 }
