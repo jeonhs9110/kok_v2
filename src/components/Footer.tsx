@@ -40,12 +40,17 @@ export default function Footer() {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase
-      .from('business_info')
-      .select('*')
-      .maybeSingle()
-      .then(({ data }) => { if (data) setBiz(data as BusinessInfo); })
-      .catch(() => { /* leave empty — footer falls back to blanks */ });
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('business_info')
+          .select('*')
+          .maybeSingle();
+        if (data) setBiz(data as BusinessInfo);
+      } catch {
+        /* leave empty — footer falls back to blanks */
+      }
+    })();
   }, []);
 
   const isKr = lang === 'kr';
