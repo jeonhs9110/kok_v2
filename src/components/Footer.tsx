@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Instagram, Youtube } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -131,7 +130,7 @@ export default function Footer() {
                   aria-label="Instagram"
                   className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center hover:bg-neutral-200 transition-colors"
                 >
-                  <Instagram className="w-4 h-4 text-neutral-600" />
+                  <span className="text-[10px] font-bold text-neutral-600">IG</span>
                 </a>
               )}
               {biz?.youtube_url && (
@@ -142,7 +141,7 @@ export default function Footer() {
                   aria-label="YouTube"
                   className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center hover:bg-neutral-200 transition-colors"
                 >
-                  <Youtube className="w-4 h-4 text-neutral-600" />
+                  <span className="text-[10px] font-bold text-neutral-600">YT</span>
                 </a>
               )}
             </div>
