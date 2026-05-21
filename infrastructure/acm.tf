@@ -1,6 +1,13 @@
 resource "aws_acm_certificate" "main" {
-  domain_name               = "kokkokgarden.com"
-  subject_alternative_names = ["www.kokkokgarden.com"]
+  # Wildcard covers www.kokkokgarden.com (and any future subdomain). Avoids
+  # CAA chain issue: with "www.kokkokgarden.com" as SAN, ACM followed the
+  # www→vercel-dns-017 CNAME and CAA-checked Vercel's domain (where Amazon
+  # is not authorized). With a wildcard, ACM CAA-checks only at the
+  # kokkokgarden.com apex (where amazontrust.com IS authorized). Apex
+  # (kokkokgarden.com) intentionally NOT in cert — it stays on Vercel
+  # serving the redirect to www.
+  domain_name               = "*.kokkokgarden.com"
+  subject_alternative_names = []
   validation_method         = "DNS"
 
   lifecycle {

@@ -13,3 +13,6 @@ override.tf.json
 # Plan files contain env var values (incl. secrets) when generated via TF_VAR_*
 tfplan
 tfplan-*
+
+# Captured terraform CLI output (may include cert ARNs, plan dumps, etc.)
+*.txt

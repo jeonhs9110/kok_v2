@@ -47,8 +47,12 @@ locals {
     chown root:ec2-user /etc/kokkok/env
 
     # ---- install + build (as ec2-user so files are owned correctly) ----
+    # IMPORTANT: source /etc/kokkok/env BEFORE `npm run build` so that
+    # NEXT_PUBLIC_* vars get inlined into the client bundle. Without this,
+    # the client-side supabase client is null and any browser-side fetch
+    # (e.g. Header nav menus) returns nothing.
     sudo -u ec2-user bash -c 'cd /opt/kokkok/app && npm ci'
-    sudo -u ec2-user bash -c 'cd /opt/kokkok/app && npm run build'
+    sudo -u ec2-user bash -c 'set -a; source /etc/kokkok/env; set +a; cd /opt/kokkok/app && npm run build'
 
     # ---- systemd unit ----
     cat >/etc/systemd/system/kokkok.service <<'UNITEOF'
