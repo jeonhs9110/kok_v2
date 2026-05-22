@@ -50,51 +50,27 @@ export default function SiteBackground() {
     );
   }
 
-  // Cinematic dual-layer to get full viewport coverage WITHOUT the heavy
-  // zoom + pixelation that plain object-cover caused for low-res sources:
-  //   1. Back layer: same media, object-cover + heavy blur + slight scale
-  //      → fills the entire viewport including the gutters where
-  //        object-contain would otherwise leave white letterbox bars.
-  //   2. Front layer: object-contain → keeps the actual subject sharp
-  //      and at its native aspect ratio.
-  // Net effect: edges of the screen are filled with a soft, abstract
-  // version of the same image/video, and the focal content stays crisp.
+  // Clean single-layer object-cover — the same pattern Netflix, Apple,
+  // and most hero-video sites use. Fills the full viewport without
+  // letterbox bars and without the blur effect (the dual-layer blur fill
+  // looked unprofessional). Visual sharpness is now bounded by the
+  // source video's resolution: a low-res asset will look soft when
+  // stretched to full viewport. To stay crisp on large displays the
+  // uploaded video should ideally be ≥1920×1080.
   return (
     <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden bg-white" aria-hidden="true">
       {bg.file_type === 'video' ? (
-        <>
-          <video
-            src={bg.file_url}
-            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl"
-            muted
-            loop
-            autoPlay
-            playsInline
-          />
-          <video
-            src={bg.file_url}
-            className="relative w-full h-full object-contain"
-            muted
-            loop
-            autoPlay
-            playsInline
-          />
-        </>
+        <video
+          src={bg.file_url}
+          className="w-full h-full object-cover"
+          muted
+          loop
+          autoPlay
+          playsInline
+        />
       ) : (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={bg.file_url}
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl"
-          />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={bg.file_url}
-            alt=""
-            className="relative w-full h-full object-contain"
-          />
-        </>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={bg.file_url} alt="" className="w-full h-full object-cover" />
       )}
     </div>
   );
