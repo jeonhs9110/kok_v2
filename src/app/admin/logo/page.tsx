@@ -14,6 +14,7 @@ interface Background {
   file_type: 'image' | 'video';
   mime_type: string;
   is_active: boolean;
+  scroll_driven: boolean;
   created_at: string;
 }
 
@@ -166,6 +167,20 @@ export default function LogoAdminPage() {
     setBgBusyId(id);
     try {
       await supabase.from('site_backgrounds').update({ is_active: false }).eq('id', id);
+      await loadBackgrounds();
+    } finally {
+      setBgBusyId(null);
+    }
+  };
+
+  const toggleScrollDriven = async (bg: Background) => {
+    if (!supabase) return;
+    setBgBusyId(bg.id);
+    try {
+      await supabase
+        .from('site_backgrounds')
+        .update({ scroll_driven: !bg.scroll_driven })
+        .eq('id', bg.id);
       await loadBackgrounds();
     } finally {
       setBgBusyId(null);
@@ -335,6 +350,22 @@ export default function LogoAdminPage() {
                         {bg.file_name || '(이름 없음)'}
                       </p>
                       <p className="text-[10px] text-gray-400">{new Date(bg.created_at).toLocaleString('ko-KR')}</p>
+
+                      {bg.file_type === 'video' && (
+                        <label className="flex items-start gap-1.5 cursor-pointer pt-1 hover:bg-gray-50 -mx-1 px-1 py-1 rounded">
+                          <input
+                            type="checkbox"
+                            checked={bg.scroll_driven}
+                            disabled={busy}
+                            onChange={() => toggleScrollDriven(bg)}
+                            className="mt-0.5 w-3.5 h-3.5 accent-[#00693A] cursor-pointer flex-shrink-0"
+                          />
+                          <span className="text-[10px] text-gray-600 leading-tight">
+                            <span className="font-semibold text-gray-700">스크롤 동기 재생</span>
+                            <span className="block text-gray-400">스크롤에 맞춰 영상 진행 (Apple 스타일)</span>
+                          </span>
+                        </label>
+                      )}
 
                       <div className="flex gap-1.5 pt-1">
                         {bg.is_active ? (
