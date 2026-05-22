@@ -50,12 +50,17 @@ export default function SiteBackground() {
     );
   }
 
+  // object-contain (not object-cover) so the media fits inside the viewport
+  // without cropping or upscaling beyond its native size — avoids the heavy
+  // zoom + visible pixelation that object-cover caused for lower-resolution
+  // assets. bg-white on the wrapper fills any letterbox area left by
+  // aspect-ratio mismatch with the same default look as the fallback.
   return (
-    <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden" aria-hidden="true">
+    <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden bg-white" aria-hidden="true">
       {bg.file_type === 'video' ? (
         <video
           src={bg.file_url}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           muted
           loop
           autoPlay
@@ -63,7 +68,7 @@ export default function SiteBackground() {
         />
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={bg.file_url} alt="" className="w-full h-full object-cover" />
+        <img src={bg.file_url} alt="" className="w-full h-full object-contain" />
       )}
     </div>
   );
