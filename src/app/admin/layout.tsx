@@ -17,7 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       title: '디자인 및 프론트 노출',
       items: [
-        { name: '로고 관리', href: '/admin/logo', icon: ImagePlus },
+        { name: '로고 및 배경 관리', href: '/admin/logo', icon: ImagePlus },
         { name: '메인 배너 (캐러셀)', href: '/admin/carousel', icon: Image },
         { name: '서브 히어로 (와이드)', href: '/admin/sub-hero', icon: PanelTop },
         { name: '프로모 배너', href: '/admin/promo-banners', icon: GalleryHorizontal },
@@ -55,7 +55,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     '/admin/users': '사용자 관리',
     '/admin/categories': '카테고리 관리',
     '/admin/products': '상품 관리',
-    '/admin/logo': '로고 관리',
+    '/admin/logo': '로고 및 배경 관리',
     '/admin/contact': '고객센터 (Contact) 관리',
     '/admin/reviews': '리뷰 쇼케이스 관리',
     '/admin/ingredient-tags': '성분 태그 관리',
