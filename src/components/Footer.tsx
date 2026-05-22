@@ -107,6 +107,32 @@ export default function Footer() {
               <Link href={`/${lang}/terms`} className="hover:underline">{t('footer.terms')}</Link>
               <Link href={`/${lang}/privacy`} className="hover:underline text-black font-bold">{t('footer.privacy')}</Link>
             </div>
+            {showSocial && (biz?.instagram_url || biz?.youtube_url) && (
+              <div className="flex items-center space-x-3 mt-6">
+                {biz?.instagram_url && (
+                  <a
+                    href={biz.instagram_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Instagram"
+                    className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center hover:bg-neutral-200 transition-colors"
+                  >
+                    <span className="text-[10px] font-bold text-neutral-600">IG</span>
+                  </a>
+                )}
+                {biz?.youtube_url && (
+                  <a
+                    href={biz.youtube_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="YouTube"
+                    className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center hover:bg-neutral-200 transition-colors"
+                  >
+                    <span className="text-[10px] font-bold text-neutral-600">YT</span>
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Customer Center */}
@@ -130,48 +156,23 @@ export default function Footer() {
             </div>
           )}
 
-          {/* Bank Info + Social */}
-          {(showBank || showSocial) && (
+          {/* Bank Info — column only renders when bank toggle is on AND
+              there's actual data. Social icons live in the brand column
+              now (above) so this column doesn't end up holding an orphan
+              icon when bank is hidden. */}
+          {showBank && (biz?.bank_name || biz?.bank_account || biz?.bank_holder) && (
             <div className="flex-1 lg:pl-12">
-              {showBank && <h3 className="text-[13px] font-bold tracking-widest mb-6">{t('footer.bankTitle')}</h3>}
-              {showBank && (
-                <div className="text-[13px] text-neutral-500 space-y-1">
-                  {(biz?.bank_name || biz?.bank_account) && (
-                    <p>
-                      {biz?.bank_name}
-                      {biz?.bank_name && biz?.bank_account && ' '}
-                      {biz?.bank_account}
-                    </p>
-                  )}
-                  {biz?.bank_holder && <p className="mt-4">{holderLabel}: {biz.bank_holder}</p>}
-                </div>
-              )}
-              {showSocial && (biz?.instagram_url || biz?.youtube_url) && (
-                <div className="flex items-center space-x-3 mt-8">
-                  {biz?.instagram_url && (
-                    <a
-                      href={biz.instagram_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Instagram"
-                      className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center hover:bg-neutral-200 transition-colors"
-                    >
-                      <span className="text-[10px] font-bold text-neutral-600">IG</span>
-                    </a>
-                  )}
-                  {biz?.youtube_url && (
-                    <a
-                      href={biz.youtube_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="YouTube"
-                      className="w-8 h-8 rounded-full bg-neutral-100 flex items-center justify-center hover:bg-neutral-200 transition-colors"
-                    >
-                      <span className="text-[10px] font-bold text-neutral-600">YT</span>
-                    </a>
-                  )}
-                </div>
-              )}
+              <h3 className="text-[13px] font-bold tracking-widest mb-6">{t('footer.bankTitle')}</h3>
+              <div className="text-[13px] text-neutral-500 space-y-1">
+                {(biz?.bank_name || biz?.bank_account) && (
+                  <p>
+                    {biz?.bank_name}
+                    {biz?.bank_name && biz?.bank_account && ' '}
+                    {biz?.bank_account}
+                  </p>
+                )}
+                {biz?.bank_holder && <p className="mt-4">{holderLabel}: {biz.bank_holder}</p>}
+              </div>
             </div>
           )}
 
