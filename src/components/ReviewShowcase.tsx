@@ -12,7 +12,7 @@ export default function ReviewShowcase({ cards, title = 'REVIEW & COMMUNITY', su
   if (cards.length === 0) return null;
 
   return (
-    <section className="py-16 md:py-24 bg-white">
+    <section className="py-16 md:py-24">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
         <div className="text-center mb-10">
           <h2 className="text-2xl font-extrabold text-[#111]">{title}</h2>
