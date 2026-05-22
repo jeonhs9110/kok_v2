@@ -34,7 +34,7 @@ export default function RootLayout({
         {/* Adobe Fonts — Tablet Gothic (영문 브랜드 서체) */}
         <link rel="stylesheet" href="https://use.typekit.net/czr4kvy.css" />
       </head>
-      <body className={`${freesentation.className} bg-white text-neutral-950 antialiased min-h-screen`}>
+      <body className={`${freesentation.className} text-neutral-950 antialiased min-h-screen`}>
         <SiteBackground />
         <StorefrontLayoutWrapper>
           {children}
