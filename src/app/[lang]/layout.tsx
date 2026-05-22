@@ -39,7 +39,14 @@ export default async function LangLayout({
       <CartProvider>
         <div className="flex flex-col min-h-screen">
           <Header canPurchase={isKorea} />
-          <main className="flex-1 w-full bg-white">{children}</main>
+          {/* main is transparent so the SiteBackground (-z-10 fixed layer)
+              can show through wherever individual sections don't paint
+              over it. Sections that want a solid backdrop (cards, hero
+              slides, ShortsFeed black, Footer white, etc.) set their own
+              bg-*; everything else lets the SiteBackground show. When no
+              active background exists, SiteBackground renders a white
+              fallback so the default look matches the pre-feature state. */}
+          <main className="flex-1 w-full">{children}</main>
           <Footer />
           <AIChatbot isKorea={isKorea} />
           <CookieConsent />
