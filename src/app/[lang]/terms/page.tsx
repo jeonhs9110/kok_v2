@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import BusinessInfoDisclosure from '@/components/BusinessInfoDisclosure';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -26,6 +27,7 @@ export default async function TermsPage({ params }: { params: Promise<{ lang: st
       </div>
       <h1 className="text-3xl font-extrabold tracking-tight text-[#111] mb-8">{title}</h1>
       <div className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">{content}</div>
+      <BusinessInfoDisclosure lang={lang} variant="terms" />
     </div>
   );
 }
