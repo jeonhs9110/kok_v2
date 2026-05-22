@@ -38,7 +38,17 @@ export default function SiteBackground() {
     })();
   }, []);
 
-  if (!bg) return null;
+  // Default fallback: solid white -z-10 layer when no active background.
+  // Guarantees the site looks like the pre-feature state regardless of
+  // browser dark-mode / system bg defaults.
+  if (!bg) {
+    return (
+      <div
+        className="fixed inset-0 -z-10 bg-white pointer-events-none"
+        aria-hidden="true"
+      />
+    );
+  }
 
   return (
     <div className="fixed inset-0 -z-10 pointer-events-none overflow-hidden" aria-hidden="true">
