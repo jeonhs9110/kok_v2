@@ -102,7 +102,7 @@ export default function InstagramSection({ data }: Props) {
                     {post?.image_url ? (
                       <img
                         src={post.image_url}
-                        alt=""
+                        alt={`@${handle} Instagram post`}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
                       />
                     ) : (
