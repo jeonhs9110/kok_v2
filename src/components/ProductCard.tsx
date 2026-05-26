@@ -27,17 +27,13 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
   const wishlisted = wishlistCtx?.isWishlisted(id) ?? false;
   const [cartAdded, setCartAdded] = useState(false);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleAddToCart = () => {
     addItem({ productId: id, name, price, originalPrice, imageUrl });
     setCartAdded(true);
     setTimeout(() => setCartAdded(false), 1500);
   };
 
-  const toggleWish = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const toggleWish = async () => {
     if (!wishlistCtx) return;
     const result = await wishlistCtx.toggle(id);
     if (result === null) {
@@ -45,68 +41,82 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
     }
   };
 
+  const priceText = lang === 'kr' ? `${price.toLocaleString()}원` : `KRW ${price.toLocaleString()}`;
+  const originalPriceText = lang === 'kr' ? `${originalPrice.toLocaleString()}원` : `KRW ${originalPrice.toLocaleString()}`;
+  const wishLabel = wishlisted
+    ? (lang === 'kr' ? '위시리스트에서 제거' : 'Remove from wishlist')
+    : (lang === 'kr' ? '위시리스트에 추가' : 'Add to wishlist');
+  const cartLabel = lang === 'kr' ? '장바구니에 담기' : 'Add to cart';
+
   return (
-    <div className="group block">
-      <Link href={`/${lang}/products/${id}`} className="block">
-        <div className="relative aspect-[5/6] w-full rounded-[16px] overflow-hidden bg-[#F5F5F5] mb-4">
-          <img
-            src={imageUrl}
-            alt={name}
-            width={500}
-            height={600}
-            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 ease-out"
-            loading="lazy"
-          />
-          <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+    <article className="group relative">
+      <div className="relative aspect-[5/6] w-full rounded-[16px] overflow-hidden bg-neutral-100 mb-4">
+        <img
+          src={imageUrl}
+          alt={name}
+          width={500}
+          height={600}
+          loading="lazy"
+          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 ease-out"
+        />
+        <div className="absolute bottom-3 right-3 z-10 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+          <button
+            type="button"
+            onClick={toggleWish}
+            aria-label={wishLabel}
+            aria-pressed={wishlisted}
+            className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors ${
+              wishlisted ? 'bg-red-500 text-white' : 'bg-white/90 text-neutral-600 hover:bg-red-50 hover:text-red-500'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${wishlisted ? 'fill-current' : ''}`} aria-hidden="true" />
+          </button>
+          {canPurchase && (
             <button
-              onClick={toggleWish}
-              aria-label={wishlisted ? (lang === 'kr' ? '위시리스트에서 제거' : 'Remove from wishlist') : (lang === 'kr' ? '위시리스트에 추가' : 'Add to wishlist')}
-              aria-pressed={wishlisted}
+              type="button"
+              onClick={handleAddToCart}
+              aria-label={cartLabel}
               className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors ${
-                wishlisted ? 'bg-red-500 text-white' : 'bg-white/90 text-neutral-600 hover:bg-red-50 hover:text-red-500'
+                cartAdded ? 'bg-green-500 text-white' : 'bg-white/90 text-neutral-600 hover:bg-black hover:text-white'
               }`}
             >
-              <Heart className={`w-4 h-4 ${wishlisted ? 'fill-current' : ''}`} aria-hidden="true" />
+              {cartAdded ? <span className="text-xs font-bold" aria-hidden="true">✓</span> : <ShoppingBag className="w-4 h-4" aria-hidden="true" />}
             </button>
-            {canPurchase && (
-              <button
-                onClick={handleAddToCart}
-                aria-label={lang === 'kr' ? '장바구니에 담기' : 'Add to cart'}
-                className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors ${
-                  cartAdded ? 'bg-green-500 text-white' : 'bg-white/90 text-neutral-600 hover:bg-black hover:text-white'
-                }`}
-              >
-                {cartAdded ? <span className="text-xs font-bold" aria-hidden="true">✓</span> : <ShoppingBag className="w-4 h-4" aria-hidden="true" />}
-              </button>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-col space-y-1 px-1">
-          <h3 className="text-[13px] font-bold text-[#333] leading-tight break-keep">{name}</h3>
-          <p className="text-[12px] text-[#999] leading-tight line-clamp-1">{summary}</p>
-
-          <div className="flex items-center space-x-1.5 mt-2">
-            {discountRate > 0 && (
-              <span className="text-[15px] font-extrabold text-[#f15a24]">{discountRate}%</span>
-            )}
-            <span className="text-[15px] font-extrabold text-[#111]">
-              {lang === 'kr' ? `${price.toLocaleString()}원` : `KRW ${price.toLocaleString()}`}
-            </span>
-          </div>
-
-          {originalPrice > price && (
-            <span className="text-[13px] text-[#b5b5b5] line-through block mt-0.5">
-              {lang === 'kr' ? `${originalPrice.toLocaleString()}원` : `KRW ${originalPrice.toLocaleString()}`}
-            </span>
-          )}
-
-          {!canPurchase && (
-            <span className="text-[11px] text-[#6b9fd4] font-medium mt-1 flex items-center gap-1">
-              🌏 {t('product.unavailable')}
-            </span>
           )}
         </div>
-      </Link>
-    </div>
+      </div>
+
+      <div className="flex flex-col space-y-1 px-1">
+        <h3 className="text-[13px] font-bold text-neutral-800 leading-tight break-keep">{name}</h3>
+        <p className="text-[12px] text-neutral-400 leading-tight line-clamp-1">{summary}</p>
+
+        <div className="flex items-center space-x-1.5 mt-2">
+          {discountRate > 0 && (
+            <span className="text-[15px] font-extrabold text-brand-accent">{discountRate}%</span>
+          )}
+          <span className="text-[15px] font-extrabold text-brand-ink">{priceText}</span>
+        </div>
+
+        {originalPrice > price && (
+          <span className="text-[13px] text-neutral-400 line-through block mt-0.5">{originalPriceText}</span>
+        )}
+
+        {!canPurchase && (
+          <span className="text-[11px] text-brand-notice-to font-medium mt-1 flex items-center gap-1">
+            🌏 {t('product.unavailable')}
+          </span>
+        )}
+      </div>
+
+      {/* Stretched link — covers entire card via ::before, sits BELOW the
+          z-10 action buttons so clicks on the wish/cart icons aren't
+          intercepted. Avoids the WCAG violation of nesting <button>
+          inside <a>. */}
+      <Link
+        href={`/${lang}/products/${id}`}
+        aria-label={name}
+        className="absolute inset-0 z-0 before:absolute before:inset-0 before:content-['']"
+      />
+    </article>
   );
 }

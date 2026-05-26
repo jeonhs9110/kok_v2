@@ -1,6 +1,17 @@
 @import "tailwindcss";
 
 /* ──────────────────────────────────────────────────────────
+   Design tokens (Tailwind v4 @theme) — surfaces a token both
+   as a utility (e.g. text-brand-ink) and as var(--color-brand-ink).
+   ────────────────────────────────────────────────────────── */
+@theme {
+  --color-brand-ink: #111111;
+  --color-brand-accent: #f15a24;
+  --color-brand-notice-from: #4a7ab5;
+  --color-brand-notice-to: #6b9fd4;
+}
+
+/* ──────────────────────────────────────────────────────────
    Brand Fonts
    - Korean: Freesentation (프리젠테이션) — registered via
      next/font/local in src/app/layout.tsx as --font-freesentation.
