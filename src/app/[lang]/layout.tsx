@@ -8,6 +8,7 @@ import AIChatbot from '@/components/AIChatbot';
 import CookieConsent from '@/components/CookieConsent';
 import PageTracker from '@/components/PageTracker';
 import { CartProvider } from '@/lib/cart/CartContext';
+import { WishlistProvider } from '@/lib/wishlist/WishlistContext';
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
@@ -37,6 +38,7 @@ export default async function LangLayout({
   return (
     <I18nProvider isKorea={isKorea} lang={lang}>
       <CartProvider>
+        <WishlistProvider>
         <div className="flex flex-col min-h-screen">
           <Header canPurchase={isKorea} />
           {/* main is transparent so the SiteBackground (-z-10 fixed layer)
@@ -52,6 +54,7 @@ export default async function LangLayout({
           <CookieConsent />
           <PageTracker />
         </div>
+        </WishlistProvider>
       </CartProvider>
     </I18nProvider>
   );

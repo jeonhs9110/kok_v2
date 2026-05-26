@@ -1,5 +1,3 @@
-'use client';
-
 import Link from 'next/link';
 
 export interface SubHeroBannerData {
@@ -25,9 +23,12 @@ export default function SubHeroBanner({ banner }: Props) {
   const inner = (
     <div className="relative w-full h-[360px] md:h-[560px] overflow-hidden group">
       {banner.image_url ? (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={banner.image_url}
           alt={banner.title || ''}
+          width={1600}
+          height={560}
           loading="lazy"
           className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
         />

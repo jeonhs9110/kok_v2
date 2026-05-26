@@ -1,7 +1,4 @@
-'use client';
-
 import Link from 'next/link';
-import Image from 'next/image';
 
 export interface PromoBanner {
   id: string;
@@ -33,9 +30,13 @@ export default function PromoBannersSection({ banners }: Props) {
               className="relative block aspect-square overflow-hidden rounded-xl group"
             >
               {banner.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={banner.image_url}
                   alt="프로모션 배너"
+                  width={800}
+                  height={800}
+                  loading="lazy"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
               ) : (

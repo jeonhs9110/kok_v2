@@ -56,12 +56,20 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
     if (!emblaApi) return;
     onSelect();
     emblaApi.on('select', onSelect);
+    return () => {
+      emblaApi.off('select', onSelect);
+    };
   }, [emblaApi, onSelect]);
 
   if (slides.length === 0) return null;
 
   return (
-    <div className="relative w-full h-[440px] sm:h-[600px] overflow-hidden group">
+    <div
+      className="relative w-full h-[440px] sm:h-[600px] overflow-hidden group"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Featured products"
+    >
       <div className="overflow-hidden h-full" ref={emblaRef}>
         <div className="flex h-full">
           {slides.map((slide, slideIdx) => {
@@ -78,7 +86,9 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
               ) : (
                 <img
                   src={slide.image}
-                  alt={slide.title.replace('\n', ' ')}
+                  alt={slide.title.replace('\n', ' ') || ''}
+                  width={1920}
+                  height={1080}
                   loading={isFirst ? 'eager' : 'lazy'}
                   fetchPriority={isFirst ? 'high' : 'auto'}
                   className="w-full h-full object-cover object-center"
@@ -248,16 +258,20 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
 
       {/* Navigation Arrows */}
       <button
+        type="button"
+        aria-label="Previous slide"
         className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-30"
         onClick={scrollPrev}
       >
-        <ChevronLeft className="w-10 h-10 stroke-[1.5] drop-shadow-md" />
+        <ChevronLeft className="w-10 h-10 stroke-[1.5] drop-shadow-md" aria-hidden="true" />
       </button>
       <button
+        type="button"
+        aria-label="Next slide"
         className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-30"
         onClick={scrollNext}
       >
-        <ChevronRight className="w-10 h-10 stroke-[1.5] drop-shadow-md" />
+        <ChevronRight className="w-10 h-10 stroke-[1.5] drop-shadow-md" aria-hidden="true" />
       </button>
 
       {/* Pagination Dots */}
@@ -265,8 +279,11 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
         {slides.map((_, index) => (
           <button
             key={index}
-            className={`w-2 h-2 rounded-full transition-all ${
-              index === selectedIndex ? 'bg-white w-6 shadow-md' : 'bg-white/50'
+            type="button"
+            aria-label={`Go to slide ${index + 1}`}
+            aria-current={index === selectedIndex ? 'true' : undefined}
+            className={`h-2 rounded-full transition-all ${
+              index === selectedIndex ? 'bg-white w-6 shadow-md' : 'bg-white/50 w-2'
             }`}
             onClick={() => emblaApi && emblaApi.scrollTo(index)}
           />

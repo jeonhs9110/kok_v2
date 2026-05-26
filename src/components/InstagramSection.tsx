@@ -1,5 +1,3 @@
-'use client';
-
 export interface InstagramPost {
   id: string;
   image_url: string;
@@ -100,9 +98,13 @@ export default function InstagramSection({ data }: Props) {
                     className={`${hasAnyEmbed ? 'aspect-[4/5]' : 'aspect-square'} block overflow-hidden group relative bg-neutral-100`}
                   >
                     {post?.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={post.image_url}
                         alt={`@${handle} Instagram post`}
+                        width={600}
+                        height={600}
+                        loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
                       />
                     ) : (
