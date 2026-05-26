@@ -7,7 +7,7 @@ import { getProducts } from '@/lib/api/products';
 import { getAllCategories } from '@/lib/api/categories';
 import { getAllTags, getProductTags, TAG_CATEGORIES } from '@/lib/api/ingredient-tags';
 import { translateProduct } from '@/lib/openai';
-import { toYouTubeEmbedUrl, isYouTubeShortsUrl } from '@/lib/youtube';
+import ProductDetailComponents from '@/components/ProductDetailComponents';
 
 const labels: Record<string, {
   home: string; shop: string; details: string; notFound: string;
@@ -199,52 +199,7 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
         <div className="mt-24 pt-16 border-t border-neutral-100">
           <h2 className="text-lg font-extrabold tracking-widest mb-12 uppercase text-center">{lb.detailView}</h2>
           <div className="max-w-3xl mx-auto">
-            {[...productData.detailComponents]
-              .sort((a, b) => a.sort_order - b.sort_order)
-              .map(c => {
-                if (c.type === 'youtube') {
-                  const embed = toYouTubeEmbedUrl(c.url);
-                  if (!embed) return null;
-                  return (
-                    <div
-                      key={c.id}
-                      className={isYouTubeShortsUrl(c.url) ? 'aspect-[9/16]' : 'aspect-video'}
-                    >
-                      <iframe
-                        src={embed}
-                        className="w-full h-full block"
-                        title="Product detail video"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        loading="lazy"
-                      />
-                    </div>
-                  );
-                }
-                if (c.type === 'video') {
-                  return (
-                    <video
-                      key={c.id}
-                      src={c.url}
-                      className="w-full block"
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      preload="metadata"
-                    />
-                  );
-                }
-                return (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={c.id}
-                    src={c.url}
-                    alt=""
-                    className="w-full block"
-                  />
-                );
-              })}
+            <ProductDetailComponents components={productData.detailComponents} />
           </div>
         </div>
       ) : productData.detailBody ? (

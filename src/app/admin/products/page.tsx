@@ -1,11 +1,12 @@
 'use client';
 
-import { Plus, Trash2, Upload, X, ImageIcon, Pencil, ArrowUp, ArrowDown, Film, Image as ImgIcon } from 'lucide-react';
+import { Plus, Trash2, Upload, X, ImageIcon, Pencil, ArrowUp, ArrowDown, Film, Image as ImgIcon, Eye } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Product, supabase, MOCK_PRODUCTS, type DetailComponent } from '@/lib/api/products';
 import type { Category } from '@/lib/api/categories';
 import { getAllTags, getProductTags, setProductTags, TAG_CATEGORIES, type IngredientTag } from '@/lib/api/ingredient-tags';
 import { isValidYouTubeUrl, toYouTubeThumbnailUrl, isYouTubeShortsUrl } from '@/lib/youtube';
+import ProductDetailComponents from '@/components/ProductDetailComponents';
 
 const BUCKET = 'product-images';
 
@@ -811,6 +812,19 @@ export default function ProductsAdminPage() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {formData.detailComponents.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-gray-400" />
+                      <p className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">사이트 미리보기</p>
+                      <span className="text-[10px] text-gray-400 ml-auto">실제 스토어 페이지와 동일한 모습 (스토어 폭은 더 넓음)</span>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                      <ProductDetailComponents components={formData.detailComponents} />
+                    </div>
                   </div>
                 )}
 
