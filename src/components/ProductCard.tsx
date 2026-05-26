@@ -91,7 +91,7 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
             aria-label={wishLabel}
             aria-pressed={wishlisted}
             aria-busy={wishPending}
-            className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors disabled:opacity-60 disabled:cursor-wait ${
+            className={`w-11 h-11 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors disabled:opacity-60 disabled:cursor-wait ${
               wishlisted ? 'bg-red-500 text-white' : 'bg-white/90 text-neutral-600 hover:bg-red-50 hover:text-red-500'
             }`}
           >
@@ -103,19 +103,24 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
               onClick={handleAddToCart}
               disabled={cartAdded}
               aria-label={cartLabel}
-              className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors disabled:cursor-default ${
+              className={`w-11 h-11 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors disabled:cursor-default ${
                 cartAdded ? 'bg-green-500 text-white' : 'bg-white/90 text-neutral-600 hover:bg-black hover:text-white'
               }`}
             >
               {cartAdded ? <span className="text-xs font-bold" aria-hidden="true">✓</span> : <ShoppingBag className="w-4 h-4" aria-hidden="true" />}
             </button>
           )}
+          {/* SR-only live region so color-blind / screen-reader users get
+              the wishlist state change in addition to the color/fill cue. */}
+          <span className="sr-only" aria-live="polite">
+            {wishlisted ? wishLabel : ''}
+          </span>
         </div>
       </div>
 
       <div className="flex flex-col space-y-1 px-1">
         <h3 className="text-[13px] font-bold text-neutral-800 leading-tight break-keep">{name}</h3>
-        <p className="text-[12px] text-neutral-400 leading-tight line-clamp-1">{summary}</p>
+        <p className="text-[12px] text-neutral-500 leading-tight line-clamp-1">{summary}</p>
 
         <div className="flex items-center space-x-1.5 mt-2">
           {discountRate > 0 && (
@@ -125,7 +130,7 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
         </div>
 
         {originalPrice > price && (
-          <span className="text-[13px] text-neutral-400 line-through block mt-0.5">{originalPriceText}</span>
+          <span className="text-[13px] text-neutral-500 line-through block mt-0.5">{originalPriceText}</span>
         )}
 
         {!canPurchase && (
@@ -142,7 +147,7 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
       <Link
         href={`/${lang}/products/${id}`}
         aria-label={name}
-        className="absolute inset-0 z-0 before:absolute before:inset-0 before:content-['']"
+        className="absolute inset-0 z-0 rounded-[16px] before:absolute before:inset-0 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand-ink"
       />
     </article>
   );

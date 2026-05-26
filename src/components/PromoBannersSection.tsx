@@ -27,7 +27,7 @@ export default function PromoBannersSection({ banners }: Props) {
               href={banner.link_url || '#'}
               target={banner.link_url?.startsWith('http') ? '_blank' : undefined}
               rel={banner.link_url?.startsWith('http') ? 'noopener noreferrer' : undefined}
-              className="relative block aspect-square overflow-hidden rounded-xl group"
+              className="relative block aspect-square overflow-hidden rounded-xl group isolate"
             >
               {banner.image_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
