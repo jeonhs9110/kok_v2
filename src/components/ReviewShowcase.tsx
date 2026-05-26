@@ -30,6 +30,9 @@ export default function ReviewShowcase({ cards, title = 'REVIEW & COMMUNITY', su
                   <img
                     src={card.image_url}
                     alt={card.title || 'review'}
+                    width={400}
+                    height={400}
+                    loading="lazy"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 ) : (

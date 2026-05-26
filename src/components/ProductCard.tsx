@@ -1,15 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShoppingBag, Heart } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
-import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { useState } from 'react';
 import { useCart } from '@/lib/cart/CartContext';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+import { useOptionalWishlist } from '@/lib/wishlist/WishlistContext';
 
 interface ProductCardProps {
   id: string;
@@ -25,8 +22,9 @@ interface ProductCardProps {
 export default function ProductCard({ id, name, summary, price, originalPrice, discountRate, imageUrl, canPurchase = true }: ProductCardProps) {
   const { t, lang } = useI18n();
   const { addItem } = useCart();
-  const [wishlisted, setWishlisted] = useState(false);
-  const [wishLoading, setWishLoading] = useState(false);
+  const wishlistCtx = useOptionalWishlist();
+  const router = useRouter();
+  const wishlisted = wishlistCtx?.isWishlisted(id) ?? false;
   const [cartAdded, setCartAdded] = useState(false);
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -37,37 +35,14 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
     setTimeout(() => setCartAdded(false), 1500);
   };
 
-  useEffect(() => {
-    (async () => {
-      if (!supabase) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase.from('wishlist').select('id').eq('user_id', user.id).eq('product_id', id).maybeSingle();
-      if (data) setWishlisted(true);
-    })();
-  }, [id]);
-
   const toggleWish = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!supabase) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      window.location.href = '/login';
-      return;
+    if (!wishlistCtx) return;
+    const result = await wishlistCtx.toggle(id);
+    if (result === null) {
+      router.push('/login');
     }
-
-    setWishLoading(true);
-    try {
-      if (wishlisted) {
-        await supabase.from('wishlist').delete().eq('user_id', user.id).eq('product_id', id);
-        setWishlisted(false);
-      } else {
-        await supabase.from('wishlist').insert([{ user_id: user.id, product_id: id }]);
-        setWishlisted(true);
-      }
-    } catch { /* ignore */ }
-    setWishLoading(false);
   };
 
   return (
@@ -77,26 +52,31 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
           <img
             src={imageUrl}
             alt={name}
+            width={500}
+            height={600}
             className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 ease-out"
+            loading="lazy"
           />
-          <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="absolute bottom-3 right-3 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
             <button
               onClick={toggleWish}
-              disabled={wishLoading}
+              aria-label={wishlisted ? (lang === 'kr' ? '위시리스트에서 제거' : 'Remove from wishlist') : (lang === 'kr' ? '위시리스트에 추가' : 'Add to wishlist')}
+              aria-pressed={wishlisted}
               className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors ${
                 wishlisted ? 'bg-red-500 text-white' : 'bg-white/90 text-neutral-600 hover:bg-red-50 hover:text-red-500'
               }`}
             >
-              <Heart className={`w-4 h-4 ${wishlisted ? 'fill-current' : ''}`} />
+              <Heart className={`w-4 h-4 ${wishlisted ? 'fill-current' : ''}`} aria-hidden="true" />
             </button>
             {canPurchase && (
               <button
                 onClick={handleAddToCart}
+                aria-label={lang === 'kr' ? '장바구니에 담기' : 'Add to cart'}
                 className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors ${
                   cartAdded ? 'bg-green-500 text-white' : 'bg-white/90 text-neutral-600 hover:bg-black hover:text-white'
                 }`}
               >
-                {cartAdded ? <span className="text-xs font-bold">✓</span> : <ShoppingBag className="w-4 h-4" />}
+                {cartAdded ? <span className="text-xs font-bold" aria-hidden="true">✓</span> : <ShoppingBag className="w-4 h-4" aria-hidden="true" />}
               </button>
             )}
           </div>

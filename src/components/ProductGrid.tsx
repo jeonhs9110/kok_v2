@@ -1,9 +1,18 @@
-import React from 'react';
 import ProductCard from './ProductCard';
+
+export interface GridProduct {
+  id: string;
+  name: string;
+  summary: string;
+  price: number;
+  originalPrice: number;
+  discountRate: number;
+  imageUrl: string;
+}
 
 interface ProductGridProps {
   title?: string;
-  products: any[];
+  products: GridProduct[];
   canPurchase?: boolean;
 }
 
