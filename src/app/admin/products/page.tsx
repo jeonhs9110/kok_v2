@@ -181,6 +181,30 @@ export default function ProductsAdminPage() {
     } catch {
       setSelectedTagIds([]);
     }
+
+    // Legacy products only have HTML in detail_body. Auto-import any <img>
+    // tags as image components so the admin sees the existing content in
+    // the new editor instead of an empty list.
+    let initialComponents: DetailComponent[] = item.detailComponents || [];
+    if (initialComponents.length === 0 && item.detailBody && typeof window !== 'undefined') {
+      try {
+        const doc = new DOMParser().parseFromString(item.detailBody, 'text/html');
+        const urls = Array.from(doc.querySelectorAll('img'))
+          .map(img => img.getAttribute('src') || '')
+          .filter(Boolean);
+        if (urls.length > 0) {
+          initialComponents = urls.map((url, i) => ({
+            id: crypto.randomUUID(),
+            type: 'image' as const,
+            url,
+            sort_order: i,
+          }));
+        }
+      } catch (err) {
+        console.warn('detail_body HTML 파싱 실패 (legacy import):', err);
+      }
+    }
+
     setFormData({
       name: item.name,
       summary: item.summary,
@@ -191,7 +215,7 @@ export default function ProductsAdminPage() {
       imageFile: null,
       description: item.description,
       detailBody: item.detailBody || '',
-      detailComponents: item.detailComponents || [],
+      detailComponents: initialComponents,
       naverStoreUrl: item.naver_store_url || '',
       categoryId: item.category_id || '',
       subcategoryId: item.subcategory_id || '',
