@@ -57,27 +57,33 @@ export default function ShortsFeed({ shorts }: { shorts: ShortItem[] }) {
                 className={`flex-none w-[260px] h-[460px] rounded-[24px] overflow-hidden bg-black snap-center relative shadow-2xl transition-all duration-500 ease-in-out ${isPlaying ? 'scale-[1.02] ring-2 ring-white z-10' : 'opacity-60 hover:opacity-100 hover:scale-[1.01] ring-1 ring-white/10'}`}
               >
                 {!isPlaying && videoId && (
-                  <div
-                    className="group relative w-full h-full cursor-pointer"
-                    onClick={() => handleThumbnailClick(index)}
-                  >
-                    <img
-                      src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-                      alt="Shorts Thumbnail"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
-                      <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                        <Play className="w-8 h-8 text-white ml-1" fill="white" />
+                  <div className="relative w-full h-full">
+                    <button
+                      type="button"
+                      onClick={() => handleThumbnailClick(index)}
+                      aria-label={lang === 'kr' ? '영상 재생' : 'Play video'}
+                      className="group absolute inset-0 w-full h-full block cursor-pointer"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+                        alt=""
+                        width={480}
+                        height={360}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/40 group-hover:bg-black/20 transition-colors">
+                        <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                          <Play className="w-8 h-8 text-white ml-1" fill="white" aria-hidden="true" />
+                        </div>
                       </div>
-                    </div>
+                    </button>
 
-                    {/* Product link badge */}
                     {short.productUrl && (
                       <Link
                         href={short.productUrl}
-                        onClick={(e) => e.stopPropagation()}
-                        className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 hover:bg-white text-black text-[11px] font-bold px-4 py-1.5 rounded-full tracking-wide transition-colors whitespace-nowrap shadow-lg"
+                        className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-white/90 hover:bg-white text-black text-[11px] font-bold px-4 py-1.5 rounded-full tracking-wide transition-colors whitespace-nowrap shadow-lg"
                       >
                         {viewLabel}
                       </Link>
@@ -88,13 +94,13 @@ export default function ShortsFeed({ shorts }: { shorts: ShortItem[] }) {
                 {(isPlaying || !videoId) && (
                   <div className="relative w-full h-full">
                     <iframe
-                      src={short.embedUrl + (short.embedUrl.includes('?') ? '&autoplay=1&mute=0' : '?autoplay=1&mute=0')}
+                      src={short.embedUrl + (short.embedUrl.includes('?') ? '&autoplay=1&mute=1' : '?autoplay=1&mute=1')}
+                      title={lang === 'kr' ? '브랜드 쇼츠 영상' : 'Brand shorts video'}
                       className="w-full h-full object-cover pointer-events-auto"
                       style={{ border: 'none' }}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
-                    {/* Product link on active/playing */}
                     {short.productUrl && (
                       <Link
                         href={short.productUrl}
