@@ -103,7 +103,7 @@ export default function Footer() {
               <p className="mt-4 pt-4 border-t border-neutral-100">© {BRAND} All Rights Reserved.</p>
             </div>
             <div className="flex space-x-4 mt-6 text-[12px] font-semibold flex-wrap gap-y-2">
-              <Link href={`/${lang}/about`} className="hover:underline">{t('footer.about')}</Link>
+              <Link href={`/${lang}/menus/about`} className="hover:underline">{t('footer.about')}</Link>
               <Link href={`/${lang}/terms`} className="hover:underline">{t('footer.terms')}</Link>
               <Link href={`/${lang}/privacy`} className="hover:underline text-black font-bold">{t('footer.privacy')}</Link>
             </div>

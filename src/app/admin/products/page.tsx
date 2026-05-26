@@ -42,14 +42,15 @@ export default function ProductsAdminPage() {
 
   const fetchCategories = useCallback(async () => {
     if (!supabase) return;
-    const { data } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order');
+    const { data, error } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order');
+    if (error) console.error('카테고리 로드 실패:', error);
     if (data) setCategories(data);
   }, []);
 
   useEffect(() => {
     fetchAll();
     fetchCategories();
-    getAllTags().then(setAllTags).catch(() => {});
+    getAllTags().then(setAllTags).catch(err => console.error('성분 태그 로드 실패:', err));
   }, [fetchCategories]);
 
   async function fetchAll() {

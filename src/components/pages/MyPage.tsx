@@ -324,7 +324,7 @@ export default function MyPage({ lang }: { lang: string }) {
                   {wishlist.map(item => (
                     <div key={item.id} className="flex items-center gap-4 p-4 border border-neutral-100 rounded-xl hover:bg-neutral-50 transition-colors">
                       <div className="w-16 h-16 bg-neutral-100 rounded-lg overflow-hidden flex-shrink-0">
-                        {item.product_image && <img src={item.product_image} alt="" className="w-full h-full object-cover" />}
+                        {item.product_image && <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm text-[#111] truncate">{item.product_name}</p>

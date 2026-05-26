@@ -184,7 +184,7 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
             <div className="pt-8 mt-8 border-t border-neutral-100 space-y-4">
               <p className="text-sm text-neutral-500">{lb.unavailable}</p>
               <Link
-                href="/kr/kr"
+                href="/kr"
                 className="inline-block bg-[#111111] text-white px-6 py-3 text-xs font-bold tracking-widest hover:bg-black transition-colors"
               >
                 {lb.visitKr}

@@ -35,7 +35,7 @@ export default function PromoBannersSection({ banners }: Props) {
               {banner.image_url ? (
                 <img
                   src={banner.image_url}
-                  alt=""
+                  alt="프로모션 배너"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
               ) : (

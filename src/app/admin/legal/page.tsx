@@ -40,12 +40,16 @@ export default function LegalAdminPage() {
         supabase.from('legal_pages').select('*').order('id'),
         supabase.from('business_info').select('*').maybeSingle(),
       ]);
+      if (pagesRes.error) console.error('약관 페이지 로드 실패:', pagesRes.error);
+      if (bizRes.error) console.error('사업자 정보 로드 실패:', bizRes.error);
       if (pagesRes.data) setPages(pagesRes.data);
       if (bizRes.data) {
         const d = bizRes.data as BusinessInfo;
         setBiz({ ...d, hidden_fields: d.hidden_fields ?? [] });
       }
-    } catch {}
+    } catch (err) {
+      console.error('법적 페이지 관리자 로드 실패:', err);
+    }
     setLoading(false);
   }
 
