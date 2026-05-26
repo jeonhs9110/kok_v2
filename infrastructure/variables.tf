@@ -74,12 +74,20 @@ variable "ec2_ami_owner" {
 variable "next_public_supabase_url" {
   type    = string
   default = ""
+  validation {
+    condition     = length(var.next_public_supabase_url) > 0
+    error_message = "next_public_supabase_url must be set. Empty value produces a broken Next.js build (server falls back to MOCK data, storefront loses hero/nav/products). Set it in infrastructure/secrets.auto.tfvars (gitignored)."
+  }
 }
 
 variable "next_public_supabase_anon_key" {
   type      = string
   sensitive = true
   default   = ""
+  validation {
+    condition     = length(var.next_public_supabase_anon_key) > 0
+    error_message = "next_public_supabase_anon_key must be set. Set it in infrastructure/secrets.auto.tfvars (gitignored)."
+  }
 }
 
 variable "openai_api_key" {
