@@ -36,23 +36,44 @@ interface BusinessInfo {
 
 const BRAND = 'KOKKOK GARDEN';
 
+// Module-level memo: every Footer mount (incl. /login → /kr re-layout)
+// hits this. business_info changes rarely, so a 5-minute in-memory TTL
+// is plenty and prevents N duplicate queries per session.
+const BIZ_TTL_MS = 5 * 60 * 1000;
+let bizCache: { data: BusinessInfo | null; ts: number } | null = null;
+let bizInFlight: Promise<BusinessInfo | null> | null = null;
+
+async function loadBusinessInfo(): Promise<BusinessInfo | null> {
+  if (bizCache && Date.now() - bizCache.ts < BIZ_TTL_MS) return bizCache.data;
+  if (bizInFlight) return bizInFlight;
+  if (!supabase) return null;
+  bizInFlight = (async () => {
+    try {
+      const { data, error } = await supabase!.from('business_info').select('*').maybeSingle();
+      if (error) {
+        console.error('business_info load failed:', error);
+        return null;
+      }
+      const value = (data as BusinessInfo | null) ?? null;
+      bizCache = { data: value, ts: Date.now() };
+      return value;
+    } finally {
+      bizInFlight = null;
+    }
+  })();
+  return bizInFlight;
+}
+
 export default function Footer() {
   const { t, lang } = useI18n();
-  const [biz, setBiz] = useState<BusinessInfo | null>(null);
+  const [biz, setBiz] = useState<BusinessInfo | null>(() => bizCache?.data ?? null);
 
   useEffect(() => {
-    if (!supabase) return;
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from('business_info')
-          .select('*')
-          .maybeSingle();
-        if (data) setBiz(data as BusinessInfo);
-      } catch {
-        /* leave empty — footer falls back to blanks */
-      }
-    })();
+    let cancelled = false;
+    loadBusinessInfo().then(value => {
+      if (!cancelled && value) setBiz(value);
+    });
+    return () => { cancelled = true; };
   }, []);
 
   const hidden = biz?.hidden_fields ?? [];

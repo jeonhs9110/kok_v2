@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
@@ -18,7 +18,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [Autoplay({ delay: 5000 })]);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const slides = (dbSlides || []).map(s => {
+  const slides = useMemo(() => (dbSlides || []).map(s => {
     const mediaType = s.media_type || (s.image_url?.match(/\.(mp4|webm|mov)$/i) ? 'video' : s.image_url?.match(/\.gif$/i) ? 'gif' : 'image');
     return {
       id: s.id,
@@ -37,7 +37,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       displayMode: s.display_mode || 'default',
       mediaType,
     };
-  });
+  }), [dbSlides, lang]);
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -61,7 +61,17 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
     };
   }, [emblaApi, onSelect]);
 
-  if (slides.length === 0) return null;
+  if (slides.length === 0) {
+    return (
+      <div
+        className="w-full h-[440px] sm:h-[600px] bg-gradient-to-br from-neutral-100 to-neutral-200 flex items-center justify-center"
+        role="img"
+        aria-label="Hero placeholder"
+      >
+        <span className="text-[11px] font-bold tracking-widest uppercase text-neutral-400">Coming soon</span>
+      </div>
+    );
+  }
 
   return (
     <div

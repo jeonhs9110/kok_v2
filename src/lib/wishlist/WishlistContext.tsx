@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -8,74 +8,122 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 interface WishlistContextValue {
-  /** Set of product IDs the current user has wishlisted. Empty when guest or still loading. */
   wishlist: Set<string>;
   isWishlisted: (productId: string) => boolean;
-  /** Toggles wishlist for the given product. Returns the new state, or null when the user must sign in first. */
+  /** Toggles wishlist for the given product. Returns the new state, or null when the user must sign in first or another toggle is already in flight for this product. */
   toggle: (productId: string) => Promise<boolean | null>;
-  /** True until the initial auth + wishlist fetch settles. */
   loading: boolean;
 }
 
 const WishlistContext = createContext<WishlistContextValue | null>(null);
 
+async function fetchWishlist(userId: string): Promise<Set<string>> {
+  if (!supabase) return new Set();
+  const { data, error } = await supabase
+    .from('wishlist')
+    .select('product_id')
+    .eq('user_id', userId);
+  if (error) {
+    console.error('위시리스트 로드 실패:', error);
+    return new Set();
+  }
+  return new Set((data ?? []).map(d => d.product_id));
+}
+
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlist, setWishlist] = useState<Set<string>>(new Set());
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // Tracks product IDs with an in-flight toggle. Ignores re-clicks until the
+  // first request resolves, so rapid double-clicks can't race two opposing
+  // DB writes against each other.
+  const inFlightRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    if (!supabase) { setLoading(false); return; }
     let cancelled = false;
+
     (async () => {
-      if (!supabase) { setLoading(false); return; }
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (cancelled) return;
         if (!user) { setLoading(false); return; }
         setUserId(user.id);
-        const { data, error } = await supabase
-          .from('wishlist')
-          .select('product_id')
-          .eq('user_id', user.id);
-        if (cancelled) return;
-        if (error) {
-          console.error('위시리스트 로드 실패:', error);
-        } else if (data) {
-          setWishlist(new Set(data.map(d => d.product_id)));
-        }
+        const ids = await fetchWishlist(user.id);
+        if (!cancelled) setWishlist(ids);
       } catch (err) {
         console.error('위시리스트 초기화 실패:', err);
       } finally {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+
+    // Auth-state subscription — if the user signs in after mount (or signs
+    // out), pick up the new wishlist instead of staying stuck on the
+    // mount-time state. Without this, post-login clicks bounce to /login.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (cancelled) return;
+      const next = session?.user?.id ?? null;
+      setUserId(prev => {
+        if (prev === next) return prev;
+        if (next) {
+          fetchWishlist(next).then(ids => { if (!cancelled) setWishlist(ids); });
+        } else {
+          setWishlist(new Set());
+        }
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const isWishlisted = useCallback((productId: string) => wishlist.has(productId), [wishlist]);
 
+  // Functional setState everywhere — toggle no longer depends on the wishlist
+  // value, so its identity is stable across renders. That means a stale
+  // closure can't roll back to the wrong set, and React.memo on consumers
+  // becomes viable later.
   const toggle = useCallback(async (productId: string): Promise<boolean | null> => {
     if (!supabase) return null;
     if (!userId) return null;
+    if (inFlightRef.current.has(productId)) return null;
+    inFlightRef.current.add(productId);
 
-    const currentlyWishlisted = wishlist.has(productId);
-    const next = new Set(wishlist);
-    if (currentlyWishlisted) next.delete(productId); else next.add(productId);
-    setWishlist(next);
+    let optimisticNext = false;
+    setWishlist(prev => {
+      optimisticNext = !prev.has(productId);
+      const next = new Set(prev);
+      if (optimisticNext) next.add(productId);
+      else next.delete(productId);
+      return next;
+    });
 
     try {
-      if (currentlyWishlisted) {
-        await supabase.from('wishlist').delete().eq('user_id', userId).eq('product_id', productId);
+      if (optimisticNext) {
+        const { error } = await supabase.from('wishlist').insert([{ user_id: userId, product_id: productId }]);
+        if (error) throw error;
       } else {
-        await supabase.from('wishlist').insert([{ user_id: userId, product_id: productId }]);
+        const { error } = await supabase.from('wishlist').delete().eq('user_id', userId).eq('product_id', productId);
+        if (error) throw error;
       }
-      return !currentlyWishlisted;
+      return optimisticNext;
     } catch (err) {
       console.error('위시리스트 토글 실패:', err);
-      setWishlist(wishlist);
-      return currentlyWishlisted;
+      setWishlist(prev => {
+        const next = new Set(prev);
+        if (optimisticNext) next.delete(productId);
+        else next.add(productId);
+        return next;
+      });
+      return !optimisticNext;
+    } finally {
+      inFlightRef.current.delete(productId);
     }
-  }, [userId, wishlist]);
+  }, [userId]);
 
   return (
     <WishlistContext.Provider value={{ wishlist, isWishlisted, toggle, loading }}>
@@ -90,7 +138,6 @@ export function useWishlist(): WishlistContextValue {
   return ctx;
 }
 
-/** True when the wishlist context isn't mounted (e.g. on /admin pages outside the storefront layout). */
 export function useOptionalWishlist(): WishlistContextValue | null {
   return useContext(WishlistContext);
 }
