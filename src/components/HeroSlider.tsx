@@ -15,7 +15,15 @@ interface HeroSliderProps {
 }
 
 export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSliderProps) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [Autoplay({ delay: 5000 })]);
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    { loop: true },
+    [Autoplay({
+      delay: 5000,
+      stopOnMouseEnter: true,
+      stopOnFocusIn: true,
+      stopOnInteraction: false,
+    })]
+  );
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const slides = useMemo(() => (dbSlides || []).map(s => {
@@ -91,6 +99,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                 <video
                   src={slide.image}
                   autoPlay muted loop playsInline
+                  aria-label={slide.title.replace('\n', ' ') || 'Hero video'}
                   className="w-full h-full object-cover object-center"
                 />
               ) : (
@@ -254,7 +263,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                     href={slide.linkUrl}
                     target={slide.linkUrl.startsWith('http') ? '_blank' : undefined}
                     rel={slide.linkUrl.startsWith('http') ? 'noopener noreferrer' : undefined}
-                    className="block w-full h-full"
+                    className="block w-full h-full select-text"
                     draggable={false}
                   >
                     {inner}
@@ -270,7 +279,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       <button
         type="button"
         aria-label="Previous slide"
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-30"
+        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white focus-visible:text-white transition-colors opacity-70 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30"
         onClick={scrollPrev}
       >
         <ChevronLeft className="w-10 h-10 stroke-[1.5] drop-shadow-md" aria-hidden="true" />
@@ -278,25 +287,32 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       <button
         type="button"
         aria-label="Next slide"
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-30"
+        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white focus-visible:text-white transition-colors opacity-70 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30"
         onClick={scrollNext}
       >
         <ChevronRight className="w-10 h-10 stroke-[1.5] drop-shadow-md" aria-hidden="true" />
       </button>
 
-      {/* Pagination Dots */}
-      <div className="absolute bottom-8 left-0 right-0 flex justify-center space-x-2">
+      {/* Pagination Dots — visible dot stays tiny, but hitbox is 32×32 via padding */}
+      <div className="absolute bottom-6 left-0 right-0 flex justify-center">
         {slides.map((_, index) => (
           <button
             key={index}
             type="button"
             aria-label={`Go to slide ${index + 1}`}
             aria-current={index === selectedIndex ? 'true' : undefined}
-            className={`h-2 rounded-full transition-all ${
-              index === selectedIndex ? 'bg-white w-6 shadow-md' : 'bg-white/50 w-2'
-            }`}
+            className="p-3 group/dot"
             onClick={() => emblaApi && emblaApi.scrollTo(index)}
-          />
+          >
+            <span
+              aria-hidden="true"
+              className={`block h-2 rounded-full transition-all ${
+                index === selectedIndex
+                  ? 'bg-white w-6 shadow-md'
+                  : 'bg-white/60 w-2 group-hover/dot:bg-white/90'
+              }`}
+            />
+          </button>
         ))}
       </div>
     </div>

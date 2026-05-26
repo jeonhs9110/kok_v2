@@ -64,7 +64,7 @@ export default function ShortsFeed({ shorts }: { shorts: ShortItem[] }) {
             return (
               <div
                 key={index}
-                className={`flex-none w-[260px] h-[460px] rounded-[24px] overflow-hidden bg-black snap-center relative shadow-2xl transition-all duration-500 ease-in-out ${isPlaying ? 'scale-[1.02] ring-2 ring-white z-10' : 'opacity-60 hover:opacity-100 hover:scale-[1.01] ring-1 ring-white/10'}`}
+                className={`flex-none w-[260px] h-[460px] rounded-[24px] overflow-hidden bg-black snap-center relative shadow-2xl transition-all duration-500 ease-in-out ${isPlaying ? 'scale-[1.02] ring-2 ring-white z-10' : 'opacity-80 hover:opacity-100 hover:scale-[1.01] ring-1 ring-white/20'}`}
               >
                 {!isPlaying && videoId && (
                   <div className="relative w-full h-full">

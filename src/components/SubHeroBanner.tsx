@@ -36,8 +36,9 @@ export default function SubHeroBanner({ banner }: Props) {
         <div className="w-full h-full bg-neutral-200" />
       )}
 
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/30" />
+      {/* Gradient overlay — darker under text region so bright background
+          images don't wash out the title/subtitle */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
 
       {/* Text */}
       {(banner.title || banner.subtitle) && (

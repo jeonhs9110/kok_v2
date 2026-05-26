@@ -7,5 +7,5 @@ export default async function SubHeroSection() {
 }
 
 export function SubHeroSkeleton() {
-  return <div className="w-full h-[360px] md:h-[560px] bg-neutral-200 animate-pulse" />;
+  return <div className="w-full h-[360px] md:h-[560px] bg-neutral-200 animate-pulse motion-reduce:animate-none" />;
 }
