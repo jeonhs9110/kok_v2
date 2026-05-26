@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Play } from 'lucide-react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n/context';
@@ -15,21 +15,31 @@ export default function ShortsFeed({ shorts }: { shorts: ShortItem[] }) {
   const viewLabel = lang === 'kr' ? '사용 제품 보기 →' : 'View product →';
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
+    };
+  }, []);
 
   if (!shorts || shorts.length === 0) return null;
 
   const handleThumbnailClick = (index: number) => {
     setActiveIndex(index);
-
-    const container = containerRef.current;
-    if (container) {
-      const child = container.children[index] as HTMLElement;
-      if (child) {
-        const containerCenter = container.clientWidth / 2;
-        const childCenter = child.offsetLeft + (child.clientWidth / 2);
-        container.scrollTo({ left: childCenter - containerCenter, behavior: 'smooth' });
-      }
-    }
+    // Rapid clicks across thumbnails would otherwise stack smooth-scroll
+    // animations. Coalesce to the latest target via rAF.
+    if (scrollRafRef.current !== null) cancelAnimationFrame(scrollRafRef.current);
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      const container = containerRef.current;
+      if (!container) return;
+      const child = container.children[index] as HTMLElement | undefined;
+      if (!child) return;
+      const containerCenter = container.clientWidth / 2;
+      const childCenter = child.offsetLeft + (child.clientWidth / 2);
+      container.scrollTo({ left: childCenter - containerCenter, behavior: 'smooth' });
+    });
   };
 
   return (

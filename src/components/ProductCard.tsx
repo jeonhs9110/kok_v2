@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Heart } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCart } from '@/lib/cart/CartContext';
 import { useOptionalWishlist } from '@/lib/wishlist/WishlistContext';
 
@@ -26,18 +26,36 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
   const router = useRouter();
   const wishlisted = wishlistCtx?.isWishlisted(id) ?? false;
   const [cartAdded, setCartAdded] = useState(false);
+  const [wishPending, setWishPending] = useState(false);
+  const cartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (cartTimeoutRef.current) clearTimeout(cartTimeoutRef.current);
+    };
+  }, []);
 
   const handleAddToCart = () => {
+    // Guard double-click — cartAdded state is set sync, so the next click
+    // within 1500ms sees the toast still up and bails. Prevents the slow-3G
+    // pattern of users spamming the button while waiting for feedback.
+    if (cartAdded) return;
     addItem({ productId: id, name, price, originalPrice, imageUrl });
     setCartAdded(true);
-    setTimeout(() => setCartAdded(false), 1500);
+    if (cartTimeoutRef.current) clearTimeout(cartTimeoutRef.current);
+    cartTimeoutRef.current = setTimeout(() => setCartAdded(false), 1500);
   };
 
   const toggleWish = async () => {
-    if (!wishlistCtx) return;
-    const result = await wishlistCtx.toggle(id);
-    if (result === null) {
-      router.push('/login');
+    if (!wishlistCtx || wishPending) return;
+    setWishPending(true);
+    try {
+      const result = await wishlistCtx.toggle(id);
+      if (result === null && !wishlistCtx.loading) {
+        router.push('/login');
+      }
+    } finally {
+      setWishPending(false);
     }
   };
 
@@ -51,21 +69,29 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
   return (
     <article className="group relative">
       <div className="relative aspect-[5/6] w-full rounded-[16px] overflow-hidden bg-neutral-100 mb-4">
-        <img
-          src={imageUrl}
-          alt={name}
-          width={500}
-          height={600}
-          loading="lazy"
-          className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 ease-out"
-        />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={name}
+            width={500}
+            height={600}
+            loading="lazy"
+            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 ease-out"
+          />
+        ) : (
+          <div className="w-full h-full bg-neutral-100 flex items-center justify-center text-neutral-300 text-[10px] font-bold tracking-widest">
+            NO IMAGE
+          </div>
+        )}
         <div className="absolute bottom-3 right-3 z-10 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
           <button
             type="button"
             onClick={toggleWish}
+            disabled={wishPending}
             aria-label={wishLabel}
             aria-pressed={wishlisted}
-            className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors ${
+            aria-busy={wishPending}
+            className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors disabled:opacity-60 disabled:cursor-wait ${
               wishlisted ? 'bg-red-500 text-white' : 'bg-white/90 text-neutral-600 hover:bg-red-50 hover:text-red-500'
             }`}
           >
@@ -75,8 +101,9 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
             <button
               type="button"
               onClick={handleAddToCart}
+              disabled={cartAdded}
               aria-label={cartLabel}
-              className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors ${
+              className={`w-9 h-9 rounded-full backdrop-blur-sm shadow-md flex items-center justify-center transition-colors disabled:cursor-default ${
                 cartAdded ? 'bg-green-500 text-white' : 'bg-white/90 text-neutral-600 hover:bg-black hover:text-white'
               }`}
             >

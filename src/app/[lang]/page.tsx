@@ -11,6 +11,7 @@ import ShortsFeedSection, { ShortsFeedSkeleton } from '@/components/sections/Sho
 import SubHeroSection, { SubHeroSkeleton } from '@/components/sections/SubHeroSection';
 import ReviewShowcaseSection, { ReviewShowcaseSkeleton } from '@/components/sections/ReviewShowcaseSection';
 import InstagramFeedSection, { InstagramFeedSkeleton } from '@/components/sections/InstagramFeedSection';
+import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
 import { getCachedProducts, getCachedSlides, getCachedPromoBanners } from '@/lib/cache/homepage';
 import { isValidLang, type Lang } from '@/lib/i18n/types';
@@ -116,21 +117,29 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
         <ProductGrid products={bestSellerProducts} canPurchase={isKorea} />
       </section>
 
-      <Suspense fallback={<ShortsFeedSkeleton />}>
-        <ShortsFeedSection lang={lang} />
-      </Suspense>
+      <SectionErrorBoundary label="ShortsFeed">
+        <Suspense fallback={<ShortsFeedSkeleton />}>
+          <ShortsFeedSection lang={lang} />
+        </Suspense>
+      </SectionErrorBoundary>
 
-      <Suspense fallback={<SubHeroSkeleton />}>
-        <SubHeroSection />
-      </Suspense>
+      <SectionErrorBoundary label="SubHero">
+        <Suspense fallback={<SubHeroSkeleton />}>
+          <SubHeroSection />
+        </Suspense>
+      </SectionErrorBoundary>
 
-      <Suspense fallback={<ReviewShowcaseSkeleton />}>
-        <ReviewShowcaseSection lang={lang} />
-      </Suspense>
+      <SectionErrorBoundary label="ReviewShowcase">
+        <Suspense fallback={<ReviewShowcaseSkeleton />}>
+          <ReviewShowcaseSection lang={lang} />
+        </Suspense>
+      </SectionErrorBoundary>
 
-      <Suspense fallback={<InstagramFeedSkeleton />}>
-        <InstagramFeedSection />
-      </Suspense>
+      <SectionErrorBoundary label="InstagramFeed">
+        <Suspense fallback={<InstagramFeedSkeleton />}>
+          <InstagramFeedSection />
+        </Suspense>
+      </SectionErrorBoundary>
     </>
   );
 }
