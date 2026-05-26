@@ -38,6 +38,12 @@ yarn-error.log*
 
 # scratch / asset drops not for the repo
 /src/0508/
+
+# local-only sibling folders (private notes, credentials, drafts — never commit)
+/aws-credentials/
+/claude-memory/
+/docs/
+/email-drafts/
 # typescript
 *.tsbuildinfo
 next-env.d.ts

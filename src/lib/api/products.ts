@@ -4,7 +4,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
-export type DetailComponentType = 'image' | 'video' | 'youtube';
+export type DetailComponentType = 'image' | 'video' | 'youtube' | 'tiktok' | 'instagram';
 
 export interface DetailComponent {
   id: string;

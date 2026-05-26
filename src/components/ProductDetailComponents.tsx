@@ -1,5 +1,5 @@
 import type { DetailComponent } from '@/lib/api/products';
-import { toYouTubeEmbedUrl, isYouTubeShortsUrl } from '@/lib/youtube';
+import { detectEmbed } from '@/lib/embed';
 
 interface Props {
   components: DetailComponent[];
@@ -13,18 +13,15 @@ export default function ProductDetailComponents({ components }: Props) {
   return (
     <>
       {sorted.map(c => {
-        if (c.type === 'youtube') {
-          const embed = toYouTubeEmbedUrl(c.url);
-          if (!embed) return null;
+        if (c.type === 'youtube' || c.type === 'tiktok' || c.type === 'instagram') {
+          const info = detectEmbed(c.url);
+          if (!info) return null;
           return (
-            <div
-              key={c.id}
-              className={isYouTubeShortsUrl(c.url) ? 'aspect-[9/16]' : 'aspect-video'}
-            >
+            <div key={c.id} className={info.aspectClass}>
               <iframe
-                src={embed}
+                src={info.embedUrl}
                 className="w-full h-full block"
-                title="Product detail video"
+                title={`${info.label} embed`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
                 loading="lazy"

@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Product, supabase, MOCK_PRODUCTS, type DetailComponent } from '@/lib/api/products';
 import type { Category } from '@/lib/api/categories';
 import { getAllTags, getProductTags, setProductTags, TAG_CATEGORIES, type IngredientTag } from '@/lib/api/ingredient-tags';
-import { isValidYouTubeUrl, toYouTubeThumbnailUrl, isYouTubeShortsUrl } from '@/lib/youtube';
+import { detectEmbed } from '@/lib/embed';
 import ProductDetailComponents from '@/components/ProductDetailComponents';
 
 const BUCKET = 'product-images';
@@ -50,8 +50,8 @@ export default function ProductsAdminPage() {
     showBuyButton: false,
   });
 
-  const [youtubeInput, setYoutubeInput] = useState('');
-  const [youtubeError, setYoutubeError] = useState('');
+  const [embedInput, setEmbedInput] = useState('');
+  const [embedError, setEmbedError] = useState('');
   const [detailUploading, setDetailUploading] = useState(false);
   const detailFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -168,8 +168,8 @@ export default function ProductsAdminPage() {
     setPreviewUrl('');
     setUploadProgress('idle');
     setIsSubmitting(false);
-    setYoutubeInput('');
-    setYoutubeError('');
+    setEmbedInput('');
+    setEmbedError('');
     setDetailUploading(false);
     if (detailFileInputRef.current) detailFileInputRef.current.value = '';
   };
@@ -296,16 +296,19 @@ export default function ProductsAdminPage() {
     }
   };
 
-  const handleAddYoutube = () => {
-    const url = youtubeInput.trim();
-    if (!isValidYouTubeUrl(url)) {
-      setYoutubeError('유효한 YouTube URL이 아닙니다. (예: https://www.youtube.com/watch?v=...)');
+  const handleAddEmbed = () => {
+    const url = embedInput.trim();
+    const info = detectEmbed(url);
+    if (!info) {
+      setEmbedError('YouTube / TikTok / Instagram URL만 지원됩니다.');
       return;
     }
-    setYoutubeError('');
-    addDetailComponent({ type: 'youtube', url });
-    setYoutubeInput('');
+    setEmbedError('');
+    addDetailComponent({ type: info.platform, url });
+    setEmbedInput('');
   };
+
+  const liveEmbedPreview = embedInput.trim() ? detectEmbed(embedInput.trim()) : null;
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -758,20 +761,24 @@ export default function ProductsAdminPage() {
 
                 {formData.detailComponents.length === 0 ? (
                   <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-400 text-xs">
-                    아직 추가된 컴포넌트가 없습니다. 아래에서 이미지/영상/YouTube를 추가하세요.
+                    아직 추가된 컴포넌트가 없습니다. 아래에서 이미지/영상/링크를 추가하세요.
                   </div>
                 ) : (
                   <div className="space-y-2">
                     {formData.detailComponents.map((c, i) => {
                       const isFirst = i === 0;
                       const isLast = i === formData.detailComponents.length - 1;
-                      const TypeIcon = c.type === 'youtube' ? YtIcon : c.type === 'video' ? Film : ImgIcon;
-                      const typeBadge = c.type === 'youtube' ? 'YouTube' : c.type === 'video' ? '영상' : '이미지';
+                      const isEmbed = c.type === 'youtube' || c.type === 'tiktok' || c.type === 'instagram';
+                      const embedInfo = isEmbed ? detectEmbed(c.url) : null;
+                      const TypeIcon = c.type === 'video' ? Film : c.type === 'image' ? ImgIcon : Film;
+                      const typeBadge = embedInfo?.label || (c.type === 'video' ? '영상' : '이미지');
                       const badgeColor =
                         c.type === 'youtube' ? 'bg-red-50 text-red-700' :
+                        c.type === 'tiktok' ? 'bg-black text-white' :
+                        c.type === 'instagram' ? 'bg-pink-50 text-pink-700' :
                         c.type === 'video' ? 'bg-purple-50 text-purple-700' :
                         'bg-blue-50 text-blue-700';
-                      const thumbnail = c.type === 'youtube' ? toYouTubeThumbnailUrl(c.url) : c.type === 'image' ? c.url : '';
+                      const thumbnail = embedInfo?.thumbnailUrl || (c.type === 'image' ? c.url : '');
                       return (
                         <div key={c.id} className="border border-gray-200 rounded-lg p-3 flex gap-3 items-center bg-white">
                           <div className="text-[10px] font-bold text-gray-400 w-5 text-center select-none">{i + 1}</div>
@@ -786,11 +793,11 @@ export default function ProductsAdminPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 mb-1">
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded ${badgeColor}`}>
-                                <TypeIcon className="w-3 h-3" />
+                                {!isEmbed && <TypeIcon className="w-3 h-3" />}
                                 {typeBadge}
                               </span>
-                              {c.type === 'youtube' && isYouTubeShortsUrl(c.url) && (
-                                <span className="px-1.5 py-0.5 bg-orange-50 text-orange-700 text-[9px] font-bold rounded">Shorts</span>
+                              {embedInfo?.sublabel && (
+                                <span className="px-1.5 py-0.5 bg-orange-50 text-orange-700 text-[9px] font-bold rounded">{embedInfo.sublabel}</span>
                               )}
                             </div>
                             <p className="text-[11px] text-gray-500 truncate" title={c.url}>{c.url}</p>
@@ -850,23 +857,30 @@ export default function ProductsAdminPage() {
                     <YtIcon className="w-4 h-4 text-red-600 flex-shrink-0 ml-1" />
                     <input
                       type="url"
-                      value={youtubeInput}
-                      onChange={e => { setYoutubeInput(e.target.value); setYoutubeError(''); }}
-                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddYoutube(); } }}
-                      placeholder="YouTube URL"
+                      value={embedInput}
+                      onChange={e => { setEmbedInput(e.target.value); setEmbedError(''); }}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddEmbed(); } }}
+                      placeholder="YouTube / TikTok / Instagram URL"
                       className="flex-1 text-xs bg-transparent outline-none min-w-0"
                     />
-                    <button type="button" onClick={handleAddYoutube}
+                    <button type="button" onClick={handleAddEmbed}
                       className="px-2.5 py-1 bg-black text-white text-[11px] font-bold rounded hover:bg-gray-800">
                       추가
                     </button>
                   </div>
                 </div>
-                {youtubeError && <p className="text-[10px] text-red-600">{youtubeError}</p>}
+                {liveEmbedPreview && !embedError && (
+                  <p className="text-[10px] text-green-700">
+                    ✓ <strong>{liveEmbedPreview.label}</strong>
+                    {liveEmbedPreview.sublabel ? ` ${liveEmbedPreview.sublabel}` : ''} 감지됨
+                  </p>
+                )}
+                {embedError && <p className="text-[10px] text-red-600">{embedError}</p>}
 
                 <p className="text-[10px] text-gray-400 leading-snug pt-1">
-                  이미지(PNG/JPG/WEBP/GIF), 영상(MP4), YouTube 링크를 추가하면 상세페이지 하단에 위→아래로 마진 없이 이어붙어 표시됩니다.
-                  영상 파일은 <strong className="text-gray-600">30MB 이하 권장</strong>. YouTube Shorts URL 사용 시 자동으로 세로 비율(9:16)로 표시됩니다.
+                  이미지(PNG/JPG/WEBP/GIF), 영상(MP4), 또는 <strong className="text-gray-600">YouTube · TikTok · Instagram</strong> URL 추가 가능.
+                  상세페이지 하단에 위→아래로 마진 없이 이어붙어 표시됩니다.
+                  영상 파일은 <strong className="text-gray-600">30MB 이하 권장</strong>. YouTube Shorts / TikTok / Instagram Reel은 자동으로 세로 비율(9:16)로 표시됩니다.
                 </p>
               </div>
 
