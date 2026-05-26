@@ -534,30 +534,76 @@ export default function ProductsAdminPage() {
               </div>
 
               {/* Price */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">현재 판매가 (원) *</label>
-                  <input
-                    required
-                    type="number"
-                    min="0"
-                    value={formData.price}
-                    onChange={e => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-                    placeholder="23400"
-                  />
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">현재 판매가 (원) *</label>
+                    <input
+                      required
+                      type="number"
+                      min="0"
+                      value={formData.price}
+                      onChange={e => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                      className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
+                      placeholder="23400"
+                    />
+                    <p className="text-[10px] text-gray-400 leading-snug">실제로 결제되는 가격입니다.</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">할인 전 가격 (취소선)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.originalPrice}
+                      onChange={e => setFormData(prev => ({ ...prev, originalPrice: e.target.value }))}
+                      className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
+                      placeholder="예: 26000 (판매가보다 높게)"
+                    />
+                    <p className="text-[10px] text-gray-400 leading-snug">
+                      <strong className="text-gray-600">현재 판매가보다 높을 때만</strong> 취소선으로 표시됩니다. 할인 없으면 비워두세요.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">정가 (취소선 표시)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.originalPrice}
-                    onChange={e => setFormData(prev => ({ ...prev, originalPrice: e.target.value }))}
-                    className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-                    placeholder="26000"
-                  />
-                </div>
+
+                {formData.price && (() => {
+                  const p = Number(formData.price) || 0;
+                  const op = Number(formData.originalPrice) || 0;
+                  const hasDiscount = op > p;
+                  const hasBackwardsInput = op > 0 && op <= p;
+                  const discountPct = hasDiscount ? Math.round(((op - p) / op) * 100) : 0;
+                  return (
+                    <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-lg p-4">
+                      <p className="text-[10px] font-bold tracking-widest text-gray-400 uppercase mb-2.5">
+                        사이트 미리보기
+                      </p>
+                      <div className="flex items-end gap-3 flex-wrap">
+                        {hasDiscount && (
+                          <span className="text-[#f15a24] font-bold text-base mb-0.5 tracking-tight">{discountPct}%</span>
+                        )}
+                        <span className="text-2xl font-extrabold tracking-tight text-[#111]">
+                          {p.toLocaleString()}<span className="text-base font-bold ml-0.5">원</span>
+                        </span>
+                        {hasDiscount && (
+                          <span className="text-neutral-400 line-through text-sm font-medium mb-1">
+                            {op.toLocaleString()}원
+                          </span>
+                        )}
+                      </div>
+                      {hasBackwardsInput && (
+                        <div className="mt-3 flex items-start gap-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2.5 py-2 leading-relaxed">
+                          <span className="font-bold shrink-0">⚠</span>
+                          <span>
+                            할인 전 가격({op.toLocaleString()}원)이 현재 판매가({p.toLocaleString()}원)보다 높지 않아 취소선이 표시되지 않습니다.
+                            두 값을 바꾸셨거나, 할인이 없는 경우 할인 전 가격을 비워두세요.
+                          </span>
+                        </div>
+                      )}
+                      {!hasDiscount && !hasBackwardsInput && (
+                        <p className="text-[10px] text-gray-400 mt-2">할인 표시 없이 판매가만 노출됩니다.</p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Description */}
