@@ -1,6 +1,14 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
-import { getSiteSettings } from '@/lib/api/site-settings';
+import { createClient } from '@supabase/supabase-js';
+
+// Reads from `business_info` (managed via /admin/legal) instead of the
+// now-removed `site_settings.contact_*` keys. Keeping a single source of
+// truth means the Footer (which already reads business_info) and this page
+// can never display different phone numbers / addresses.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 const LABELS: Record<string, {
   title: string; subtitle: string; home: string; contact: string;
@@ -51,24 +59,44 @@ const LABELS: Record<string, {
   },
 };
 
+interface BusinessInfoRow {
+  phone: string | null;
+  email: string | null;
+  address_kr: string | null;
+  address_en: string | null;
+  cs_hours_kr: string | null;
+  cs_hours_en: string | null;
+  cs_lunch_kr: string | null;
+  cs_lunch_en: string | null;
+  cs_holiday_kr: string | null;
+  cs_holiday_en: string | null;
+}
+
 export default async function ContactPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   const lb = LABELS[lang] ?? LABELS['en'];
 
-  const values = await getSiteSettings([
-    'contact_hours',
-    'contact_address',
-    'contact_phone',
-    'contact_email',
-    'contact_overseas_email',
-  ]);
+  let biz: BusinessInfoRow | null = null;
+  if (supabase) {
+    const { data } = await supabase
+      .from('business_info')
+      .select('phone, email, address_kr, address_en, cs_hours_kr, cs_hours_en, cs_lunch_kr, cs_lunch_en, cs_holiday_kr, cs_holiday_en')
+      .maybeSingle();
+    biz = (data as BusinessInfoRow | null) ?? null;
+  }
+
+  const isKr = lang === 'kr';
+  const address = (isKr ? biz?.address_kr : biz?.address_en) || biz?.address_kr || '';
+  const hoursParts = isKr
+    ? [biz?.cs_hours_kr, biz?.cs_lunch_kr, biz?.cs_holiday_kr]
+    : [biz?.cs_hours_en, biz?.cs_lunch_en, biz?.cs_holiday_en];
+  const hours = hoursParts.filter(Boolean).join('\n');
 
   const rows: { label: string; value: string; href?: string }[] = [
-    { label: lb.hours,    value: values.contact_hours },
-    { label: lb.address,  value: values.contact_address },
-    { label: lb.phone,    value: values.contact_phone, href: values.contact_phone ? `tel:${values.contact_phone.replace(/\s+/g, '')}` : undefined },
-    { label: lb.email,    value: values.contact_email, href: values.contact_email ? `mailto:${values.contact_email}` : undefined },
-    { label: lb.overseas, value: values.contact_overseas_email, href: values.contact_overseas_email ? `mailto:${values.contact_overseas_email}` : undefined },
+    { label: lb.hours,   value: hours },
+    { label: lb.address, value: address },
+    { label: lb.phone,   value: biz?.phone || '', href: biz?.phone ? `tel:${biz.phone.replace(/\s+/g, '')}` : undefined },
+    { label: lb.email,   value: biz?.email || '', href: biz?.email ? `mailto:${biz.email}` : undefined },
   ].filter(r => r.value);
 
   return (

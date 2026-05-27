@@ -1,12 +1,13 @@
 import { supabase } from './products';
 
-export type SiteSettingKey =
-  | 'logo_url'
-  | 'contact_hours'
-  | 'contact_address'
-  | 'contact_phone'
-  | 'contact_email'
-  | 'contact_overseas_email';
+// Note: contact_* keys (hours/address/phone/email/overseas_email) used to live
+// here, edited via /admin/contact and read by the public /contact page. That
+// duplicated the data in `business_info` (which the footer + legal pages need
+// anyway). To prevent the two sources from drifting (and historically
+// displaying different phone numbers!), contact info is now solely managed
+// from /admin/legal -> business_info. Existing rows in site_settings with
+// these keys can be left behind; nothing reads them.
+export type SiteSettingKey = 'logo_url';
 
 export async function getSiteSetting(key: SiteSettingKey): Promise<string> {
   if (!supabase) return '';

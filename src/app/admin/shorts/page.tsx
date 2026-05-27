@@ -41,26 +41,25 @@ export default function ShortsAdminPage() {
 
   async function fetchShorts() {
     try {
-      if (!supabase) throw new Error('클라이언트 없음');
+      if (!supabase) throw new Error('Supabase 클라이언트 없음');
       const { data, error } = await supabase
         .from('shorts')
         .select('id, youtube_id, product_id, created_at, products(name)')
         .order('created_at', { ascending: false });
-      if (error || !data) throw error;
-      setShorts(data.map((d: any) => ({
+      if (error) throw error;
+      setShorts((data ?? []).map((d: any) => ({
         id: d.id,
         youtubeId: d.youtube_id,
         productId: d.product_id || null,
         productName: d.products?.name || null,
         addedAt: new Date(d.created_at).toISOString().split('T')[0],
       })));
-    } catch {
-      setShorts([
-        { id: '1', youtubeId: 'ho0EhuO3RNs', productId: null, productName: null, addedAt: '2026-04-01' },
-        { id: '2', youtubeId: 'lD1VId0ec2s', productId: null, productName: null, addedAt: '2026-04-01' },
-        { id: '3', youtubeId: 'mkBTUDxMKtU', productId: null, productName: null, addedAt: '2026-04-02' },
-        { id: '4', youtubeId: 'yPRcriD4FcM', productId: null, productName: null, addedAt: '2026-04-02' },
-      ]);
+    } catch (err) {
+      // Previously fell back to 4 hardcoded demo YouTube IDs which made
+      // it impossible to tell whether the DB had real shorts or none.
+      // Now surface the failure to the operator instead of masking it.
+      console.error('[admin/shorts] DB fetch failed:', err);
+      setShorts([]);
     } finally {
       setIsLoading(false);
     }

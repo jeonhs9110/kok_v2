@@ -38,8 +38,8 @@ function IgIcon({ className }: { className?: string }) {
 const emptyPost = (i: number): IgPost => ({ id: null, image_url: '', link_url: '', post_url: '', sort_order: i });
 
 export default function InstagramAdminPage() {
-  const [handle, setHandle] = useState('rdrd_official');
-  const [description, setDescription] = useState('인스타그램에서 최신 소식을 확인하세요');
+  const [handle, setHandle] = useState('');
+  const [description, setDescription] = useState('');
   const [rssFeedUrl, setRssFeedUrl] = useState('');
   const [posts, setPosts] = useState<IgPost[]>(Array.from({ length: SLOTS }, (_, i) => emptyPost(i)));
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -62,7 +62,7 @@ export default function InstagramAdminPage() {
         supabase.from('instagram_posts').select('*').order('sort_order').limit(SLOTS),
       ]);
       if (configRes.data) {
-        setHandle(configRes.data.handle || 'rdrd_official');
+        setHandle(configRes.data.handle || '');
         setDescription(configRes.data.description || '');
         setRssFeedUrl(configRes.data.rss_feed_url || '');
       }

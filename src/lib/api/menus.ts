@@ -123,12 +123,19 @@ export async function getPostsByMenuPaginated(
   };
 }
 
+/**
+ * Public-facing post fetcher. Requires `is_published = true`; admins can
+ * see drafts through their own queries that explicitly bypass this. Without
+ * the filter, a customer with a guessable / shared URL could read draft
+ * posts the operator hasn't released yet.
+ */
 export async function getPostById(postId: string): Promise<Post | null> {
   if (!supabase) return null;
   const { data, error } = await supabase
     .from('posts')
     .select('*')
     .eq('id', postId)
+    .eq('is_published', true)
     .single();
   if (error || !data) return null;
   return data;
