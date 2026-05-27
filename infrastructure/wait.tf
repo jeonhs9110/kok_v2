@@ -23,11 +23,18 @@ resource "null_resource" "wait_for_healthy" {
 
   provisioner "local-exec" {
     interpreter = ["bash", "-c"]
-    command     = <<-EOT
+    # local-exec runs in a fresh subshell that does NOT inherit the
+    # operator's AWS_PROFILE / PATH. Set them explicitly so the AWS CLI
+    # finds credentials and the binary itself.
+    environment = {
+      AWS_PROFILE = var.aws_profile
+      AWS_REGION  = var.region
+      PATH        = "/c/Program Files/Amazon/AWSCLIV2:/usr/local/bin:/usr/bin:/bin"
+    }
+    command = <<-EOT
       set -euo pipefail
       echo "[wait_for_healthy] new instance ${aws_instance.app.id} — waiting for ALB target health..."
       aws elbv2 wait target-in-service \
-        --region ${var.region} \
         --target-group-arn ${aws_lb_target_group.app.arn} \
         --targets Id=${aws_instance.app.id},Port=3000
       echo "[wait_for_healthy] healthy — safe to drain the old instance now."
