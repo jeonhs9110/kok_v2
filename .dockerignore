@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.gitignore
+.vercel
+.env*
+README.md
+*.md
+infrastructure/
+src/0508/
+migration*.sql
+Dockerfile
+.dockerignore
+.github/
+.vscode/
+.cursorignore

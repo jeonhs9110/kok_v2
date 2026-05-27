@@ -1,0 +1,18 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Plan files contain env var values (incl. secrets) when generated via TF_VAR_*
+tfplan
+tfplan-*
+
+# Captured terraform CLI output (may include cert ARNs, plan dumps, etc.)
+*.txt

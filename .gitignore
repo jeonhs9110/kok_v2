@@ -49,3 +49,12 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# terraform — state files contain secrets and resource IDs, never commit
+**/*.tfstate
+**/*.tfstate.*
+**/.terraform/
+**/.terraform.lock.hcl
+**/*.tfvars
+**/*.tfvars.json
+!**/*.tfvars.example

@@ -252,7 +252,7 @@ export const DEFAULT_LABELS: Record<WorldwideLang, WorldwideLabels> = {
 type SeedRow = [id: string, country: string, countryEn: string, region: Region, storeName: string, storeUrl: string, bannerColor: string];
 
 const SEED_ROWS: SeedRow[] = [
-  ['kr', '한국', 'South Korea', 'ASIA', 'Kokkok Garden Official', 'https://kokv2.vercel.app/kr', '#4a7ab5'],
+  ['kr', '한국', 'South Korea', 'ASIA', 'Kokkok Garden Official', 'https://www.kokkokgarden.com/kr', '#4a7ab5'],
   ['jp', '日本', 'Japan', 'ASIA', 'Kokkok Garden Japan', '#', '#bc002d'],
   ['cn', '中国', 'China', 'ASIA', 'Kokkok Garden China', '#', '#de2910'],
   ['tw', '台灣', 'Taiwan', 'ASIA', 'Kokkok Garden Taiwan', '#', '#003070'],
