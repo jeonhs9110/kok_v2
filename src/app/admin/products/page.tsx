@@ -7,6 +7,7 @@ import type { Category } from '@/lib/api/categories';
 import { getAllTags, getProductTags, setProductTags, TAG_CATEGORIES, type IngredientTag } from '@/lib/api/ingredient-tags';
 import { isValidYouTubeUrl, toYouTubeThumbnailUrl, isYouTubeShortsUrl } from '@/lib/youtube';
 import ProductDetailComponents from '@/components/ProductDetailComponents';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const BUCKET = 'product-images';
 
@@ -145,6 +146,7 @@ export default function ProductsAdminPage() {
     try {
       if (!supabase) throw new Error('클라이언트 없음');
       await supabase.from('products').update({ is_active: !currentStatus }).eq('id', id);
+      revalidateHomepageData('products');
     } catch {
       console.warn('토글 DB 동기화 실패');
     }
@@ -155,6 +157,7 @@ export default function ProductsAdminPage() {
     try {
       if (!supabase) throw new Error('클라이언트 없음');
       await supabase.from('products').delete().eq('id', id);
+      revalidateHomepageData('products');
     } catch {
       console.warn('삭제 DB 동기화 실패');
     }
@@ -397,6 +400,7 @@ export default function ProductsAdminPage() {
       }
 
       if (supabase) await fetchAll();
+      revalidateHomepageData('products');
 
       resetModal();
     } catch (err) {

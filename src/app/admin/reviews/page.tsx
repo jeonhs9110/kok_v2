@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Save, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/api/products';
 import RichEditor from '@/components/admin/RichEditor';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const BUCKET = 'product-images';
 
@@ -88,6 +89,7 @@ export default function ReviewsAdminPage() {
     if (res.data) update(i, { id: (res.data as { id: string }).id });
     setSavedId(res.data ? (res.data as { id: string }).id : null);
     setTimeout(() => setSavedId(null), 2000);
+    revalidateHomepageData('reviews');
   }
 
   async function remove(i: number) {
@@ -95,6 +97,7 @@ export default function ReviewsAdminPage() {
     if (!confirm('이 리뷰 카드를 삭제하시겠습니까?')) return;
     if (r.id && supabase) {
       await supabase.from('review_cards').delete().eq('id', r.id);
+      revalidateHomepageData('reviews');
     }
     setRows(prev => prev.filter((_, idx) => idx !== i));
   }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Upload, ImageIcon } from 'lucide-react';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -87,6 +88,7 @@ export default function SubHeroAdminPage() {
         if (error) throw error;
         setBanner(prev => ({ ...prev, id: data.id }));
       }
+      revalidateHomepageData('sub_hero');
       alert('서브 히어로 배너가 저장되었습니다.');
     } catch (e) {
       console.error(e);

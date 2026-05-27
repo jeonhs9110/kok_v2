@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Video, Trash2, Plus, Link as LinkIcon } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -82,6 +83,7 @@ export default function ShortsAdminPage() {
         if (!error) {
           alert(`YouTube ID '${videoId}' 가 홈페이지에 추가되었습니다.`);
           fetchShorts();
+          revalidateHomepageData('shorts');
         }
       } catch { /* mock mode */ }
     } else {
@@ -94,6 +96,7 @@ export default function ShortsAdminPage() {
     try {
       if (!supabase) throw new Error('클라이언트 없음');
       await supabase.from('shorts').delete().eq('id', id);
+      revalidateHomepageData('shorts');
     } catch { /* ignore */ }
   };
 
@@ -105,6 +108,7 @@ export default function ShortsAdminPage() {
       }
       const prod = products.find(p => p.id === productId);
       setShorts(prev => prev.map(s => s.id === shortId ? { ...s, productId: productId, productName: prod?.name || null } : s));
+      revalidateHomepageData('shorts');
     } catch { /* ignore */ }
     finally { setLinkingId(null); }
   };
