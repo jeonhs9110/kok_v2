@@ -91,13 +91,18 @@ export const MOCK_PRODUCTS: Product[] = [
   }
 ];
 
+// Production behavior: return [] on any Supabase failure so the BEST SELLER
+// section shows its empty state. The previous behavior (returning MOCK_PRODUCTS
+// — fake "레티놀 바운스 세럼" etc.) hid real outages from the operator and could
+// route customers to product IDs that 404 on click. Mocks are dev-only now.
+const IS_DEV = process.env.NODE_ENV === 'development';
+
 export async function getProducts(): Promise<Product[]> {
   try {
     if (!supabase) throw new Error("No Supabase Client");
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
     if (error) throw error;
-    
-    // Map DB schema to frontend interface
+
     return data.map(d => ({
       id: d.id,
       name: d.name,
@@ -118,7 +123,11 @@ export async function getProducts(): Promise<Product[]> {
       show_buy_button: d.show_buy_button ?? false,
     }));
   } catch (err) {
-    console.warn("DB Products Fetch Failed. Returning Mock Data.");
-    return MOCK_PRODUCTS;
+    if (IS_DEV) {
+      console.warn("[products] DB fetch failed in dev — serving MOCK_PRODUCTS:", err);
+      return MOCK_PRODUCTS;
+    }
+    console.error("[products] DB fetch failed in production — returning empty list:", err);
+    return [];
   }
 }

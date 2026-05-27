@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import {
-  DEFAULT_LABELS,
   DEFAULT_RETAILERS,
   LABEL_KEYS,
   resolveLabels,
@@ -12,6 +11,8 @@ import {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+const IS_DEV = process.env.NODE_ENV === 'development';
 
 interface LabelRow {
   label_key: string;
@@ -48,9 +49,25 @@ export interface WorldwidePageData {
  * Resolves the 20+ UI labels for the current language (falls back to English
  * per-key, then to the hardcoded defaults) and the active retailer list.
  */
+// Fallback policy:
+//   - DEV / preview:  fall back to DEFAULT_RETAILERS (28 hardcoded countries
+//     with '#' placeholders) so local development without a populated DB
+//     still shows a worldwide page.
+//   - PRODUCTION:    return ONLY what the DB has. Empty DB -> empty page.
+//     No more 28 "coming soon" placeholders pretending to be live retailer
+//     coverage. If the operator hasn't seeded worldwide_retailers, the page
+//     is honestly empty rather than misleading customers about reach.
+// Retailers with a missing/'#' store_url are filtered out (we won't ship a
+// broken link). Banner color falls back to black as a pure cosmetic default.
 export async function fetchWorldwideData(lang: string): Promise<WorldwidePageData> {
+  const labelsOnly = (): WorldwidePageData => ({
+    labels: resolveLabels(lang),
+    retailers: IS_DEV ? DEFAULT_RETAILERS : [],
+  });
+
   if (!supabase) {
-    return { labels: resolveLabels(lang), retailers: DEFAULT_RETAILERS };
+    console.error('[worldwide] Supabase client not configured');
+    return labelsOnly();
   }
 
   try {
@@ -75,25 +92,32 @@ export async function fetchWorldwideData(lang: string): Promise<WorldwidePageDat
       }
     }
 
-    let retailers: RetailerEntry[] = DEFAULT_RETAILERS;
+    let retailers: RetailerEntry[];
     if (retailersRes.data && retailersRes.data.length > 0) {
       const rows = retailersRes.data as RetailerRow[];
-      retailers = rows.map(r => ({
-        id: String(r.id),
-        countryCode: r.country_code,
-        country: r.country_native,
-        countryEn: r.country_en,
-        region: (r.region as Region) ?? 'ASIA',
-        storeName: r.store_name ?? '',
-        storeUrl: r.store_url ?? '#',
-        storeLogoUrl: r.store_logo_url ?? '',
-        countryImageUrl: r.country_image_url ?? '',
-        bannerColor: r.banner_color ?? '#111111',
-      }));
+      retailers = rows
+        // Drop rows without a real store URL — a "#" link is worse than no
+        // tile at all because it advertises coverage we don't have.
+        .filter(r => r.store_url && r.store_url.trim() !== '' && r.store_url.trim() !== '#')
+        .map(r => ({
+          id: String(r.id),
+          countryCode: r.country_code,
+          country: r.country_native,
+          countryEn: r.country_en,
+          region: (r.region as Region) ?? 'ASIA',
+          storeName: r.store_name ?? '',
+          storeUrl: r.store_url as string,
+          storeLogoUrl: r.store_logo_url ?? '',
+          countryImageUrl: r.country_image_url ?? '',
+          bannerColor: r.banner_color ?? '#111111',
+        }));
+    } else {
+      retailers = IS_DEV ? DEFAULT_RETAILERS : [];
     }
 
     return { labels, retailers };
-  } catch {
-    return { labels: resolveLabels(lang), retailers: DEFAULT_RETAILERS };
+  } catch (err) {
+    console.error('[worldwide] Supabase fetch failed:', err);
+    return labelsOnly();
   }
 }

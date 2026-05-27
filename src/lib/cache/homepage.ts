@@ -121,8 +121,12 @@ export const getCachedInstagram = unstable_cache(
         post_url: p.post_url ?? undefined,
         sort_order: p.sort_order ?? 0,
       }));
+      // Drop section entirely if no handle is configured — previously
+      // defaulted to 'rdrd_official' which is the wrong/old account and
+      // hid the missing-config state.
+      if (!configRes.data.handle) return null;
       return {
-        handle: configRes.data.handle ?? 'rdrd_official',
+        handle: configRes.data.handle,
         description: configRes.data.description ?? '',
         posts,
       };

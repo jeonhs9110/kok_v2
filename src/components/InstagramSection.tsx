@@ -34,9 +34,14 @@ function IgIcon({ className }: { className?: string }) {
 const SLOTS = 6;
 
 export default function InstagramSection({ data }: Props) {
-  const handle = data?.handle || 'rdrd_official';
-  const description = data?.description || '인스타그램에서 최신 소식을 확인하세요';
-  const posts = data?.posts || [];
+  // If the DB doesn't have an instagram_config row (or the fetch failed),
+  // hide the whole section instead of falling back to a hardcoded handle.
+  // The previous default '@rdrd_official' is an outdated/wrong handle that
+  // would route users to the wrong account and hide the real failure.
+  if (!data?.handle) return null;
+  const handle = data.handle;
+  const description = data.description || '';
+  const posts = data.posts || [];
   const profileUrl = `https://www.instagram.com/${handle}/`;
 
   // Build 6 slots — filled posts first, then empty placeholders

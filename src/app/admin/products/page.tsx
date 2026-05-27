@@ -2,7 +2,7 @@
 
 import { Plus, Trash2, Upload, X, ImageIcon, Pencil, ArrowUp, ArrowDown, Film, Image as ImgIcon, Eye } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Product, supabase, MOCK_PRODUCTS, type DetailComponent } from '@/lib/api/products';
+import { Product, supabase, type DetailComponent } from '@/lib/api/products';
 import type { Category } from '@/lib/api/categories';
 import { getAllTags, getProductTags, setProductTags, TAG_CATEGORIES, type IngredientTag } from '@/lib/api/ingredient-tags';
 import { isValidYouTubeUrl, toYouTubeThumbnailUrl, isYouTubeShortsUrl } from '@/lib/youtube';
@@ -22,6 +22,7 @@ function YtIcon({ className }: { className?: string }) {
 export default function ProductsAdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,8 +72,9 @@ export default function ProductsAdminPage() {
 
   async function fetchAll() {
     setIsLoading(true);
+    setLoadError(null);
     try {
-      if (!supabase) throw new Error('클라이언트 없음');
+      if (!supabase) throw new Error('Supabase 클라이언트 없음 (env 미설정)');
       const { data, error } = await supabase
         .from('products')
         .select('*')
@@ -97,9 +99,14 @@ export default function ProductsAdminPage() {
         show_cart_button: d.show_cart_button ?? false,
         show_buy_button: d.show_buy_button ?? false,
       })));
-    } catch {
-      console.warn('DB 연결 실패. 목업 데이터로 전환.');
-      setProducts(MOCK_PRODUCTS);
+    } catch (err) {
+      // Previously fell back to MOCK_PRODUCTS, which made it impossible to
+      // tell whether the DB was actually unreachable. Surface the error
+      // explicitly so the operator can fix the connection issue.
+      const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+      console.error('[admin/products] DB 로드 실패:', err);
+      setLoadError(msg);
+      setProducts([]);
     } finally {
       setIsLoading(false);
     }
@@ -427,7 +434,14 @@ export default function ProductsAdminPage() {
       </div>
 
       <div className="overflow-x-auto min-h-[400px]">
-        {isLoading ? (
+        {loadError ? (
+          <div className="p-8 m-6 border-2 border-red-200 bg-red-50 rounded-lg text-center">
+            <p className="text-sm font-bold text-red-700">DB 연결 실패 — 데이터를 불러올 수 없습니다</p>
+            <p className="text-xs mt-2 text-red-600 font-mono">{loadError}</p>
+            <p className="text-xs mt-3 text-gray-600">Supabase 환경변수 / RLS 정책을 확인하세요. 이전에는 가짜 mock 데이터로 자동 전환됐지만 이제 실제 오류를 표시합니다.</p>
+            <button onClick={() => fetchAll()} className="mt-4 px-4 py-2 bg-red-700 text-white text-xs font-semibold rounded hover:bg-red-800">다시 시도</button>
+          </div>
+        ) : isLoading ? (
           <div className="p-8 text-center text-sm text-gray-400 font-bold tracking-widest">불러오는 중...</div>
         ) : products.length === 0 ? (
           <div className="p-12 text-center text-gray-400">
