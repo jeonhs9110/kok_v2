@@ -8,6 +8,33 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
+function SectionHeader({
+  id,
+  title,
+  icon: Icon,
+  openSection,
+  setOpenSection,
+}: {
+  id: string;
+  title: string;
+  icon: React.ElementType;
+  openSection: string;
+  setOpenSection: (v: string) => void;
+}) {
+  return (
+    <button
+      onClick={() => setOpenSection(openSection === id ? '' : id)}
+      className="w-full flex items-center justify-between p-5 hover:bg-gray-50/50 transition-colors"
+    >
+      <div className="flex items-center gap-3">
+        <Icon className="w-5 h-5 text-gray-500" />
+        <h2 className="text-lg font-bold text-gray-800">{title}</h2>
+      </div>
+      {openSection === id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+    </button>
+  );
+}
+
 interface RegField {
   key: string;
   label_kr: string;
@@ -84,8 +111,6 @@ export default function RegistrationAdminPage() {
   // New field form
   const [newField, setNewField] = useState({ key: '', label_kr: '', label_en: '', type: 'text' });
 
-  useEffect(() => { loadAll(); }, []);
-
   async function loadAll() {
     if (!supabase) { setLoading(false); return; }
     try {
@@ -114,6 +139,8 @@ export default function RegistrationAdminPage() {
     } catch { /* tables may not exist */ }
     setLoading(false);
   }
+
+  useEffect(() => { loadAll(); }, []);
 
   async function saveFields() {
     if (!supabase) return;
@@ -178,19 +205,6 @@ export default function RegistrationAdminPage() {
     setAuthProviders(prev => prev.map(p => p.provider === provider ? { ...p, ...updates } : p));
   }
 
-  const SectionHeader = ({ id, title, icon: Icon }: { id: string; title: string; icon: React.ElementType }) => (
-    <button
-      onClick={() => setOpenSection(openSection === id ? '' : id)}
-      className="w-full flex items-center justify-between p-5 hover:bg-gray-50/50 transition-colors"
-    >
-      <div className="flex items-center gap-3">
-        <Icon className="w-5 h-5 text-gray-500" />
-        <h2 className="text-lg font-bold text-gray-800">{title}</h2>
-      </div>
-      {openSection === id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-    </button>
-  );
-
   if (loading) return <div className="text-gray-500">로딩 중...</div>;
 
   return (
@@ -198,7 +212,7 @@ export default function RegistrationAdminPage() {
 
       {/* ═══ Section 1: Registration Fields ═══ */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <SectionHeader id="fields" title="회원가입 항목 관리" icon={UserPlus} />
+        <SectionHeader id="fields" title="회원가입 항목 관리" icon={UserPlus} openSection={openSection} setOpenSection={setOpenSection} />
         {openSection === 'fields' && (
           <div className="p-5 pt-0 space-y-4">
             <p className="text-sm text-gray-500">고객 회원가입 시 수집할 항목을 관리합니다. 드래그하여 순서를 변경하거나, 토글로 활성/비활성 할 수 있습니다.</p>
@@ -290,7 +304,7 @@ export default function RegistrationAdminPage() {
 
       {/* ═══ Section 2: Social Login Providers ═══ */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <SectionHeader id="social" title="소셜 로그인 설정" icon={Key} />
+        <SectionHeader id="social" title="소셜 로그인 설정" icon={Key} openSection={openSection} setOpenSection={setOpenSection} />
         {openSection === 'social' && (
           <div className="p-5 pt-0 space-y-4">
             <p className="text-sm text-gray-500">각 소셜 로그인 제공자의 API 키를 입력하고 활성화하세요. 키를 발급받으려면 각 링크를 클릭하세요.</p>
@@ -341,7 +355,7 @@ export default function RegistrationAdminPage() {
 
       {/* ═══ Section 3: Identity Verification ═══ */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <SectionHeader id="verification" title="본인인증 (Identity Verification)" icon={Shield} />
+        <SectionHeader id="verification" title="본인인증 (Identity Verification)" icon={Shield} openSection={openSection} setOpenSection={setOpenSection} />
         {openSection === 'verification' && (
           <div className="p-5 pt-0 space-y-4">
             <p className="text-sm text-gray-500">한국 내 구매를 위한 본인인증 서비스를 설정합니다. 본인인증 제공자의 API 키를 입력하세요.</p>
@@ -402,7 +416,7 @@ export default function RegistrationAdminPage() {
 
       {/* ═══ Section 4: Customer Data ═══ */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <SectionHeader id="customers" title="수집된 고객 데이터" icon={UserPlus} />
+        <SectionHeader id="customers" title="수집된 고객 데이터" icon={UserPlus} openSection={openSection} setOpenSection={setOpenSection} />
         {openSection === 'customers' && (
           <div className="p-5 pt-0">
             <div className="flex items-center justify-between mb-3">

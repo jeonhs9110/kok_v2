@@ -155,7 +155,7 @@ export default function MenusAdminPage() {
               {parents.map(parent => {
                 const children = getChildren(parent.id);
                 return (
-                  <MenuRows key={parent.id} parent={parent} children={children} onEdit={openEdit} onDelete={handleDelete} onAddChild={() => openAdd(parent.id)} />
+                  <MenuRows key={parent.id} parent={parent} subItems={children} onEdit={openEdit} onDelete={handleDelete} onAddChild={() => openAdd(parent.id)} />
                 );
               })}
             </tbody>
@@ -276,8 +276,8 @@ export default function MenusAdminPage() {
   );
 }
 
-function MenuRows({ parent, children, onEdit, onDelete, onAddChild }: {
-  parent: Menu; children: Menu[];
+function MenuRows({ parent, subItems, onEdit, onDelete, onAddChild }: {
+  parent: Menu; subItems: Menu[];
   onEdit: (m: Menu) => void; onDelete: (id: string, h: boolean) => void; onAddChild: () => void;
 }) {
   const typeIcon = (m: Menu) => m.page_type === 'board'
@@ -325,14 +325,14 @@ function MenuRows({ parent, children, onEdit, onDelete, onAddChild }: {
               <Pencil className="w-4 h-4" />
             </button>
             {parent.slug !== 'support' && (
-              <button onClick={() => onDelete(parent.id, children.length > 0)} title="삭제" className="text-gray-400 hover:text-red-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
+              <button onClick={() => onDelete(parent.id, subItems.length > 0)} title="삭제" className="text-gray-400 hover:text-red-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
           </div>
         </td>
       </tr>
-      {children.map(child => (
+      {subItems.map(child => (
         <tr key={child.id} className="hover:bg-gray-50/50 transition-colors bg-gray-50/30">
           <td className="p-4 pl-6 text-sm text-gray-400 w-16">{child.sort_order}</td>
           <td className="p-4 pl-10">

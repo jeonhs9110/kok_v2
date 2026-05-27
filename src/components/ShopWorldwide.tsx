@@ -23,7 +23,7 @@ interface ShopWorldwideProps {
 
 type FilterValue = 'ALL' | (typeof REGION_ORDER)[number];
 
-export default function ShopWorldwide({ lang: _lang, labels, retailers }: ShopWorldwideProps) {
+export default function ShopWorldwide({ labels, retailers }: ShopWorldwideProps) {
   const [activeRegion, setActiveRegion] = useState<FilterValue>('ALL');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
 

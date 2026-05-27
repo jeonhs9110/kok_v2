@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { User, Package, Heart, LogOut, ChevronRight, Save, Pencil } from 'lucide-react';
+import { User, Package, Heart, LogOut, Save, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
@@ -100,7 +100,12 @@ export default function MyPage({ lang }: { lang: string }) {
           .order('created_at', { ascending: false });
 
         if (wishes) {
-          setWishlist(wishes.map((w: any) => ({
+          type WishRow = {
+            id: string;
+            product_id: string;
+            products: { name: string; images: string[]; price: number | string } | null;
+          };
+          setWishlist((wishes as unknown as WishRow[]).map(w => ({
             id: w.id,
             product_id: w.product_id,
             product_name: w.products?.name ?? '',

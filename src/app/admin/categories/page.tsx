@@ -135,7 +135,7 @@ export default function CategoriesAdminPage() {
                   <CategoryRows
                     key={parent.id}
                     parent={parent}
-                    children={children}
+                    subItems={children}
                     onEdit={openEdit}
                     onDelete={handleDelete}
                     onAddChild={() => openAdd(parent.id)}
@@ -241,10 +241,10 @@ export default function CategoriesAdminPage() {
 }
 
 function CategoryRows({
-  parent, children, onEdit, onDelete, onAddChild,
+  parent, subItems, onEdit, onDelete, onAddChild,
 }: {
   parent: Category;
-  children: Category[];
+  subItems: Category[];
   onEdit: (c: Category) => void;
   onDelete: (id: string, hasChildren: boolean) => void;
   onAddChild: () => void;
@@ -272,14 +272,14 @@ function CategoryRows({
             <button onClick={() => onEdit(parent)} title="수정" className="text-gray-400 hover:text-amber-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
               <Pencil className="w-4 h-4" />
             </button>
-            <button onClick={() => onDelete(parent.id, children.length > 0)} title="삭제" className="text-gray-400 hover:text-red-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
+            <button onClick={() => onDelete(parent.id, subItems.length > 0)} title="삭제" className="text-gray-400 hover:text-red-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </td>
       </tr>
       {/* Child rows */}
-      {children.map(child => (
+      {subItems.map(child => (
         <tr key={child.id} className="hover:bg-gray-50/50 transition-colors bg-gray-50/30">
           <td className="p-4 pl-6 text-sm text-gray-400 w-16">{child.sort_order}</td>
           <td className="p-4 pl-10">

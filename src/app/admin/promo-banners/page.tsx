@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
-import { Upload, Trash2, X, Link as LinkIcon, ImageIcon } from 'lucide-react';
+import { Upload, Trash2, Link as LinkIcon, ImageIcon } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';

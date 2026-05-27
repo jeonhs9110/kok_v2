@@ -11,6 +11,27 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 interface LegalPage { id: number; slug: string; title_kr: string; title_en: string; content_kr: string; content_en: string; is_published: boolean; }
 interface BusinessInfo { company_name_kr: string; company_name_en: string; ceo_name: string; business_reg_number: string; mail_order_number: string; address_kr: string; address_en: string; phone: string; email: string; bank_name: string; bank_account: string; bank_holder: string; instagram_url: string; youtube_url: string; cs_hours_kr: string; cs_hours_en: string; cs_lunch_kr: string; cs_lunch_en: string; cs_holiday_kr: string; cs_holiday_en: string; privacy_officer_name: string; privacy_officer_email: string; hidden_fields: string[]; }
 
+function SectionBtn({
+  id,
+  title,
+  icon: Icon,
+  openSection,
+  setOpenSection,
+}: {
+  id: string;
+  title: string;
+  icon: React.ElementType;
+  openSection: string;
+  setOpenSection: (v: string) => void;
+}) {
+  return (
+    <button onClick={() => setOpenSection(openSection === id ? '' : id)} className="w-full flex items-center justify-between p-5 hover:bg-gray-50/50 transition-colors">
+      <div className="flex items-center gap-3"><Icon className="w-5 h-5 text-gray-500" /><h2 className="text-lg font-bold text-gray-800">{title}</h2></div>
+      {openSection === id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+    </button>
+  );
+}
+
 // Footer visibility groups — match those checked in src/components/Footer.tsx
 const FOOTER_GROUPS: { key: string; label: string; desc: string }[] = [
   { key: 'company',  label: '회사 정보',     desc: '상호 / 대표 / 사업자등록번호 / 통신판매업신고번호' },
@@ -30,8 +51,6 @@ export default function LegalAdminPage() {
   const [saved, setSaved] = useState<string | null>(null);
   const [openSection, setOpenSection] = useState('terms');
   const [editLang, setEditLang] = useState<'kr' | 'en'>('kr');
-
-  useEffect(() => { load(); }, []);
 
   async function load() {
     if (!supabase) { setLoading(false); return; }
@@ -53,6 +72,8 @@ export default function LegalAdminPage() {
     setLoading(false);
   }
 
+  useEffect(() => { load(); }, []);
+
   async function savePage(p: LegalPage) {
     if (!supabase) return;
     setSaving(p.slug);
@@ -71,13 +92,6 @@ export default function LegalAdminPage() {
     setPages(prev => prev.map(p => p.slug === slug ? { ...p, ...updates } : p));
   }
 
-  const SectionBtn = ({ id, title, icon: Icon }: { id: string; title: string; icon: React.ElementType }) => (
-    <button onClick={() => setOpenSection(openSection === id ? '' : id)} className="w-full flex items-center justify-between p-5 hover:bg-gray-50/50 transition-colors">
-      <div className="flex items-center gap-3"><Icon className="w-5 h-5 text-gray-500" /><h2 className="text-lg font-bold text-gray-800">{title}</h2></div>
-      {openSection === id ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-    </button>
-  );
-
   if (loading) return <div className="text-gray-500">로딩 중...</div>;
 
   return (
@@ -85,7 +99,7 @@ export default function LegalAdminPage() {
       {/* Legal Pages */}
       {pages.map(p => (
         <div key={p.slug} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <SectionBtn id={p.slug} title={p.slug === 'terms' ? '이용약관 (Terms of Service)' : '개인정보처리방침 (Privacy Policy)'} icon={FileText} />
+          <SectionBtn id={p.slug} title={p.slug === 'terms' ? '이용약관 (Terms of Service)' : '개인정보처리방침 (Privacy Policy)'} icon={FileText} openSection={openSection} setOpenSection={setOpenSection} />
           {openSection === p.slug && (
             <div className="p-5 pt-0 space-y-4">
               <div className="flex items-center justify-between">
@@ -119,7 +133,7 @@ export default function LegalAdminPage() {
 
       {/* Business Info */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <SectionBtn id="biz" title="사업자 정보 (Business Info)" icon={Building2} />
+        <SectionBtn id="biz" title="사업자 정보 (Business Info)" icon={Building2} openSection={openSection} setOpenSection={setOpenSection} />
         {openSection === 'biz' && (
           <div className="p-5 pt-0 space-y-4">
             <p className="text-sm text-gray-500">전자상거래법에 따라 사이트 하단(Footer)에 표시되는 사업자 정보입니다.</p>
@@ -172,7 +186,7 @@ export default function LegalAdminPage() {
               ] as [string, string][]).map(([key, label]) => (
                 <div key={key}>
                   <label className="text-[10px] font-bold text-gray-500 uppercase">{label}</label>
-                  <input type="text" value={(biz as any)[key] || ''} onChange={e => setBiz(prev => ({ ...prev, [key]: e.target.value }))} className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-blue-400" />
+                  <input type="text" value={(biz as unknown as Record<string, string>)[key] || ''} onChange={e => setBiz(prev => ({ ...prev, [key]: e.target.value }))} className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-xs outline-none focus:border-blue-400" />
                 </div>
               ))}
             </div>

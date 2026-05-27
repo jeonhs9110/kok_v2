@@ -8,12 +8,11 @@ import { createClient } from '@/lib/supabase/client';
 interface PostActionsProps {
   postId: string;
   authorId: string | null;
-  isAdminPost: boolean;
   slug: string;
   lang: string;
 }
 
-export default function PostActions({ postId, authorId, isAdminPost, slug, lang }: PostActionsProps) {
+export default function PostActions({ postId, authorId, slug, lang }: PostActionsProps) {
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
