@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/api/products';
 import type { CarouselSlide } from '@/lib/api/carousel';
 import { SUPPORTED_LANGS, LANG_LABELS } from '@/lib/i18n/types';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const BUCKET = 'product-images';
 
@@ -132,12 +133,18 @@ export default function CarouselAdminPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('이 슬라이드를 삭제하시겠습니까?')) return;
     setSlides(prev => prev.filter(s => s.id !== id));
-    if (supabase) await supabase.from('carousel_slides').delete().eq('id', id);
+    if (supabase) {
+      await supabase.from('carousel_slides').delete().eq('id', id);
+      revalidateHomepageData('carousel');
+    }
   };
 
   const handleToggle = async (id: string, current: boolean) => {
     setSlides(prev => prev.map(s => s.id === id ? { ...s, is_active: !current } : s));
-    if (supabase) await supabase.from('carousel_slides').update({ is_active: !current }).eq('id', id);
+    if (supabase) {
+      await supabase.from('carousel_slides').update({ is_active: !current }).eq('id', id);
+      revalidateHomepageData('carousel');
+    }
   };
 
   const updateField = (field: 'badge' | 'title' | 'subtitle', lang: string, value: string) => {
@@ -176,6 +183,7 @@ export default function CarouselAdminPage() {
         if (error) throw error;
       }
       await fetchAll();
+      revalidateHomepageData('carousel');
       resetModal();
     } catch (err) {
       console.error('슬라이드 저장 실패:', err);

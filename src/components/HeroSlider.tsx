@@ -259,15 +259,27 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
             return (
               <div key={slide.id} className="flex-[0_0_100%] min-w-0 h-full relative" style={isFullpage ? undefined : { backgroundColor: slide.bgColor }}>
                 {slide.linkUrl ? (
-                  <Link
-                    href={slide.linkUrl}
-                    target={slide.linkUrl.startsWith('http') ? '_blank' : undefined}
-                    rel={slide.linkUrl.startsWith('http') ? 'noopener noreferrer' : undefined}
-                    className="block w-full h-full select-text"
-                    draggable={false}
-                  >
-                    {inner}
-                  </Link>
+                  slide.linkUrl.startsWith('http') ? (
+                    // External URL → plain <a> so Next.js doesn't try to
+                    // prefetch a remote origin.
+                    <a
+                      href={slide.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full h-full select-text"
+                      draggable={false}
+                    >
+                      {inner}
+                    </a>
+                  ) : (
+                    <Link
+                      href={slide.linkUrl}
+                      className="block w-full h-full select-text"
+                      draggable={false}
+                    >
+                      {inner}
+                    </Link>
+                  )
                 ) : inner}
               </div>
             );
