@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChevronRight } from 'lucide-react';
 import ProductActionButtons from '@/components/ProductActionButtons';
 import RecentViewTracker from '@/components/RecentViewTracker';
@@ -45,7 +46,7 @@ export default async function ProductDetail({ params }: { params: Promise<{ id: 
             {id.includes('_new') && (
               <span className="absolute top-4 left-4 bg-[#111111] text-white text-[10px] font-bold px-2 py-1 tracking-widest z-10">NEW</span>
             )}
-            <img src={productData.imageUrl} alt={name} className="w-full h-full object-cover mix-blend-multiply" />
+            <Image src={productData.imageUrl} alt={name} fill sizes="(max-width: 768px) 100vw, 50vw" priority className="object-cover mix-blend-multiply" />
           </div>
         </div>
 

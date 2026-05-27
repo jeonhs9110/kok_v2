@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -103,14 +104,13 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                   className="w-full h-full object-cover object-center"
                 />
               ) : (
-                <img
+                <Image
                   src={slide.image}
                   alt={slide.title.replace('\n', ' ') || ''}
-                  width={1920}
-                  height={1080}
-                  loading={isFirst ? 'eager' : 'lazy'}
-                  fetchPriority={isFirst ? 'high' : 'auto'}
-                  className="w-full h-full object-cover object-center"
+                  fill
+                  sizes="100vw"
+                  priority={isFirst}
+                  className="object-cover object-center"
                 />
               )
             ) : (
@@ -181,12 +181,13 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         className="w-full h-full object-cover object-center"
                       />
                     ) : (
-                      <img
+                      <Image
                         src={slide.image}
                         alt={slide.title.replace('\n', ' ')}
-                        loading={isFirst ? 'eager' : 'lazy'}
-                        fetchPriority={isFirst ? 'high' : 'auto'}
-                        className="w-full h-full object-cover object-center"
+                        fill
+                        sizes="100vw"
+                        priority={isFirst}
+                        className="object-cover object-center"
                       />
                     )
                   ) : (
@@ -239,12 +240,13 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         slide.mediaType === 'video' ? (
                           <video src={slide.image} autoPlay muted loop playsInline className="object-cover w-full h-full" />
                         ) : (
-                          <img
+                          <Image
                             src={slide.image}
                             alt={slide.title.replace('\n', ' ')}
-                            loading={isFirst ? 'eager' : 'lazy'}
-                            fetchPriority={isFirst ? 'high' : 'auto'}
-                            className="object-cover w-full h-full"
+                            fill
+                            sizes="(max-width: 1024px) 50vw, 40vw"
+                            priority={isFirst}
+                            className="object-cover"
                           />
                         )
                       ) : (

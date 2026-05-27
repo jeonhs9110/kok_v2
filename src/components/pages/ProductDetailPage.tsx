@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ChevronRight } from 'lucide-react';
 import ProductActionButtons from '@/components/ProductActionButtons';
 import ProductReviewSection from '@/components/ProductReviewSection';
@@ -107,12 +108,15 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
         {/* Product Image */}
         <div className="space-y-4">
-          <div className="w-full aspect-[5/6] bg-[#f8f8f8] flex items-center justify-center overflow-hidden">
+          <div className="relative w-full aspect-[5/6] bg-[#f8f8f8] flex items-center justify-center overflow-hidden">
             {productData.imageUrl ? (
-              <img
+              <Image
                 src={productData.imageUrl}
                 alt={translated.name}
-                className="w-full h-full object-cover mix-blend-multiply"
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+                className="object-cover mix-blend-multiply"
               />
             ) : (
               <div className="text-neutral-300 text-sm tracking-widest">NO IMAGE</div>
