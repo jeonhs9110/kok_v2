@@ -54,10 +54,4 @@ resource "aws_route_table_association" "public" {
 
 # Private subnets: no NAT (cost). EC2 in public subnet handles outbound.
 # Phase 2 can add NAT Gateway if private workloads need outbound.
-
-# DB Subnet Group for RDS
-resource "aws_db_subnet_group" "main" {
-  name       = "${var.project_name}-db-subnets"
-  subnet_ids = aws_subnet.private[*].id
-  tags       = { Name = "${var.project_name}-db-subnets" }
-}
+# (Previous aws_db_subnet_group removed alongside RDS — storefront uses Supabase.)
