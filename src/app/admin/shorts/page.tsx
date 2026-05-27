@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Video, Trash2, Plus, Link as LinkIcon } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
@@ -150,11 +151,13 @@ export default function ShortsAdminPage() {
         <div className="p-6 grid grid-cols-2 md:grid-cols-4 gap-6">
           {shorts.map((short) => (
             <div key={short.id} className="relative group rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-              <div className="aspect-[9/16] w-full">
-                <img
+              <div className="relative aspect-[9/16] w-full">
+                <Image
                   src={`https://i.ytimg.com/vi/${short.youtubeId}/hqdefault.jpg`}
                   alt="썸네일"
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                  className="object-cover"
                 />
               </div>
               <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/60 to-transparent flex justify-between items-start">

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Heart } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
@@ -70,13 +71,12 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
     <article className="group relative">
       <div className="relative aspect-[5/6] w-full rounded-[16px] overflow-hidden bg-neutral-100 mb-4">
         {imageUrl ? (
-          <img
+          <Image
             src={imageUrl}
             alt={name}
-            width={500}
-            height={600}
-            loading="lazy"
-            className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500 ease-out"
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
         ) : (
           <div className="w-full h-full bg-neutral-100 flex items-center justify-center text-neutral-300 text-[10px] font-bold tracking-widest">

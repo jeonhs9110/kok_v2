@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { User, Package, Heart, LogOut, ChevronRight, Save, Pencil } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -323,8 +324,8 @@ export default function MyPage({ lang }: { lang: string }) {
                 <div className="space-y-3">
                   {wishlist.map(item => (
                     <div key={item.id} className="flex items-center gap-4 p-4 border border-neutral-100 rounded-xl hover:bg-neutral-50 transition-colors">
-                      <div className="w-16 h-16 bg-neutral-100 rounded-lg overflow-hidden flex-shrink-0">
-                        {item.product_image && <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />}
+                      <div className="relative w-16 h-16 bg-neutral-100 rounded-lg overflow-hidden flex-shrink-0">
+                        {item.product_image && <Image src={item.product_image} alt={item.product_name} fill sizes="64px" className="object-cover" />}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm text-[#111] truncate">{item.product_name}</p>

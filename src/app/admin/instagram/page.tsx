@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
 import { Upload, Trash2, ImageIcon, Save, RefreshCw, ExternalLink } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
@@ -319,7 +320,7 @@ export default function InstagramAdminPage() {
                       loading="lazy"
                     />
                   ) : post.image_url ? (
-                    <img src={post.image_url} alt="" className="w-full h-full object-cover" />
+                    <Image src={post.image_url} alt="" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-gray-300">
                       {uploadingSlot === slot

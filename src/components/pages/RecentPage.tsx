@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Clock, X } from 'lucide-react';
 import { useRecentItems, clearRecentItems, removeRecentItem } from '@/components/RecentViewTracker';
 import { useI18n } from '@/lib/i18n/context';
@@ -77,10 +78,9 @@ export default function RecentPage() {
                 </button>
 
                 <Link href={`/${lang}/products/${item.id}`} className="block">
-                  <div className="aspect-[5/6] w-full rounded-[16px] overflow-hidden bg-[#F5F5F5] mb-3">
+                  <div className="relative aspect-[5/6] w-full rounded-[16px] overflow-hidden bg-[#F5F5F5] mb-3">
                     {item.imageUrl ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
+                      <Image src={item.imageUrl} alt={item.name} fill sizes="(max-width: 640px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-neutral-300 text-xs">NO IMAGE</div>
                     )}

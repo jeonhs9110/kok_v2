@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { createClient } from '@supabase/supabase-js';
 import { Upload, ImageIcon } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
@@ -120,7 +121,7 @@ export default function SubHeroAdminPage() {
           >
             {banner.image_url ? (
               <>
-                <img src={banner.image_url} alt="" className="w-full h-full object-cover" />
+                <Image src={banner.image_url} alt="" fill sizes="100vw" className="object-cover" />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                   <Upload className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
