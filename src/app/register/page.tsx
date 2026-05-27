@@ -4,7 +4,7 @@ import { UserPlus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import FooterClient from '@/components/FooterClient';
 import { I18nProvider } from '@/lib/i18n/context';
 import { isValidLang, type Lang } from '@/lib/i18n/types';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
@@ -230,7 +230,7 @@ export default function RegisterPage() {
         <main className="flex-1 w-full flex items-center justify-center px-4 py-16 animate-in fade-in duration-500">
           {children}
         </main>
-        <Footer />
+        <FooterClient />
       </div>
     </I18nProvider>
   );
