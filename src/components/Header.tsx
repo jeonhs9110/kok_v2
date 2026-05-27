@@ -46,9 +46,14 @@ export default function Header({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [navMenus, setNavMenus] = useState<MenuWithChildren[]>(initialNavMenus);
-  const [megaCategories, setMegaCategories] = useState<CategoryWithChildren[]>(initialMegaCategories);
-  const [logoUrl, setLogoUrl] = useState<string>(initialLogoUrl);
+  // Server-prefetched via [lang]/layout.tsx (lib/cache/header.ts). No setters
+  // because we no longer refetch client-side after the initial render — the
+  // ~60s cache TTL on the server is fresh enough, and refetching here would
+  // re-introduce the hydration flicker this whole code path was rewritten
+  // to eliminate.
+  const navMenus = initialNavMenus;
+  const megaCategories = initialMegaCategories;
+  const logoUrl = initialLogoUrl;
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
