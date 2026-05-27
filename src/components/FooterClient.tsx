@@ -1,30 +1,25 @@
+'use client';
+
 import Link from 'next/link';
-import { unstable_cache } from 'next/cache';
-import { getSupabaseServer } from '@/lib/supabase/server';
-import { translations, type TranslationKey } from '@/lib/i18n/translations';
-import type { Lang } from '@/lib/i18n/types';
+import { useEffect, useState } from 'react';
+import { useI18n } from '@/lib/i18n/context';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
 /**
- * Footer — server component.
+ * Client-side variant of <Footer>. Used by the auth / cart pages (login,
+ * register, forgot-password, reset-password, cart) which are themselves
+ * `'use client'` top-level components and therefore can't render the
+ * async server Footer directly.
  *
- * Was a `'use client'` component that fetched `business_info` on mount and
- * carried its own 5-minute in-memory cache. The data never changes inside a
- * single page view, so client-side fetching just delayed the first paint
- * and shipped an unused effect + Supabase JS bundle into the browser. Now
- * the data is fetched server-side and the markup is rendered directly into
- * the HTML, eliminating the network round-trip + hydration mismatch risk.
+ * Same visual + data contract as Footer.tsx. The split exists purely
+ * because React Server Components can't be imported by Client Components;
+ * passing them as `children` is allowed but the existing page structure
+ * doesn't fit that pattern without a wider refactor of those pages.
  *
- * Caching: `unstable_cache` with a 5-minute TTL replaces the module-level
- * memo the client component used. Same effective freshness, but the cache
- * is process-shared instead of per-tab, so a single admin edit propagates
- * to every visitor on next revalidate.
- *
- * i18n: server components can't use the `useI18n()` hook, so we look up
- * translations directly from the `translations` map using the `lang` prop
- * forwarded by `[lang]/layout.tsx`.
+ * If/when those pages are converted to server components (each form lifted
+ * into a child `_components/Form.tsx`), this file becomes redundant and
+ * can be deleted along with all `import FooterClient` lines.
  */
-
-const BRAND = 'KOKKOK GARDEN';
 
 interface BusinessInfo {
   company_name_kr: string;
@@ -50,34 +45,50 @@ interface BusinessInfo {
   hidden_fields?: string[] | null;
 }
 
-const getCachedBusinessInfo = unstable_cache(
-  async (): Promise<BusinessInfo | null> => {
+const BRAND = 'KOKKOK GARDEN';
+
+// Tab-scoped in-memory cache. Same TTL the server-side Footer uses via
+// `unstable_cache`, but per browser session here since we can't share a
+// process-wide cache from the client.
+const BIZ_TTL_MS = 5 * 60 * 1000;
+let bizCache: { data: BusinessInfo | null; ts: number } | null = null;
+let bizInFlight: Promise<BusinessInfo | null> | null = null;
+
+async function loadBusinessInfo(): Promise<BusinessInfo | null> {
+  if (bizCache && Date.now() - bizCache.ts < BIZ_TTL_MS) return bizCache.data;
+  if (bizInFlight) return bizInFlight;
+  bizInFlight = (async () => {
     try {
-      const supabase = await getSupabaseServer();
+      const supabase = getSupabaseBrowser();
       const { data, error } = await supabase
         .from('business_info')
         .select('*')
         .maybeSingle();
       if (error) {
-        console.error('[Footer] business_info load failed:', error);
+        console.error('[FooterClient] business_info load failed:', error);
         return null;
       }
-      return (data as BusinessInfo | null) ?? null;
-    } catch (err) {
-      console.error('[Footer] business_info threw:', err);
-      return null;
+      const value = (data as BusinessInfo | null) ?? null;
+      bizCache = { data: value, ts: Date.now() };
+      return value;
+    } finally {
+      bizInFlight = null;
     }
-  },
-  ['footer:business-info'],
-  { revalidate: 300, tags: ['business_info'] }
-);
-
-function t(lang: Lang, key: TranslationKey): string {
-  return translations[lang]?.[key] ?? translations['en'][key] ?? key;
+  })();
+  return bizInFlight;
 }
 
-export default async function Footer({ lang }: { lang: Lang }) {
-  const biz = await getCachedBusinessInfo();
+export default function FooterClient() {
+  const { t, lang } = useI18n();
+  const [biz, setBiz] = useState<BusinessInfo | null>(() => bizCache?.data ?? null);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadBusinessInfo().then(value => {
+      if (!cancelled && value) setBiz(value);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const hidden = biz?.hidden_fields ?? [];
   const showCompany = !hidden.includes('company');
@@ -108,7 +119,6 @@ export default async function Footer({ lang }: { lang: Lang }) {
       <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
         <div className="flex flex-col lg:flex-row justify-between lg:space-x-12 space-y-12 lg:space-y-0">
 
-          {/* Company info */}
           <div className="flex-1 max-w-sm">
             <h2 className="text-xl font-bold tracking-widest uppercase mb-6">{BRAND}</h2>
             <div className="space-y-2 text-[13px] text-brand-muted leading-relaxed break-keep">
@@ -127,9 +137,9 @@ export default async function Footer({ lang }: { lang: Lang }) {
               <p className="mt-4 pt-4 border-t border-neutral-100">© {BRAND} All Rights Reserved.</p>
             </div>
             <div className="flex space-x-4 mt-6 text-[12px] font-semibold flex-wrap gap-y-2">
-              <Link href={`/${lang}/menus/about`} className="hover:underline">{t(lang, 'footer.about')}</Link>
-              <Link href={`/${lang}/terms`} className="hover:underline">{t(lang, 'footer.terms')}</Link>
-              <Link href={`/${lang}/privacy`} className="hover:underline text-brand-ink font-bold">{t(lang, 'footer.privacy')}</Link>
+              <Link href={`/${lang}/menus/about`} className="hover:underline">{t('footer.about')}</Link>
+              <Link href={`/${lang}/terms`} className="hover:underline">{t('footer.terms')}</Link>
+              <Link href={`/${lang}/privacy`} className="hover:underline text-brand-ink font-bold">{t('footer.privacy')}</Link>
             </div>
             {showSocial && (biz?.instagram_url || biz?.youtube_url) && (
               <div className="flex items-center space-x-3 mt-6">
@@ -159,10 +169,9 @@ export default async function Footer({ lang }: { lang: Lang }) {
             )}
           </div>
 
-          {/* Customer center */}
           {(showPhone || showCsHours) && (
             <div className="flex-1 lg:pl-12">
-              <h3 className="text-[13px] font-bold tracking-widest mb-6">{t(lang, 'footer.ccTitle')}</h3>
+              <h3 className="text-[13px] font-bold tracking-widest mb-6">{t('footer.ccTitle')}</h3>
               {showPhone && (
                 biz?.phone ? (
                   <div className="text-3xl font-extrabold tracking-tighter mb-4 text-brand-ink">{biz.phone}</div>
@@ -180,13 +189,9 @@ export default async function Footer({ lang }: { lang: Lang }) {
             </div>
           )}
 
-          {/* Bank info — only renders when both the admin toggle is on AND
-              there's actual bank data. Social icons live in the brand
-              column now so this column never displays an orphan icon when
-              bank is hidden. */}
           {showBank && (biz?.bank_name || biz?.bank_account || biz?.bank_holder) && (
             <div className="flex-1 lg:pl-12">
-              <h3 className="text-[13px] font-bold tracking-widest mb-6">{t(lang, 'footer.bankTitle')}</h3>
+              <h3 className="text-[13px] font-bold tracking-widest mb-6">{t('footer.bankTitle')}</h3>
               <div className="text-[13px] text-brand-muted space-y-1">
                 {(biz?.bank_name || biz?.bank_account) && (
                   <p>

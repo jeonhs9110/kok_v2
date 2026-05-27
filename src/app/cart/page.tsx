@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowLeft, X, ChevronRight } from 'lucide-react';
 import { CartProvider, useCart } from '@/lib/cart/CartContext';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import FooterClient from '@/components/FooterClient';
 import { I18nProvider, useI18n } from '@/lib/i18n/context';
 import { isValidLang, type Lang } from '@/lib/i18n/types';
 
@@ -287,7 +287,7 @@ export default function CartPage() {
           <main className="flex-1 bg-white">
             <CartContent />
           </main>
-          <Footer />
+          <FooterClient />
         </div>
       </CartProvider>
     </I18nProvider>

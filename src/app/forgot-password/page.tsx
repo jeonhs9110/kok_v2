@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, ArrowLeft } from 'lucide-react';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import FooterClient from '@/components/FooterClient';
 import { I18nProvider } from '@/lib/i18n/context';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
@@ -122,7 +122,7 @@ export default function ForgotPasswordPage() {
             )}
           </div>
         </main>
-        <Footer />
+        <FooterClient />
       </div>
     </I18nProvider>
   );

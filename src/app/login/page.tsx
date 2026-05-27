@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
+import FooterClient from '@/components/FooterClient';
 import { I18nProvider } from '@/lib/i18n/context';
 import { isValidLang, type Lang } from '@/lib/i18n/types';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
@@ -216,7 +216,7 @@ function LoginForm() {
             </div>
           </div>
         </main>
-        <Footer />
+        <FooterClient />
       </div>
     </I18nProvider>
   );

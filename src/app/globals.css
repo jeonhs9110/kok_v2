@@ -10,6 +10,7 @@
   --color-brand-notice-from: #4a7ab5;
   --color-brand-notice-to: #6b9fd4;
   --color-brand-muted: #6b7280;           /* WCAG-safe body text on white (4.6:1) */
+  --color-brand-primary: #00693a;         /* deep green — admin accent + confirmations */
 }
 
 /* ──────────────────────────────────────────────────────────

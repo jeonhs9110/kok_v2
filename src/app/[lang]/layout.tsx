@@ -66,7 +66,7 @@ export default async function LangLayout({
               active background exists, SiteBackground renders a white
               fallback so the default look matches the pre-feature state. */}
           <main className="flex-1 w-full">{children}</main>
-          <Footer />
+          <Footer lang={lang} />
           <AIChatbot isKorea={isKorea} />
           <CookieConsent />
           <PageTracker />
