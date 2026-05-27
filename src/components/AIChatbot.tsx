@@ -134,9 +134,20 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
 
   useEffect(() => {
     fetch('/api/chat/config')
-      .then(r => r.json())
+      .then(async r => {
+        // /api/chat/config now returns 503 when Supabase is unreachable
+        // instead of silently defaulting to "chatbot enabled". Hide the
+        // widget when the config can't be fetched so the operator notices
+        // the outage instead of a half-broken chatbot.
+        if (!r.ok) return null;
+        return r.json();
+      })
       .then(data => {
-        const visible = isKorea ? (data.show_domestic ?? false) : (data.show_global ?? true);
+        if (!data || data.error) {
+          setIsEnabled(false);
+          return;
+        }
+        const visible = isKorea ? (data.show_domestic ?? false) : (data.show_global ?? false);
         setIsEnabled(visible);
         const customGreeting = lang === 'kr' ? data.greeting_kr : data.greeting_en;
         if (customGreeting) {
@@ -146,8 +157,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
         }
       })
       .catch(() => {
-        setIsEnabled(!isKorea);
-        setMessages([{ id: 'greeting', role: 'assistant', content: L.greeting }]);
+        setIsEnabled(false);
       });
   }, [lang, L.greeting, isKorea]);
 
