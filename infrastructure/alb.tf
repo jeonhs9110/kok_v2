@@ -54,15 +54,22 @@ resource "aws_lb_target_group_attachment" "app" {
   }
 }
 
-# HTTP — redirect to HTTPS (set up later once ACM cert exists)
+# HTTP listener — 301 redirect to HTTPS. Previously this forwarded
+# plaintext traffic to the app (cookies, form posts, all unencrypted).
+# Now any http://www.kokkokgarden.com request gets bounced to https://
+# before reaching the backend.
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
 
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 }
 

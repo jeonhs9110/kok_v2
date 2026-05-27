@@ -86,6 +86,11 @@ locals {
     fi
 
     # ---- systemd unit (ExecStart depends on which path took us here) ----
+    # KillSignal=SIGTERM + TimeoutStopSec=30 gives Next.js up to 30s
+    # to finish in-flight requests before being SIGKILL'd. Pairs with
+    # the ALB target group's deregistration_delay = 30 so ALB stops
+    # routing new traffic at the same time. Net: in-flight requests
+    # complete cleanly during a refresh, no cut-off connections.
     cat >/etc/systemd/system/kokkok.service <<UNITEOF
     [Unit]
     Description=KOKKOK Garden Next.js
@@ -102,6 +107,9 @@ locals {
     Restart=always
     RestartSec=5
     LimitNOFILE=65536
+    KillSignal=SIGTERM
+    TimeoutStopSec=30
+    KillMode=mixed
 
     [Install]
     WantedBy=multi-user.target
