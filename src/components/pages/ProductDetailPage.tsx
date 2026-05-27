@@ -7,6 +7,7 @@ import { getProducts } from '@/lib/api/products';
 import { getAllCategories } from '@/lib/api/categories';
 import { getAllTags, getProductTags, TAG_CATEGORIES } from '@/lib/api/ingredient-tags';
 import { translateProduct } from '@/lib/openai';
+import ProductDetailComponents from '@/components/ProductDetailComponents';
 
 const labels: Record<string, {
   home: string; shop: string; details: string; notFound: string;
@@ -184,7 +185,7 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
             <div className="pt-8 mt-8 border-t border-neutral-100 space-y-4">
               <p className="text-sm text-neutral-500">{lb.unavailable}</p>
               <Link
-                href="/kr/kr"
+                href="/kr"
                 className="inline-block bg-[#111111] text-white px-6 py-3 text-xs font-bold tracking-widest hover:bg-black transition-colors"
               >
                 {lb.visitKr}
@@ -194,8 +195,14 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
         </div>
       </div>
 
-      {/* Detail body — HTML content authored by admin via Tiptap */}
-      {productData.detailBody ? (
+      {productData.detailComponents && productData.detailComponents.length > 0 ? (
+        <div className="mt-24 pt-16 border-t border-neutral-100">
+          <h2 className="text-lg font-extrabold tracking-widest mb-12 uppercase text-center">{lb.detailView}</h2>
+          <div className="max-w-3xl mx-auto">
+            <ProductDetailComponents components={productData.detailComponents} />
+          </div>
+        </div>
+      ) : productData.detailBody ? (
         <div className="mt-24 pt-16 border-t border-neutral-100">
           <h2 className="text-lg font-extrabold tracking-widest mb-12 uppercase text-center">{lb.detailView}</h2>
           <div

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Upload, Trash2, ImageIcon, Save, RefreshCw, ExternalLink } from 'lucide-react';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -83,6 +84,7 @@ export default function InstagramAdminPage() {
     setIsSavingConfig(true);
     try {
       await supabase.from('instagram_config').upsert({ id: 1, handle, description, rss_feed_url: rssFeedUrl, updated_at: new Date().toISOString() });
+      revalidateHomepageData('instagram');
       alert('인스타그램 설정이 저장되었습니다.');
     } catch { alert('저장에 실패했습니다.'); }
     finally { setIsSavingConfig(false); }
@@ -123,6 +125,7 @@ export default function InstagramAdminPage() {
         if (error) throw error;
         setPosts(prev => prev.map((p, i) => i === slot ? { ...p, id: data.id } : p));
       }
+      revalidateHomepageData('instagram');
     } catch (err) {
       const msg = err instanceof Error ? err.message : '알 수 없는 오류';
       console.error('Instagram save error:', err);
@@ -135,6 +138,7 @@ export default function InstagramAdminPage() {
     const post = posts[slot];
     if (post.id && supabase) {
       await supabase.from('instagram_posts').delete().eq('id', post.id);
+      revalidateHomepageData('instagram');
     }
     setPosts(prev => prev.map((p, i) => i === slot ? emptyPost(i) : p));
   };

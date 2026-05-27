@@ -1,13 +1,23 @@
 'use client';
 
-import { Plus, Trash2, Upload, X, ImageIcon, Pencil } from 'lucide-react';
+import { Plus, Trash2, Upload, X, ImageIcon, Pencil, ArrowUp, ArrowDown, Film, Image as ImgIcon, Eye } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Product, supabase, MOCK_PRODUCTS } from '@/lib/api/products';
+import { Product, supabase, MOCK_PRODUCTS, type DetailComponent } from '@/lib/api/products';
 import type { Category } from '@/lib/api/categories';
 import { getAllTags, getProductTags, setProductTags, TAG_CATEGORIES, type IngredientTag } from '@/lib/api/ingredient-tags';
-import RichEditor from '@/components/admin/RichEditor';
+import { isValidYouTubeUrl, toYouTubeThumbnailUrl, isYouTubeShortsUrl } from '@/lib/youtube';
+import ProductDetailComponents from '@/components/ProductDetailComponents';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const BUCKET = 'product-images';
+
+function YtIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 00.5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 002.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 002.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z" />
+    </svg>
+  );
+}
 
 export default function ProductsAdminPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -32,6 +42,7 @@ export default function ProductsAdminPage() {
     imageFile: null as File | null,
     description: '',
     detailBody: '',
+    detailComponents: [] as DetailComponent[],
     naverStoreUrl: '',
     categoryId: '',
     subcategoryId: '',
@@ -40,16 +51,22 @@ export default function ProductsAdminPage() {
     showBuyButton: false,
   });
 
+  const [youtubeInput, setYoutubeInput] = useState('');
+  const [youtubeError, setYoutubeError] = useState('');
+  const [detailUploading, setDetailUploading] = useState(false);
+  const detailFileInputRef = useRef<HTMLInputElement>(null);
+
   const fetchCategories = useCallback(async () => {
     if (!supabase) return;
-    const { data } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order');
+    const { data, error } = await supabase.from('categories').select('*').eq('is_active', true).order('sort_order');
+    if (error) console.error('카테고리 로드 실패:', error);
     if (data) setCategories(data);
   }, []);
 
   useEffect(() => {
     fetchAll();
     fetchCategories();
-    getAllTags().then(setAllTags).catch(() => {});
+    getAllTags().then(setAllTags).catch(err => console.error('성분 태그 로드 실패:', err));
   }, [fetchCategories]);
 
   async function fetchAll() {
@@ -68,6 +85,7 @@ export default function ProductsAdminPage() {
         ingredient: d.ingredient || '',
         description: d.description || '',
         detailBody: d.detail_body || '',
+        detailComponents: Array.isArray(d.detail_components) ? d.detail_components : [],
         price: Number(d.price),
         originalPrice: Number(d.original_price || d.price),
         imageUrl: (d.images && d.images.length > 0) ? d.images[0] : '',
@@ -128,6 +146,7 @@ export default function ProductsAdminPage() {
     try {
       if (!supabase) throw new Error('클라이언트 없음');
       await supabase.from('products').update({ is_active: !currentStatus }).eq('id', id);
+      revalidateHomepageData('products');
     } catch {
       console.warn('토글 DB 동기화 실패');
     }
@@ -138,6 +157,7 @@ export default function ProductsAdminPage() {
     try {
       if (!supabase) throw new Error('클라이언트 없음');
       await supabase.from('products').delete().eq('id', id);
+      revalidateHomepageData('products');
     } catch {
       console.warn('삭제 DB 동기화 실패');
     }
@@ -146,11 +166,15 @@ export default function ProductsAdminPage() {
   const resetModal = () => {
     setIsModalOpen(false);
     setEditingId(null);
-    setFormData({ name: '', summary: '', ingredient: '', price: '', originalPrice: '', imageUrl: '', imageFile: null, description: '', detailBody: '', naverStoreUrl: '', categoryId: '', subcategoryId: '', isBestSeller: false, showCartButton: false, showBuyButton: false });
+    setFormData({ name: '', summary: '', ingredient: '', price: '', originalPrice: '', imageUrl: '', imageFile: null, description: '', detailBody: '', detailComponents: [], naverStoreUrl: '', categoryId: '', subcategoryId: '', isBestSeller: false, showCartButton: false, showBuyButton: false });
     setSelectedTagIds([]);
     setPreviewUrl('');
     setUploadProgress('idle');
     setIsSubmitting(false);
+    setYoutubeInput('');
+    setYoutubeError('');
+    setDetailUploading(false);
+    if (detailFileInputRef.current) detailFileInputRef.current.value = '';
   };
 
   const openEdit = async (item: Product) => {
@@ -161,6 +185,30 @@ export default function ProductsAdminPage() {
     } catch {
       setSelectedTagIds([]);
     }
+
+    // Legacy products only have HTML in detail_body. Auto-import any <img>
+    // tags as image components so the admin sees the existing content in
+    // the new editor instead of an empty list.
+    let initialComponents: DetailComponent[] = item.detailComponents || [];
+    if (initialComponents.length === 0 && item.detailBody && typeof window !== 'undefined') {
+      try {
+        const doc = new DOMParser().parseFromString(item.detailBody, 'text/html');
+        const urls = Array.from(doc.querySelectorAll('img'))
+          .map(img => img.getAttribute('src') || '')
+          .filter(Boolean);
+        if (urls.length > 0) {
+          initialComponents = urls.map((url, i) => ({
+            id: crypto.randomUUID(),
+            type: 'image' as const,
+            url,
+            sort_order: i,
+          }));
+        }
+      } catch (err) {
+        console.warn('detail_body HTML 파싱 실패 (legacy import):', err);
+      }
+    }
+
     setFormData({
       name: item.name,
       summary: item.summary,
@@ -171,6 +219,7 @@ export default function ProductsAdminPage() {
       imageFile: null,
       description: item.description,
       detailBody: item.detailBody || '',
+      detailComponents: initialComponents,
       naverStoreUrl: item.naver_store_url || '',
       categoryId: item.category_id || '',
       subcategoryId: item.subcategory_id || '',
@@ -180,6 +229,85 @@ export default function ProductsAdminPage() {
     });
     setPreviewUrl(item.imageUrl);
     setIsModalOpen(true);
+  };
+
+  const addDetailComponent = (c: Omit<DetailComponent, 'sort_order' | 'id'>) => {
+    setFormData(prev => ({
+      ...prev,
+      detailComponents: [
+        ...prev.detailComponents,
+        { ...c, id: crypto.randomUUID(), sort_order: prev.detailComponents.length },
+      ],
+    }));
+  };
+
+  const removeDetailComponent = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      detailComponents: prev.detailComponents.filter(c => c.id !== id),
+    }));
+  };
+
+  const moveDetailComponent = (id: string, dir: -1 | 1) => {
+    setFormData(prev => {
+      const arr = [...prev.detailComponents];
+      const i = arr.findIndex(c => c.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= arr.length) return prev;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      return { ...prev, detailComponents: arr };
+    });
+  };
+
+  const handleDetailFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+    if (!isVideo && !isImage) {
+      alert('이미지 또는 영상 파일만 업로드 가능합니다.');
+      return;
+    }
+
+    if (file.size > 30 * 1024 * 1024) {
+      const sizeMb = (file.size / 1024 / 1024).toFixed(1);
+      if (!confirm(`파일 크기가 ${sizeMb}MB로 큽니다. 30MB 이하를 권장합니다. 계속하시겠습니까?`)) {
+        return;
+      }
+    }
+
+    setDetailUploading(true);
+    try {
+      if (!supabase) throw new Error('Supabase 클라이언트 없음');
+      const ext = file.name.split('.').pop() ?? 'bin';
+      const path = `detail-components/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type,
+      });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      addDetailComponent({ type: isVideo ? 'video' : 'image', url: urlData.publicUrl });
+    } catch (err) {
+      console.error('상세 컴포넌트 업로드 실패:', err);
+      alert('업로드에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setDetailUploading(false);
+    }
+  };
+
+  const handleAddYoutube = () => {
+    const url = youtubeInput.trim();
+    if (!isValidYouTubeUrl(url)) {
+      setYoutubeError('유효한 YouTube URL이 아닙니다. (예: https://www.youtube.com/watch?v=...)');
+      return;
+    }
+    setYoutubeError('');
+    addDetailComponent({ type: 'youtube', url });
+    setYoutubeInput('');
   };
 
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -199,6 +327,11 @@ export default function ProductsAdminPage() {
         }
       }
 
+      const normalizedComponents: DetailComponent[] = formData.detailComponents.map((c, i) => ({
+        ...c,
+        sort_order: i,
+      }));
+
       const newProduct: Product = {
         id: Date.now().toString(),
         name: formData.name,
@@ -209,6 +342,7 @@ export default function ProductsAdminPage() {
         imageUrl: finalImageUrl,
         description: formData.description,
         detailBody: formData.detailBody,
+        detailComponents: normalizedComponents,
         is_active: true,
         is_best_seller: formData.isBestSeller,
         naver_store_url: formData.naverStoreUrl || undefined,
@@ -224,6 +358,7 @@ export default function ProductsAdminPage() {
         original_price: Number(formData.originalPrice || formData.price),
         description: formData.description,
         detail_body: formData.detailBody,
+        detail_components: normalizedComponents,
         images: finalImageUrl ? [finalImageUrl] : [],
         naver_store_url: formData.naverStoreUrl || null,
         category_id: formData.categoryId || null,
@@ -265,6 +400,7 @@ export default function ProductsAdminPage() {
       }
 
       if (supabase) await fetchAll();
+      revalidateHomepageData('products');
 
       resetModal();
     } catch (err) {
@@ -534,30 +670,76 @@ export default function ProductsAdminPage() {
               </div>
 
               {/* Price */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">현재 판매가 (원) *</label>
-                  <input
-                    required
-                    type="number"
-                    min="0"
-                    value={formData.price}
-                    onChange={e => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                    className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-                    placeholder="23400"
-                  />
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">현재 판매가 (원) *</label>
+                    <input
+                      required
+                      type="number"
+                      min="0"
+                      value={formData.price}
+                      onChange={e => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                      className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
+                      placeholder="23400"
+                    />
+                    <p className="text-[10px] text-gray-400 leading-snug">실제로 결제되는 가격입니다.</p>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">할인 전 가격 (취소선)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.originalPrice}
+                      onChange={e => setFormData(prev => ({ ...prev, originalPrice: e.target.value }))}
+                      className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
+                      placeholder="예: 26000 (판매가보다 높게)"
+                    />
+                    <p className="text-[10px] text-gray-400 leading-snug">
+                      <strong className="text-gray-600">현재 판매가보다 높을 때만</strong> 취소선으로 표시됩니다. 할인 없으면 비워두세요.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">정가 (취소선 표시)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.originalPrice}
-                    onChange={e => setFormData(prev => ({ ...prev, originalPrice: e.target.value }))}
-                    className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-                    placeholder="26000"
-                  />
-                </div>
+
+                {formData.price && (() => {
+                  const p = Number(formData.price) || 0;
+                  const op = Number(formData.originalPrice) || 0;
+                  const hasDiscount = op > p;
+                  const hasBackwardsInput = op > 0 && op <= p;
+                  const discountPct = hasDiscount ? Math.round(((op - p) / op) * 100) : 0;
+                  return (
+                    <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-200 rounded-lg p-4">
+                      <p className="text-[10px] font-bold tracking-widest text-gray-400 uppercase mb-2.5">
+                        사이트 미리보기
+                      </p>
+                      <div className="flex items-end gap-3 flex-wrap">
+                        {hasDiscount && (
+                          <span className="text-[#f15a24] font-bold text-base mb-0.5 tracking-tight">{discountPct}%</span>
+                        )}
+                        <span className="text-2xl font-extrabold tracking-tight text-[#111]">
+                          {p.toLocaleString()}<span className="text-base font-bold ml-0.5">원</span>
+                        </span>
+                        {hasDiscount && (
+                          <span className="text-neutral-400 line-through text-sm font-medium mb-1">
+                            {op.toLocaleString()}원
+                          </span>
+                        )}
+                      </div>
+                      {hasBackwardsInput && (
+                        <div className="mt-3 flex items-start gap-2 text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded px-2.5 py-2 leading-relaxed">
+                          <span className="font-bold shrink-0">⚠</span>
+                          <span>
+                            할인 전 가격({op.toLocaleString()}원)이 현재 판매가({p.toLocaleString()}원)보다 높지 않아 취소선이 표시되지 않습니다.
+                            두 값을 바꾸셨거나, 할인이 없는 경우 할인 전 가격을 비워두세요.
+                          </span>
+                        </div>
+                      )}
+                      {!hasDiscount && !hasBackwardsInput && (
+                        <p className="text-[10px] text-gray-400 mt-2">할인 표시 없이 판매가만 노출됩니다.</p>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Description */}
@@ -572,19 +754,124 @@ export default function ProductsAdminPage() {
                 />
               </div>
 
-              {/* Detail body (rich content for the product detail page) */}
-              <div className="space-y-1">
+              <div className="space-y-3">
                 <div className="flex items-baseline justify-between">
-                  <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">상세페이지 콘텐츠</label>
-                  <span className="text-[10px] text-gray-400">이미지 · 텍스트 섞어서 작성 (붙여넣기 / 드래그 지원)</span>
+                  <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">상세페이지 컴포넌트</label>
+                  <span className="text-[10px] text-gray-400">위 → 아래 순서, 컴포넌트 간 마진 없이 이어붙음</span>
                 </div>
-                <RichEditor
-                  content={formData.detailBody}
-                  onChange={html => setFormData(prev => ({ ...prev, detailBody: html }))}
-                  uploadPath="product-detail"
-                  minHeight={320}
-                />
-                <p className="text-[10px] text-gray-400 mt-1">상세페이지 하단에 렌더링됩니다. 긴 이미지 한 장만 올리셔도 되고, 중간에 설명 글을 섞어 작성해도 됩니다.</p>
+
+                {formData.detailComponents.length === 0 ? (
+                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-400 text-xs">
+                    아직 추가된 컴포넌트가 없습니다. 아래에서 이미지/영상/YouTube를 추가하세요.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {formData.detailComponents.map((c, i) => {
+                      const isFirst = i === 0;
+                      const isLast = i === formData.detailComponents.length - 1;
+                      const TypeIcon = c.type === 'youtube' ? YtIcon : c.type === 'video' ? Film : ImgIcon;
+                      const typeBadge = c.type === 'youtube' ? 'YouTube' : c.type === 'video' ? '영상' : '이미지';
+                      const badgeColor =
+                        c.type === 'youtube' ? 'bg-red-50 text-red-700' :
+                        c.type === 'video' ? 'bg-purple-50 text-purple-700' :
+                        'bg-blue-50 text-blue-700';
+                      const thumbnail = c.type === 'youtube' ? toYouTubeThumbnailUrl(c.url) : c.type === 'image' ? c.url : '';
+                      return (
+                        <div key={c.id} className="border border-gray-200 rounded-lg p-3 flex gap-3 items-center bg-white">
+                          <div className="text-[10px] font-bold text-gray-400 w-5 text-center select-none">{i + 1}</div>
+                          <div className="w-20 h-14 bg-gray-100 rounded flex-shrink-0 overflow-hidden flex items-center justify-center">
+                            {thumbnail ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={thumbnail} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <Film className="w-6 h-6 text-gray-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded ${badgeColor}`}>
+                                <TypeIcon className="w-3 h-3" />
+                                {typeBadge}
+                              </span>
+                              {c.type === 'youtube' && isYouTubeShortsUrl(c.url) && (
+                                <span className="px-1.5 py-0.5 bg-orange-50 text-orange-700 text-[9px] font-bold rounded">Shorts</span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-gray-500 truncate" title={c.url}>{c.url}</p>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <button type="button" disabled={isFirst} onClick={() => moveDetailComponent(c.id, -1)}
+                              className="p-1 text-gray-400 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed">
+                              <ArrowUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button type="button" disabled={isLast} onClick={() => moveDetailComponent(c.id, 1)}
+                              className="p-1 text-gray-400 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed">
+                              <ArrowDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <button type="button" onClick={() => removeDetailComponent(c.id)}
+                            className="p-1.5 text-gray-400 hover:text-red-600">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {formData.detailComponents.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-gray-400" />
+                      <p className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">사이트 미리보기</p>
+                      <span className="text-[10px] text-gray-400 ml-auto">실제 스토어 페이지와 동일한 모습 (스토어 폭은 더 넓음)</span>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                      <ProductDetailComponents components={formData.detailComponents} />
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => detailFileInputRef.current?.click()}
+                    disabled={detailUploading}
+                    className="border border-dashed border-gray-300 rounded-lg p-3 text-xs font-semibold text-gray-700 hover:border-black hover:bg-gray-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {detailUploading ? '업로드 중...' : '파일 업로드 (이미지/영상)'}
+                  </button>
+                  <input
+                    ref={detailFileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif,video/mp4"
+                    className="hidden"
+                    onChange={handleDetailFileSelect}
+                  />
+
+                  <div className="border border-dashed border-gray-300 rounded-lg p-2 flex items-center gap-1.5">
+                    <YtIcon className="w-4 h-4 text-red-600 flex-shrink-0 ml-1" />
+                    <input
+                      type="url"
+                      value={youtubeInput}
+                      onChange={e => { setYoutubeInput(e.target.value); setYoutubeError(''); }}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddYoutube(); } }}
+                      placeholder="YouTube URL"
+                      className="flex-1 text-xs bg-transparent outline-none min-w-0"
+                    />
+                    <button type="button" onClick={handleAddYoutube}
+                      className="px-2.5 py-1 bg-black text-white text-[11px] font-bold rounded hover:bg-gray-800">
+                      추가
+                    </button>
+                  </div>
+                </div>
+                {youtubeError && <p className="text-[10px] text-red-600">{youtubeError}</p>}
+
+                <p className="text-[10px] text-gray-400 leading-snug pt-1">
+                  이미지(PNG/JPG/WEBP/GIF), 영상(MP4), YouTube 링크를 추가하면 상세페이지 하단에 위→아래로 마진 없이 이어붙어 표시됩니다.
+                  영상 파일은 <strong className="text-gray-600">30MB 이하 권장</strong>. YouTube Shorts URL 사용 시 자동으로 세로 비율(9:16)로 표시됩니다.
+                </p>
               </div>
 
               {/* Naver Store URL */}

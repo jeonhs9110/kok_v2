@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Upload, Trash2, X, Link as LinkIcon, ImageIcon } from 'lucide-react';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -99,6 +100,7 @@ export default function PromoBannersAdminPage() {
         if (error) throw error;
         alert('배너가 수정되었습니다.');
       }
+      revalidateHomepageData('promo_banners');
     } catch (e) {
       console.error(e);
       alert('저장에 실패했습니다.');
@@ -117,6 +119,7 @@ export default function PromoBannersAdminPage() {
     try {
       await supabase.from('promo_banners').delete().eq('id', banner.id);
       setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, id: `new-${b.sort_order}`, image_url: '', link_url: '' } : b));
+      revalidateHomepageData('promo_banners');
     } catch {
       alert('삭제에 실패했습니다.');
     }

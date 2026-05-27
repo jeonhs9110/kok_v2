@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Search, ShoppingBag, User, Menu, X, Globe } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
 import LanguagePicker from '@/components/LanguagePicker';
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/api/products';
 import { getCategoriesTree, type CategoryWithChildren } from '@/lib/api/categories';
 import { getMenuTree, type MenuWithChildren } from '@/lib/api/menus';
@@ -39,28 +39,55 @@ export default function Header({ canPurchase = true }: HeaderProps) {
   const [logoUrl, setLogoUrl] = useState<string>('/kokkokgarden_primary.svg');
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isLoggedIn = useMemo(() => typeof document !== 'undefined' && document.cookie.includes('kokkok_auth=true'), []);
-  const isAdmin = useMemo(() => typeof document !== 'undefined' && document.cookie.includes('kokkok_admin_auth=true'), []);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const fetchNavMenus = useCallback(async () => {
-    try {
-      const tree = await getMenuTree();
-      setNavMenus(tree.filter(m => m.show_in_nav));
-    } catch { /* ignore */ }
-  }, []);
-
-  const fetchCategories = useCallback(async () => {
-    try {
-      const tree = await getCategoriesTree();
-      setMegaCategories(tree);
-    } catch { /* ignore */ }
-  }, []);
-
+  // Auth state — re-evaluates on mount AND on supabase auth events so the
+  // header swaps Sign-in ↔ Logout immediately after login, without a reload.
   useEffect(() => {
-    fetchNavMenus();
-    fetchCategories();
-    getSiteSetting('logo_url').then(url => { if (url) setLogoUrl(url); }).catch(() => {});
-  }, [fetchNavMenus, fetchCategories]);
+    const refresh = () => {
+      if (typeof document === 'undefined') return;
+      setIsLoggedIn(document.cookie.includes('kokkok_auth=true'));
+      setIsAdmin(document.cookie.includes('kokkok_admin_auth=true'));
+    };
+    refresh();
+    if (!supabase) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => refresh());
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Single effect with one `cancelled` flag, so navigation-away during slow
+  // 3G doesn't leak setState onto an unmounted component. Each catch logs
+  // explicitly so a broken menu/categories load is debuggable in the
+  // browser console instead of silently disappearing from the nav.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const tree = await getMenuTree();
+        if (!cancelled) setNavMenus(tree.filter(m => m.show_in_nav));
+      } catch (err) {
+        console.error('Header: menu tree load failed:', err);
+      }
+    })();
+    (async () => {
+      try {
+        const tree = await getCategoriesTree();
+        if (!cancelled) setMegaCategories(tree);
+      } catch (err) {
+        console.error('Header: categories load failed:', err);
+      }
+    })();
+    (async () => {
+      try {
+        const url = await getSiteSetting('logo_url');
+        if (!cancelled && url) setLogoUrl(url);
+      } catch (err) {
+        console.error('Header: logo_url load failed:', err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const util = UTILITY[lang] ?? UTILITY['en'];
   const nav = NAV_LABELS[lang] ?? NAV_LABELS['en'];
 

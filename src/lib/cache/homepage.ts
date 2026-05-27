@@ -1,0 +1,161 @@
+import { unstable_cache } from 'next/cache';
+import { createClient } from '@supabase/supabase-js';
+import { getProducts, type Product } from '@/lib/api/products';
+import { getActiveSlides, type CarouselSlide } from '@/lib/api/carousel';
+import { getActiveReviewCards, type ReviewCard } from '@/lib/api/reviews';
+import { withTimeout } from '@/lib/async-utils';
+import type { PromoBanner } from '@/components/PromoBannersSection';
+import type { SubHeroBannerData } from '@/components/SubHeroBanner';
+import type { InstagramData, InstagramPost } from '@/components/InstagramSection';
+
+const REVALIDATE = 60;
+const QUERY_BUDGET_MS = 3000;
+const TAGS = ['homepage'];
+
+function client() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return url && key ? createClient(url, key) : null;
+}
+
+async function tryQuery<T>(p: PromiseLike<T>, label: string, fallback: T): Promise<T> {
+  try {
+    return await withTimeout(p, QUERY_BUDGET_MS);
+  } catch (err) {
+    console.error(`[cache:${label}] failed:`, err);
+    return fallback;
+  }
+}
+
+export const getCachedProducts = unstable_cache(
+  () => tryQuery<Product[]>(getProducts(), 'products', []),
+  ['homepage:products'],
+  { revalidate: REVALIDATE, tags: [...TAGS, 'products'] }
+);
+
+export const getCachedSlides = unstable_cache(
+  () => tryQuery<CarouselSlide[]>(getActiveSlides(), 'slides', []),
+  ['homepage:slides'],
+  { revalidate: REVALIDATE, tags: [...TAGS, 'carousel'] }
+);
+
+export const getCachedReviewCards = unstable_cache(
+  () => tryQuery<ReviewCard[]>(getActiveReviewCards(), 'reviews', []),
+  ['homepage:reviews'],
+  { revalidate: REVALIDATE, tags: [...TAGS, 'reviews'] }
+);
+
+export const getCachedPromoBanners = unstable_cache(
+  async (): Promise<PromoBanner[]> => {
+    const c = client();
+    if (!c) return [];
+    try {
+      const { data, error } = await withTimeout(
+        c.from('promo_banners').select('id, image_url, link_url, sort_order')
+          .eq('is_active', true).order('sort_order').limit(2),
+        QUERY_BUDGET_MS
+      );
+      if (error) throw error;
+      return (data ?? []).map(r => ({
+        id: r.id,
+        image_url: r.image_url ?? '',
+        link_url: r.link_url ?? '',
+        sort_order: r.sort_order ?? 0,
+      }));
+    } catch (err) {
+      console.error('[cache:promo] failed:', err);
+      return [];
+    }
+  },
+  ['homepage:promo'],
+  { revalidate: REVALIDATE, tags: [...TAGS, 'promo_banners'] }
+);
+
+export const getCachedSubHero = unstable_cache(
+  async (): Promise<SubHeroBannerData | null> => {
+    const c = client();
+    if (!c) return null;
+    try {
+      const { data, error } = await withTimeout(
+        c.from('sub_hero_banners').select('id, image_url, link_url, title, subtitle')
+          .eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        QUERY_BUDGET_MS
+      );
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        id: data.id,
+        image_url: data.image_url ?? '',
+        link_url: data.link_url ?? '',
+        title: data.title ?? '',
+        subtitle: data.subtitle ?? '',
+      };
+    } catch (err) {
+      console.error('[cache:subhero] failed:', err);
+      return null;
+    }
+  },
+  ['homepage:subhero'],
+  { revalidate: REVALIDATE, tags: [...TAGS, 'sub_hero'] }
+);
+
+export const getCachedInstagram = unstable_cache(
+  async (): Promise<InstagramData | null> => {
+    const c = client();
+    if (!c) return null;
+    try {
+      const [configRes, postsRes] = await withTimeout(
+        Promise.all([
+          c.from('instagram_config').select('handle, description').maybeSingle(),
+          c.from('instagram_posts').select('id, image_url, link_url, post_url, sort_order').eq('is_active', true).order('sort_order').limit(6),
+        ]),
+        QUERY_BUDGET_MS
+      );
+      if (configRes.error) console.error('[cache:instagram_config]', configRes.error);
+      if (postsRes.error) console.error('[cache:instagram_posts]', postsRes.error);
+      if (!configRes.data) return null;
+      const posts: InstagramPost[] = (postsRes.data ?? []).map(p => ({
+        id: p.id,
+        image_url: p.image_url ?? '',
+        link_url: p.link_url ?? '',
+        post_url: p.post_url ?? undefined,
+        sort_order: p.sort_order ?? 0,
+      }));
+      return {
+        handle: configRes.data.handle ?? 'rdrd_official',
+        description: configRes.data.description ?? '',
+        posts,
+      };
+    } catch (err) {
+      console.error('[cache:instagram] failed:', err);
+      return null;
+    }
+  },
+  ['homepage:instagram'],
+  { revalidate: REVALIDATE, tags: [...TAGS, 'instagram'] }
+);
+
+export interface RawShort {
+  youtube_id: string;
+  product_id: string | null;
+}
+
+export const getCachedShorts = unstable_cache(
+  async (): Promise<RawShort[]> => {
+    const c = client();
+    if (!c) return [];
+    try {
+      const { data, error } = await withTimeout(
+        c.from('shorts').select('youtube_id, product_id').order('created_at', { ascending: false }).limit(10),
+        QUERY_BUDGET_MS
+      );
+      if (error) throw error;
+      return data ?? [];
+    } catch (err) {
+      console.error('[cache:shorts] failed:', err);
+      return [];
+    }
+  },
+  ['homepage:shorts'],
+  { revalidate: REVALIDATE, tags: [...TAGS, 'shorts'] }
+);

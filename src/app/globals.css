@@ -1,6 +1,31 @@
 @import "tailwindcss";
 
 /* ──────────────────────────────────────────────────────────
+   Design tokens (Tailwind v4 @theme) — surfaces a token both
+   as a utility (e.g. text-brand-ink) and as var(--color-brand-ink).
+   ────────────────────────────────────────────────────────── */
+@theme {
+  --color-brand-ink: #111111;
+  --color-brand-accent: #d94a18;          /* darkened from #f15a24 for WCAG AA on white at <18px */
+  --color-brand-notice-from: #4a7ab5;
+  --color-brand-notice-to: #6b9fd4;
+  --color-brand-muted: #6b7280;           /* WCAG-safe body text on white (4.6:1) */
+}
+
+/* ──────────────────────────────────────────────────────────
+   Global keyboard focus ring — any interactive element gets
+   a visible 2px outline on keyboard focus. Mouse users see
+   nothing (focus-visible only fires on keyboard).
+   ────────────────────────────────────────────────────────── */
+@layer base {
+  *:focus-visible {
+    outline: 2px solid var(--color-brand-ink);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────
    Brand Fonts
    - Korean: Freesentation (프리젠테이션) — registered via
      next/font/local in src/app/layout.tsx as --font-freesentation.

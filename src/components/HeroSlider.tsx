@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import useEmblaCarousel from 'embla-carousel-react';
 import Autoplay from 'embla-carousel-autoplay';
@@ -15,10 +15,18 @@ interface HeroSliderProps {
 }
 
 export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSliderProps) {
-  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [Autoplay({ delay: 5000 })]);
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    { loop: true },
+    [Autoplay({
+      delay: 5000,
+      stopOnMouseEnter: true,
+      stopOnFocusIn: true,
+      stopOnInteraction: false,
+    })]
+  );
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const slides = (dbSlides || []).map(s => {
+  const slides = useMemo(() => (dbSlides || []).map(s => {
     const mediaType = s.media_type || (s.image_url?.match(/\.(mp4|webm|mov)$/i) ? 'video' : s.image_url?.match(/\.gif$/i) ? 'gif' : 'image');
     return {
       id: s.id,
@@ -37,7 +45,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       displayMode: s.display_mode || 'default',
       mediaType,
     };
-  });
+  }), [dbSlides, lang]);
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
@@ -56,12 +64,30 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
     if (!emblaApi) return;
     onSelect();
     emblaApi.on('select', onSelect);
+    return () => {
+      emblaApi.off('select', onSelect);
+    };
   }, [emblaApi, onSelect]);
 
-  if (slides.length === 0) return null;
+  if (slides.length === 0) {
+    return (
+      <div
+        className="w-full h-[440px] sm:h-[600px] bg-gradient-to-br from-neutral-100 to-neutral-200 flex items-center justify-center"
+        role="img"
+        aria-label="Hero placeholder"
+      >
+        <span className="text-[11px] font-bold tracking-widest uppercase text-neutral-400">Coming soon</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="relative w-full h-[440px] sm:h-[600px] overflow-hidden group">
+    <div
+      className="relative w-full h-[440px] sm:h-[600px] overflow-hidden group"
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Featured products"
+    >
       <div className="overflow-hidden h-full" ref={emblaRef}>
         <div className="flex h-full">
           {slides.map((slide, slideIdx) => {
@@ -73,12 +99,15 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                 <video
                   src={slide.image}
                   autoPlay muted loop playsInline
+                  aria-label={slide.title.replace('\n', ' ') || 'Hero video'}
                   className="w-full h-full object-cover object-center"
                 />
               ) : (
                 <img
                   src={slide.image}
-                  alt={slide.title.replace('\n', ' ')}
+                  alt={slide.title.replace('\n', ' ') || ''}
+                  width={1920}
+                  height={1080}
                   loading={isFirst ? 'eager' : 'lazy'}
                   fetchPriority={isFirst ? 'high' : 'auto'}
                   className="w-full h-full object-cover object-center"
@@ -230,15 +259,27 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
             return (
               <div key={slide.id} className="flex-[0_0_100%] min-w-0 h-full relative" style={isFullpage ? undefined : { backgroundColor: slide.bgColor }}>
                 {slide.linkUrl ? (
-                  <Link
-                    href={slide.linkUrl}
-                    target={slide.linkUrl.startsWith('http') ? '_blank' : undefined}
-                    rel={slide.linkUrl.startsWith('http') ? 'noopener noreferrer' : undefined}
-                    className="block w-full h-full"
-                    draggable={false}
-                  >
-                    {inner}
-                  </Link>
+                  slide.linkUrl.startsWith('http') ? (
+                    // External URL → plain <a> so Next.js doesn't try to
+                    // prefetch a remote origin.
+                    <a
+                      href={slide.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block w-full h-full select-text"
+                      draggable={false}
+                    >
+                      {inner}
+                    </a>
+                  ) : (
+                    <Link
+                      href={slide.linkUrl}
+                      className="block w-full h-full select-text"
+                      draggable={false}
+                    >
+                      {inner}
+                    </Link>
+                  )
                 ) : inner}
               </div>
             );
@@ -248,28 +289,42 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
 
       {/* Navigation Arrows */}
       <button
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-30"
+        type="button"
+        aria-label="Previous slide"
+        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white focus-visible:text-white transition-colors opacity-70 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30"
         onClick={scrollPrev}
       >
-        <ChevronLeft className="w-10 h-10 stroke-[1.5] drop-shadow-md" />
+        <ChevronLeft className="w-10 h-10 stroke-[1.5] drop-shadow-md" aria-hidden="true" />
       </button>
       <button
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-30"
+        type="button"
+        aria-label="Next slide"
+        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white focus-visible:text-white transition-colors opacity-70 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30"
         onClick={scrollNext}
       >
-        <ChevronRight className="w-10 h-10 stroke-[1.5] drop-shadow-md" />
+        <ChevronRight className="w-10 h-10 stroke-[1.5] drop-shadow-md" aria-hidden="true" />
       </button>
 
-      {/* Pagination Dots */}
-      <div className="absolute bottom-8 left-0 right-0 flex justify-center space-x-2">
+      {/* Pagination Dots — visible dot stays tiny, but hitbox is 32×32 via padding */}
+      <div className="absolute bottom-6 left-0 right-0 flex justify-center">
         {slides.map((_, index) => (
           <button
             key={index}
-            className={`w-2 h-2 rounded-full transition-all ${
-              index === selectedIndex ? 'bg-white w-6 shadow-md' : 'bg-white/50'
-            }`}
+            type="button"
+            aria-label={`Go to slide ${index + 1}`}
+            aria-current={index === selectedIndex ? 'true' : undefined}
+            className="p-3 group/dot"
             onClick={() => emblaApi && emblaApi.scrollTo(index)}
-          />
+          >
+            <span
+              aria-hidden="true"
+              className={`block h-2 rounded-full transition-all ${
+                index === selectedIndex
+                  ? 'bg-white w-6 shadow-md'
+                  : 'bg-white/60 w-2 group-hover/dot:bg-white/90'
+              }`}
+            />
+          </button>
         ))}
       </div>
     </div>

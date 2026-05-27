@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Upload, ImageIcon } from 'lucide-react';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -15,10 +16,12 @@ interface SubHero {
   link_url: string;
   title: string;
   subtitle: string;
+  title_size_offset: number;
+  subtitle_size_offset: number;
   is_active: boolean;
 }
 
-const EMPTY: SubHero = { id: null, image_url: '', link_url: '', title: '', subtitle: '', is_active: true };
+const EMPTY: SubHero = { id: null, image_url: '', link_url: '', title: '', subtitle: '', title_size_offset: 0, subtitle_size_offset: 0, is_active: true };
 
 export default function SubHeroAdminPage() {
   const [banner, setBanner] = useState<SubHero>(EMPTY);
@@ -73,6 +76,8 @@ export default function SubHeroAdminPage() {
         link_url: banner.link_url,
         title: banner.title,
         subtitle: banner.subtitle,
+        title_size_offset: banner.title_size_offset,
+        subtitle_size_offset: banner.subtitle_size_offset,
         is_active: banner.is_active,
       };
       if (banner.id) {
@@ -83,6 +88,7 @@ export default function SubHeroAdminPage() {
         if (error) throw error;
         setBanner(prev => ({ ...prev, id: data.id }));
       }
+      revalidateHomepageData('sub_hero');
       alert('서브 히어로 배너가 저장되었습니다.');
     } catch (e) {
       console.error(e);
@@ -178,6 +184,47 @@ export default function SubHeroAdminPage() {
             placeholder="예: Let's make together"
             className="w-full border border-gray-200 rounded px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:border-black outline-none transition"
           />
+        </div>
+
+        {/* Font size offsets */}
+        <div className="space-y-3 pt-2 border-t border-gray-100">
+          <div>
+            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">폰트 크기 조절</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">기본 크기 대비 ± px 단위로 조정 (예: -4 = 작게, +4 = 크게). 미리보기는 데스크탑 기준 실제 크기입니다.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {([
+              { key: 'title', label: '제목', basePx: 48, sample: '제목' },
+              { key: 'subtitle', label: '서브타이틀', basePx: 16, sample: '서브타이틀' },
+            ] as const).map(({ key, label, basePx, sample }) => {
+              const offsetField = `${key}_size_offset` as 'title_size_offset' | 'subtitle_size_offset';
+              const offset = banner[offsetField] || 0;
+              const effectivePx = basePx + offset;
+              const sampleText = banner[key] || sample;
+              return (
+                <div key={key} className="space-y-1">
+                  <div className="flex items-baseline justify-between">
+                    <label className="text-[10px] font-semibold text-gray-500">{label}</label>
+                    <span className="text-[10px] text-gray-400 font-mono">= {effectivePx}px</span>
+                  </div>
+                  <input
+                    type="number"
+                    value={offset}
+                    onChange={e => setBanner(prev => ({ ...prev, [offsetField]: parseInt(e.target.value) || 0 }))}
+                    placeholder="0"
+                    className="w-full border border-gray-200 rounded px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:border-black outline-none transition"
+                  />
+                  <div
+                    className="px-2 py-1.5 border border-gray-200 rounded bg-white overflow-hidden truncate"
+                    style={{ fontSize: `${effectivePx}px`, lineHeight: 1.15 }}
+                    title={sampleText}
+                  >
+                    {sampleText}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Link URL */}

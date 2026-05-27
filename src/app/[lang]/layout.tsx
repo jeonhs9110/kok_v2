@@ -8,6 +8,7 @@ import AIChatbot from '@/components/AIChatbot';
 import CookieConsent from '@/components/CookieConsent';
 import PageTracker from '@/components/PageTracker';
 import { CartProvider } from '@/lib/cart/CartContext';
+import { WishlistProvider } from '@/lib/wishlist/WishlistContext';
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
@@ -37,14 +38,23 @@ export default async function LangLayout({
   return (
     <I18nProvider isKorea={isKorea} lang={lang}>
       <CartProvider>
+        <WishlistProvider>
         <div className="flex flex-col min-h-screen">
           <Header canPurchase={isKorea} />
-          <main className="flex-1 w-full bg-white">{children}</main>
+          {/* main is transparent so the SiteBackground (-z-10 fixed layer)
+              can show through wherever individual sections don't paint
+              over it. Sections that want a solid backdrop (cards, hero
+              slides, ShortsFeed black, Footer white, etc.) set their own
+              bg-*; everything else lets the SiteBackground show. When no
+              active background exists, SiteBackground renders a white
+              fallback so the default look matches the pre-feature state. */}
+          <main className="flex-1 w-full">{children}</main>
           <Footer />
           <AIChatbot isKorea={isKorea} />
           <CookieConsent />
           <PageTracker />
         </div>
+        </WishlistProvider>
       </CartProvider>
     </I18nProvider>
   );

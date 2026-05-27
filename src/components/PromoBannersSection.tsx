@@ -1,7 +1,4 @@
-'use client';
-
 import Link from 'next/link';
-import Image from 'next/image';
 
 export interface PromoBanner {
   id: string;
@@ -30,12 +27,16 @@ export default function PromoBannersSection({ banners }: Props) {
               href={banner.link_url || '#'}
               target={banner.link_url?.startsWith('http') ? '_blank' : undefined}
               rel={banner.link_url?.startsWith('http') ? 'noopener noreferrer' : undefined}
-              className="relative block aspect-square overflow-hidden rounded-xl group"
+              className="relative block aspect-square overflow-hidden rounded-xl group isolate"
             >
               {banner.image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={banner.image_url}
-                  alt=""
+                  alt="프로모션 배너"
+                  width={800}
+                  height={800}
+                  loading="lazy"
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                 />
               ) : (
