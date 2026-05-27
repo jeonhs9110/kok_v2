@@ -6,13 +6,20 @@ import { useI18n } from '@/lib/i18n/context';
 import LanguagePicker from '@/components/LanguagePicker';
 import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/api/products';
-import { getCategoriesTree, type CategoryWithChildren } from '@/lib/api/categories';
-import { getMenuTree, type MenuWithChildren } from '@/lib/api/menus';
-import { getSiteSetting } from '@/lib/api/site-settings';
+import type { CategoryWithChildren } from '@/lib/api/categories';
+import type { MenuWithChildren } from '@/lib/api/menus';
 import { useCart } from '@/lib/cart/CartContext';
 
 interface HeaderProps {
   canPurchase?: boolean;
+  /**
+   * SSR-fetched header data, passed in by [lang]/layout.tsx via
+   * lib/cache/header.ts. Used as initial useState values so the first
+   * client render matches the server HTML — no expanding-nav flicker.
+   */
+  initialNavMenus?: MenuWithChildren[];
+  initialMegaCategories?: CategoryWithChildren[];
+  initialLogoUrl?: string;
 }
 
 /* ── i18n utility strings ───────────────────────────────────────────── */
@@ -26,7 +33,12 @@ const NAV_LABELS: Record<string, { product: string; event: string; brand: string
   en: { product: 'Product', event: 'EVENT & NOTICE', brand: 'BRAND STORY', review: 'REVIEWS', global: 'SHOP Worldwide', worldwide: 'SHOP Worldwide' },
 };
 
-export default function Header({ canPurchase = true }: HeaderProps) {
+export default function Header({
+  canPurchase = true,
+  initialNavMenus = [],
+  initialMegaCategories = [],
+  initialLogoUrl = '/kokkokgarden_primary.svg',
+}: HeaderProps) {
   const { lang } = useI18n();
   const { totalCount } = useCart();
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -34,9 +46,9 @@ export default function Header({ canPurchase = true }: HeaderProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [navMenus, setNavMenus] = useState<MenuWithChildren[]>([]);
-  const [megaCategories, setMegaCategories] = useState<CategoryWithChildren[]>([]);
-  const [logoUrl, setLogoUrl] = useState<string>('/kokkokgarden_primary.svg');
+  const [navMenus, setNavMenus] = useState<MenuWithChildren[]>(initialNavMenus);
+  const [megaCategories, setMegaCategories] = useState<CategoryWithChildren[]>(initialMegaCategories);
+  const [logoUrl, setLogoUrl] = useState<string>(initialLogoUrl);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -56,38 +68,11 @@ export default function Header({ canPurchase = true }: HeaderProps) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Single effect with one `cancelled` flag, so navigation-away during slow
-  // 3G doesn't leak setState onto an unmounted component. Each catch logs
-  // explicitly so a broken menu/categories load is debuggable in the
-  // browser console instead of silently disappearing from the nav.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const tree = await getMenuTree();
-        if (!cancelled) setNavMenus(tree.filter(m => m.show_in_nav));
-      } catch (err) {
-        console.error('Header: menu tree load failed:', err);
-      }
-    })();
-    (async () => {
-      try {
-        const tree = await getCategoriesTree();
-        if (!cancelled) setMegaCategories(tree);
-      } catch (err) {
-        console.error('Header: categories load failed:', err);
-      }
-    })();
-    (async () => {
-      try {
-        const url = await getSiteSetting('logo_url');
-        if (!cancelled && url) setLogoUrl(url);
-      } catch (err) {
-        console.error('Header: logo_url load failed:', err);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // Nav menus / mega-categories / logo are SSR'd by [lang]/layout.tsx via
+  // lib/cache/header.ts (60s revalidate). The previous client-side fetch
+  // here caused a visible header expansion ~300ms after first paint, which
+  // looked like the nav was loading in. Removing that fetch makes the
+  // first paint identical to the post-hydration state.
   const util = UTILITY[lang] ?? UTILITY['en'];
   const nav = NAV_LABELS[lang] ?? NAV_LABELS['en'];
 
