@@ -95,3 +95,10 @@ variable "openai_api_key" {
   sensitive = true
   default   = ""
 }
+
+# ---- Monitoring ----
+variable "alerts_email" {
+  description = "Email address to receive CloudWatch alarm notifications. AWS sends a one-click confirmation link to this address on first apply — alarms fire silently until that link is clicked."
+  type        = string
+  default     = "jeonhs9110@gmail.com"
+}

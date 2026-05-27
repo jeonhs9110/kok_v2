@@ -6,7 +6,18 @@ resource "aws_lb" "main" {
   subnets            = aws_subnet.public[*].id
 
   enable_deletion_protection = false # toggle to true in Phase 2
-  tags                       = { Name = "${var.project_name}-alb" }
+
+  # Per-request log to S3. Bucket + policy in alb-logs.tf.
+  access_logs {
+    bucket  = aws_s3_bucket.alb_logs.id
+    enabled = true
+  }
+
+  tags = { Name = "${var.project_name}-alb" }
+
+  # Bucket policy must exist BEFORE ALB tries to write its first log,
+  # otherwise the create call fails with "Access Denied for bucket".
+  depends_on = [aws_s3_bucket_policy.alb_logs]
 }
 
 resource "aws_lb_target_group" "app" {
