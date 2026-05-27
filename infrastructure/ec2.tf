@@ -22,14 +22,18 @@ locals {
     exec > >(tee -a /var/log/kokkok-boot.log) 2>&1
 
     # ---- system deps ----
-    dnf update -y
-    dnf install -y git tar gzip
+    # Skip `dnf update -y` — AL2023 base image is fresh enough; the update
+    # was costing ~30s of cold-cache time on every boot.
+    # `--setopt=install_weak_deps=False` skips Recommends, ~5s saving.
+    dnf install -y --setopt=install_weak_deps=False git tar gzip
     curl -fsSL https://rpm.nodesource.com/setup_22.x | bash -
-    dnf install -y nodejs
+    dnf install -y --setopt=install_weak_deps=False nodejs
 
     # ---- clone app ----
+    # --single-branch avoids fetching refs we won't use.
     install -d -o ec2-user -g ec2-user /opt/kokkok
-    sudo -u ec2-user git clone --depth 1 https://github.com/jeonhs9110/kok_v2.git /opt/kokkok/app
+    sudo -u ec2-user git clone --depth 1 --single-branch --branch master \
+      https://github.com/jeonhs9110/kok_v2.git /opt/kokkok/app
     cd /opt/kokkok/app
 
     # ---- env file ----
@@ -51,8 +55,16 @@ locals {
     # NEXT_PUBLIC_* vars get inlined into the client bundle. Without this,
     # the client-side supabase client is null and any browser-side fetch
     # (e.g. Header nav menus) returns nothing.
-    sudo -u ec2-user bash -c 'cd /opt/kokkok/app && npm ci'
-    sudo -u ec2-user bash -c 'set -a; source /etc/kokkok/env; set +a; cd /opt/kokkok/app && npm run build'
+    # --prefer-offline uses the npm cache first, --no-audit/--no-fund skip
+    # the audit + funding API calls (each ~5-10s on slow networks),
+    # --ignore-scripts skips package postinstall hooks (none needed here).
+    sudo -u ec2-user bash -c '\
+      cd /opt/kokkok/app && \
+      npm ci --prefer-offline --no-audit --no-fund --ignore-scripts'
+    sudo -u ec2-user bash -c '\
+      set -a; source /etc/kokkok/env; set +a; \
+      cd /opt/kokkok/app && \
+      npm run build'
 
     # ---- systemd unit ----
     cat >/etc/systemd/system/kokkok.service <<'UNITEOF'
@@ -104,9 +116,30 @@ resource "aws_instance" "app" {
     http_endpoint = "enabled"
   }
 
-  tags = { Name = "${var.project_name}-app" }
+  # Timestamp suffix so during a create_before_destroy swap the temporarily
+  # coexisting old + new instances don't share a Name tag (just makes the
+  # EC2 console less confusing during the ~5min overlap window).
+  tags = {
+    Name = "${var.project_name}-app-${formatdate("YYMMDD-hhmm", timestamp())}"
+  }
 
   lifecycle {
-    ignore_changes = [ami]
+    # ZERO-DOWNTIME REPLACEMENT:
+    # 1. Terraform creates the new instance first.
+    # 2. The new aws_lb_target_group_attachment.app (also
+    #    create_before_destroy) attaches it to the TG — both old + new
+    #    are now in the TG.
+    # 3. null_resource.wait_for_healthy (wait.tf) blocks apply until the
+    #    new target reports `healthy`.
+    # 4. Old attachment is destroyed → old instance deregisters and
+    #    drains for 30s (aws_lb_target_group.app.deregistration_delay).
+    # 5. Old instance is finally destroyed.
+    # Net visible downtime: 0s. Net cost: ~$0.005 for the 5min overlap.
+    create_before_destroy = true
+
+    # Ignore the timestamp tag — otherwise every `terraform plan` would
+    # see a Name diff and force a replacement on its own. Only real
+    # config changes (user_data, instance_type, etc.) trigger replace.
+    ignore_changes = [ami, tags]
   }
 }
