@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { useI18n } from '@/lib/i18n/context';
 import Link from 'next/link';
 
@@ -19,27 +19,44 @@ const L: Record<string, { message: string; accept: string; decline: string; link
   },
 };
 
+const COOKIE_PATTERN = /kokkok_cookie_consent=\w+/;
+
+// useSyncExternalStore inputs need stable identity. Reading document.cookie
+// has no subscription mechanism (cookies don't fire events) — we render the
+// snapshot once on mount and rely on the local `dismissed` state for
+// in-session updates.
+function subscribeNoop() {
+  return () => {};
+}
+
+function getServerSnapshot() {
+  // SSR can't read the cookie. Pretend it's present so the banner stays
+  // hidden during SSR + first client paint — no hydration mismatch, no
+  // FOUC. The real value swaps in on the second client render.
+  return true;
+}
+
+function getClientSnapshot() {
+  return COOKIE_PATTERN.test(document.cookie);
+}
+
 export default function CookieConsent() {
   const { lang } = useI18n();
   const t = L[lang] ?? L['en'];
-  const [show, setShow] = useState(false);
+  const hasConsent = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
+  const [dismissed, setDismissed] = useState(false);
 
-  useEffect(() => {
-    const consent = document.cookie.match(/kokkok_cookie_consent=(\w+)/);
-    if (!consent) setShow(true);
-  }, []);
+  if (hasConsent || dismissed) return null;
 
   const handleAccept = () => {
     document.cookie = 'kokkok_cookie_consent=accepted; path=/; max-age=31536000; SameSite=Lax';
-    setShow(false);
+    setDismissed(true);
   };
 
   const handleDecline = () => {
     document.cookie = 'kokkok_cookie_consent=declined; path=/; max-age=31536000; SameSite=Lax';
-    setShow(false);
+    setDismissed(true);
   };
-
-  if (!show) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 p-4 animate-in slide-in-from-bottom-4 duration-300">

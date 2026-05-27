@@ -90,6 +90,10 @@ export default function ProductReviewSection({ productId, lang }: Props) {
     setLoading(false);
   }, [productId]);
 
+  // One-shot fetch on mount + when productId changes. No external-store
+  // subscription source here; the explicit refetch on form submit keeps the
+  // list fresh.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const submit = async (e: React.FormEvent) => {
