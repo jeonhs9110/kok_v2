@@ -16,27 +16,24 @@ data "aws_ami" "al2023" {
 # directly — no ECR pull, no Secrets Manager, no S3 access required.
 # Env vars come from terraform variables, written into a systemd EnvironmentFile.
 locals {
+  # Hybrid Phase 2 user-data:
+  #   1. Try to fetch a pre-built artifact from S3 (Phase 2A, fast path, ~90s)
+  #   2. Fall back to git clone + npm ci + build (Phase 1.5, slow path, ~5min)
+  #
+  # This lets the deploy pipeline progress safely: if GitHub Actions has
+  # ever produced an artifact, EC2 takes the fast path; if not (or if the
+  # artifact 404s for any reason), the legacy path keeps the site alive.
+  # Once the workflow is proven, we'll delete the fallback in a follow-up
+  # to slim the user-data and shave another ~20s of AMI-install time off.
+
+  artifact_url = aws_s3_bucket.deploy_artifacts.bucket != "" ? "https://${aws_s3_bucket.deploy_artifacts.bucket}.s3.${var.region}.amazonaws.com/latest.tar.gz" : ""
+
   user_data = <<-EOT
     #!/bin/bash
     set -euxo pipefail
     exec > >(tee -a /var/log/kokkok-boot.log) 2>&1
 
-    # ---- system deps ----
-    # Skip `dnf update -y` — AL2023 base image is fresh enough; the update
-    # was costing ~30s of cold-cache time on every boot.
-    # `--setopt=install_weak_deps=False` skips Recommends, ~5s saving.
-    dnf install -y --setopt=install_weak_deps=False git tar gzip
-    curl -fsSL https://rpm.nodesource.com/setup_22.x | bash -
-    dnf install -y --setopt=install_weak_deps=False nodejs
-
-    # ---- clone app ----
-    # --single-branch avoids fetching refs we won't use.
-    install -d -o ec2-user -g ec2-user /opt/kokkok
-    sudo -u ec2-user git clone --depth 1 --single-branch --branch master \
-      https://github.com/jeonhs9110/kok_v2.git /opt/kokkok/app
-    cd /opt/kokkok/app
-
-    # ---- env file ----
+    # ---- env file (needed by BOTH paths) ----
     install -d -m 750 -o ec2-user -g ec2-user /etc/kokkok
     cat >/etc/kokkok/env <<'ENVEOF'
     NODE_ENV=production
@@ -50,24 +47,46 @@ locals {
     chmod 640 /etc/kokkok/env
     chown root:ec2-user /etc/kokkok/env
 
-    # ---- install + build (as ec2-user so files are owned correctly) ----
-    # IMPORTANT: source /etc/kokkok/env BEFORE `npm run build` so that
-    # NEXT_PUBLIC_* vars get inlined into the client bundle. Without this,
-    # the client-side supabase client is null and any browser-side fetch
-    # (e.g. Header nav menus) returns nothing.
-    # --prefer-offline uses the npm cache first, --no-audit/--no-fund skip
-    # the audit + funding API calls (each ~5-10s on slow networks),
-    # --ignore-scripts skips package postinstall hooks (none needed here).
-    sudo -u ec2-user bash -c '\
-      cd /opt/kokkok/app && \
-      npm ci --prefer-offline --no-audit --no-fund --ignore-scripts'
-    sudo -u ec2-user bash -c '\
-      set -a; source /etc/kokkok/env; set +a; \
-      cd /opt/kokkok/app && \
-      npm run build'
+    # ---- always need Node.js runtime ----
+    dnf install -y --setopt=install_weak_deps=False tar gzip
+    curl -fsSL https://rpm.nodesource.com/setup_22.x | bash -
+    dnf install -y --setopt=install_weak_deps=False nodejs
 
-    # ---- systemd unit ----
-    cat >/etc/systemd/system/kokkok.service <<'UNITEOF'
+    install -d -o ec2-user -g ec2-user /opt/kokkok/app
+
+    # ---- try Phase 2A (fast): download pre-built artifact ----
+    ARTIFACT_URL="${local.artifact_url}"
+    EXEC_START=""
+    if [ -n "$ARTIFACT_URL" ] && curl -fsSL "$ARTIFACT_URL" -o /tmp/app.tar.gz; then
+      echo "[boot] Phase 2A — using pre-built artifact from $ARTIFACT_URL"
+      tar -xzf /tmp/app.tar.gz -C /opt/kokkok/app
+      chown -R ec2-user:ec2-user /opt/kokkok/app
+      rm -f /tmp/app.tar.gz
+      # Next.js standalone produces a top-level server.js entrypoint.
+      EXEC_START="/usr/bin/node server.js"
+    else
+      # ---- Phase 1.5 fallback (slow): clone + npm ci + npm build ----
+      echo "[boot] Phase 1.5 fallback — artifact unavailable, building from source"
+      dnf install -y --setopt=install_weak_deps=False git
+      sudo -u ec2-user git clone --depth 1 --single-branch --branch master \
+        https://github.com/jeonhs9110/kok_v2.git /opt/kokkok/app-src
+      # Move into app dir to keep the standalone vs source path structure
+      # consistent for systemd's WorkingDirectory.
+      cp -a /opt/kokkok/app-src/. /opt/kokkok/app/
+      rm -rf /opt/kokkok/app-src
+      chown -R ec2-user:ec2-user /opt/kokkok/app
+      sudo -u ec2-user bash -c '\
+        cd /opt/kokkok/app && \
+        npm ci --prefer-offline --no-audit --no-fund --ignore-scripts'
+      sudo -u ec2-user bash -c '\
+        set -a; source /etc/kokkok/env; set +a; \
+        cd /opt/kokkok/app && \
+        npm run build'
+      EXEC_START="/usr/bin/npm start"
+    fi
+
+    # ---- systemd unit (ExecStart depends on which path took us here) ----
+    cat >/etc/systemd/system/kokkok.service <<UNITEOF
     [Unit]
     Description=KOKKOK Garden Next.js
     After=network-online.target
@@ -79,7 +98,7 @@ locals {
     Group=ec2-user
     WorkingDirectory=/opt/kokkok/app
     EnvironmentFile=/etc/kokkok/env
-    ExecStart=/usr/bin/npm start
+    ExecStart=$EXEC_START
     Restart=always
     RestartSec=5
     LimitNOFILE=65536
@@ -91,7 +110,6 @@ locals {
     systemctl daemon-reload
     systemctl enable --now kokkok.service
 
-    # ---- mark boot complete ----
     date > /var/log/kokkok-ready
   EOT
 }
