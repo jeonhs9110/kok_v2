@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { Clock, X, Trash2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { getRecentItems, type RecentItem } from '@/components/RecentViewTracker';
+import { Clock, X } from 'lucide-react';
+import { useRecentItems, clearRecentItems, removeRecentItem } from '@/components/RecentViewTracker';
 import { useI18n } from '@/lib/i18n/context';
 
 const labels: Record<string, { title: string; sub: string; empty: string; emptyDesc: string; shop: string; clear: string; clearConfirm: string }> = {
@@ -25,27 +24,12 @@ function formatTimeAgo(timestamp: number, lang: string): string {
 export default function RecentPage() {
   const { lang } = useI18n();
   const lb = labels[lang] ?? labels['en'];
-  const [items, setItems] = useState<RecentItem[]>([]);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setItems(getRecentItems());
-    setMounted(true);
-  }, []);
+  const items = useRecentItems();
 
   const handleClear = () => {
     if (!confirm(lb.clearConfirm)) return;
-    localStorage.removeItem('kokkok_recent');
-    setItems([]);
+    clearRecentItems();
   };
-
-  const handleRemove = (id: string) => {
-    const updated = items.filter(i => i.id !== id);
-    localStorage.setItem('kokkok_recent', JSON.stringify(updated));
-    setItems(updated);
-  };
-
-  if (!mounted) return null;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-in fade-in duration-500">
@@ -86,7 +70,7 @@ export default function RecentPage() {
               <div key={item.id} className="group relative">
                 {/* Remove button */}
                 <button
-                  onClick={() => handleRemove(item.id)}
+                  onClick={() => removeRecentItem(item.id)}
                   className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-white/80 backdrop-blur-sm shadow-sm flex items-center justify-center text-neutral-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -95,6 +79,7 @@ export default function RecentPage() {
                 <Link href={`/${lang}/products/${item.id}`} className="block">
                   <div className="aspect-[5/6] w-full rounded-[16px] overflow-hidden bg-[#F5F5F5] mb-3">
                     {item.imageUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-neutral-300 text-xs">NO IMAGE</div>

@@ -33,6 +33,10 @@ export default function CommentSection({ postId, lang }: CommentSectionProps) {
     setLoading(false);
   }, [postId]);
 
+  // One-shot fetch on mount + when postId changes. No external-store
+  // subscription source; the form's `onSubmitted` refetch keeps the
+  // thread fresh after a new comment.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchComments(); }, [fetchComments]);
 
   const topLevel = comments.filter((c) => !c.parent_id);

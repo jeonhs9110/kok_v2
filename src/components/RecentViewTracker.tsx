@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 
 const STORAGE_KEY = 'kokkok_recent';
 const MAX_ITEMS = 20;
@@ -14,26 +14,92 @@ export interface RecentItem {
   viewedAt: number;
 }
 
-export function getRecentItems(): RecentItem[] {
-  if (typeof window === 'undefined') return [];
+let cached: RecentItem[] | null = null;
+const listeners = new Set<() => void>();
+
+function loadFromStorage(): RecentItem[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    return raw ? (JSON.parse(raw) as RecentItem[]) : [];
   } catch {
     return [];
   }
 }
 
-function saveRecentItems(items: RecentItem[]) {
+function saveToStorage(items: RecentItem[]) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   } catch { /* ignore */ }
 }
 
+function notify() {
+  listeners.forEach(l => l());
+}
+
+// Exported for tracking views and for the recent-items list page. `trackView`
+// writes through the cache so subscribers re-render immediately; the same
+// `getRecentItems` shape is preserved for any callers that need a one-shot
+// read (e.g. analytics).
+export function getRecentItems(): RecentItem[] {
+  if (typeof window === 'undefined') return [];
+  if (cached === null) cached = loadFromStorage();
+  return cached;
+}
+
 export function trackView(item: Omit<RecentItem, 'viewedAt'>) {
-  const items = getRecentItems().filter(i => i.id !== item.id);
-  items.unshift({ ...item, viewedAt: Date.now() });
-  saveRecentItems(items.slice(0, MAX_ITEMS));
+  if (typeof window === 'undefined') return;
+  const current = getRecentItems();
+  const next = [{ ...item, viewedAt: Date.now() }, ...current.filter(i => i.id !== item.id)].slice(0, MAX_ITEMS);
+  cached = next;
+  saveToStorage(next);
+  notify();
+}
+
+export function clearRecentItems() {
+  if (typeof window === 'undefined') return;
+  cached = [];
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch { /* ignore */ }
+  notify();
+}
+
+export function removeRecentItem(id: string) {
+  if (typeof window === 'undefined') return;
+  const current = getRecentItems();
+  const next = current.filter(i => i.id !== id);
+  cached = next;
+  saveToStorage(next);
+  notify();
+}
+
+const EMPTY: readonly RecentItem[] = Object.freeze([]);
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener);
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== STORAGE_KEY) return;
+    cached = loadFromStorage();
+    listener();
+  };
+  window.addEventListener('storage', onStorage);
+  return () => {
+    listeners.delete(listener);
+    window.removeEventListener('storage', onStorage);
+  };
+}
+
+/**
+ * Subscribe to the recently-viewed list. Returns the current snapshot and
+ * re-renders the component on `trackView` / `clearRecentItems` /
+ * `removeRecentItem` calls, plus any cross-tab `storage` events.
+ */
+export function useRecentItems(): readonly RecentItem[] {
+  return useSyncExternalStore(
+    subscribe,
+    getRecentItems,
+    () => EMPTY,
+  );
 }
 
 interface Props {

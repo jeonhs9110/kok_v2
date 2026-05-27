@@ -1,31 +1,42 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { X } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
 
 const COOKIE_KEY = 'kokkok_promo_hidden';
 
+function subscribeNoop() {
+  return () => {};
+}
+
+function getServerSnapshot() {
+  // Hide on SSR + first client paint — see CookieConsent for the same
+  // pattern. Avoids hydration mismatch + lets the second client render
+  // surface the real cookie state.
+  return true;
+}
+
+function getClientSnapshot() {
+  return document.cookie.includes(`${COOKIE_KEY}=1`);
+}
+
 export default function PromoBanner() {
   const { t } = useI18n();
-  const [visible, setVisible] = useState(false);
+  const hiddenByCookie = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
+  const [dismissed, setDismissed] = useState(false);
   const [hideToday, setHideToday] = useState(false);
 
-  useEffect(() => {
-    const hidden = document.cookie.includes(`${COOKIE_KEY}=1`);
-    if (!hidden) setVisible(true);
-  }, []);
+  if (hiddenByCookie || dismissed) return null;
 
   const handleClose = () => {
-    setVisible(false);
+    setDismissed(true);
     if (hideToday) {
       const expires = new Date();
       expires.setHours(23, 59, 59, 999);
       document.cookie = `${COOKIE_KEY}=1; path=/; expires=${expires.toUTCString()}`;
     }
   };
-
-  if (!visible) return null;
 
   return (
     <div className="bg-[#00693A] text-white text-[12.5px] font-medium tracking-wide py-2.5 px-4 z-50 flex items-center justify-center relative">
