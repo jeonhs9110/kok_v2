@@ -2,7 +2,36 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import BoardWriteButton from '@/components/BoardWriteButton';
 import { getActiveReviewCards } from '@/lib/api/reviews';
-import { getSiteSettings } from '@/lib/api/site-settings';
+import { createClient } from '@supabase/supabase-js';
+
+// Contact rendering reads from `business_info` (Footer's source) instead of
+// the legacy `site_settings.contact_*` keys, so all contact surfaces on the
+// site display the same number / email / address.
+const _supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const _supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const _supabase = _supabaseUrl && _supabaseKey ? createClient(_supabaseUrl, _supabaseKey) : null;
+
+interface BizContact {
+  phone: string | null;
+  email: string | null;
+  address_kr: string | null;
+  address_en: string | null;
+  cs_hours_kr: string | null;
+  cs_hours_en: string | null;
+  cs_lunch_kr: string | null;
+  cs_lunch_en: string | null;
+  cs_holiday_kr: string | null;
+  cs_holiday_en: string | null;
+}
+
+async function _getBizContact(): Promise<BizContact | null> {
+  if (!_supabase) return null;
+  const { data } = await _supabase
+    .from('business_info')
+    .select('phone, email, address_kr, address_en, cs_hours_kr, cs_hours_en, cs_lunch_kr, cs_lunch_en, cs_holiday_kr, cs_holiday_en')
+    .maybeSingle();
+  return (data as BizContact | null) ?? null;
+}
 
 function sanitizeHtml(html: string): string {
   return html
@@ -70,16 +99,19 @@ const CONTACT_LABELS: Record<string, {
 
 async function ContactInfoView({ lang, displayTitle }: { lang: string; displayTitle: string }) {
   const lb = CONTACT_LABELS[lang] ?? CONTACT_LABELS['en'];
-  const values = await getSiteSettings([
-    'contact_hours', 'contact_address', 'contact_phone',
-    'contact_email', 'contact_overseas_email',
-  ]);
+  const biz = await _getBizContact();
+  const isKr = lang === 'kr';
+  const address = (isKr ? biz?.address_kr : biz?.address_en) || biz?.address_kr || '';
+  const hours = [
+    isKr ? biz?.cs_hours_kr   : biz?.cs_hours_en,
+    isKr ? biz?.cs_lunch_kr   : biz?.cs_lunch_en,
+    isKr ? biz?.cs_holiday_kr : biz?.cs_holiday_en,
+  ].filter(Boolean).join('\n');
   const rows: { label: string; value: string; href?: string }[] = [
-    { label: lb.hours, value: values.contact_hours },
-    { label: lb.address, value: values.contact_address },
-    { label: lb.phone, value: values.contact_phone, href: values.contact_phone ? `tel:${values.contact_phone.replace(/\s+/g, '')}` : undefined },
-    { label: lb.email, value: values.contact_email, href: values.contact_email ? `mailto:${values.contact_email}` : undefined },
-    { label: lb.overseas, value: values.contact_overseas_email, href: values.contact_overseas_email ? `mailto:${values.contact_overseas_email}` : undefined },
+    { label: lb.hours,   value: hours },
+    { label: lb.address, value: address },
+    { label: lb.phone,   value: biz?.phone || '', href: biz?.phone ? `tel:${biz.phone.replace(/\s+/g, '')}` : undefined },
+    { label: lb.email,   value: biz?.email || '', href: biz?.email ? `mailto:${biz.email}` : undefined },
   ].filter(r => r.value);
 
   return (

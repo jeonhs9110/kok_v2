@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard, Scale, Globe, ImagePlus, Phone, Star, FileText } from 'lucide-react';
+import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard, Scale, Globe, ImagePlus, Star, FileText } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -35,7 +35,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { name: '성분 태그', href: '/admin/ingredient-tags', icon: Tag },
         { name: '상품 관리', href: '/admin/products', icon: Package },
         { name: '쇼핑 월드와이드', href: '/admin/worldwide', icon: Globe },
-        { name: '고객센터 (Contact)', href: '/admin/contact', icon: Phone },
+        // /admin/contact removed — contact info (phone, email, address,
+        // hours) is now managed only from /admin/legal which writes the
+        // canonical business_info row that the footer + /contact page read.
       ],
     },
     {
@@ -56,7 +58,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     '/admin/categories': '카테고리 관리',
     '/admin/products': '상품 관리',
     '/admin/logo': '로고 및 배경 관리',
-    '/admin/contact': '고객센터 (Contact) 관리',
     '/admin/reviews': '리뷰 쇼케이스 관리',
     '/admin/ingredient-tags': '성분 태그 관리',
     '/admin/carousel': '메인 배너 (캐러셀) 관리',
