@@ -1,0 +1,61 @@
+# Supabase CLI project config.
+# Generated for the kokkokgarden Phase 4 migration scaffold (2026-05).
+#
+# To work with this project:
+#   1. Install the CLI:  npm i -g supabase
+#   2. Link to the remote project:
+#        supabase link --project-ref auxfxdttbhhnmnutbemn
+#      (asks for your database password — same one used by the dashboard)
+#   3. Pull current schema (one-time, to backfill the baseline):
+#        supabase db pull
+#   4. New schema changes from now on:
+#        supabase migration new <descriptive_name>
+#        # edit the generated supabase/migrations/<ts>_<name>.sql
+#        supabase db push          # apply to remote
+#
+# The existing 16 migration-*.sql files at the repo root have already
+# been applied to production via the Supabase dashboard SQL editor.
+# They're preserved under supabase/migrations/ as historical reference
+# with timestamps that put them in their original application order,
+# but the live DB schema is the source of truth — `supabase db pull`
+# will reconcile.
+
+project_id = "auxfxdttbhhnmnutbemn"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 16
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "https://www.kokkokgarden.com"
+additional_redirect_urls = [
+  "https://www.kokkokgarden.com/**",
+  "https://www.kokkokgarden.com/auth/callback",
+  "http://localhost:3000/**",
+]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
