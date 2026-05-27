@@ -28,25 +28,48 @@ function safeNext(raw: string | null): string {
   return raw;
 }
 
+/**
+ * Build the public-facing origin from the inbound request. We can't trust
+ * `request.url` here because Next.js's standalone build constructs it from
+ * the server's HOSTNAME env var, which our EC2 user-data sets to "0.0.0.0"
+ * so Next can bind to all interfaces. A naive `new URL('/', request.url)`
+ * therefore redirects the user's browser to `https://0.0.0.0:3000/` —
+ * unreachable, and exactly the bug that broke the password-reset flow
+ * on the first Phase 1.5 deploy.
+ *
+ * ALB forwards the real host as `x-forwarded-host` and the real scheme as
+ * `x-forwarded-proto`. Echo those back so the Location header points at
+ * what the visitor actually typed in the address bar.
+ */
+function getRequestOrigin(request: NextRequest): string {
+  const host =
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    'www.kokkokgarden.com';
+  const proto = request.headers.get('x-forwarded-proto') || 'https';
+  return `${proto}://${host}`;
+}
+
 export async function GET(request: NextRequest): Promise<NextResponse> {
-  const url = new URL(request.url);
-  const next = safeNext(url.searchParams.get('next'));
+  const reqUrl = new URL(request.url);
+  const next = safeNext(reqUrl.searchParams.get('next'));
+  const origin = getRequestOrigin(request);
 
   // Supabase Auth may return an error in the query string when the verify
   // step itself fails (expired token, malformed link). Surface it to /login.
-  const upstreamError = url.searchParams.get('error');
-  const upstreamDesc = url.searchParams.get('error_description');
+  const upstreamError = reqUrl.searchParams.get('error');
+  const upstreamDesc = reqUrl.searchParams.get('error_description');
   if (upstreamError) {
     console.error('[auth/callback] Supabase returned upstream error:', upstreamError, upstreamDesc);
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL('/login', origin);
     loginUrl.searchParams.set('error', upstreamDesc || upstreamError);
     return NextResponse.redirect(loginUrl);
   }
 
-  const code = url.searchParams.get('code');
+  const code = reqUrl.searchParams.get('code');
   if (!code) {
     // No code, no error — treat as a benign direct visit; just redirect to next.
-    return NextResponse.redirect(new URL(next, request.url));
+    return NextResponse.redirect(new URL(next, origin));
   }
 
   const supabase = await getSupabaseServer();
@@ -54,12 +77,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
   if (exchangeError) {
     console.error('[auth/callback] exchangeCodeForSession failed:', exchangeError);
-    const loginUrl = new URL('/login', request.url);
+    const loginUrl = new URL('/login', origin);
     loginUrl.searchParams.set('error', 'link-expired');
     return NextResponse.redirect(loginUrl);
   }
 
   // Session cookies were written by getSupabaseServer's cookie setter during
   // the exchange. The user is now signed in for the duration of the JWT.
-  return NextResponse.redirect(new URL(next, request.url));
+  return NextResponse.redirect(new URL(next, origin));
 }
