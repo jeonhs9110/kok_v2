@@ -1,16 +1,18 @@
 import ShortsFeed, { type ShortItem } from '@/components/ShortsFeed';
 import { getCachedShorts } from '@/lib/cache/homepage';
 
-const FALLBACK_YT_IDS = ['ho0EhuO3RNs', 'lD1VId0ec2s', 'mkBTUDxMKtU', 'yPRcriD4FcM'];
-
 export default async function ShortsFeedSection({ lang }: { lang: string }) {
   const live = await getCachedShorts();
-  const shorts: ShortItem[] = live.length > 0
-    ? live.map(d => ({
-        embedUrl: `https://www.youtube.com/embed/${d.youtube_id}`,
-        productUrl: d.product_id ? `/${lang}/products/${d.product_id}` : undefined,
-      }))
-    : FALLBACK_YT_IDS.map(id => ({ embedUrl: `https://www.youtube.com/embed/${id}` }));
+  // No placeholder/demo videos — if admin hasn't added shorts, the
+  // section is hidden entirely. Previously a FALLBACK_YT_IDS list
+  // rendered 4 unrelated demo videos when the DB was empty, which
+  // contradicted the admin panel showing "0 shorts" and confused the
+  // operator into thinking they were live content.
+  if (live.length === 0) return null;
+  const shorts: ShortItem[] = live.map(d => ({
+    embedUrl: `https://www.youtube.com/embed/${d.youtube_id}`,
+    productUrl: d.product_id ? `/${lang}/products/${d.product_id}` : undefined,
+  }));
   return <ShortsFeed shorts={shorts} />;
 }
 
