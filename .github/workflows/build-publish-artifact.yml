@@ -1,0 +1,114 @@
+name: Build & Publish Next.js Artifact
+
+# Phase 2 deploy pipeline: GitHub Actions builds the Next.js standalone
+# bundle, tars it, and uploads to s3://kokkok-deploy-artifacts/latest.tar.gz.
+# EC2 user-data then just curls + extracts it on boot (no npm install,
+# no build) — boot-to-healthy goes from ~5min to ~90s.
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [master]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'next.config.ts'
+      - 'tsconfig.json'
+      - '.github/workflows/build-publish-artifact.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AWS_REGION: ap-northeast-2
+  S3_BUCKET: kokkok-deploy-artifacts
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'   # ~/.npm cache cuts `npm ci` from ~90s to ~20s on warm cache
+
+      - name: Install deps
+        run: npm ci --no-audit --no-fund --ignore-scripts
+
+      - name: Build Next.js (standalone)
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: '1'
+          # NEXT_PUBLIC_* must be present at BUILD time — Next.js inlines
+          # them into the client bundle. Add these to repo Settings →
+          # Secrets and variables → Actions → New repository secret.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run build
+
+      - name: Package artifact
+        run: |
+          # next.config.ts is configured with `output: 'standalone'`, which
+          # produces a self-contained server.js + minimal node_modules in
+          # .next/standalone. We layer .next/static and public/ back on top
+          # since Next's standalone copy intentionally omits them.
+          set -euxo pipefail
+          mkdir -p deploy
+          cp -r .next/standalone/. deploy/
+          mkdir -p deploy/.next
+          cp -r .next/static deploy/.next/static
+          if [ -d public ]; then cp -r public deploy/public; fi
+
+          tar -czf app.tar.gz -C deploy .
+          SIZE=$(du -h app.tar.gz | cut -f1)
+          echo "Artifact size: $SIZE"
+          echo "ARTIFACT_SIZE=$SIZE" >> "$GITHUB_ENV"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # Long-lived keys for now — switch to OIDC role
+          # `github-actions-deploy` once 권대영 provisions it.
+          # See [[pending-email-to-daeyoung-iam-for-phase2]].
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload artifact to S3
+        run: |
+          set -euxo pipefail
+          SHA_SHORT=${GITHUB_SHA::7}
+
+          # Versioned history (kept 30 days via bucket lifecycle).
+          aws s3 cp app.tar.gz "s3://${S3_BUCKET}/builds/master-${SHA_SHORT}.tar.gz" \
+            --no-progress
+
+          # Atomic "what's currently live" pointer that EC2 boots fetch.
+          aws s3 cp app.tar.gz "s3://${S3_BUCKET}/latest.tar.gz" \
+            --no-progress \
+            --metadata "commit=${GITHUB_SHA},built=$(date -Iseconds)"
+
+          echo "✓ Published: s3://${S3_BUCKET}/latest.tar.gz (commit ${SHA_SHORT}, ${ARTIFACT_SIZE})"
+
+      - name: Summary
+        run: |
+          {
+            echo "### Artifact published"
+            echo "- **commit**: \`${GITHUB_SHA::7}\`"
+            echo "- **size**: ${ARTIFACT_SIZE}"
+            echo "- **url**: \`s3://${S3_BUCKET}/latest.tar.gz\`"
+            echo ""
+            echo "**Next:** run \`terraform apply -replace=aws_instance.app\` to roll out."
+          } >> "$GITHUB_STEP_SUMMARY"
