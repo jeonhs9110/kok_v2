@@ -9,10 +9,60 @@ import { I18nProvider } from '@/lib/i18n/context';
 import { isValidLang, type Lang } from '@/lib/i18n/types';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-const L: Record<string, { title: string; subtitle: string; email: string; password: string; signin: string; verifying: string; register: string; error: string }> = {
-  kr: { title: '로그인', subtitle: '콕콕가든 스토어에 로그인하세요.', email: '이메일 주소', password: '비밀번호', signin: '로그인', verifying: '확인 중...', register: '회원가입', error: '이메일 또는 비밀번호가 올바르지 않습니다.' },
-  en: { title: 'Sign In', subtitle: 'Sign in to Kokkok Garden storefront.', email: 'Email Address', password: 'Password', signin: 'SIGN IN', verifying: 'VERIFYING...', register: 'Create an account', error: 'Invalid email or password.' },
+interface Labels {
+  title: string;
+  subtitle: string;
+  email: string;
+  password: string;
+  signin: string;
+  verifying: string;
+  register: string;
+  error: string;
+  forgot: string;
+  errLinkExpired: string;
+  errSessionMissing: string;
+}
+
+const L: Record<string, Labels> = {
+  kr: {
+    title: '로그인',
+    subtitle: '콕콕가든 스토어에 로그인하세요.',
+    email: '이메일 주소',
+    password: '비밀번호',
+    signin: '로그인',
+    verifying: '확인 중...',
+    register: '회원가입',
+    error: '이메일 또는 비밀번호가 올바르지 않습니다.',
+    forgot: '비밀번호를 잊으셨나요?',
+    errLinkExpired: '링크가 만료되었습니다. 다시 요청해주세요.',
+    errSessionMissing: '세션이 만료되었습니다. 다시 로그인해주세요.',
+  },
+  en: {
+    title: 'Sign In',
+    subtitle: 'Sign in to Kokkok Garden storefront.',
+    email: 'Email Address',
+    password: 'Password',
+    signin: 'SIGN IN',
+    verifying: 'VERIFYING...',
+    register: 'Create an account',
+    error: 'Invalid email or password.',
+    forgot: 'Forgot your password?',
+    errLinkExpired: 'The link has expired. Please request a new one.',
+    errSessionMissing: 'Your session has expired. Please sign in again.',
+  },
 };
+
+/**
+ * Map common `?error=` query values (set by /auth/callback) to a readable
+ * message in the visitor's language. Unknown values fall through to the
+ * raw string so we don't lose the underlying diagnostic.
+ */
+function translateError(raw: string | null, t: Labels): string {
+  if (!raw) return '';
+  if (raw === 'link-expired') return t.errLinkExpired;
+  if (raw === 'session-missing') return t.errSessionMissing;
+  return raw;
+}
 
 function detectLang(): string {
   if (typeof window === 'undefined') return 'kr';
@@ -37,6 +87,7 @@ function safeNext(raw: string | null): string | null {
 function LoginForm() {
   const searchParams = useSearchParams();
   const next = safeNext(searchParams.get('next'));
+  const callbackError = searchParams.get('error');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -46,6 +97,13 @@ function LoginForm() {
   const t = L[lang] ?? L['en'];
 
   useEffect(() => { setLang(detectLang()); }, []);
+
+  // Surface an upstream error (link expired, missing session, etc.) that
+  // /auth/callback bounced us back with. Re-runs if the user navigates
+  // between login states without a full page load.
+  useEffect(() => {
+    if (callbackError) setError(translateError(callbackError, t));
+  }, [callbackError, t]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,8 +200,17 @@ function LoginForm() {
               </button>
             </form>
 
-            <div className="mt-8 text-center text-sm">
-              <Link href="/register" className="text-gray-500 hover:text-black transition-colors font-medium underline underline-offset-4">
+            <div className="mt-8 flex flex-col items-center gap-3 text-sm">
+              <Link
+                href="/forgot-password"
+                className="text-gray-500 hover:text-black transition-colors underline underline-offset-4"
+              >
+                {t.forgot}
+              </Link>
+              <Link
+                href="/register"
+                className="text-gray-500 hover:text-black transition-colors font-medium underline underline-offset-4"
+              >
                 {t.register}
               </Link>
             </div>
