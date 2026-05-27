@@ -5,7 +5,10 @@ resource "aws_lb" "main" {
   security_groups    = [aws_security_group.alb.id]
   subnets            = aws_subnet.public[*].id
 
-  enable_deletion_protection = false # toggle to true in Phase 2
+  # Prevents `terraform destroy` or a console "delete" click from
+  # wiping the ALB and DNS-attached records. To actually delete, flip
+  # this to false, apply, then delete in a second apply.
+  enable_deletion_protection = true
 
   # Per-request log to S3. Bucket + policy in alb-logs.tf.
   access_logs {
