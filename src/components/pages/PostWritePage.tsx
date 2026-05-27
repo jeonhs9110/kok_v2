@@ -7,7 +7,6 @@ import { ChevronRight, LogIn } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useI18n } from '@/lib/i18n/context';
 import RichEditor from '@/components/admin/RichEditor';
-import type { Post } from '@/lib/api/menus';
 
 interface Props {
   menuId: string;

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -31,7 +31,7 @@ function parseRssItems(xml: string): string[] {
   return urls;
 }
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     if (!supabase) {
       return NextResponse.json({ error: 'Database unavailable.' }, { status: 503 });

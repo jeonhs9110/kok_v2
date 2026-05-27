@@ -81,8 +81,6 @@ export default function PaymentsAdminPage() {
   const [saved, setSaved] = useState<string | null>(null);
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
 
-  useEffect(() => { loadProviders(); }, []);
-
   async function loadProviders() {
     if (!supabase) { setLoading(false); return; }
     try {
@@ -91,6 +89,8 @@ export default function PaymentsAdminPage() {
     } catch { /* table may not exist */ }
     setLoading(false);
   }
+
+  useEffect(() => { loadProviders(); }, []);
 
   function updateProvider(provider: string, updates: Partial<PaymentProvider>) {
     setProviders(prev => prev.map(p => p.provider === provider ? { ...p, ...updates } : p));
@@ -179,8 +179,8 @@ export default function PaymentsAdminPage() {
                         <label className="text-[10px] font-bold opacity-60 uppercase">{f.label}</label>
                         <input
                           type={f.key === 'secret_key' ? 'password' : 'text'}
-                          value={(p as any)[f.key] || ''}
-                          onChange={e => updateProvider(p.provider, { [f.key]: e.target.value } as any)}
+                          value={(p as unknown as Record<string, string>)[f.key] || ''}
+                          onChange={e => updateProvider(p.provider, { [f.key]: e.target.value } as Partial<PaymentProvider>)}
                           placeholder={f.placeholder}
                           className="w-full mt-1 border border-current/20 rounded-lg px-3 py-2 text-xs outline-none bg-white/80 focus:bg-white font-mono"
                         />

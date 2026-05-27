@@ -48,7 +48,14 @@ export default function ShortsAdminPage() {
         .select('id, youtube_id, product_id, created_at, products(name)')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setShorts((data ?? []).map((d: any) => ({
+      type ShortsRow = {
+        id: string;
+        youtube_id: string;
+        product_id: string | null;
+        created_at: string;
+        products: { name: string } | null;
+      };
+      setShorts(((data ?? []) as unknown as ShortsRow[]).map(d => ({
         id: d.id,
         youtubeId: d.youtube_id,
         productId: d.product_id || null,

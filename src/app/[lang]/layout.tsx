@@ -11,8 +11,7 @@ import { CartProvider } from '@/lib/cart/CartContext';
 import { WishlistProvider } from '@/lib/wishlist/WishlistContext';
 import { getCachedNavMenus, getCachedCategoriesTree, getCachedLogoUrl } from '@/lib/cache/header';
 
-export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
-  const { lang } = await params;
+export async function generateMetadata() {
   const headersList = await headers();
   const country = headersList.get('x-vercel-ip-country') || headersList.get('x-user-country') || 'KR';
   const isKorea = country === 'KR';

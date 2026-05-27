@@ -44,11 +44,6 @@ export default function ChatbotAdminPage() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadConfig();
-    loadLeads();
-  }, []);
-
   async function loadConfig() {
     if (!supabase) { setLoading(false); return; }
     try {
@@ -78,6 +73,11 @@ export default function ChatbotAdminPage() {
       if (data) setLeads(data);
     } catch { /* table may not exist */ }
   }
+
+  useEffect(() => {
+    loadConfig();
+    loadLeads();
+  }, []);
 
   async function handleSave() {
     if (!supabase) return;

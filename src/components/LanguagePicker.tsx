@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Globe } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
-import { SUPPORTED_LANGS, LANG_LABELS, LANG_FLAGS, type Lang } from '@/lib/i18n/types';
+import { SUPPORTED_LANGS, LANG_LABELS, LANG_FLAGS } from '@/lib/i18n/types';
 
 export default function LanguagePicker() {
   const { lang, setLang } = useI18n();

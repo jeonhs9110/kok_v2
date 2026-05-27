@@ -38,7 +38,7 @@ export default async function PostDetailPage({ slug, postId, lang }: Props) {
               <span>{post.author_name}</span>
               <span>{new Date(post.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
             </div>
-            <PostActions postId={postId} authorId={post.author_id} isAdminPost={post.is_admin_post} slug={slug} lang={lang} />
+            <PostActions postId={postId} authorId={post.author_id} slug={slug} lang={lang} />
           </div>
         </div>
 
