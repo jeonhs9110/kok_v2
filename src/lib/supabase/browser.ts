@@ -32,6 +32,13 @@ export function getSupabaseBrowser(): SupabaseClient {
         'is not set at build time. Verify GitHub Actions secrets / .env.local.'
     );
   }
-  cached = createBrowserClient(url, anonKey);
+  // Explicit PKCE flow. Pairs with /auth/callback (server-side code-for-session
+  // exchange) so email links survive Gmail/Outlook prefetchers — those would
+  // otherwise consume the magic-link OTP before the user clicks. The verifier
+  // half of the PKCE pair lives in the user's browser cookie; the prefetcher
+  // doesn't have it, so it can't complete the exchange.
+  cached = createBrowserClient(url, anonKey, {
+    auth: { flowType: 'pkce' },
+  });
   return cached;
 }

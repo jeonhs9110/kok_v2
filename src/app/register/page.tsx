@@ -3,15 +3,13 @@
 import { UserPlus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { I18nProvider } from '@/lib/i18n/context';
 import { isValidLang, type Lang } from '@/lib/i18n/types';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+const supabase = getSupabaseBrowser();
 
 interface RegField {
   key: string;
@@ -104,7 +102,6 @@ export default function RegisterPage() {
 
   useEffect(() => {
     async function load() {
-      if (!supabase) { setConfigLoading(false); return; }
       try {
         const [regRes, authRes] = await Promise.all([
           supabase.from('registration_config').select('*').single(),
@@ -158,12 +155,14 @@ export default function RegisterPage() {
     }
 
     try {
-      if (!supabase) throw new Error('No client');
-
-      // 1. Create auth user
+      // 1. Create auth user. If email confirmation is enabled in Supabase Auth,
+      //    the confirmation link must land on /auth/callback so the PKCE code
+      //    exchange runs server-side (immune to Gmail/Outlook prefetchers).
+      const emailRedirectTo = `${window.location.origin}/auth/callback?next=/`;
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email?.trim(),
         password: formData.password?.trim(),
+        options: { emailRedirectTo },
       });
       if (authError) { setError(authError.message); setIsLoading(false); return; }
 
@@ -203,11 +202,13 @@ export default function RegisterPage() {
   };
 
   const handleSocialLogin = async (provider: string) => {
-    if (!supabase) return;
     try {
+      // OAuth providers return through the same /auth/callback as email flows.
+      // The legacy /register/callback path no longer exists; switching here
+      // unifies all auth callback handling on one route handler.
       await supabase.auth.signInWithOAuth({
         provider: provider as 'google' | 'kakao' | 'apple',
-        options: { redirectTo: `${window.location.origin}/register/callback` },
+        options: { redirectTo: `${window.location.origin}/auth/callback?next=/` },
       });
     } catch {
       setError(`${provider} login failed.`);
