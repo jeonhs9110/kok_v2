@@ -2,7 +2,12 @@
 
 import { Search, Trash2, Shield, ShieldOff } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 4 RLS lockdown on `users` is admin-only for
+// reading other users, updating roles, and deleting accounts — see
+// migration 20.
+const supabase = getSupabaseBrowser();
 
 interface UserRow {
   id: string;

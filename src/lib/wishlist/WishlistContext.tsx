@@ -1,11 +1,13 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Session-aware client. Phase 4 RLS lockdown on `wishlist` is self-only
+// (auth.uid() = user_id) — see migration 20. The bare anon client this
+// used to use couldn't pass the auth.uid() check, so wishlist would have
+// silently stopped working post-lockdown without this swap.
+const supabase = getSupabaseBrowser();
 
 interface WishlistContextValue {
   wishlist: Set<string>;
