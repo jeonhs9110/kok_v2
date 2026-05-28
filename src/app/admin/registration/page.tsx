@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Plus, Trash2, GripVertical, ExternalLink, Key, Shield, UserPlus, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Session-aware client (was the bare anon client). The Phase 1 RLS
+// lockdown requires the admin's JWT to ride along on every write so
+// is_admin() can pass — see migration 00000000000017.
+const supabase = getSupabaseBrowser();
 
 function SectionHeader({
   id,
@@ -310,7 +311,7 @@ export default function RegistrationAdminPage() {
             <p className="text-sm text-gray-500">각 소셜 로그인 제공자의 API 키를 입력하고 활성화하세요. 키를 발급받으려면 각 링크를 클릭하세요.</p>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
               <strong>Supabase Redirect URI</strong> (각 제공자에 등록 필요):<br />
-              <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-[11px]">{supabaseUrl}/auth/v1/callback</code>
+              <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-[11px]">{process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/callback</code>
             </div>
 
             {authProviders.map(p => {

@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { User, Package, Heart, LogOut, Save, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Session-aware client. The Phase 1 RLS lockdown on customer_profiles
+// requires `auth.uid() = id` to match for self-read/write — that only
+// works when the user's JWT is attached, which the bare anon client
+// doesn't do.
+const supabase = getSupabaseBrowser();
 
 const L: Record<string, {
   title: string; profile: string; orders: string; wishlist: string;
