@@ -22,23 +22,17 @@ resource "null_resource" "wait_for_healthy" {
   }
 
   provisioner "local-exec" {
-    interpreter = ["bash", "-c"]
-    # local-exec runs in a fresh subshell that does NOT inherit the
-    # operator's AWS_PROFILE / PATH. Set them explicitly so the AWS CLI
-    # finds credentials and the binary itself.
+    # No `interpreter` block — let Terraform pick the OS default (cmd.exe on
+    # Windows, sh on Linux). Earlier this used `bash -c` which broke when the
+    # operator ran from PowerShell without Git Bash on PATH, killing the apply
+    # mid-flight and leaving both old and new instances attached to the ALB.
+    # The aws CLI returns non-zero on `wait` failure, which local-exec
+    # surfaces as a provisioner error — no shell guard needed.
     environment = {
       AWS_PROFILE = var.aws_profile
       AWS_REGION  = var.region
-      PATH        = "/c/Program Files/Amazon/AWSCLIV2:/usr/local/bin:/usr/bin:/bin"
     }
-    command = <<-EOT
-      set -euo pipefail
-      echo "[wait_for_healthy] new instance ${aws_instance.app.id} — waiting for ALB target health..."
-      aws elbv2 wait target-in-service \
-        --target-group-arn ${aws_lb_target_group.app.arn} \
-        --targets Id=${aws_instance.app.id},Port=3000
-      echo "[wait_for_healthy] healthy — safe to drain the old instance now."
-    EOT
+    command = "aws elbv2 wait target-in-service --target-group-arn ${aws_lb_target_group.app.arn} --targets Id=${aws_instance.app.id},Port=3000"
   }
 
   depends_on = [aws_lb_target_group_attachment.app]
