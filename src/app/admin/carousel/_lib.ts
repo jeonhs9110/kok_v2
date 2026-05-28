@@ -4,7 +4,11 @@
  * Lives here (not in src/lib/) because nothing outside this route reads it.
  */
 
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 5 storage RLS on product-images requires
+// the admin JWT for the upload below.
+const supabase = getSupabaseBrowser();
 
 const BUCKET = 'product-images';
 export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
@@ -50,7 +54,6 @@ export const emptyForm: SlideFormData = {
 };
 
 export async function uploadSlideAsset(file: File): Promise<string> {
-  if (!supabase) throw new Error('Supabase 클라이언트 없음');
   const ext = file.name.split('.').pop() ?? 'jpg';
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const filePath = `carousel/${fileName}`;
