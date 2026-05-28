@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, Trash2, Save, ArrowUp, ArrowDown } from 'lucide-react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 2 RLS lockdown requires admin's JWT for
+// ingredient_tags + product_ingredient_tags writes — see migration 18.
+const supabase = getSupabaseBrowser();
 import { TAG_CATEGORIES, type TagCategory, type IngredientTag, getAllTags } from '@/lib/api/ingredient-tags';
 
 const LANGS: { code: string; label: string }[] = [

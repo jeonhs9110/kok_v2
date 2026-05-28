@@ -2,7 +2,9 @@
 
 import { Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+const supabase = getSupabaseBrowser();
 import type { CarouselSlide } from '@/lib/api/carousel';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import CarouselList from './_components/CarouselList';

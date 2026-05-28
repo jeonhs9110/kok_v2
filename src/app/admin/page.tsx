@@ -3,7 +3,9 @@
 import { Package, Video, RefreshCw, Globe, Eye, Heart, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+const supabase = getSupabaseBrowser();
 
 interface DashboardStats {
   totalProducts: number;

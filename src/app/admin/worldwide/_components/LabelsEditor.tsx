@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { Save, ChevronDown, ChevronUp, Globe } from 'lucide-react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+const supabase = getSupabaseBrowser();
 import { SUPPORTED_LANGS, type WorldwideLang } from '@/lib/worldwide/defaults';
 import {
   LANG_LABEL,

@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { createClient } from '@supabase/supabase-js';
 import { Upload, Trash2, ImageIcon, Save, RefreshCw, ExternalLink } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Session-aware client. Phase 2 RLS lockdown on `instagram_posts` requires admin JWT.
+const supabase = getSupabaseBrowser();
 const BUCKET = 'product-images';
 const SLOTS = 6;
 

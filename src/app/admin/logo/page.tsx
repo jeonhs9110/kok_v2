@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Upload, Trash2, Check, Star } from 'lucide-react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 2 RLS lockdown requires admin's JWT for
+// site_backgrounds writes — see migration 18.
+const supabase = getSupabaseBrowser();
 import { getSiteSetting, setSiteSetting } from '@/lib/api/site-settings';
 
 const BUCKET = 'site-assets';
@@ -75,7 +79,7 @@ export default function LogoAdminPage() {
       const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, logoPending, { upsert: false });
       if (upErr) throw upErr;
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      const ok = await setSiteSetting('logo_url', data.publicUrl);
+      const ok = await setSiteSetting(supabase, 'logo_url', data.publicUrl);
       if (!ok) throw new Error('저장 실패');
       setLogoUrl(data.publicUrl);
       setLogoPreview(data.publicUrl);
@@ -94,7 +98,7 @@ export default function LogoAdminPage() {
   const removeLogo = async () => {
     if (!confirm('로고를 삭제하고 기본 텍스트(KOKKOK GARDEN)로 돌아가시겠습니까?')) return;
     setLogoSaving(true);
-    const ok = await setSiteSetting('logo_url', '');
+    const ok = await setSiteSetting(supabase, 'logo_url', '');
     if (ok) {
       setLogoUrl('');
       setLogoPreview('');
