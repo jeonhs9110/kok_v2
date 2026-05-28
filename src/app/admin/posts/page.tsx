@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 3 RLS lockdown on `posts` requires admin
+// JWT for cross-author updates/deletes — see migration 19.
+const supabase = getSupabaseBrowser();
 import type { Post, Menu } from '@/lib/api/menus';
 
 type PostWithMenu = Post & { menu_title: string; menu_slug: string };

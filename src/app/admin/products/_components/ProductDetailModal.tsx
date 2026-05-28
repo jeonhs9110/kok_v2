@@ -4,7 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import {
   X, Upload, ArrowUp, ArrowDown, Trash2, Film, Image as ImgIcon, Eye,
 } from 'lucide-react';
-import { Product, supabase, type DetailComponent } from '@/lib/api/products';
+import { type Product, type DetailComponent } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 3 RLS lockdown requires admin's JWT for
+// products writes — see migration 19.
+const supabase = getSupabaseBrowser();
 import type { Category } from '@/lib/api/categories';
 import {
   getProductTags, setProductTags, TAG_CATEGORIES, type IngredientTag,

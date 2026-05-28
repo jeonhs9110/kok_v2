@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
-import { Product, supabase } from '@/lib/api/products';
+import type { Product } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 3 RLS lockdown requires admin's JWT for
+// products writes — see migration 19.
+const supabase = getSupabaseBrowser();
 import type { Category } from '@/lib/api/categories';
 import { getAllTags, type IngredientTag } from '@/lib/api/ingredient-tags';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';

@@ -4,7 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, X, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 3 RLS lockdown on `posts` requires admin
+// JWT for cross-author updates/deletes — see migration 19.
+const supabase = getSupabaseBrowser();
 import type { Post, Menu } from '@/lib/api/menus';
 
 export default function PostsAdminPage() {
