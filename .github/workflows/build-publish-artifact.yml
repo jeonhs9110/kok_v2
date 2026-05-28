@@ -31,7 +31,12 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # ARM64 runner so sharp's postinstall pulls the linux-arm64 binary that
+    # matches the t4g.small EC2 (Graviton, aarch64). Previously this ran on
+    # ubuntu-latest (x86_64), so the standalone bundle shipped sharp-linux-x64
+    # to an ARM host — next/image fell back to its WASM resizer and pegged
+    # both vCPUs on every product grid render.
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 10
 
     steps:
@@ -45,7 +50,11 @@ jobs:
           cache: 'npm'   # ~/.npm cache cuts `npm ci` from ~90s to ~20s on warm cache
 
       - name: Install deps
-        run: npm ci --no-audit --no-fund --ignore-scripts
+        # Dropped --ignore-scripts: sharp's postinstall is what selects the
+        # right platform binary (linux-arm64 / linux-x64 / musl / etc.).
+        # With scripts blocked, npm resolved the metapackage but never
+        # downloaded the actual native binary, forcing the WASM fallback.
+        run: npm ci --no-audit --no-fund
 
       - name: Build Next.js (standalone)
         env:
