@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Save, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 2 RLS lockdown requires admin's JWT for
+// review_cards writes — see migration 18.
+const supabase = getSupabaseBrowser();
 import RichEditor from '@/components/admin/RichEditor';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 

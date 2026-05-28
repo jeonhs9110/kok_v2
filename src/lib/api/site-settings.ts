@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase } from './products';
 
 // Note: contact_* keys (hours/address/phone/email/overseas_email) used to live
@@ -42,19 +43,20 @@ export async function getSiteSettings(keys: SiteSettingKey[]): Promise<Record<st
   }
 }
 
-export async function setSiteSetting(key: SiteSettingKey, value: string): Promise<boolean> {
-  if (!supabase) return false;
-  const { error } = await supabase
+// Writes require a session-aware client (admin's JWT must ride along
+// to satisfy the Phase 2 RLS admin_write policy on site_settings).
+// Callers should pass their own getSupabaseBrowser() client.
+export async function setSiteSetting(client: SupabaseClient, key: SiteSettingKey, value: string): Promise<boolean> {
+  const { error } = await client
     .from('site_settings')
     .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
   return !error;
 }
 
-export async function setSiteSettings(entries: Record<string, string>): Promise<boolean> {
-  if (!supabase) return false;
+export async function setSiteSettings(client: SupabaseClient, entries: Record<string, string>): Promise<boolean> {
   const rows = Object.entries(entries).map(([key, value]) => ({
     key, value, updated_at: new Date().toISOString(),
   }));
-  const { error } = await supabase.from('site_settings').upsert(rows, { onConflict: 'key' });
+  const { error } = await client.from('site_settings').upsert(rows, { onConflict: 'key' });
   return !error;
 }

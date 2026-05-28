@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { ExternalLink, Save, CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Session-aware client. Phase 2 RLS lockdown on `payment_providers_config`
+// is admin-only (rows hold provider API keys).
+const supabase = getSupabaseBrowser();
 
 interface PaymentProvider {
   id: number;

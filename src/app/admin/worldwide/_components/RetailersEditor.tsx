@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { Save, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+const supabase = getSupabaseBrowser();
 import { REGION_ORDER, type Region } from '@/lib/worldwide/defaults';
 import {
   EMPTY_RETAILER,

@@ -2,12 +2,11 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Video, Trash2, Plus, Link as LinkIcon } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Session-aware client. Phase 2 RLS lockdown on `shorts` requires admin JWT.
+const supabase = getSupabaseBrowser();
 
 interface Short {
   id: string;

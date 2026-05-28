@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Session-aware client. Phase 2 RLS lockdown on `chatbot_config` requires
+// admin JWT for writes, and admin reads of `chatbot_leads`.
+const supabase = getSupabaseBrowser();
 
 interface ChatbotConfig {
   is_enabled: boolean;

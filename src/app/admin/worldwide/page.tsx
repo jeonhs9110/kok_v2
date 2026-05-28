@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { List, MessageSquare } from 'lucide-react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+const supabase = getSupabaseBrowser();
 import {
   LABEL_KEYS,
   DEFAULT_RETAILERS,
