@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard, Scale, Globe, ImagePlus, Star, FileText } from 'lucide-react';
+import { Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare, Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard, Scale, Globe, ImagePlus, Star, FileText, FolderOpen } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -17,6 +17,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       title: '디자인 및 프론트 노출',
       items: [
+        { name: '에셋 라이브러리', href: '/admin/assets', icon: FolderOpen },
         { name: '로고 및 배경 관리', href: '/admin/logo', icon: ImagePlus },
         { name: '메인 배너 (캐러셀)', href: '/admin/carousel', icon: Image },
         { name: '서브 히어로 (와이드)', href: '/admin/sub-hero', icon: PanelTop },
@@ -58,6 +59,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     '/admin/categories': '카테고리 관리',
     '/admin/products': '상품 관리',
     '/admin/logo': '로고 및 배경 관리',
+    '/admin/assets': '에셋 라이브러리',
+    '/admin/pages': '페이지 빌더',
     '/admin/reviews': '리뷰 쇼케이스 관리',
     '/admin/ingredient-tags': '성분 태그 관리',
     '/admin/carousel': '메인 배너 (캐러셀) 관리',

@@ -11,6 +11,7 @@ import {
   uploadSlideAsset,
   type SlideFormData,
 } from '../_lib';
+import CarouselSlidePreview from './CarouselSlidePreview';
 
 interface Props {
   editingId: string | null;
@@ -127,6 +128,8 @@ export default function CarouselSlideModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
+          <CarouselSlidePreview form={formData} lang={activeLang} previewImageUrl={previewUrl} />
+
           <div className="space-y-2">
             <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
               배너 표시 모드
