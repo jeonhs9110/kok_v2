@@ -10,6 +10,8 @@ import PageTracker from '@/components/PageTracker';
 import { CartProvider } from '@/lib/cart/CartContext';
 import { WishlistProvider } from '@/lib/wishlist/WishlistContext';
 import { getCachedNavMenus, getCachedCategoriesTree, getCachedLogoUrl } from '@/lib/cache/header';
+import { getThemeTokens } from '@/lib/theme/getThemeTokens';
+import { tokensToCss } from '@/lib/theme/tokens';
 
 export async function generateMetadata() {
   const headersList = await headers();
@@ -40,16 +42,28 @@ export default async function LangLayout({
   // useEffect inside Header would fetch these after mount and the visible
   // header would expand from "Product / SHOP Worldwide" to the full bar
   // a few hundred ms later — a layout shift the operator complained about.
-  const [initialNavMenus, initialMegaCategories, initialLogoUrl] = await Promise.all([
+  const [initialNavMenus, initialMegaCategories, initialLogoUrl, themeTokens] = await Promise.all([
     getCachedNavMenus(),
     getCachedCategoriesTree(),
     getCachedLogoUrl(),
+    getThemeTokens(),
   ]);
 
   return (
     <I18nProvider isKorea={isKorea} lang={lang}>
       <CartProvider>
         <WishlistProvider>
+        {/* Theme tokens override the defaults baked into globals.css.
+            Inline <style> rather than a CSS file so admin edits show
+            up on the next request — no cache invalidation needed.
+            The postMessage listener below lets the /admin/theme
+            editor iframe push live updates without a reload. */}
+        <style id="kokkok-theme-tokens" dangerouslySetInnerHTML={{ __html: tokensToCss(themeTokens) }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){if(window.parent===window)return;window.addEventListener('message',function(e){if(!e.data||e.data.type!=='kokkok-theme-tokens')return;var s=document.getElementById('kokkok-theme-tokens');if(s)s.textContent=e.data.css;});})();`,
+          }}
+        />
         <div className="flex flex-col min-h-screen">
           <Header
             canPurchase={isKorea}
