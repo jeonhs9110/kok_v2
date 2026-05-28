@@ -74,9 +74,12 @@ export default function ChatbotAdminPage() {
     } catch { /* table may not exist */ }
   }
 
+  // One-shot fetch on mount. No external-store subscription source; the
+  // explicit refetch in handleSave keeps the config fresh after edits.
   useEffect(() => {
     loadConfig();
     loadLeads();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSave() {

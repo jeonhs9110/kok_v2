@@ -2,7 +2,11 @@
 
 import { useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 2 / 5 RLS need the admin JWT for the
+// carousel_slides upsert and the storage.objects upload in this modal.
+const supabase = getSupabaseBrowser();
 import { SUPPORTED_LANGS, LANG_LABELS } from '@/lib/i18n/types';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import {

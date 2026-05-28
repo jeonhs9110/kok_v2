@@ -72,6 +72,8 @@ export default function LegalAdminPage() {
     setLoading(false);
   }
 
+  // One-shot fetch on mount; explicit refetch in savePage keeps it fresh.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   async function savePage(p: LegalPage) {

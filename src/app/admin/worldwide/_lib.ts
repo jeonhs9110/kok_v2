@@ -6,13 +6,17 @@
  * accidental imports from the public storefront.
  */
 
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import {
   DEFAULT_LABELS,
   SUPPORTED_LANGS,
   type WorldwideLabels,
   type WorldwideLang,
 } from '@/lib/worldwide/defaults';
+
+// Session-aware client. Phase 5 storage RLS on site-assets requires
+// the admin JWT for the upload below.
+const supabase = getSupabaseBrowser();
 
 export type LangColumns = Record<WorldwideLang, string>;
 export type LabelRow = { label_key: string } & LangColumns;
@@ -53,7 +57,6 @@ export async function uploadWorldwideAsset(
   file: File,
   prefix: 'vendor-logo' | 'country-image'
 ): Promise<string> {
-  if (!supabase) throw new Error('Supabase 클라이언트 없음');
   const ext = file.name.split('.').pop() ?? 'png';
   const path = `worldwide/${prefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const { error } = await supabase.storage

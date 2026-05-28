@@ -141,6 +141,8 @@ export default function RegistrationAdminPage() {
     setLoading(false);
   }
 
+  // One-shot fetch on mount; explicit refetch in save handlers keeps it fresh.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadAll(); }, []);
 
   async function saveFields() {

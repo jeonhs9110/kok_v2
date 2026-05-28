@@ -6,7 +6,11 @@ import { Node, mergeAttributes } from '@tiptap/core';
 import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
 import TiptapImage from '@tiptap/extension-image';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 5 storage RLS requires the admin JWT
+// for the inline image uploads triggered by paste/drop in this editor.
+const supabase = getSupabaseBrowser();
 import { Upload, Loader2, Video as VideoIcon, Code2 } from 'lucide-react';
 
 const BUCKET = 'product-images';
