@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import {
-  Plus, Trash2, ChevronUp, ChevronDown, ChevronRight, ChevronLeft,
+  Plus, Trash2, ChevronRight, ChevronLeft,
   LayoutTemplate, Type, ImageIcon, Megaphone, Video, GripVertical,
 } from 'lucide-react';
 import {
@@ -12,6 +12,19 @@ import {
   type BlockType,
   type PageBlock,
 } from '@/lib/pages/blocks';
+import SortableList from '@/components/admin/SortableList';
+
+interface BlockWithId {
+  id: string;
+  block: PageBlock;
+}
+
+// Blocks themselves don't carry an id — we generate stable client-side ids
+// for dnd-kit, derived from the array index + content fingerprint so they
+// survive re-mounts but change when blocks are added/removed.
+function makeBlockId(block: PageBlock, index: number): string {
+  return `${index}-${block.type}`;
+}
 
 interface Props {
   blocks: PageBlock[];
@@ -36,33 +49,30 @@ const BLOCK_ICONS: Record<BlockType, React.ComponentType<{ className?: string }>
  * pointer-event plumbing.
  */
 export default function PageBlocksEditor({ blocks, onChange }: Props) {
-  const [openIndex, setOpenIndex] = useState<number | null>(blocks.length === 0 ? null : 0);
+  const [openId, setOpenId] = useState<string | null>(
+    blocks.length === 0 ? null : makeBlockId(blocks[0], 0),
+  );
   const [adderOpen, setAdderOpen] = useState(false);
 
-  const update = (i: number, next: PageBlock) => {
+  // dnd-kit needs stable ids per item. Derive from array index + type so
+  // adds / removes invalidate them as expected, and reorder preserves them.
+  const withIds: BlockWithId[] = blocks.map((block, i) => ({ id: makeBlockId(block, i), block }));
+
+  const updateAt = (i: number, next: PageBlock) => {
     onChange(blocks.map((b, idx) => (idx === i ? next : b)));
   };
 
-  const remove = (i: number) => {
+  const removeAt = (i: number) => {
     if (!confirm('이 블록을 삭제하시겠습니까?')) return;
     onChange(blocks.filter((_, idx) => idx !== i));
-    if (openIndex === i) setOpenIndex(null);
-  };
-
-  const move = (i: number, dir: -1 | 1) => {
-    const j = i + dir;
-    if (j < 0 || j >= blocks.length) return;
-    const next = [...blocks];
-    [next[i], next[j]] = [next[j], next[i]];
-    onChange(next);
-    if (openIndex === i) setOpenIndex(j);
-    else if (openIndex === j) setOpenIndex(i);
+    setOpenId(null);
   };
 
   const add = (type: BlockType) => {
-    const next = [...blocks, makeBlock(type)];
-    onChange(next);
-    setOpenIndex(next.length - 1);
+    const newIndex = blocks.length;
+    const newBlock = makeBlock(type);
+    onChange([...blocks, newBlock]);
+    setOpenId(makeBlockId(newBlock, newIndex));
     setAdderOpen(false);
   };
 
@@ -74,66 +84,63 @@ export default function PageBlocksEditor({ blocks, onChange }: Props) {
           <p className="text-xs mt-1">아래 버튼을 눌러 첫 번째 블록을 추가해보세요</p>
         </div>
       ) : (
-        blocks.map((block, i) => {
-          const Icon = BLOCK_ICONS[block.type];
-          const isOpen = openIndex === i;
-          return (
-            <div
-              key={i}
-              className={`border rounded-lg overflow-hidden transition-shadow ${
-                isOpen ? 'border-black shadow-sm' : 'border-gray-200'
-              }`}
-            >
-              <div className="flex items-center bg-gray-50/50 border-b border-gray-100">
-                <div className="flex items-center pl-2 text-gray-300">
-                  <GripVertical className="w-4 h-4" />
+        <SortableList
+          items={withIds}
+          getId={(b) => b.id}
+          onReorder={(next) => onChange(next.map((x) => x.block))}
+          className="space-y-3"
+        >
+          {(item, { dragHandleProps }) => {
+            // Re-derive the index from the on-screen list so updates / removes
+            // hit the original blocks array regardless of dnd-kit ordering.
+            const i = withIds.findIndex((x) => x.id === item.id);
+            const block = item.block;
+            const Icon = BLOCK_ICONS[block.type];
+            const isOpen = openId === item.id;
+            return (
+              <div
+                className={`border rounded-lg overflow-hidden transition-shadow ${
+                  isOpen ? 'border-black shadow-sm' : 'border-gray-200'
+                }`}
+              >
+                <div className="flex items-center bg-gray-50/50 border-b border-gray-100">
+                  <button
+                    type="button"
+                    {...dragHandleProps}
+                    className={`${dragHandleProps.className ?? ''} pl-2 pr-1 py-3 text-gray-300 hover:text-gray-500`}
+                    aria-label="드래그하여 순서 변경"
+                  >
+                    <GripVertical className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOpenId(isOpen ? null : item.id)}
+                    className="flex-1 flex items-center gap-2 px-2 py-3 text-left text-sm hover:bg-gray-50"
+                  >
+                    <Icon className="w-4 h-4 text-gray-500" />
+                    <span className="font-bold text-gray-700">{BLOCK_LABELS[block.type]}</span>
+                    <span className="text-xs text-gray-400 truncate">{summarize(block)}</span>
+                  </button>
+                  <div className="flex items-center gap-1 pr-2">
+                    <button
+                      type="button"
+                      onClick={() => removeAt(i)}
+                      className="p-1.5 text-gray-400 hover:text-red-500"
+                      title="삭제"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setOpenIndex(isOpen ? null : i)}
-                  className="flex-1 flex items-center gap-2 px-3 py-3 text-left text-sm hover:bg-gray-50"
-                >
-                  <Icon className="w-4 h-4 text-gray-500" />
-                  <span className="font-bold text-gray-700">{BLOCK_LABELS[block.type]}</span>
-                  <span className="text-xs text-gray-400 truncate">{summarize(block)}</span>
-                </button>
-                <div className="flex items-center gap-1 pr-2">
-                  <button
-                    type="button"
-                    onClick={() => move(i, -1)}
-                    disabled={i === 0}
-                    className="p-1.5 text-gray-400 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed"
-                    title="위로"
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => move(i, 1)}
-                    disabled={i === blocks.length - 1}
-                    className="p-1.5 text-gray-400 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed"
-                    title="아래로"
-                  >
-                    <ChevronDown className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(i)}
-                    className="p-1.5 text-gray-400 hover:text-red-500"
-                    title="삭제"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                {isOpen && (
+                  <div className="p-4 bg-white">
+                    <BlockEditor block={block} onChange={(next) => updateAt(i, next)} />
+                  </div>
+                )}
               </div>
-              {isOpen && (
-                <div className="p-4 bg-white">
-                  <BlockEditor block={block} onChange={(next) => update(i, next)} />
-                </div>
-              )}
-            </div>
-          );
-        })
+            );
+          }}
+        </SortableList>
       )}
 
       {/* Add block tray */}

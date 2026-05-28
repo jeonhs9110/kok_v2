@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Save, Plus, Trash2, GripVertical } from 'lucide-react';
+import SortableList from '@/components/admin/SortableList';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
 const supabase = getSupabaseBrowser();
@@ -158,22 +159,31 @@ export default function RetailersEditor({ initialRetailers }: Props) {
     setRetailers(prev => prev.filter((_, i) => i !== index));
   }
 
-  async function moveRetailer(index: number, dir: -1 | 1) {
-    const j = index + dir;
-    if (j < 0 || j >= retailers.length) return;
-    const a = retailers[index];
-    const b = retailers[j];
-    setRetailers(prev => {
-      const next = [...prev];
-      next[index] = { ...a, sort_order: b.sort_order };
-      next[j] = { ...b, sort_order: a.sort_order };
-      return next;
-    });
-    if (supabase && a.id && b.id) {
-      await Promise.all([
-        supabase.from('worldwide_retailers').update({ sort_order: b.sort_order }).eq('id', a.id),
-        supabase.from('worldwide_retailers').update({ sort_order: a.sort_order }).eq('id', b.id),
-      ]);
+  // dnd id helper. Saved rows use the numeric DB id; unsaved rows fall
+  // back to country_code + array index, which is stable enough for the
+  // brief window between "click add" and "click save". Two brand-new
+  // rows with empty country_code collide, but they can't be saved without
+  // one anyway, so the collision never lands on a persisted row.
+  function retailerDndId(r: RetailerRow, index: number): string {
+    return r.id !== null ? `id-${r.id}` : `new-${r.country_code || 'empty'}-${index}`;
+  }
+
+  async function handleReorder(next: RetailerRow[]) {
+    // Renumber by 10s — leaves room for manual sort_order edits in the
+    // detail form without immediately requiring another full renumber.
+    const renumbered = next.map((r, i) => ({ ...r, sort_order: (i + 1) * 10 }));
+    setRetailers(renumbered);
+    if (!supabase) return;
+    try {
+      await Promise.all(
+        renumbered
+          .filter(r => r.id !== null)
+          .map(r =>
+            supabase.from('worldwide_retailers').update({ sort_order: r.sort_order }).eq('id', r.id!),
+          ),
+      );
+    } catch (err) {
+      console.error('[admin/worldwide] reorder persist failed:', err);
     }
   }
 
@@ -198,13 +208,28 @@ export default function RetailersEditor({ initialRetailers }: Props) {
         <Plus className="w-4 h-4" /> 새 국가 추가
       </button>
 
-      {retailers.map((r, index) => (
+      <SortableList
+        items={retailers.map((r, index) => ({ ...r, _dndId: retailerDndId(r, index) }))}
+        getId={(r) => r._dndId}
+        onReorder={(next) => handleReorder(next.map(({ _dndId, ...rest }) => { void _dndId; return rest; }))}
+        className="space-y-3"
+      >
+        {(r, { dragHandleProps }) => {
+          const index = retailers.findIndex(x => retailerDndId(x, retailers.indexOf(x)) === r._dndId);
+          return (
         <div
-          key={r.id ?? `new-${index}`}
           className="bg-white rounded-xl border border-gray-200 p-4 space-y-3"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              <button
+                type="button"
+                {...dragHandleProps}
+                className={`${dragHandleProps.className ?? ''} text-gray-300 hover:text-gray-600 p-1`}
+                aria-label="드래그하여 순서 변경"
+              >
+                <GripVertical className="w-5 h-5" />
+              </button>
               <div
                 className="w-8 h-8 rounded-full border border-gray-200"
                 style={{ backgroundColor: r.banner_color }}
@@ -215,22 +240,6 @@ export default function RetailersEditor({ initialRetailers }: Props) {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => moveRetailer(index, -1)}
-                disabled={index === 0}
-                className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"
-                title="위로"
-              >
-                <ArrowUp className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => moveRetailer(index, 1)}
-                disabled={index === retailers.length - 1}
-                className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"
-                title="아래로"
-              >
-                <ArrowDown className="w-4 h-4" />
-              </button>
               <button
                 onClick={() => deleteRetailer(index)}
                 className="p-1.5 rounded hover:bg-red-50 text-red-500"
@@ -457,7 +466,9 @@ export default function RetailersEditor({ initialRetailers }: Props) {
             <span className="text-xs text-gray-400">{r.id ? `ID: ${r.id}` : '저장되지 않음'}</span>
           </div>
         </div>
-      ))}
+          );
+        }}
+      </SortableList>
     </div>
   );
 }

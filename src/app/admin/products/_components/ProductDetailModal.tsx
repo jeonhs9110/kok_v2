@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import {
-  X, Upload, ArrowUp, ArrowDown, Trash2, Film, Image as ImgIcon, Eye,
+  X, Upload, GripVertical, Trash2, Film, Image as ImgIcon, Eye,
 } from 'lucide-react';
 import { type Product, type DetailComponent } from '@/lib/api/products';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
@@ -17,6 +17,7 @@ import {
 import { isValidYouTubeUrl, toYouTubeThumbnailUrl, isYouTubeShortsUrl } from '@/lib/youtube';
 import ProductDetailComponents from '@/components/ProductDetailComponents';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import SortableList from '@/components/admin/SortableList';
 
 const BUCKET = 'product-images';
 
@@ -208,17 +209,6 @@ export default function ProductDetailModal({
       ...prev,
       detailComponents: prev.detailComponents.filter(c => c.id !== id),
     }));
-  };
-
-  const moveDetailComponent = (id: string, dir: -1 | 1) => {
-    setFormData(prev => {
-      const arr = [...prev.detailComponents];
-      const i = arr.findIndex(c => c.id === id);
-      const j = i + dir;
-      if (i < 0 || j < 0 || j >= arr.length) return prev;
-      [arr[i], arr[j]] = [arr[j], arr[i]];
-      return { ...prev, detailComponents: arr };
-    });
   };
 
   const handleDetailFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -585,10 +575,14 @@ export default function ProductDetailModal({
                 아직 추가된 컴포넌트가 없습니다. 아래에서 이미지/영상/YouTube를 추가하세요.
               </div>
             ) : (
-              <div className="space-y-2">
-                {formData.detailComponents.map((c, i) => {
-                  const isFirst = i === 0;
-                  const isLast = i === formData.detailComponents.length - 1;
+              <SortableList
+                items={formData.detailComponents}
+                getId={(c) => c.id}
+                onReorder={(next) => setFormData(prev => ({ ...prev, detailComponents: next }))}
+                className="space-y-2"
+              >
+                {(c, { dragHandleProps }) => {
+                  const i = formData.detailComponents.findIndex(x => x.id === c.id);
                   const TypeIcon = c.type === 'youtube' ? YtIcon : c.type === 'video' ? Film : ImgIcon;
                   const typeBadge = c.type === 'youtube' ? 'YouTube' : c.type === 'video' ? '영상' : '이미지';
                   const badgeColor =
@@ -597,7 +591,15 @@ export default function ProductDetailModal({
                     'bg-blue-50 text-blue-700';
                   const thumbnail = c.type === 'youtube' ? toYouTubeThumbnailUrl(c.url) : c.type === 'image' ? c.url : '';
                   return (
-                    <div key={c.id} className="border border-gray-200 rounded-lg p-3 flex gap-3 items-center bg-white">
+                    <div className="border border-gray-200 rounded-lg p-3 flex gap-3 items-center bg-white">
+                      <button
+                        type="button"
+                        {...dragHandleProps}
+                        className={`${dragHandleProps.className ?? ''} text-gray-300 hover:text-gray-600 p-1`}
+                        aria-label="드래그하여 순서 변경"
+                      >
+                        <GripVertical className="w-4 h-4" />
+                      </button>
                       <div className="text-[10px] font-bold text-gray-400 w-5 text-center select-none">{i + 1}</div>
                       <div className="w-20 h-14 bg-gray-100 rounded flex-shrink-0 overflow-hidden flex items-center justify-center">
                         {thumbnail ? (
@@ -619,24 +621,6 @@ export default function ProductDetailModal({
                         </div>
                         <p className="text-[11px] text-gray-500 truncate" title={c.url}>{c.url}</p>
                       </div>
-                      <div className="flex flex-col gap-0.5">
-                        <button
-                          type="button"
-                          disabled={isFirst}
-                          onClick={() => moveDetailComponent(c.id, -1)}
-                          className="p-1 text-gray-400 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed"
-                        >
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isLast}
-                          onClick={() => moveDetailComponent(c.id, 1)}
-                          className="p-1 text-gray-400 hover:text-black disabled:opacity-20 disabled:cursor-not-allowed"
-                        >
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
                       <button
                         type="button"
                         onClick={() => removeDetailComponent(c.id)}
@@ -646,8 +630,8 @@ export default function ProductDetailModal({
                       </button>
                     </div>
                   );
-                })}
-              </div>
+                }}
+              </SortableList>
             )}
 
             {formData.detailComponents.length > 0 && (

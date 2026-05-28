@@ -113,6 +113,27 @@ export default function CarouselAdminPage() {
     }
   }
 
+  async function handleReorder(next: CarouselSlide[]) {
+    // Renumber sort_order at fixed increments of 10 so future single-slot
+    // inserts (manual sort_order=15 etc.) don't require renumbering the
+    // whole list immediately. Local state updates optimistically; failed
+    // writes get logged but don't block the user — the next fetchAll()
+    // will resync from the server.
+    const renumbered = next.map((s, i) => ({ ...s, sort_order: (i + 1) * 10 }));
+    setSlides(renumbered);
+    if (!supabase) return;
+    try {
+      await Promise.all(
+        renumbered.map(s =>
+          supabase.from('carousel_slides').update({ sort_order: s.sort_order }).eq('id', s.id),
+        ),
+      );
+      revalidateHomepageData('carousel');
+    } catch (err) {
+      console.error('[admin/carousel] reorder persist failed:', err);
+    }
+  }
+
   const initialForm: SlideFormData = editingSlide
     ? formFromSlide(editingSlide)
     : { ...emptyForm, badge: {}, title: {}, subtitle: {} };
@@ -140,6 +161,7 @@ export default function CarouselAdminPage() {
           onEdit={openEdit}
           onDelete={handleDelete}
           onToggleActive={handleToggle}
+          onReorder={handleReorder}
         />
       </div>
 
