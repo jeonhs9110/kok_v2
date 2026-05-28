@@ -2,7 +2,10 @@
 
 import { Plus, Trash2, Pencil, X, Eye, EyeOff, Menu as MenuIcon } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 4 RLS lockdown on `pages` requires admin JWT.
+const supabase = getSupabaseBrowser();
 import RichEditor from '@/components/admin/RichEditor';
 
 /* ── Constants ─────────────────────────────────────────────────────── */
