@@ -71,14 +71,20 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
   }, [emblaApi, onSelect]);
 
   if (slides.length === 0) {
+    // SSR always passes the cached slides array (with a [] fallback on DB
+    // failure). If we land here client-side after a non-empty SSR render,
+    // it means hydration replaced the SSR DOM with this branch — log so we
+    // can catch transient cache misses or prop-serialization issues.
+    if (typeof window !== 'undefined') {
+      console.warn('[HeroSlider] rendered with 0 slides');
+    }
     return (
       <div
-        className="w-full h-[440px] sm:h-[600px] bg-gradient-to-br from-neutral-100 to-neutral-200 flex items-center justify-center"
+        className="w-full h-[440px] sm:h-[600px] bg-gradient-to-br from-neutral-100 to-neutral-200 animate-pulse motion-reduce:animate-none"
         role="img"
-        aria-label="Hero placeholder"
-      >
-        <span className="text-[11px] font-bold tracking-widest uppercase text-neutral-400">Coming soon</span>
-      </div>
+        aria-label="Hero loading"
+        aria-busy="true"
+      />
     );
   }
 
