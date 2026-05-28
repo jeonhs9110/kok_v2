@@ -75,9 +75,11 @@ locals {
       cp -a /opt/kokkok/app-src/. /opt/kokkok/app/
       rm -rf /opt/kokkok/app-src
       chown -R ec2-user:ec2-user /opt/kokkok/app
+      # Sharp's postinstall picks the right platform binary; without it,
+      # next/image silently falls back to the WASM resizer and burns CPU.
       sudo -u ec2-user bash -c '\
         cd /opt/kokkok/app && \
-        npm ci --prefer-offline --no-audit --no-fund --ignore-scripts'
+        npm ci --prefer-offline --no-audit --no-fund'
       sudo -u ec2-user bash -c '\
         set -a; source /etc/kokkok/env; set +a; \
         cd /opt/kokkok/app && \
