@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import PageBlocks from '@/components/PageBlocks';
+import type { PageBlock } from '@/lib/pages/blocks';
 
 // Strip script tags and event handlers from HTML content
 function sanitizeHtml(html: string): string {
@@ -18,6 +20,19 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
+function pickBlocks(
+  blocks: unknown,
+  lang: string,
+): PageBlock[] | null {
+  if (!blocks || typeof blocks !== 'object') return null;
+  const byLang = blocks as Record<string, unknown>;
+  const candidate =
+    (Array.isArray(byLang[lang]) && byLang[lang]) ||
+    (Array.isArray(byLang.kr) && byLang.kr) ||
+    (Array.isArray(byLang.en) && byLang.en);
+  return Array.isArray(candidate) ? (candidate as PageBlock[]) : null;
+}
+
 export default async function CmsPage({ params }: { params: Promise<{ lang: string; slug: string }> }) {
   const { lang, slug } = await params;
 
@@ -33,6 +48,9 @@ export default async function CmsPage({ params }: { params: Promise<{ lang: stri
   if (!page) notFound();
 
   const title = page.title?.[lang] || page.title?.kr || page.title?.en || '';
+  const blocks = pickBlocks(page.blocks, lang);
+  // Fallback to the legacy rich-text content when no blocks are saved
+  // (pages built before the page-builder migrate over lazily).
   const content = page.content?.[lang] || page.content?.kr || page.content?.en || '';
 
   return (
@@ -45,10 +63,14 @@ export default async function CmsPage({ params }: { params: Promise<{ lang: stri
 
       <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-[#111111] mb-8">{title}</h1>
 
-      <div
-        className="prose prose-neutral max-w-none prose-headings:font-bold prose-headings:text-[#111111] prose-p:text-neutral-600 prose-a:text-blue-600 prose-img:rounded-lg"
-        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
-      />
+      {blocks && blocks.length > 0 ? (
+        <PageBlocks blocks={blocks} />
+      ) : (
+        <div
+          className="prose prose-neutral max-w-none prose-headings:font-bold prose-headings:text-[#111111] prose-p:text-neutral-600 prose-a:text-blue-600 prose-img:rounded-lg"
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
+        />
+      )}
     </div>
   );
 }

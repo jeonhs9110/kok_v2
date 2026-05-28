@@ -111,6 +111,52 @@ export default function SubHeroAdminPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
 
+        {/* ── Live preview ─────────────────────────────────────────
+            Mirrors src/components/SubHeroBanner.tsx so admins see
+            the final layout while editing instead of save → refresh
+            → repeat. Font sizes are halved to fit the editor card. */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">미리보기</label>
+            <span className="text-[10px] text-gray-400">실제 화면 비율 축소판</span>
+          </div>
+          <div className="relative w-full aspect-[21/9] rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-100">
+            {banner.image_url ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={banner.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-[10px] text-gray-400 tracking-widest uppercase">
+                이미지를 업로드하면 미리보기가 표시됩니다
+              </div>
+            )}
+            {(banner.title || banner.subtitle) && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+                {banner.title && (
+                  <h3
+                    className="text-white drop-shadow-lg font-extrabold whitespace-pre-line mb-1"
+                    style={{ fontSize: `${Math.max(14, (32 + (banner.title_size_offset || 0)) * 0.5)}px` }}
+                  >
+                    {banner.title}
+                  </h3>
+                )}
+                {banner.subtitle && (
+                  <p
+                    className="text-white/90 drop-shadow-md"
+                    style={{ fontSize: `${Math.max(10, (16 + (banner.subtitle_size_offset || 0)) * 0.5)}px` }}
+                  >
+                    {banner.subtitle}
+                  </p>
+                )}
+              </div>
+            )}
+            {banner.link_url && (
+              <span className="absolute bottom-2 right-2 text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/60 text-white">
+                → {banner.link_url}
+              </span>
+            )}
+          </div>
+        </div>
+
         {/* Image upload */}
         <div>
           <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase block mb-2">배너 이미지</label>

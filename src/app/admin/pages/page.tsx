@@ -1,17 +1,20 @@
 'use client';
 
-import { Plus, Trash2, Pencil, X, Eye, EyeOff, Menu as MenuIcon } from 'lucide-react';
+import { Plus, Trash2, Pencil, X, Eye, EyeOff, Menu as MenuIcon, LayoutTemplate, Code2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
 // Session-aware client. Phase 4 RLS lockdown on `pages` requires admin JWT.
 const supabase = getSupabaseBrowser();
 import RichEditor from '@/components/admin/RichEditor';
+import PageBlocksEditor from './_components/PageBlocksEditor';
+import type { PageBlock } from '@/lib/pages/blocks';
 
 /* ── Constants ─────────────────────────────────────────────────────── */
 import { SUPPORTED_LANGS, LANG_LABELS, type Lang } from '@/lib/i18n/types';
 
 type LangMap = Record<string, string>;
+type BlocksMap = Record<string, PageBlock[]>;
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 interface Page {
@@ -19,6 +22,7 @@ interface Page {
   slug: string;
   title: LangMap;
   content: LangMap;
+  blocks: BlocksMap | null;
   is_published: boolean;
   show_in_nav: boolean;
   nav_order: number;
@@ -35,11 +39,14 @@ export default function PagesAdminPage() {
   const [activeLang, setActiveLang] = useState<string>('kr');
 
   const emptyLangMap = (): LangMap => ({ kr: '', en: '', cn: '', jp: '', vn: '', th: '' });
+  const emptyBlocksMap = (): BlocksMap => ({ kr: [], en: [], cn: [], jp: [], vn: [], th: [] });
 
+  const [editorMode, setEditorMode] = useState<'blocks' | 'rich'>('blocks');
   const [formData, setFormData] = useState({
     titles: emptyLangMap(),
     slug: '',
     contents: emptyLangMap(),
+    blocks: emptyBlocksMap(),
     is_published: false,
     show_in_nav: false,
     nav_order: 0,
@@ -58,6 +65,7 @@ export default function PagesAdminPage() {
         ...d,
         title: typeof d.title === 'string' ? { kr: d.title } : (d.title || { kr: '' }),
         content: typeof d.content === 'string' ? { kr: d.content } : (d.content || { kr: '' }),
+        blocks: (d.blocks && typeof d.blocks === 'object') ? (d.blocks as BlocksMap) : null,
       })));
     } catch {
       console.warn('페이지 목록 로딩 실패');
@@ -73,17 +81,24 @@ export default function PagesAdminPage() {
     setIsModalOpen(false);
     setEditingId(null);
     setActiveLang('kr');
-    setFormData({ titles: emptyLangMap(), slug: '', contents: emptyLangMap(), is_published: false, show_in_nav: false, nav_order: 0 });
+    setEditorMode('blocks');
+    setFormData({ titles: emptyLangMap(), slug: '', contents: emptyLangMap(), blocks: emptyBlocksMap(), is_published: false, show_in_nav: false, nav_order: 0 });
     setIsSubmitting(false);
   };
 
   const openEdit = (page: Page) => {
     setEditingId(page.id);
     setActiveLang('kr');
+    // Prefer the block editor when blocks exist on the row; legacy
+    // rich-text-only pages default to the rich-text tab so admins
+    // don't see a blank page-builder until they migrate.
+    const hasBlocks = page.blocks && Object.values(page.blocks).some(arr => Array.isArray(arr) && arr.length > 0);
+    setEditorMode(hasBlocks ? 'blocks' : 'rich');
     setFormData({
       titles: { ...emptyLangMap(), ...page.title },
       slug: page.slug,
       contents: { ...emptyLangMap(), ...page.content },
+      blocks: { ...emptyBlocksMap(), ...(page.blocks || {}) },
       is_published: page.is_published,
       show_in_nav: page.show_in_nav,
       nav_order: page.nav_order,
@@ -107,18 +122,22 @@ export default function PagesAdminPage() {
     try {
       if (!supabase) throw new Error('No client');
 
-      // Remove empty lang entries
+      // Remove empty lang entries — keeps the JSON small + makes the
+      // "has content for lang X" badges accurate.
       const cleanTitles: LangMap = {};
       const cleanContents: LangMap = {};
+      const cleanBlocks: BlocksMap = {};
       for (const l of SUPPORTED_LANGS) {
         if (formData.titles[l]) cleanTitles[l] = formData.titles[l];
         if (formData.contents[l]) cleanContents[l] = formData.contents[l];
+        if (formData.blocks[l] && formData.blocks[l].length > 0) cleanBlocks[l] = formData.blocks[l];
       }
 
       const payload = {
         title: cleanTitles,
         slug: formData.slug,
         content: cleanContents,
+        blocks: Object.keys(cleanBlocks).length > 0 ? cleanBlocks : null,
         is_published: formData.is_published,
         show_in_nav: formData.show_in_nav,
         nav_order: formData.nav_order,
@@ -342,19 +361,55 @@ export default function PagesAdminPage() {
                     />
                   </div>
 
-                  {/* Content for active language */}
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
-                      페이지 내용 ({LANG_LABELS[activeLang as Lang]})
-                    </label>
-                    <RichEditor
-                      content={formData.contents[activeLang] || ''}
-                      onChange={html => setFormData(prev => ({
-                        ...prev,
-                        contents: { ...prev.contents, [activeLang]: html },
-                      }))}
-                      uploadPath="pages"
-                    />
+                  {/* Content editor — mode toggle */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+                        페이지 내용 ({LANG_LABELS[activeLang as Lang]})
+                      </label>
+                      <div className="inline-flex bg-gray-100 rounded p-0.5 text-[11px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setEditorMode('blocks')}
+                          className={`px-2.5 py-1 rounded inline-flex items-center gap-1.5 transition ${
+                            editorMode === 'blocks' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
+                          }`}
+                        >
+                          <LayoutTemplate className="w-3 h-3" /> 섹션 빌더
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditorMode('rich')}
+                          className={`px-2.5 py-1 rounded inline-flex items-center gap-1.5 transition ${
+                            editorMode === 'rich' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
+                          }`}
+                        >
+                          <Code2 className="w-3 h-3" /> 클래식 (rich text)
+                        </button>
+                      </div>
+                    </div>
+
+                    {editorMode === 'blocks' ? (
+                      <PageBlocksEditor
+                        blocks={formData.blocks[activeLang] || []}
+                        onChange={(next) => setFormData(prev => ({
+                          ...prev,
+                          blocks: { ...prev.blocks, [activeLang]: next },
+                        }))}
+                      />
+                    ) : (
+                      <RichEditor
+                        content={formData.contents[activeLang] || ''}
+                        onChange={html => setFormData(prev => ({
+                          ...prev,
+                          contents: { ...prev.contents, [activeLang]: html },
+                        }))}
+                        uploadPath="pages"
+                      />
+                    )}
+                    <p className="text-[10px] text-gray-400">
+                      두 모드는 독립적으로 저장됩니다. 섹션 빌더에 블록이 있으면 클래식 본문보다 우선합니다.
+                    </p>
                   </div>
                 </div>
               </div>
