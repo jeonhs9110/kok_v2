@@ -3,7 +3,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, ChevronRight, X, FileText, MessageSquare, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
-import { supabase } from '@/lib/api/products';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+
+// Session-aware client. Phase 3 RLS lockdown on `menus` requires admin JWT.
+const supabase = getSupabaseBrowser();
 import type { Menu } from '@/lib/api/menus';
 import { SUPPORTED_LANGS, LANG_LABELS, type Lang } from '@/lib/i18n/types';
 
