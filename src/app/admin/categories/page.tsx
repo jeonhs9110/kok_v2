@@ -8,6 +8,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 const supabase = getSupabaseBrowser();
 import type { Category } from '@/lib/api/categories';
 import { SUPPORTED_LANGS, LANG_LABELS } from '@/lib/i18n/types';
+import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
 interface FormData {
   slug: string;
@@ -87,6 +88,9 @@ export default function CategoriesAdminPage() {
       }
       setModalOpen(false);
       fetchAll();
+      // Bust the header memo so the new category shows in the mega-menu
+      // on the next page load (instead of waiting up to 60s for the TTL).
+      revalidateHeaderData();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '저장 실패';
       alert(msg);
@@ -101,6 +105,7 @@ export default function CategoriesAdminPage() {
     if (!supabase) return;
     await supabase.from('categories').delete().eq('id', id);
     fetchAll();
+    revalidateHeaderData();
   };
 
   return (

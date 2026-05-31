@@ -8,6 +8,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 // site_backgrounds writes — see migration 18.
 const supabase = getSupabaseBrowser();
 import { getSiteSetting, setSiteSetting } from '@/lib/api/site-settings';
+import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
 const BUCKET = 'site-assets';
 
@@ -85,6 +86,8 @@ export default function LogoAdminPage() {
       setLogoPreview(data.publicUrl);
       setLogoPending(null);
       if (logoInputRef.current) logoInputRef.current.value = '';
+      // Bust the header memo so the new logo shows site-wide on next render.
+      revalidateHeaderData();
       setLogoSavedFlash(true);
       setTimeout(() => setLogoSavedFlash(false), 3500);
     } catch (err) {
@@ -100,6 +103,7 @@ export default function LogoAdminPage() {
     setLogoSaving(true);
     const ok = await setSiteSetting(supabase, 'logo_url', '');
     if (ok) {
+      revalidateHeaderData();
       setLogoUrl('');
       setLogoPreview('');
       setLogoPending(null);
