@@ -25,13 +25,13 @@ export default function LanguagePicker() {
       <button
         id="language-picker-btn"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-neutral-200 hover:border-neutral-400 transition-colors text-sm text-neutral-700 bg-white/80 backdrop-blur-sm"
+        className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-full sm:border sm:border-neutral-200 sm:hover:border-neutral-400 transition-colors text-sm text-neutral-700 sm:bg-white/80 sm:backdrop-blur-sm"
         aria-label="Language selector"
       >
-        <Globe className="w-3.5 h-3.5 text-neutral-500" />
+        <Globe className="w-3.5 h-3.5 text-neutral-500 hidden sm:block" />
         <span className="text-base leading-none">{LANG_FLAGS[lang]}</span>
         <span className="text-[13px] font-semibold hidden sm:inline">{LANG_LABELS[lang]}</span>
-        <ChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-3 sm:w-3.5 h-3 sm:h-3.5 text-neutral-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
