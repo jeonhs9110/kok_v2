@@ -5,6 +5,8 @@ import Image from 'next/image';
 import { Upload, ImageIcon } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { TypographyPanel, PositionPicker } from '@/components/admin/TypographyPanel';
+import { fontFamilyForKey, positionForKey, type PositionKey } from '@/lib/typography/options';
 
 // Session-aware client. Phase 2 RLS lockdown on `sub_hero_banners` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -19,9 +21,29 @@ interface SubHero {
   title_size_offset: number;
   subtitle_size_offset: number;
   is_active: boolean;
+  // Phase 2 typography columns (migration 00000000000024).
+  title_font_family: string | null;
+  subtitle_font_family: string | null;
+  title_bold: boolean;
+  title_italic: boolean;
+  title_underline: boolean;
+  subtitle_bold: boolean;
+  subtitle_italic: boolean;
+  subtitle_underline: boolean;
+  title_color: string | null;
+  subtitle_color: string | null;
+  text_position: PositionKey;
 }
 
-const EMPTY: SubHero = { id: null, image_url: '', link_url: '', title: '', subtitle: '', title_size_offset: 0, subtitle_size_offset: 0, is_active: true };
+const EMPTY: SubHero = {
+  id: null, image_url: '', link_url: '', title: '', subtitle: '',
+  title_size_offset: 0, subtitle_size_offset: 0, is_active: true,
+  title_font_family: null, subtitle_font_family: null,
+  title_bold: true,  title_italic: false,    title_underline: false,
+  subtitle_bold: false, subtitle_italic: false, subtitle_underline: false,
+  title_color: null, subtitle_color: null,
+  text_position: 'mc',
+};
 
 export default function SubHeroAdminPage() {
   const [banner, setBanner] = useState<SubHero>(EMPTY);
@@ -79,6 +101,17 @@ export default function SubHeroAdminPage() {
         title_size_offset: banner.title_size_offset,
         subtitle_size_offset: banner.subtitle_size_offset,
         is_active: banner.is_active,
+        title_font_family: banner.title_font_family,
+        subtitle_font_family: banner.subtitle_font_family,
+        title_bold: banner.title_bold,
+        title_italic: banner.title_italic,
+        title_underline: banner.title_underline,
+        subtitle_bold: banner.subtitle_bold,
+        subtitle_italic: banner.subtitle_italic,
+        subtitle_underline: banner.subtitle_underline,
+        title_color: banner.title_color,
+        subtitle_color: banner.subtitle_color,
+        text_position: banner.text_position,
       };
       if (banner.id) {
         const { error } = await supabase.from('sub_hero_banners').update(payload).eq('id', banner.id);
@@ -129,26 +162,46 @@ export default function SubHeroAdminPage() {
                 이미지를 업로드하면 미리보기가 표시됩니다
               </div>
             )}
-            {(banner.title || banner.subtitle) && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-                {banner.title && (
-                  <h3
-                    className="text-white drop-shadow-lg font-extrabold whitespace-pre-line mb-1"
-                    style={{ fontSize: `${Math.max(14, (32 + (banner.title_size_offset || 0)) * 0.5)}px` }}
-                  >
-                    {banner.title}
-                  </h3>
-                )}
-                {banner.subtitle && (
-                  <p
-                    className="text-white/90 drop-shadow-md"
-                    style={{ fontSize: `${Math.max(10, (16 + (banner.subtitle_size_offset || 0)) * 0.5)}px` }}
-                  >
-                    {banner.subtitle}
-                  </p>
-                )}
-              </div>
-            )}
+            {(banner.title || banner.subtitle) && (() => {
+              // Mirror SubHeroBanner.tsx so the admin sees the actual
+              // anchor, font, weight, color, and decoration as they
+              // toggle them. Sizes are still halved to fit the editor.
+              const pos = positionForKey(banner.text_position);
+              return (
+                <div className={`absolute inset-0 flex flex-col px-6 ${pos.align} ${pos.justify} ${pos.textAlign}`}>
+                  {banner.title && (
+                    <h3
+                      className="drop-shadow-lg whitespace-pre-line mb-1"
+                      style={{
+                        fontSize: `${Math.max(14, (32 + (banner.title_size_offset || 0)) * 0.5)}px`,
+                        fontFamily: fontFamilyForKey(banner.title_font_family),
+                        fontWeight: banner.title_bold ? 800 : 400,
+                        fontStyle: banner.title_italic ? 'italic' : 'normal',
+                        textDecoration: banner.title_underline ? 'underline' : 'none',
+                        color: banner.title_color ?? '#ffffff',
+                      }}
+                    >
+                      {banner.title}
+                    </h3>
+                  )}
+                  {banner.subtitle && (
+                    <p
+                      className="drop-shadow-md"
+                      style={{
+                        fontSize: `${Math.max(10, (16 + (banner.subtitle_size_offset || 0)) * 0.5)}px`,
+                        fontFamily: fontFamilyForKey(banner.subtitle_font_family),
+                        fontWeight: banner.subtitle_bold ? 700 : 400,
+                        fontStyle: banner.subtitle_italic ? 'italic' : 'normal',
+                        textDecoration: banner.subtitle_underline ? 'underline' : 'none',
+                        color: banner.subtitle_color ?? 'rgba(255,255,255,0.9)',
+                      }}
+                    >
+                      {banner.subtitle}
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
             {banner.link_url && (
               <span className="absolute bottom-2 right-2 text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/60 text-white">
                 → {banner.link_url}
@@ -271,6 +324,60 @@ export default function SubHeroAdminPage() {
               );
             })}
           </div>
+        </div>
+
+        {/* ── Phase 2 typography controls ─────────────────────────────
+            Font family + bold/italic/underline + color per text block,
+            plus a 9-cell anchor picker for where the whole block sits
+            inside the banner. Defaults keep the previous look (centered,
+            bold white title, regular white subtitle). */}
+        <div className="space-y-4 pt-2 border-t border-gray-100">
+          <div>
+            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">타이포그래피</p>
+            <p className="text-[10px] text-gray-400 mt-0.5">폰트 / 굵기 / 기울임 / 밑줄 / 색상을 텍스트별로 지정하고, 텍스트 블록의 위치를 이미지 안에서 골라보세요.</p>
+          </div>
+          <TypographyPanel
+            label="제목 스타일"
+            value={{
+              fontFamily: banner.title_font_family,
+              bold: banner.title_bold,
+              italic: banner.title_italic,
+              underline: banner.title_underline,
+              color: banner.title_color,
+            }}
+            onChange={s => setBanner(prev => ({
+              ...prev,
+              title_font_family: s.fontFamily,
+              title_bold: s.bold,
+              title_italic: s.italic,
+              title_underline: s.underline,
+              title_color: s.color,
+            }))}
+            defaultColor="#ffffff"
+          />
+          <TypographyPanel
+            label="서브타이틀 스타일"
+            value={{
+              fontFamily: banner.subtitle_font_family,
+              bold: banner.subtitle_bold,
+              italic: banner.subtitle_italic,
+              underline: banner.subtitle_underline,
+              color: banner.subtitle_color,
+            }}
+            onChange={s => setBanner(prev => ({
+              ...prev,
+              subtitle_font_family: s.fontFamily,
+              subtitle_bold: s.bold,
+              subtitle_italic: s.italic,
+              subtitle_underline: s.underline,
+              subtitle_color: s.color,
+            }))}
+            defaultColor="#ffffff"
+          />
+          <PositionPicker
+            value={banner.text_position}
+            onChange={pos => setBanner(prev => ({ ...prev, text_position: pos }))}
+          />
         </div>
 
         {/* Link URL */}

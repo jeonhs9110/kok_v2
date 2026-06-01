@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { fontFamilyForKey, positionForKey, type PositionKey } from '@/lib/typography/options';
 
 export interface SubHeroBannerData {
   id: string;
@@ -8,6 +9,20 @@ export interface SubHeroBannerData {
   subtitle: string;
   title_size_offset?: number | null;
   subtitle_size_offset?: number | null;
+  // Phase 2 typography columns. All optional so the storefront keeps
+  // rendering correctly for rows from before the migration ran — each
+  // resolver falls back to the previous hardcoded look.
+  title_font_family?: string | null;
+  subtitle_font_family?: string | null;
+  title_bold?: boolean | null;
+  title_italic?: boolean | null;
+  title_underline?: boolean | null;
+  subtitle_bold?: boolean | null;
+  subtitle_italic?: boolean | null;
+  subtitle_underline?: boolean | null;
+  title_color?: string | null;
+  subtitle_color?: string | null;
+  text_position?: PositionKey | string | null;
 }
 
 interface Props {
@@ -41,26 +56,48 @@ export default function SubHeroBanner({ banner }: Props) {
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
 
       {/* Text */}
-      {(banner.title || banner.subtitle) && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-6">
-          {banner.subtitle && (
-            <p
-              className={`text-sm md:text-base font-medium tracking-widest uppercase mb-3 opacity-80 max-w-full [word-break:keep-all] [overflow-wrap:break-word] ${subtitleOffset !== 0 ? 'md:text-[length:var(--subtitle-fs)]' : ''}`}
-              style={subtitleOffset !== 0 ? { ['--subtitle-fs' as string]: `calc(1rem + ${subtitleOffset}px)` } as React.CSSProperties : undefined}
-            >
-              {banner.subtitle}
-            </p>
-          )}
-          {banner.title && (
-            <h2
-              className={`text-3xl md:text-5xl font-black tracking-tight leading-tight max-w-2xl [word-break:keep-all] [overflow-wrap:break-word] ${titleOffset !== 0 ? 'md:text-[length:var(--title-fs)]' : ''}`}
-              style={titleOffset !== 0 ? { ['--title-fs' as string]: `calc(3rem + ${titleOffset}px)` } as React.CSSProperties : undefined}
-            >
-              {banner.title}
-            </h2>
-          )}
-        </div>
-      )}
+      {(banner.title || banner.subtitle) && (() => {
+        // Resolve admin choices into Tailwind utilities + inline style.
+        // Each helper has a sensible fallback so a freshly-migrated row
+        // (all-NULL columns) renders the same as the pre-Phase-2 layout.
+        const pos = positionForKey(banner.text_position);
+        const titleStyle: React.CSSProperties = {
+          fontFamily: fontFamilyForKey(banner.title_font_family),
+          fontWeight: banner.title_bold === false ? 400 : 900,
+          fontStyle: banner.title_italic ? 'italic' : 'normal',
+          textDecoration: banner.title_underline ? 'underline' : 'none',
+          color: banner.title_color ?? undefined,
+          ...(titleOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${titleOffset}px)` }),
+        };
+        const subtitleStyle: React.CSSProperties = {
+          fontFamily: fontFamilyForKey(banner.subtitle_font_family),
+          fontWeight: banner.subtitle_bold ? 700 : 500,
+          fontStyle: banner.subtitle_italic ? 'italic' : 'normal',
+          textDecoration: banner.subtitle_underline ? 'underline' : 'none',
+          color: banner.subtitle_color ?? undefined,
+          ...(subtitleOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${subtitleOffset}px)` }),
+        };
+        return (
+          <div className={`absolute inset-0 flex flex-col px-6 text-white ${pos.align} ${pos.justify} ${pos.textAlign}`}>
+            {banner.subtitle && (
+              <p
+                className={`text-sm md:text-base font-medium tracking-widest uppercase mb-3 opacity-80 max-w-full [word-break:keep-all] [overflow-wrap:break-word] ${subtitleOffset !== 0 ? 'md:text-[length:var(--subtitle-fs)]' : ''}`}
+                style={subtitleStyle}
+              >
+                {banner.subtitle}
+              </p>
+            )}
+            {banner.title && (
+              <h2
+                className={`text-3xl md:text-5xl tracking-tight leading-tight max-w-2xl [word-break:keep-all] [overflow-wrap:break-word] ${titleOffset !== 0 ? 'md:text-[length:var(--title-fs)]' : ''}`}
+                style={titleStyle}
+              >
+                {banner.title}
+              </h2>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 

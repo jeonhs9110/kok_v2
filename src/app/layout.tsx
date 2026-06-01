@@ -41,6 +41,24 @@ export default function RootLayout({
       <head>
         {/* Adobe Fonts — Tablet Gothic (영문 브랜드 서체) */}
         <link rel="stylesheet" href="https://use.typekit.net/czr4kvy.css" />
+
+        {/* Optional admin-selectable fonts. Listed in src/lib/typography/options.ts
+            and exposed to the admin via FONT_OPTIONS. Loaded with display=swap
+            so the page renders in fallback fonts immediately; the chosen face
+            paints in once it arrives. Only used on hero / sub-hero / carousel
+            text so the network cost stays off the critical path of product
+            grids and the cart. */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Inter:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;700;900&family=Playfair+Display:wght@400;700;900&display=swap"
+        />
+        {/* Pretendard isn't on Google Fonts; pulled from the official CDN. */}
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+        />
       </head>
       <body className={`${freesentation.className} text-neutral-950 antialiased min-h-screen`}>
         <SiteBackground />
