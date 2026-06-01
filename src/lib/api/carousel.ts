@@ -19,6 +19,21 @@ export interface CarouselSlide {
   display_mode: 'default' | 'fullpage';
   media_type: 'image' | 'video' | 'gif';
   created_at: string;
+  // Phase 3 typography columns (migration 00000000000025). All optional
+  // so rows from before the migration still type-check.
+  badge_font_family?: string | null;
+  title_font_family?: string | null;
+  subtitle_font_family?: string | null;
+  badge_bold?: boolean | null;
+  badge_italic?: boolean | null;
+  badge_underline?: boolean | null;
+  title_bold?: boolean | null;
+  title_italic?: boolean | null;
+  title_underline?: boolean | null;
+  subtitle_bold?: boolean | null;
+  subtitle_italic?: boolean | null;
+  subtitle_underline?: boolean | null;
+  text_position?: string | null;
 }
 
 export async function getActiveSlides(): Promise<CarouselSlide[]> {

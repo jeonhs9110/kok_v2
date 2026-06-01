@@ -42,6 +42,19 @@ function formFromSlide(s: CarouselSlide): SlideFormData {
     link_url: s.link_url || '',
     display_mode: s.display_mode || 'default',
     media_type: s.media_type || 'image',
+    badge_font_family: s.badge_font_family ?? null,
+    title_font_family: s.title_font_family ?? null,
+    subtitle_font_family: s.subtitle_font_family ?? null,
+    badge_bold:        s.badge_bold        ?? false,
+    badge_italic:      s.badge_italic      ?? false,
+    badge_underline:   s.badge_underline   ?? false,
+    title_bold:        s.title_bold        ?? true,
+    title_italic:      s.title_italic      ?? false,
+    title_underline:   s.title_underline   ?? false,
+    subtitle_bold:     s.subtitle_bold     ?? false,
+    subtitle_italic:   s.subtitle_italic   ?? false,
+    subtitle_underline: s.subtitle_underline ?? false,
+    text_position:     (s.text_position as SlideFormData['text_position']) ?? 'mc',
   };
 }
 
