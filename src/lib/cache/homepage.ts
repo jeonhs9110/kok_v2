@@ -77,7 +77,15 @@ export const getCachedSubHero = unstable_cache(
     if (!c) return null;
     try {
       const { data, error } = await withTimeout(
-        c.from('sub_hero_banners').select('id, image_url, link_url, title, subtitle')
+        c.from('sub_hero_banners')
+          .select(`
+            id, image_url, link_url, title, subtitle,
+            title_size_offset, subtitle_size_offset,
+            title_font_family, subtitle_font_family,
+            title_bold, title_italic, title_underline,
+            subtitle_bold, subtitle_italic, subtitle_underline,
+            title_color, subtitle_color, text_position
+          `)
           .eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         QUERY_BUDGET_MS
       );
@@ -89,6 +97,19 @@ export const getCachedSubHero = unstable_cache(
         link_url: data.link_url ?? '',
         title: data.title ?? '',
         subtitle: data.subtitle ?? '',
+        title_size_offset: data.title_size_offset,
+        subtitle_size_offset: data.subtitle_size_offset,
+        title_font_family: data.title_font_family,
+        subtitle_font_family: data.subtitle_font_family,
+        title_bold: data.title_bold,
+        title_italic: data.title_italic,
+        title_underline: data.title_underline,
+        subtitle_bold: data.subtitle_bold,
+        subtitle_italic: data.subtitle_italic,
+        subtitle_underline: data.subtitle_underline,
+        title_color: data.title_color,
+        subtitle_color: data.subtitle_color,
+        text_position: data.text_position,
       };
     } catch (err) {
       console.error('[cache:subhero] failed:', err);
