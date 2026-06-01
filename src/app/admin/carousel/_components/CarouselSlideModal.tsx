@@ -16,6 +16,7 @@ import {
   type SlideFormData,
 } from '../_lib';
 import CarouselSlidePreview from './CarouselSlidePreview';
+import { TypographyPanel, PositionPicker } from '@/components/admin/TypographyPanel';
 
 interface Props {
   editingId: string | null;
@@ -94,6 +95,19 @@ export default function CarouselSlideModal({
         link_url: formData.link_url || null,
         display_mode: formData.display_mode,
         media_type: formData.media_type,
+        badge_font_family: formData.badge_font_family,
+        title_font_family: formData.title_font_family,
+        subtitle_font_family: formData.subtitle_font_family,
+        badge_bold: formData.badge_bold,
+        badge_italic: formData.badge_italic,
+        badge_underline: formData.badge_underline,
+        title_bold: formData.title_bold,
+        title_italic: formData.title_italic,
+        title_underline: formData.title_underline,
+        subtitle_bold: formData.subtitle_bold,
+        subtitle_italic: formData.subtitle_italic,
+        subtitle_underline: formData.subtitle_underline,
+        text_position: formData.text_position,
       };
       if (!supabase) throw new Error('클라이언트 없음');
       if (editingId) {
@@ -443,6 +457,83 @@ export default function CarouselSlideModal({
                 );
               })}
             </div>
+          </div>
+
+          {/* ── Phase 3 typography controls ─────────────────────────
+              Same panel + position picker as the SubHero editor; admin
+              gets per-block font, B/I/U and a single 9-cell anchor for
+              where the text sits inside the slide. Colors stay in the
+              existing "색상 설정" group above. */}
+          <div className="space-y-4 pt-2 border-t border-gray-100">
+            <div>
+              <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">타이포그래피</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">
+                폰트와 굵기 / 기울임 / 밑줄을 텍스트별로 지정하고, 텍스트 블록의 위치를 슬라이드 안에서 골라보세요.
+              </p>
+            </div>
+            <TypographyPanel
+              label="뱃지 스타일"
+              value={{
+                fontFamily: formData.badge_font_family,
+                bold: formData.badge_bold,
+                italic: formData.badge_italic,
+                underline: formData.badge_underline,
+                color: formData.badge_text_color,
+              }}
+              onChange={s => setFormData(prev => ({
+                ...prev,
+                badge_font_family: s.fontFamily,
+                badge_bold: s.bold,
+                badge_italic: s.italic,
+                badge_underline: s.underline,
+                badge_text_color: s.color ?? prev.badge_text_color,
+              }))}
+              defaultColor="#FFFFFF"
+            />
+            <TypographyPanel
+              label="제목 스타일"
+              value={{
+                fontFamily: formData.title_font_family,
+                bold: formData.title_bold,
+                italic: formData.title_italic,
+                underline: formData.title_underline,
+                color: formData.text_color,
+              }}
+              onChange={s => setFormData(prev => ({
+                ...prev,
+                title_font_family: s.fontFamily,
+                title_bold: s.bold,
+                title_italic: s.italic,
+                title_underline: s.underline,
+                text_color: s.color ?? prev.text_color,
+              }))}
+              defaultColor="#111111"
+            />
+            <TypographyPanel
+              label="부제목 스타일"
+              value={{
+                fontFamily: formData.subtitle_font_family,
+                bold: formData.subtitle_bold,
+                italic: formData.subtitle_italic,
+                underline: formData.subtitle_underline,
+                color: formData.text_color,
+              }}
+              onChange={s => setFormData(prev => ({
+                ...prev,
+                subtitle_font_family: s.fontFamily,
+                subtitle_bold: s.bold,
+                subtitle_italic: s.italic,
+                subtitle_underline: s.underline,
+                // text_color is shared with title; subtitle just reads it.
+                // Allow override via the picker but don't reset on null.
+                text_color: s.color ?? prev.text_color,
+              }))}
+              defaultColor="#111111"
+            />
+            <PositionPicker
+              value={formData.text_position}
+              onChange={pos => setFormData(prev => ({ ...prev, text_position: pos }))}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">

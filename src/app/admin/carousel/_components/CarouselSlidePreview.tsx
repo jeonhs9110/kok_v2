@@ -1,6 +1,7 @@
 'use client';
 
 import { type SlideFormData } from '../_lib';
+import { fontFamilyForKey, positionForKey } from '@/lib/typography/options';
 
 interface Props {
   form: SlideFormData;
@@ -32,6 +33,28 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
   const subtitlePx = 16 + (form.subtitle_size_offset || 0);
   const badgePx = 12 + (form.badge_size_offset || 0);
 
+  // Phase 3 typography resolvers — surfaced once so we don't repeat the
+  // ternaries inside the JSX for both render modes.
+  const pos = positionForKey(form.text_position);
+  const badgeStyle: React.CSSProperties = {
+    fontFamily: fontFamilyForKey(form.badge_font_family),
+    fontWeight: form.badge_bold ? 700 : 500,
+    fontStyle: form.badge_italic ? 'italic' : 'normal',
+    textDecoration: form.badge_underline ? 'underline' : 'none',
+  };
+  const titleStyle: React.CSSProperties = {
+    fontFamily: fontFamilyForKey(form.title_font_family),
+    fontWeight: form.title_bold ? 800 : 400,
+    fontStyle: form.title_italic ? 'italic' : 'normal',
+    textDecoration: form.title_underline ? 'underline' : 'none',
+  };
+  const subtitleStyle: React.CSSProperties = {
+    fontFamily: fontFamilyForKey(form.subtitle_font_family),
+    fontWeight: form.subtitle_bold ? 700 : 400,
+    fontStyle: form.subtitle_italic ? 'italic' : 'normal',
+    textDecoration: form.subtitle_underline ? 'underline' : 'none',
+  };
+
   const MediaEl = mediaUrl ? (
     isVideo ? (
       <video src={mediaUrl} autoPlay muted loop playsInline className="w-full h-full object-cover object-center" />
@@ -62,63 +85,63 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
           <>
             <div className="absolute inset-0">{MediaEl}</div>
             {(badge || title || subtitle) && (
-              <div className="absolute inset-0 flex items-center">
-                <div className="max-w-[1400px] mx-auto w-full px-8">
-                  <div className="max-w-lg">
-                    {badge && (
-                      <span
-                        className="inline-block px-2 py-1 rounded-full mb-2 backdrop-blur-sm"
-                        style={{
-                          backgroundColor: form.badge_bg_color || 'rgba(0,0,0,0.7)',
-                          color: form.badge_text_color || '#fff',
-                          fontSize: `${Math.max(8, badgePx * 0.5)}px`,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {badge}
-                      </span>
-                    )}
-                    {title && (
-                      <h2
-                        className="whitespace-pre-line drop-shadow-lg mb-1"
-                        style={{
-                          color: form.text_color || '#fff',
-                          fontSize: `${Math.max(14, titlePx * 0.5)}px`,
-                          fontWeight: 800,
-                          lineHeight: 1.2,
-                        }}
-                      >
-                        {title}
-                      </h2>
-                    )}
-                    {subtitle && (
-                      <p
-                        className="drop-shadow-md"
-                        style={{
-                          color: form.text_color || 'rgba(255,255,255,0.9)',
-                          fontSize: `${Math.max(10, subtitlePx * 0.5)}px`,
-                        }}
-                      >
-                        {subtitle}
-                      </p>
-                    )}
-                  </div>
+              <div className={`absolute inset-0 flex flex-col px-6 ${pos.align} ${pos.justify} ${pos.textAlign}`}>
+                <div className="max-w-lg">
+                  {badge && (
+                    <span
+                      className="inline-block px-2 py-1 rounded-full mb-2 backdrop-blur-sm"
+                      style={{
+                        ...badgeStyle,
+                        backgroundColor: form.badge_bg_color || 'rgba(0,0,0,0.7)',
+                        color: form.badge_text_color || '#fff',
+                        fontSize: `${Math.max(8, badgePx * 0.5)}px`,
+                      }}
+                    >
+                      {badge}
+                    </span>
+                  )}
+                  {title && (
+                    <h2
+                      className="whitespace-pre-line drop-shadow-lg mb-1"
+                      style={{
+                        ...titleStyle,
+                        color: form.text_color || '#fff',
+                        fontSize: `${Math.max(14, titlePx * 0.5)}px`,
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      {title}
+                    </h2>
+                  )}
+                  {subtitle && (
+                    <p
+                      className="drop-shadow-md"
+                      style={{
+                        ...subtitleStyle,
+                        color: form.text_color || 'rgba(255,255,255,0.9)',
+                        fontSize: `${Math.max(10, subtitlePx * 0.5)}px`,
+                      }}
+                    >
+                      {subtitle}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
           </>
         ) : (
           <div className="absolute inset-0 grid grid-cols-2">
-            {/* Text side */}
-            <div className="flex flex-col justify-center px-6 py-4">
+            {/* Text side — position picker drives where the block sits
+                within the left half. */}
+            <div className={`flex flex-col px-6 py-4 ${pos.align} ${pos.justify} ${pos.textAlign}`}>
               {badge && (
                 <span
                   className="inline-block w-fit px-2 py-1 rounded-full mb-2"
                   style={{
+                    ...badgeStyle,
                     backgroundColor: form.badge_bg_color || '#333',
                     color: form.badge_text_color || '#fff',
                     fontSize: `${Math.max(8, badgePx * 0.5)}px`,
-                    fontWeight: 600,
                   }}
                 >
                   {badge}
@@ -128,9 +151,9 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
                 <h2
                   className="whitespace-pre-line mb-1"
                   style={{
+                    ...titleStyle,
                     color: form.text_color || '#111',
                     fontSize: `${Math.max(14, titlePx * 0.5)}px`,
-                    fontWeight: 800,
                     lineHeight: 1.15,
                   }}
                 >
@@ -138,7 +161,11 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
                 </h2>
               )}
               {subtitle && (
-                <p style={{ color: form.text_color || '#111', fontSize: `${Math.max(10, subtitlePx * 0.5)}px` }}>
+                <p style={{
+                  ...subtitleStyle,
+                  color: form.text_color || '#111',
+                  fontSize: `${Math.max(10, subtitlePx * 0.5)}px`,
+                }}>
                   {subtitle}
                 </p>
               )}

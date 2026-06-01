@@ -13,6 +13,8 @@ const supabase = getSupabaseBrowser();
 const BUCKET = 'product-images';
 export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
+import type { PositionKey } from '@/lib/typography/options';
+
 export interface SlideFormData {
   badge: Record<string, string>;
   title: Record<string, string>;
@@ -31,6 +33,20 @@ export interface SlideFormData {
   link_url: string;
   display_mode: 'default' | 'fullpage';
   media_type: 'image' | 'video' | 'gif';
+  // Phase 3 typography columns (migration 00000000000025).
+  badge_font_family: string | null;
+  title_font_family: string | null;
+  subtitle_font_family: string | null;
+  badge_bold: boolean;
+  badge_italic: boolean;
+  badge_underline: boolean;
+  title_bold: boolean;
+  title_italic: boolean;
+  title_underline: boolean;
+  subtitle_bold: boolean;
+  subtitle_italic: boolean;
+  subtitle_underline: boolean;
+  text_position: PositionKey;
 }
 
 export const emptyForm: SlideFormData = {
@@ -51,6 +67,13 @@ export const emptyForm: SlideFormData = {
   link_url: '',
   display_mode: 'default',
   media_type: 'image',
+  badge_font_family: null,
+  title_font_family: null,
+  subtitle_font_family: null,
+  badge_bold: false,    badge_italic: false,    badge_underline: false,
+  title_bold: true,     title_italic: false,    title_underline: false,
+  subtitle_bold: false, subtitle_italic: false, subtitle_underline: false,
+  text_position: 'mc',
 };
 
 export async function uploadSlideAsset(file: File): Promise<string> {

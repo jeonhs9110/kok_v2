@@ -8,6 +8,7 @@ import Autoplay from 'embla-carousel-autoplay';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Lang } from '@/lib/i18n/types';
 import type { CarouselSlide } from '@/lib/api/carousel';
+import { fontFamilyForKey, positionForKey } from '@/lib/typography/options';
 
 
 interface HeroSliderProps {
@@ -45,6 +46,22 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       linkUrl: s.link_url || null,
       displayMode: s.display_mode || 'default',
       mediaType,
+      // Phase 3 typography. Render code below merges these into the
+      // existing style objects so rows from before migration 25 fall
+      // back to the previous look automatically.
+      badgeFontFamily: fontFamilyForKey(s.badge_font_family),
+      titleFontFamily: fontFamilyForKey(s.title_font_family),
+      subtitleFontFamily: fontFamilyForKey(s.subtitle_font_family),
+      badgeBold: s.badge_bold ?? false,
+      badgeItalic: s.badge_italic ?? false,
+      badgeUnderline: s.badge_underline ?? false,
+      titleBold: s.title_bold ?? true,
+      titleItalic: s.title_italic ?? false,
+      titleUnderline: s.title_underline ?? false,
+      subtitleBold: s.subtitle_bold ?? false,
+      subtitleItalic: s.subtitle_italic ?? false,
+      subtitleUnderline: s.subtitle_underline ?? false,
+      position: positionForKey(s.text_position),
     };
   }), [dbSlides, lang]);
 
@@ -124,49 +141,63 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
             );
 
             const inner = isFullpage ? (
-              /* ── Full-page mode: media fills entire banner ── */
+              /* ── Full-page mode: media fills entire banner ──
+                 Phase 3: position picker drives where the text block
+                 sits inside the slide (9-cell anchor). Per-block font /
+                 weight / italic / underline read off slide.titleBold etc.
+                 Defaults reproduce the pre-Phase-3 look (center, bold
+                 white title, regular subtitle, semi-bold badge). */
               <div className="relative w-full h-full">
                 {MediaEl}
-                {/* Optional text overlay */}
                 {(slide.badge || slide.title || slide.subtitle) && (
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="max-w-[1400px] mx-auto w-full px-8">
-                      <div className="max-w-lg">
-                        {slide.badge && (
-                          <span
-                            className={`inline-block text-xs font-semibold px-3 py-1.5 rounded-full mb-4 backdrop-blur-sm ${slide.badgeSizeOffset !== 0 ? 'sm:text-[length:var(--badge-fs)]' : ''}`}
-                            style={{
-                              backgroundColor: slide.badgeBgColor || 'rgba(0,0,0,0.7)',
-                              color: slide.badgeTextColor || '#ffffff',
-                              ...(slide.badgeSizeOffset !== 0 && { ['--badge-fs' as string]: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
-                            } as React.CSSProperties}
-                          >
-                            {slide.badge}
-                          </span>
-                        )}
-                        {slide.title && (
-                          <h2
-                            className={`text-3xl sm:text-5xl font-bold leading-[1.3] whitespace-pre-line max-w-full mb-3 drop-shadow-lg [word-break:keep-all] [overflow-wrap:break-word] ${slide.titleSizeOffset !== 0 ? 'sm:text-[length:var(--title-fs)]' : ''}`}
-                            style={{
-                              color: slide.textColor || '#ffffff',
-                              ...(slide.titleSizeOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${slide.titleSizeOffset}px)` }),
-                            } as React.CSSProperties}
-                          >
-                            {slide.title}
-                          </h2>
-                        )}
-                        {slide.subtitle && (
-                          <p
-                            className={`text-sm sm:text-base drop-shadow-md ${slide.subtitleSizeOffset !== 0 ? 'sm:text-[length:var(--subtitle-fs)]' : ''}`}
-                            style={{
-                              color: slide.textColor ? slide.textColor : 'rgba(255,255,255,0.9)',
-                              ...(slide.subtitleSizeOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
-                            } as React.CSSProperties}
-                          >
-                            {slide.subtitle}
-                          </p>
-                        )}
-                      </div>
+                  <div className={`absolute inset-0 flex flex-col px-8 ${slide.position.align} ${slide.position.justify} ${slide.position.textAlign}`}>
+                    <div className="max-w-lg">
+                      {slide.badge && (
+                        <span
+                          className={`inline-block text-xs px-3 py-1.5 rounded-full mb-4 backdrop-blur-sm ${slide.badgeSizeOffset !== 0 ? 'sm:text-[length:var(--badge-fs)]' : ''}`}
+                          style={{
+                            backgroundColor: slide.badgeBgColor || 'rgba(0,0,0,0.7)',
+                            color: slide.badgeTextColor || '#ffffff',
+                            fontFamily: slide.badgeFontFamily,
+                            fontWeight: slide.badgeBold ? 700 : 600,
+                            fontStyle: slide.badgeItalic ? 'italic' : 'normal',
+                            textDecoration: slide.badgeUnderline ? 'underline' : 'none',
+                            ...(slide.badgeSizeOffset !== 0 && { ['--badge-fs' as string]: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
+                          } as React.CSSProperties}
+                        >
+                          {slide.badge}
+                        </span>
+                      )}
+                      {slide.title && (
+                        <h2
+                          className={`text-3xl sm:text-5xl leading-[1.3] whitespace-pre-line max-w-full mb-3 drop-shadow-lg [word-break:keep-all] [overflow-wrap:break-word] ${slide.titleSizeOffset !== 0 ? 'sm:text-[length:var(--title-fs)]' : ''}`}
+                          style={{
+                            color: slide.textColor || '#ffffff',
+                            fontFamily: slide.titleFontFamily,
+                            fontWeight: slide.titleBold === false ? 400 : 800,
+                            fontStyle: slide.titleItalic ? 'italic' : 'normal',
+                            textDecoration: slide.titleUnderline ? 'underline' : 'none',
+                            ...(slide.titleSizeOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${slide.titleSizeOffset}px)` }),
+                          } as React.CSSProperties}
+                        >
+                          {slide.title}
+                        </h2>
+                      )}
+                      {slide.subtitle && (
+                        <p
+                          className={`text-sm sm:text-base drop-shadow-md ${slide.subtitleSizeOffset !== 0 ? 'sm:text-[length:var(--subtitle-fs)]' : ''}`}
+                          style={{
+                            color: slide.textColor ? slide.textColor : 'rgba(255,255,255,0.9)',
+                            fontFamily: slide.subtitleFontFamily,
+                            fontWeight: slide.subtitleBold ? 700 : 400,
+                            fontStyle: slide.subtitleItalic ? 'italic' : 'normal',
+                            textDecoration: slide.subtitleUnderline ? 'underline' : 'none',
+                            ...(slide.subtitleSizeOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
+                          } as React.CSSProperties}
+                        >
+                          {slide.subtitle}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -216,10 +247,14 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                   <div className="z-10 max-w-lg">
                     {slide.badge && (
                       <span
-                        className={`inline-block text-xs font-semibold px-3 py-1.5 rounded-full mb-4 sm:mb-6 ${slide.badgeSizeOffset !== 0 ? 'sm:text-[length:var(--badge-fs)]' : ''}`}
+                        className={`inline-block text-xs px-3 py-1.5 rounded-full mb-4 sm:mb-6 ${slide.badgeSizeOffset !== 0 ? 'sm:text-[length:var(--badge-fs)]' : ''}`}
                         style={{
                           backgroundColor: slide.badgeBgColor || '#333333',
                           color: slide.badgeTextColor || '#ffffff',
+                          fontFamily: slide.badgeFontFamily,
+                          fontWeight: slide.badgeBold ? 700 : 600,
+                          fontStyle: slide.badgeItalic ? 'italic' : 'normal',
+                          textDecoration: slide.badgeUnderline ? 'underline' : 'none',
                           ...(slide.badgeSizeOffset !== 0 && { ['--badge-fs' as string]: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
                         } as React.CSSProperties}
                       >
@@ -232,9 +267,13 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         doesn't apply once an image fills the slide. The
                         admin color is preserved at sm+ via a CSS var. */}
                     <h2
-                      className={`text-2xl sm:text-5xl font-bold leading-[1.3] whitespace-pre-line max-w-full mb-3 sm:mb-4 [word-break:keep-all] [overflow-wrap:break-word] text-white sm:text-[color:var(--title-color)] drop-shadow-md sm:drop-shadow-none ${slide.titleSizeOffset !== 0 ? 'sm:text-[length:var(--title-fs)]' : ''}`}
+                      className={`text-2xl sm:text-5xl leading-[1.3] whitespace-pre-line max-w-full mb-3 sm:mb-4 [word-break:keep-all] [overflow-wrap:break-word] text-white sm:text-[color:var(--title-color)] drop-shadow-md sm:drop-shadow-none ${slide.titleSizeOffset !== 0 ? 'sm:text-[length:var(--title-fs)]' : ''}`}
                       style={{
                         ['--title-color' as string]: slide.textColor || '#111827',
+                        fontFamily: slide.titleFontFamily,
+                        fontWeight: slide.titleBold === false ? 400 : 700,
+                        fontStyle: slide.titleItalic ? 'italic' : 'normal',
+                        textDecoration: slide.titleUnderline ? 'underline' : 'none',
                         ...(slide.titleSizeOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${slide.titleSizeOffset}px)` }),
                       } as React.CSSProperties}
                     >
@@ -245,6 +284,10 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         className={`text-[13px] sm:text-base text-white/90 sm:text-[color:var(--subtitle-color)] drop-shadow sm:drop-shadow-none ${slide.subtitleSizeOffset !== 0 ? 'sm:text-[length:var(--subtitle-fs)]' : ''}`}
                         style={{
                           ['--subtitle-color' as string]: slide.textColor || '#374151',
+                          fontFamily: slide.subtitleFontFamily,
+                          fontWeight: slide.subtitleBold ? 700 : 400,
+                          fontStyle: slide.subtitleItalic ? 'italic' : 'normal',
+                          textDecoration: slide.subtitleUnderline ? 'underline' : 'none',
                           ...(slide.subtitleSizeOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
                         } as React.CSSProperties}
                       >
