@@ -33,11 +33,26 @@ async function _getBizContact(): Promise<BizContact | null> {
   return (data as BizContact | null) ?? null;
 }
 
+// Hosts the RichEditor's "embed" button produces iframes for, plus the
+// embed origins their players load (e.g. youtube-nocookie). Anything not
+// in this list gets stripped — the previous blanket strip killed the
+// editor's own legitimate output.
+const IFRAME_ALLOWED_HOST_RE = /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)(?:\/|$)/i;
+
 function sanitizeHtml(html: string): string {
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-    .replace(/<iframe\b[^>]*>/gi, '')
+    // Allow <iframe> only if its src points at a whitelisted embed host
+    // (YouTube / Vimeo). Strip everything else, including <iframe>s with
+    // no src or odd schemes. The closing </iframe> tag we leave alone —
+    // RichEditor emits well-formed pairs and a stray </iframe> in text
+    // would have rendered as harmless plain text already.
+    .replace(/<iframe\b([^>]*)>/gi, (match, attrs) => {
+      const srcMatch = attrs.match(/\bsrc\s*=\s*("([^"]*)"|'([^']*)')/i);
+      const src = srcMatch ? (srcMatch[2] ?? srcMatch[3] ?? '') : '';
+      return IFRAME_ALLOWED_HOST_RE.test(src) ? match : '';
+    })
     .replace(/<object\b[^>]*>/gi, '')
     .replace(/<embed\b[^>]*>/gi, '')
     .replace(/javascript\s*:/gi, '');
