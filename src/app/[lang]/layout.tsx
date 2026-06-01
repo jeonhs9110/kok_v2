@@ -78,7 +78,12 @@ export default async function LangLayout({
               bg-*; everything else lets the SiteBackground show. When no
               active background exists, SiteBackground renders a white
               fallback so the default look matches the pre-feature state. */}
-          <main className="flex-1 w-full">{children}</main>
+          {/* overflow-x-hidden guards against any per-route horizontal
+              overflow (e.g. an admin-set hero title with an aggressive
+              size offset that wraps poorly on small phones) bleeding
+              into a global horizontal scroll. Header sits outside <main>
+              so its sticky positioning is unaffected. */}
+          <main className="flex-1 w-full overflow-x-hidden">{children}</main>
           <Footer lang={lang} />
           <AIChatbot isKorea={isKorea} />
           <CookieConsent />
