@@ -17,6 +17,29 @@
 --   InstagramSection → transparent    (legacy: inherits page bg)
 -- ════════════════════════════════════════════════════════════════════
 
+-- Defensive: ensure public.is_admin() exists before the RLS policies
+-- below reference it. The function was first declared in migration 17
+-- and re-declared in migration 20 for the same reason — if the remote
+-- DB only has the historical pre-migration-17 schema, the RLS policies
+-- here would fail with "function public.is_admin() does not exist".
+-- CREATE OR REPLACE is a no-op when the function already matches.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid()
+      AND role = 'admin'
+  );
+$$;
+
+GRANT EXECUTE ON FUNCTION public.is_admin() TO anon, authenticated;
+
+
 ALTER TABLE public.instagram_config
   -- 'transparent' | 'color' | 'image' | 'video'. Free text on purpose:
   -- the renderer treats anything it doesn't recognize as 'transparent'.
