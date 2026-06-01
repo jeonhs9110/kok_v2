@@ -46,6 +46,17 @@ body {
      just fixed in the HeroSlider/SubHeroBanner offset path. */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+
+  /* Page-level horizontal overflow guard. <main> already has
+     overflow-x: hidden but doesn't catch overflow from siblings
+     (Header / Footer / AIChatbot floating panel / CookieConsent).
+     `overflow-x: clip` is the right tool here vs `hidden`: it clips
+     without creating a scroll container, so position:sticky on the
+     Header keeps working and position:fixed elements still anchor
+     to the viewport. Safari 16+ / Chrome 90+ / Firefox 81+ support
+     this; older Safari falls back to visible (the current behavior),
+     so this is a progressive enhancement, not a regression. */
+  overflow-x: clip;
 }
 
 
