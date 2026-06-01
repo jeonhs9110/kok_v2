@@ -35,9 +35,16 @@ interface TypographyPanelProps {
   onChange: (next: TextStyle) => void;
   /** Default color shown in the swatch when value.color is null */
   defaultColor?: string;
+  /**
+   * Hide the color column. Used by the carousel slide editor where the
+   * subtitle reuses the title's `text_color` column — showing a second
+   * color picker for the subtitle would silently overwrite the title's
+   * color, which is the wrong mental model for the admin.
+   */
+  hideColor?: boolean;
 }
 
-export function TypographyPanel({ label, value, onChange, defaultColor = '#ffffff' }: TypographyPanelProps) {
+export function TypographyPanel({ label, value, onChange, defaultColor = '#ffffff', hideColor = false }: TypographyPanelProps) {
   const set = <K extends keyof TextStyle>(key: K, v: TextStyle[K]) =>
     onChange({ ...value, [key]: v });
 
@@ -55,8 +62,8 @@ export function TypographyPanel({ label, value, onChange, defaultColor = '#fffff
       </div>
 
       <div className="grid grid-cols-12 gap-2 items-center">
-        {/* Font family — half width */}
-        <div className="col-span-7">
+        {/* Font family — width depends on whether color column is shown */}
+        <div className={hideColor ? 'col-span-8' : 'col-span-7'}>
           <label className="block text-[9px] uppercase tracking-wider text-gray-500 mb-1">폰트</label>
           <select
             value={value.fontFamily ?? ''}
@@ -71,7 +78,7 @@ export function TypographyPanel({ label, value, onChange, defaultColor = '#fffff
         </div>
 
         {/* B / I / U toggle group */}
-        <div className="col-span-3">
+        <div className={hideColor ? 'col-span-4' : 'col-span-3'}>
           <label className="block text-[9px] uppercase tracking-wider text-gray-500 mb-1">스타일</label>
           <div className="flex gap-1">
             <StyleToggle pressed={value.bold}      onClick={() => set('bold', !value.bold)}            title="굵게"     ><Bold className="w-3 h-3" strokeWidth={3} /></StyleToggle>
@@ -80,29 +87,33 @@ export function TypographyPanel({ label, value, onChange, defaultColor = '#fffff
           </div>
         </div>
 
-        {/* Color picker */}
-        <div className="col-span-2">
-          <label className="block text-[9px] uppercase tracking-wider text-gray-500 mb-1">색상</label>
-          <div className="flex items-center gap-1">
-            <input
-              type="color"
-              value={value.color ?? defaultColor}
-              onChange={e => set('color', e.target.value)}
-              className="w-7 h-7 rounded border border-gray-200 cursor-pointer bg-white"
-              title="색상 선택"
-            />
-            {value.color !== null && (
-              <button
-                type="button"
-                onClick={() => set('color', null)}
-                className="text-[9px] text-gray-400 hover:text-black"
-                title="기본 색상으로 되돌리기"
-              >
-                ✕
-              </button>
-            )}
+        {/* Color picker — omitted when the consumer shares this row's
+            color with another column (carousel subtitle reuses
+            text_color from the title). */}
+        {!hideColor && (
+          <div className="col-span-2">
+            <label className="block text-[9px] uppercase tracking-wider text-gray-500 mb-1">색상</label>
+            <div className="flex items-center gap-1">
+              <input
+                type="color"
+                value={value.color ?? defaultColor}
+                onChange={e => set('color', e.target.value)}
+                className="w-7 h-7 rounded border border-gray-200 cursor-pointer bg-white"
+                title="색상 선택"
+              />
+              {value.color !== null && (
+                <button
+                  type="button"
+                  onClick={() => set('color', null)}
+                  className="text-[9px] text-gray-400 hover:text-black"
+                  title="기본 색상으로 되돌리기"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
