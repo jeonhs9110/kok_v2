@@ -107,7 +107,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                   src={slide.image}
                   autoPlay muted loop playsInline
                   aria-label={slide.title.replace('\n', ' ') || 'Hero video'}
-                  className="w-full h-full object-cover object-center"
+                  className="w-full h-full object-cover object-right sm:object-center"
                 />
               ) : (
                 <Image
@@ -116,7 +116,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                   fill
                   sizes="100vw"
                   priority={isFirst}
-                  className="object-cover object-center"
+                  className="object-cover object-right sm:object-center"
                 />
               )
             ) : (
