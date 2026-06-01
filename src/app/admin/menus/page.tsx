@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, ChevronRight, X, FileText, MessageSquare, Externa
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import RichEditor from '@/components/admin/RichEditor';
+import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
 // Session-aware client. Phase 3 RLS lockdown on `menus` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -104,6 +105,12 @@ export default function MenusAdminPage() {
         const { error } = await supabase.from('menus').insert(payload);
         if (error) throw error;
       }
+      // Evict the process-local header memo so the next page load picks
+      // up the renamed / reordered / newly-published menu in the nav and
+      // (for page_type:page rows like Brand Story) shows the fresh content
+      // body without waiting on the 60s TTL. Same call site used by the
+      // categories and logo admins for parity.
+      await revalidateHeaderData();
       setModalOpen(false);
       fetchAll();
     } catch (err: unknown) {
@@ -123,6 +130,7 @@ export default function MenusAdminPage() {
     if (!confirm(msg)) return;
     if (!supabase) return;
     await supabase.from('menus').delete().eq('id', id);
+    await revalidateHeaderData();
     fetchAll();
   };
 

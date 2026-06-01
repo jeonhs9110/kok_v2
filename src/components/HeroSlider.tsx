@@ -174,7 +174,13 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                           style={{
                             color: slide.textColor || '#ffffff',
                             fontFamily: slide.titleFontFamily,
-                            fontWeight: slide.titleBold === false ? 400 : 800,
+                            // 700 matches the original `font-bold` class
+                            // this h2 used before Phase 3 swapped class
+                            // weight for inline weight. Default-mode h2
+                            // below already used 700; this brings the
+                            // fullpage path to parity so admin-untouched
+                            // slides paint the same as they did pre-PR.
+                            fontWeight: slide.titleBold === false ? 400 : 700,
                             fontStyle: slide.titleItalic ? 'italic' : 'normal',
                             textDecoration: slide.titleUnderline ? 'underline' : 'none',
                             ...(slide.titleSizeOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${slide.titleSizeOffset}px)` }),

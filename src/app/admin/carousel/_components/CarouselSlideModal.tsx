@@ -524,11 +524,14 @@ export default function CarouselSlideModal({
                 subtitle_bold: s.bold,
                 subtitle_italic: s.italic,
                 subtitle_underline: s.underline,
-                // text_color is shared with title; subtitle just reads it.
-                // Allow override via the picker but don't reset on null.
+                // text_color stays in the title panel since it controls
+                // both rows on this table — passing hideColor below means
+                // s.color is always the unchanged title color and this
+                // assignment is a no-op, kept for shape parity only.
                 text_color: s.color ?? prev.text_color,
               }))}
               defaultColor="#111111"
+              hideColor
             />
             <PositionPicker
               value={formData.text_position}
