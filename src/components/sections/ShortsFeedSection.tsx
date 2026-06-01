@@ -1,8 +1,8 @@
 import ShortsFeed, { type ShortItem } from '@/components/ShortsFeed';
-import { getCachedShorts } from '@/lib/cache/homepage';
+import { getCachedShorts, getCachedShortsBg } from '@/lib/cache/homepage';
 
 export default async function ShortsFeedSection({ lang }: { lang: string }) {
-  const live = await getCachedShorts();
+  const [live, bg] = await Promise.all([getCachedShorts(), getCachedShortsBg()]);
   // No placeholder/demo videos — if admin hasn't added shorts, the
   // section is hidden entirely. Previously a FALLBACK_YT_IDS list
   // rendered 4 unrelated demo videos when the DB was empty, which
@@ -13,7 +13,12 @@ export default async function ShortsFeedSection({ lang }: { lang: string }) {
     embedUrl: `https://www.youtube.com/embed/${d.youtube_id}`,
     productUrl: d.product_id ? `/${lang}/products/${d.product_id}` : undefined,
   }));
-  return <ShortsFeed shorts={shorts} />;
+  return <ShortsFeed shorts={shorts} bgConfig={bg ? {
+    type: bg.bg_type,
+    color: bg.bg_color,
+    media_url: bg.bg_media_url,
+    media_type: bg.bg_media_type,
+  } : null} />;
 }
 
 export function ShortsFeedSkeleton() {

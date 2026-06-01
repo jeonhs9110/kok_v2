@@ -127,7 +127,9 @@ export const getCachedInstagram = unstable_cache(
     try {
       const [configRes, postsRes] = await withTimeout(
         Promise.all([
-          c.from('instagram_config').select('handle, description').maybeSingle(),
+          c.from('instagram_config')
+            .select('handle, description, bg_type, bg_color, bg_media_url, bg_media_type')
+            .maybeSingle(),
           c.from('instagram_posts').select('id, image_url, link_url, post_url, sort_order').eq('is_active', true).order('sort_order').limit(6),
         ]),
         QUERY_BUDGET_MS
@@ -150,6 +152,10 @@ export const getCachedInstagram = unstable_cache(
         handle: configRes.data.handle,
         description: configRes.data.description ?? '',
         posts,
+        bg_type: configRes.data.bg_type ?? null,
+        bg_color: configRes.data.bg_color ?? null,
+        bg_media_url: configRes.data.bg_media_url ?? null,
+        bg_media_type: configRes.data.bg_media_type ?? null,
       };
     } catch (err) {
       console.error('[cache:instagram] failed:', err);
@@ -158,6 +164,41 @@ export const getCachedInstagram = unstable_cache(
   },
   ['homepage:instagram'],
   { revalidate: REVALIDATE, tags: [...TAGS, 'instagram'] }
+);
+
+export interface ShortsBgConfig {
+  bg_type: string | null;
+  bg_color: string | null;
+  bg_media_url: string | null;
+  bg_media_type: string | null;
+}
+
+export const getCachedShortsBg = unstable_cache(
+  async (): Promise<ShortsBgConfig | null> => {
+    const c = client();
+    if (!c) return null;
+    try {
+      const { data, error } = await withTimeout(
+        c.from('shorts_config')
+          .select('bg_type, bg_color, bg_media_url, bg_media_type')
+          .limit(1).maybeSingle(),
+        QUERY_BUDGET_MS
+      );
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        bg_type: data.bg_type ?? null,
+        bg_color: data.bg_color ?? null,
+        bg_media_url: data.bg_media_url ?? null,
+        bg_media_type: data.bg_media_type ?? null,
+      };
+    } catch (err) {
+      console.error('[cache:shorts_bg] failed:', err);
+      return null;
+    }
+  },
+  ['homepage:shorts_bg'],
+  { revalidate: REVALIDATE, tags: [...TAGS, 'shorts'] }
 );
 
 export interface RawShort {
