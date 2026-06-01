@@ -1,12 +1,15 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Video, Trash2, Plus, Link as LinkIcon } from 'lucide-react';
+import { Video, Trash2, Plus, Link as LinkIcon, Save } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 
 // Session-aware client. Phase 2 RLS lockdown on `shorts` requires admin JWT.
 const supabase = getSupabaseBrowser();
+
+const EMPTY_BG: SectionBgValue = { type: null, color: null, mediaUrl: null, mediaType: null };
 
 interface Short {
   id: string;
@@ -27,11 +30,65 @@ export default function ShortsAdminPage() {
   const [newUrl, setNewUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [linkingId, setLinkingId] = useState<string | null>(null);
+  // Section background — singleton row in shorts_config (migration 26).
+  const [bgConfigId, setBgConfigId] = useState<string | null>(null);
+  const [bg, setBg] = useState<SectionBgValue>(EMPTY_BG);
+  const [savingBg, setSavingBg] = useState(false);
+  const [bgSaved, setBgSaved] = useState(false);
 
   useEffect(() => {
     fetchShorts();
     fetchProducts();
+    fetchBg();
   }, []);
+
+  async function fetchBg() {
+    if (!supabase) return;
+    const { data } = await supabase
+      .from('shorts_config')
+      .select('id, bg_type, bg_color, bg_media_url, bg_media_type')
+      .limit(1).maybeSingle();
+    if (data) {
+      setBgConfigId(data.id);
+      setBg({
+        type: data.bg_type ?? null,
+        color: data.bg_color ?? null,
+        mediaUrl: data.bg_media_url ?? null,
+        mediaType: (data.bg_media_type as 'image' | 'video' | null) ?? null,
+      });
+    }
+  }
+
+  async function saveBg() {
+    if (!supabase) return;
+    setSavingBg(true);
+    try {
+      const payload = {
+        bg_type: bg.type,
+        bg_color: bg.color,
+        bg_media_url: bg.mediaUrl,
+        bg_media_type: bg.mediaType,
+      };
+      if (bgConfigId) {
+        const { error } = await supabase.from('shorts_config').update(payload).eq('id', bgConfigId);
+        if (error) throw error;
+      } else {
+        // Seed row should already exist from the migration, but tolerate
+        // its absence so a fresh project doesn't get stuck.
+        const { data, error } = await supabase.from('shorts_config').insert([payload]).select('id').single();
+        if (error) throw error;
+        setBgConfigId(data.id);
+      }
+      revalidateHomepageData('shorts');
+      setBgSaved(true);
+      setTimeout(() => setBgSaved(false), 2000);
+    } catch (err) {
+      console.error('[admin/shorts] bg save failed:', err);
+      alert('배경 저장에 실패했습니다.');
+    } finally {
+      setSavingBg(false);
+    }
+  }
 
   async function fetchProducts() {
     if (!supabase) return;
@@ -127,6 +184,30 @@ export default function ShortsAdminPage() {
 
   return (
     <div className="space-y-8">
+      {/* 섹션 배경 설정 (migration 26) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-lg font-bold text-gray-800">섹션 배경</h2>
+          <p className="text-xs text-gray-400">기본값은 검정(neutral-900) 배경입니다.</p>
+        </div>
+        <SectionBackgroundPanel
+          value={bg}
+          onChange={setBg}
+          defaultColor="#171717"
+          uploadPathPrefix="shorts-bg"
+        />
+        <button
+          onClick={saveBg}
+          disabled={savingBg}
+          className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+            bgSaved ? 'bg-green-600 text-white' : 'bg-black/80 text-white hover:bg-black'
+          } disabled:opacity-50`}
+        >
+          <Save className="w-3.5 h-3.5" />
+          {savingBg ? '저장 중...' : bgSaved ? '✓ 저장 완료' : '배경 저장'}
+        </button>
+      </div>
+
       {/* 새 숏츠 추가 */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">

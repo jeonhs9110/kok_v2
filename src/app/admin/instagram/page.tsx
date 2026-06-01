@@ -5,6 +5,9 @@ import Image from 'next/image';
 import { Upload, Trash2, ImageIcon, Save, RefreshCw, ExternalLink } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
+
+const EMPTY_BG: SectionBgValue = { type: null, color: null, mediaUrl: null, mediaType: null };
 
 // Session-aware client. Phase 2 RLS lockdown on `instagram_posts` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -50,6 +53,10 @@ export default function InstagramAdminPage() {
   const [savingSlot, setSavingSlot] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const activeSlotRef = useRef<number | null>(null);
+  // Section background — instagram_config columns added in migration 26.
+  const [bg, setBg] = useState<SectionBgValue>(EMPTY_BG);
+  const [savingBg, setSavingBg] = useState(false);
+  const [bgSaved, setBgSaved] = useState(false);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -65,6 +72,12 @@ export default function InstagramAdminPage() {
         setHandle(configRes.data.handle || '');
         setDescription(configRes.data.description || '');
         setRssFeedUrl(configRes.data.rss_feed_url || '');
+        setBg({
+          type: configRes.data.bg_type ?? null,
+          color: configRes.data.bg_color ?? null,
+          mediaUrl: configRes.data.bg_media_url ?? null,
+          mediaType: (configRes.data.bg_media_type as 'image' | 'video' | null) ?? null,
+        });
       }
       const fetched = postsRes.data || [];
       const filled = Array.from({ length: SLOTS }, (_, i) => fetched[i] ? {
@@ -89,6 +102,32 @@ export default function InstagramAdminPage() {
     } catch { alert('저장에 실패했습니다.'); }
     finally { setIsSavingConfig(false); }
   };
+
+  async function saveBg() {
+    if (!supabase) return;
+    setSavingBg(true);
+    try {
+      // Bg columns live on the same singleton row instagram_config uses
+      // for handle / description; piggyback the existing id=1 convention.
+      const { error } = await supabase.from('instagram_config').upsert({
+        id: 1,
+        bg_type: bg.type,
+        bg_color: bg.color,
+        bg_media_url: bg.mediaUrl,
+        bg_media_type: bg.mediaType,
+        updated_at: new Date().toISOString(),
+      });
+      if (error) throw error;
+      revalidateHomepageData('instagram');
+      setBgSaved(true);
+      setTimeout(() => setBgSaved(false), 2000);
+    } catch (err) {
+      console.error('[admin/instagram] bg save failed:', err);
+      alert('배경 저장에 실패했습니다.');
+    } finally {
+      setSavingBg(false);
+    }
+  }
 
   const uploadImage = async (file: File, slot: number) => {
     if (!supabase) return;
@@ -231,6 +270,30 @@ export default function InstagramAdminPage() {
             {isSavingConfig ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />저장 중...</> : <><Save className="w-4 h-4" />설정 저장</>}
           </button>
         </div>
+      </div>
+
+      {/* 섹션 배경 설정 (migration 26) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-lg font-bold text-gray-800">섹션 배경</h2>
+          <p className="text-xs text-gray-400">기본값은 페이지 배경(투명)입니다.</p>
+        </div>
+        <SectionBackgroundPanel
+          value={bg}
+          onChange={setBg}
+          defaultColor="#ffffff"
+          uploadPathPrefix="instagram-bg"
+        />
+        <button
+          onClick={saveBg}
+          disabled={savingBg}
+          className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+            bgSaved ? 'bg-green-600 text-white' : 'bg-black/80 text-white hover:bg-black'
+          } disabled:opacity-50`}
+        >
+          <Save className="w-3.5 h-3.5" />
+          {savingBg ? '저장 중...' : bgSaved ? '✓ 저장 완료' : '배경 저장'}
+        </button>
       </div>
 
       {/* RSS Auto-Refresh card */}

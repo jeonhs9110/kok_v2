@@ -4,13 +4,19 @@ import { useEffect, useState, useRef } from 'react';
 import { Play } from 'lucide-react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n/context';
+import SectionBackground, { type SectionBackgroundConfig } from '@/components/SectionBackground';
 
 export interface ShortItem {
   embedUrl: string;
   productUrl?: string;
 }
 
-export default function ShortsFeed({ shorts }: { shorts: ShortItem[] }) {
+interface Props {
+  shorts: ShortItem[];
+  bgConfig?: SectionBackgroundConfig | null;
+}
+
+export default function ShortsFeed({ shorts, bgConfig = null }: Props) {
   const { lang } = useI18n();
   const viewLabel = lang === 'kr' ? '사용 제품 보기 →' : 'View product →';
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -43,7 +49,11 @@ export default function ShortsFeed({ shorts }: { shorts: ShortItem[] }) {
   };
 
   return (
-    <section className="py-16 md:py-24 bg-neutral-900 overflow-hidden">
+    <SectionBackground
+      config={bgConfig}
+      className="py-16 md:py-24 overflow-hidden"
+      fallbackClassName="bg-neutral-900"
+    >
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-center items-end mb-10">
           <h2 className="text-white text-[15px] font-bold tracking-widest uppercase">
@@ -126,6 +136,6 @@ export default function ShortsFeed({ shorts }: { shorts: ShortItem[] }) {
           })}
         </div>
       </div>
-    </section>
+    </SectionBackground>
   );
 }

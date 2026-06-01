@@ -1,3 +1,5 @@
+import SectionBackground, { type SectionBackgroundConfig } from '@/components/SectionBackground';
+
 export interface InstagramPost {
   id: string;
   image_url: string;
@@ -15,6 +17,12 @@ export interface InstagramData {
   handle: string;
   description: string;
   posts: InstagramPost[];
+  // Admin-configured section background (migration 26). Null when the
+  // admin hasn't touched it — caller falls back to the legacy look.
+  bg_type?: string | null;
+  bg_color?: string | null;
+  bg_media_url?: string | null;
+  bg_media_type?: string | null;
 }
 
 interface Props {
@@ -47,8 +55,18 @@ export default function InstagramSection({ data }: Props) {
   // Build 6 slots — filled posts first, then empty placeholders
   const slots = Array.from({ length: SLOTS }, (_, i) => posts[i] || null);
 
+  const bgConfig: SectionBackgroundConfig = {
+    type: data.bg_type ?? null,
+    color: data.bg_color ?? null,
+    media_url: data.bg_media_url ?? null,
+    media_type: data.bg_media_type ?? null,
+  };
   return (
-    <section className="py-16 md:py-24">
+    <SectionBackground
+      config={bgConfig}
+      className="py-16 md:py-24"
+      fallbackClassName=""
+    >
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header */}
@@ -138,6 +156,6 @@ export default function InstagramSection({ data }: Props) {
           </a>
         </div>
       </div>
-    </section>
+    </SectionBackground>
   );
 }
