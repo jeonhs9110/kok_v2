@@ -284,7 +284,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
 
       {/* ── Expanded: Chat panel (bottom-right) ── */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-h-[600px] flex flex-col bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] border border-gray-200/80 overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200">
+        <div className="fixed bottom-6 right-3 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[380px] max-h-[min(80vh,600px)] sm:max-h-[600px] flex flex-col bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] border border-gray-200/80 overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200">
 
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-[#6b9fd4] to-[#4a7ab5]">
