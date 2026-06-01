@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, ChevronRight, X, FileText, MessageSquare, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import RichEditor from '@/components/admin/RichEditor';
 
 // Session-aware client. Phase 3 RLS lockdown on `menus` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -233,12 +234,20 @@ export default function MenusAdminPage() {
                   {form.page_type === 'page' && (
                     <div>
                       <label className="block text-[10px] text-gray-400 mb-1">콘텐츠 ({LANG_LABELS[activeLang]})</label>
-                      <textarea
-                        rows={8}
-                        value={form.content[activeLang] || ''}
-                        onChange={e => setForm(f => ({ ...f, content: { ...f.content, [activeLang]: e.target.value } }))}
-                        placeholder="HTML 콘텐츠를 입력하세요..."
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-black/5 resize-none"
+                      {/* Rich editor (TipTap) replaces the raw-HTML textarea.
+                          Gives the admin Bold / Italic / Underline /
+                          headings / lists / link / image upload / video
+                          upload / YouTube + Vimeo embeds. The rendered
+                          HTML is sanitized by MenuPage before being
+                          dangerouslySetInnerHTML'd into the page body. */}
+                      <RichEditor
+                        key={`${editingId ?? 'new'}-${activeLang}`}
+                        content={form.content[activeLang] || ''}
+                        onChange={(html) =>
+                          setForm(f => ({ ...f, content: { ...f.content, [activeLang]: html } }))
+                        }
+                        uploadPath={`menus/${form.slug || 'draft'}`}
+                        minHeight={320}
                       />
                     </div>
                   )}
