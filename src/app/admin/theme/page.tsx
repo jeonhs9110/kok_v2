@@ -9,6 +9,7 @@ import {
   tokensToCss,
   type ThemeTokens,
 } from '@/lib/theme/tokens';
+import { FONT_OPTIONS } from '@/lib/typography/options';
 
 // Session-aware client. site_settings writes require admin JWT (Phase 2 RLS).
 const supabase = getSupabaseBrowser();
@@ -166,12 +167,13 @@ export default function ThemePage() {
               </Section>
 
               <Section title="타이포그래피 (선택)">
-                <TextRow label="본문 폰트" value={tokens.font_body} placeholder="비워두면 기본값"
+                <FontRow label="본문 폰트" value={tokens.font_body}
                   onChange={v => setTokens(t => ({ ...t, font_body: v }))} />
-                <TextRow label="제목 폰트" value={tokens.font_display} placeholder="비워두면 본문과 동일"
+                <FontRow label="제목 폰트" value={tokens.font_display}
                   onChange={v => setTokens(t => ({ ...t, font_display: v }))} />
                 <p className="text-[10px] text-gray-400">
-                  Tablet Gothic, Pretendard 등 시스템에 설치된 폰트명 또는 Google Fonts 폰트 패밀리 문자열을 입력하세요.
+                  드롭다운에서 사이트가 미리 로드한 8개 폰트 중 하나를 고르거나, &quot;기타 (직접 입력)&quot;를
+                  선택해 시스템에 설치된 폰트명 또는 Google Fonts 폰트 패밀리 문자열을 직접 입력할 수 있습니다.
                 </p>
               </Section>
             </>
@@ -307,6 +309,65 @@ function TextRow({
         onChange={e => onChange(e.target.value)}
         className="w-full mt-1 border border-gray-200 rounded px-2 py-1.5 text-xs font-mono outline-none focus:border-black"
       />
+    </div>
+  );
+}
+
+/**
+ * Font picker for the theme tokens. Stores the CSS font-family string
+ * (same shape `font_body` / `font_display` always had) so existing
+ * theme_tokens rows keep rendering unchanged, but presents a dropdown
+ * of the 8 brand + Google-loaded fonts the rest of the admin uses.
+ *
+ * "기타 (직접 입력)" reveals the legacy text input so an admin can paste
+ * any CSS family stack — handy when previewing a font we haven't added
+ * to FONT_OPTIONS yet.
+ *
+ * Mode is derived from `value`: if the stored string matches any of
+ * FONT_OPTIONS[].cssFamily exactly, the dropdown shows that entry;
+ * otherwise it falls into "custom" mode and reveals the text field.
+ * Switching from custom back to a preset clears the text field.
+ */
+function FontRow({
+  label, value, onChange,
+}: { label: string; value: string; onChange: (v: string) => void }) {
+  const presetMatch = FONT_OPTIONS.find(f => f.cssFamily === value);
+  const isCustom = value.trim() !== '' && !presetMatch;
+  const selectValue = value.trim() === '' ? '' : presetMatch ? presetMatch.key : '__custom__';
+
+  return (
+    <div className="space-y-1.5">
+      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
+      <select
+        value={selectValue}
+        onChange={e => {
+          const v = e.target.value;
+          if (v === '') onChange('');                // back to brand default
+          else if (v === '__custom__') onChange(value || ' ');  // stay in custom (force non-empty so chip shows)
+          else {
+            const opt = FONT_OPTIONS.find(f => f.key === v);
+            if (opt) onChange(opt.cssFamily);
+          }
+        }}
+        className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs bg-white outline-none focus:border-black"
+      >
+        <option value="">기본 (비워둠 — 브랜드 폰트)</option>
+        {FONT_OPTIONS.map(f => (
+          <option key={f.key} value={f.key}>
+            {f.label} — {f.hint}
+          </option>
+        ))}
+        <option value="__custom__">기타 (직접 입력)</option>
+      </select>
+      {isCustom && (
+        <input
+          type="text"
+          value={value}
+          placeholder='예: "Helvetica Neue", system-ui, sans-serif'
+          onChange={e => onChange(e.target.value)}
+          className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs font-mono outline-none focus:border-black"
+        />
+      )}
     </div>
   );
 }
