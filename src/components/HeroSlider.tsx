@@ -146,7 +146,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         )}
                         {slide.title && (
                           <h2
-                            className={`text-3xl sm:text-5xl font-bold leading-[1.3] whitespace-pre-line mb-3 drop-shadow-lg ${slide.titleSizeOffset !== 0 ? 'sm:text-[length:var(--title-fs)]' : ''}`}
+                            className={`text-3xl sm:text-5xl font-bold leading-[1.3] whitespace-pre-line max-w-full mb-3 drop-shadow-lg [word-break:keep-all] [overflow-wrap:break-word] ${slide.titleSizeOffset !== 0 ? 'sm:text-[length:var(--title-fs)]' : ''}`}
                             style={{
                               color: slide.textColor || '#ffffff',
                               ...(slide.titleSizeOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${slide.titleSizeOffset}px)` }),
@@ -177,14 +177,23 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                                 (avoids the cramped half-width image-on-right look).
                  Desktop (≥ sm): text left + framed image right (original look). */
               <>
-                {/* Mobile background media + overlay */}
+                {/* Mobile background media + overlay
+                    Admin's source images are authored desktop-first
+                    (text on the left, product on the right). On mobile
+                    we crop with object-right so the product side stays
+                    on-screen instead of cropping to the empty center
+                    whitespace. The legibility gradient is localized to
+                    the bottom-left text region in a dark tone — works
+                    for both bright (cream/white) and dark images, where
+                    the previous white-from-bottom gradient disappeared
+                    on light backgrounds and the hero looked empty. */}
                 <div className="absolute inset-0 sm:hidden">
                   {slide.image ? (
                     slide.mediaType === 'video' ? (
                       <video
                         src={slide.image}
                         autoPlay muted loop playsInline
-                        className="w-full h-full object-cover object-center"
+                        className="w-full h-full object-cover object-right"
                       />
                     ) : (
                       <Image
@@ -193,14 +202,13 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         fill
                         sizes="100vw"
                         priority={isFirst}
-                        className="object-cover object-center"
+                        className="object-cover object-right"
                       />
                     )
                   ) : (
                     <div className="w-full h-full bg-gray-200" />
                   )}
-                  {/* Subtle bottom gradient so the text stays legible regardless of image */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-white/85 via-white/30 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/65 via-black/35 to-transparent" />
                 </div>
 
                 {/* Text + (desktop) framed image */}
@@ -218,10 +226,15 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         {slide.badge}
                       </span>
                     )}
+                    {/* Mobile uses white text with a drop shadow against
+                        the dark gradient overlay above — the admin's
+                        textColor is sized for the desktop bgColor, which
+                        doesn't apply once an image fills the slide. The
+                        admin color is preserved at sm+ via a CSS var. */}
                     <h2
-                      className={`text-2xl sm:text-5xl font-bold leading-[1.3] whitespace-pre-line mb-3 sm:mb-4 ${slide.titleSizeOffset !== 0 ? 'sm:text-[length:var(--title-fs)]' : ''}`}
+                      className={`text-2xl sm:text-5xl font-bold leading-[1.3] whitespace-pre-line max-w-full mb-3 sm:mb-4 [word-break:keep-all] [overflow-wrap:break-word] text-white sm:text-[color:var(--title-color)] drop-shadow-md sm:drop-shadow-none ${slide.titleSizeOffset !== 0 ? 'sm:text-[length:var(--title-fs)]' : ''}`}
                       style={{
-                        color: slide.textColor || '#111827',
+                        ['--title-color' as string]: slide.textColor || '#111827',
                         ...(slide.titleSizeOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${slide.titleSizeOffset}px)` }),
                       } as React.CSSProperties}
                     >
@@ -229,9 +242,9 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                     </h2>
                     {slide.subtitle && (
                       <p
-                        className={`text-[13px] sm:text-base ${slide.subtitleSizeOffset !== 0 ? 'sm:text-[length:var(--subtitle-fs)]' : ''}`}
+                        className={`text-[13px] sm:text-base text-white/90 sm:text-[color:var(--subtitle-color)] drop-shadow sm:drop-shadow-none ${slide.subtitleSizeOffset !== 0 ? 'sm:text-[length:var(--subtitle-fs)]' : ''}`}
                         style={{
-                          color: slide.textColor || '#374151',
+                          ['--subtitle-color' as string]: slide.textColor || '#374151',
                           ...(slide.subtitleSizeOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
                         } as React.CSSProperties}
                       >

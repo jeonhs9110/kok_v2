@@ -40,7 +40,14 @@ body {
                var(--font-freesentation),
                -apple-system, BlinkMacSystemFont,
                "Segoe UI", Roboto, sans-serif;
+  /* Stop iOS Safari from auto-inflating text on landscape rotation.
+     Without this, paragraphs with an admin-set fontSize can render
+     ~20% larger after a device flip and re-trigger the overflow we
+     just fixed in the HeroSlider/SubHeroBanner offset path. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
+
 
 /* All interactive elements get pointer cursor */
 button,
