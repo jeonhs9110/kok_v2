@@ -158,10 +158,16 @@ export default function Header({
               {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
 
-            {/* Logo */}
+            {/* Logo
+                mr-8 spaces the logo from the nav on lg+ where the nav
+                actually renders next to it. On mobile/tablet the nav is
+                lg:hidden, so the 32px gap is just dead pixels that push
+                the right icons (including LanguagePicker) toward — and on
+                Galaxy Z Fold outer, past — the viewport edge, which is
+                what was causing the page-wide right whitespace. */}
             <Link
               href={`/${lang}`}
-              className="flex-shrink-0 mr-8 flex items-center"
+              className="flex-shrink-0 mr-2 lg:mr-8 flex items-center"
               aria-label="Kokkok Garden"
             >
               {logoUrl ? (
@@ -229,15 +235,20 @@ export default function Header({
             </nav>
 
             {/* ── Right Icons ──────────────────────────────────────────── */}
-            <div className="ml-auto flex items-center gap-2">
-              <button onClick={() => setSearchOpen(v => !v)} className="p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Search">
+            {/* Tightened gap + padding on xs so this row fits inside a
+                360px viewport (Galaxy Z Fold outer cover display). The
+                previous gap-2 + p-2 pattern overflowed by ~16px which is
+                what was clipping the LanguagePicker chevron off the
+                right edge and driving the page-wide right whitespace. */}
+            <div className="ml-auto flex items-center gap-1 sm:gap-2">
+              <button onClick={() => setSearchOpen(v => !v)} className="p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Search">
                 <Search className="w-[21px] h-[21px]" />
               </button>
-              <Link href={isLoggedIn ? `/${lang}/mypage` : '/login'} className="hidden sm:flex p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Account">
+              <Link href={isLoggedIn ? `/${lang}/mypage` : '/login'} className="hidden sm:flex p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Account">
                 <User className="w-[21px] h-[21px]" />
               </Link>
               {canPurchase && (
-                <Link href="/cart" className="relative p-2 text-neutral-900 hover:opacity-60 transition-opacity flex" aria-label="Cart">
+                <Link href="/cart" className="relative p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity flex" aria-label="Cart">
                   <ShoppingBag className="w-[21px] h-[21px]" />
                   {totalCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-[#111] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
