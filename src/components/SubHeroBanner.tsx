@@ -45,16 +45,16 @@ export default function SubHeroBanner({ banner }: Props) {
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-6">
           {banner.subtitle && (
             <p
-              className="text-sm md:text-base font-medium tracking-widest uppercase mb-3 opacity-80"
-              style={subtitleOffset !== 0 ? { fontSize: `calc(1rem + ${subtitleOffset}px)` } : undefined}
+              className={`text-sm md:text-base font-medium tracking-widest uppercase mb-3 opacity-80 max-w-full [word-break:keep-all] [overflow-wrap:break-word] ${subtitleOffset !== 0 ? 'md:text-[length:var(--subtitle-fs)]' : ''}`}
+              style={subtitleOffset !== 0 ? { ['--subtitle-fs' as string]: `calc(1rem + ${subtitleOffset}px)` } as React.CSSProperties : undefined}
             >
               {banner.subtitle}
             </p>
           )}
           {banner.title && (
             <h2
-              className="text-3xl md:text-5xl font-black tracking-tight leading-tight max-w-2xl"
-              style={titleOffset !== 0 ? { fontSize: `calc(3rem + ${titleOffset}px)` } : undefined}
+              className={`text-3xl md:text-5xl font-black tracking-tight leading-tight max-w-2xl [word-break:keep-all] [overflow-wrap:break-word] ${titleOffset !== 0 ? 'md:text-[length:var(--title-fs)]' : ''}`}
+              style={titleOffset !== 0 ? { ['--title-fs' as string]: `calc(3rem + ${titleOffset}px)` } as React.CSSProperties : undefined}
             >
               {banner.title}
             </h2>
