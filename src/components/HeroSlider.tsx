@@ -8,7 +8,7 @@ import Autoplay from 'embla-carousel-autoplay';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Lang } from '@/lib/i18n/types';
 import type { CarouselSlide } from '@/lib/api/carousel';
-import { fontFamilyForKey, positionForKey } from '@/lib/typography/options';
+import { fontFamilyForKey, positionForKey, positionDesktopForKey } from '@/lib/typography/options';
 
 
 interface HeroSliderProps {
@@ -61,7 +61,11 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       subtitleBold: s.subtitle_bold ?? false,
       subtitleItalic: s.subtitle_italic ?? false,
       subtitleUnderline: s.subtitle_underline ?? false,
-      position: positionForKey(s.text_position),
+      // Mobile uses the unprefixed PositionOption (applies at xs).
+      // Desktop uses the sm:-prefixed lookup so the same template
+      // string holds both breakpoints' flex utilities.
+      positionMobile: positionForKey(s.text_position_mobile),
+      positionDesktop: positionDesktopForKey(s.text_position),
     };
   }), [dbSlides, lang]);
 
@@ -124,7 +128,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                   src={slide.image}
                   autoPlay muted loop playsInline
                   aria-label={slide.title.replace('\n', ' ') || 'Hero video'}
-                  className="w-full h-full object-cover object-right sm:object-center"
+                  className="w-full h-full object-cover object-center"
                 />
               ) : (
                 <Image
@@ -133,7 +137,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                   fill
                   sizes="100vw"
                   priority={isFirst}
-                  className="object-cover object-right sm:object-center"
+                  className="object-cover object-center"
                 />
               )
             ) : (
@@ -150,7 +154,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
               <div className="relative w-full h-full">
                 {MediaEl}
                 {(slide.badge || slide.title || slide.subtitle) && (
-                  <div className={`absolute inset-0 flex flex-col px-8 ${slide.position.align} ${slide.position.justify} ${slide.position.textAlign}`}>
+                  <div className={`absolute inset-0 flex flex-col px-8 ${slide.positionMobile.align} ${slide.positionDesktop.align} ${slide.positionMobile.justify} ${slide.positionDesktop.justify} ${slide.positionMobile.textAlign} ${slide.positionDesktop.textAlign}`}>
                     <div className="max-w-lg">
                       {slide.badge && (
                         <span
@@ -215,22 +219,22 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                  Desktop (≥ sm): text left + framed image right (original look). */
               <>
                 {/* Mobile background media + overlay
-                    Admin's source images are authored desktop-first
-                    (text on the left, product on the right). On mobile
-                    we crop with object-right so the product side stays
-                    on-screen instead of cropping to the empty center
-                    whitespace. The legibility gradient is localized to
-                    the bottom-left text region in a dark tone — works
-                    for both bright (cream/white) and dark images, where
-                    the previous white-from-bottom gradient disappeared
-                    on light backgrounds and the hero looked empty. */}
+                    Previously cropped with object-right to keep
+                    desktop-first product images on-screen, but that
+                    auto-shifted everything sideways on mobile. With
+                    migration 27 the admin now controls text placement
+                    per breakpoint, so the image stays centered and the
+                    admin moves the text away from the product instead.
+                    The legibility gradient is localized to the
+                    bottom-left text region in a dark tone — works for
+                    both bright and dark images. */}
                 <div className="absolute inset-0 sm:hidden">
                   {slide.image ? (
                     slide.mediaType === 'video' ? (
                       <video
                         src={slide.image}
                         autoPlay muted loop playsInline
-                        className="w-full h-full object-cover object-right"
+                        className="w-full h-full object-cover object-center"
                       />
                     ) : (
                       <Image
@@ -239,7 +243,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         fill
                         sizes="100vw"
                         priority={isFirst}
-                        className="object-cover object-right"
+                        className="object-cover object-center"
                       />
                     )
                   ) : (

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { type SlideFormData } from '../_lib';
 import { fontFamilyForKey, positionForKey } from '@/lib/typography/options';
 
@@ -33,9 +34,15 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
   const subtitlePx = 16 + (form.subtitle_size_offset || 0);
   const badgePx = 12 + (form.badge_size_offset || 0);
 
+  // Preview-only toggle so the admin can see how the slide looks at
+  // each breakpoint without leaving the modal. The picker just swaps
+  // which position key feeds the layout — same render, different anchor.
+  const [view, setView] = useState<'pc' | 'mobile'>('pc');
+  const isMobileView = view === 'mobile';
+
   // Phase 3 typography resolvers — surfaced once so we don't repeat the
   // ternaries inside the JSX for both render modes.
-  const pos = positionForKey(form.text_position);
+  const pos = positionForKey(isMobileView ? form.text_position_mobile : form.text_position);
   const badgeStyle: React.CSSProperties = {
     fontFamily: fontFamilyForKey(form.badge_font_family),
     fontWeight: form.badge_bold ? 700 : 500,
@@ -74,11 +81,29 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
         <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
           미리보기 ({lang.toUpperCase()})
         </label>
-        <span className="text-[10px] text-gray-400">실제 화면 비율 축소판</span>
+        <div className="inline-flex bg-gray-100 rounded p-0.5 text-[10px] font-bold">
+          {(['pc', 'mobile'] as const).map(v => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setView(v)}
+              className={`px-2.5 py-1 rounded transition-colors ${
+                view === v ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-black'
+              }`}
+            >
+              {v === 'pc' ? 'PC' : '모바일'}
+            </button>
+          ))}
+        </div>
       </div>
-      {/* 16:9 aspect to approximate the desktop hero band */}
+      {/* 16:7 for PC view (hero band); 9:14 for mobile view (phone
+          portrait approximation, matching the storefront 440px @ 360 wide
+          ratio). Centered + max-width on mobile keeps the preview from
+          stretching the modal. */}
       <div
-        className="relative w-full aspect-[16/7] rounded-lg overflow-hidden border border-gray-200 shadow-sm"
+        className={`relative rounded-lg overflow-hidden border border-gray-200 shadow-sm mx-auto ${
+          isMobileView ? 'w-[220px] aspect-[9/14]' : 'w-full aspect-[16/7]'
+        }`}
         style={{ backgroundColor: form.bg_color || '#eef4f7' }}
       >
         {isFullpage ? (
@@ -180,7 +205,9 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
         )}
       </div>
       <p className="text-[10px] text-gray-400 text-center">
-        텍스트 / 색상 / 이미지가 바로 반영됩니다. 폰트 크기는 시각적 비율을 위해 50%로 축소되어 표시됩니다.
+        {isMobileView
+          ? '모바일 텍스트 위치를 기준으로 표시됩니다. 폰트 크기는 시각적 비율을 위해 50%로 축소되어 있습니다.'
+          : 'PC 텍스트 위치를 기준으로 표시됩니다. 폰트 크기는 시각적 비율을 위해 50%로 축소되어 있습니다.'}
       </p>
     </div>
   );

@@ -34,6 +34,8 @@ export interface CarouselSlide {
   subtitle_italic?: boolean | null;
   subtitle_underline?: boolean | null;
   text_position?: string | null;
+  // Migration 27: separate anchor for the mobile breakpoint.
+  text_position_mobile?: string | null;
 }
 
 export async function getActiveSlides(): Promise<CarouselSlide[]> {

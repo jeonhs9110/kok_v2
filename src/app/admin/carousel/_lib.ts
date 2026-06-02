@@ -47,6 +47,10 @@ export interface SlideFormData {
   subtitle_italic: boolean;
   subtitle_underline: boolean;
   text_position: PositionKey;
+  // Migration 27: separate anchor for the mobile breakpoint so the
+  // admin can place text wherever doesn't collide with the product
+  // image on a phone, without changing the desktop layout.
+  text_position_mobile: PositionKey;
 }
 
 export const emptyForm: SlideFormData = {
@@ -74,6 +78,7 @@ export const emptyForm: SlideFormData = {
   title_bold: true,     title_italic: false,    title_underline: false,
   subtitle_bold: false, subtitle_italic: false, subtitle_underline: false,
   text_position: 'mc',
+  text_position_mobile: 'mc',
 };
 
 export async function uploadSlideAsset(file: File): Promise<string> {

@@ -108,6 +108,7 @@ export default function CarouselSlideModal({
         subtitle_italic: formData.subtitle_italic,
         subtitle_underline: formData.subtitle_underline,
         text_position: formData.text_position,
+        text_position_mobile: formData.text_position_mobile,
       };
       if (!supabase) throw new Error('클라이언트 없음');
       if (editingId) {
@@ -533,10 +534,24 @@ export default function CarouselSlideModal({
               defaultColor="#111111"
               hideColor
             />
-            <PositionPicker
-              value={formData.text_position}
-              onChange={pos => setFormData(prev => ({ ...prev, text_position: pos }))}
-            />
+            {/* Dual anchor: text position can differ between desktop
+                and mobile — admin places text where it doesn't collide
+                with the product on each device. The migration 27 schema
+                holds text_position (desktop / sm+) and
+                text_position_mobile (xs); the public render uses the
+                same key, just at different breakpoints. */}
+            <div className="grid grid-cols-2 gap-3">
+              <PositionPicker
+                label="PC 텍스트 위치 (sm+)"
+                value={formData.text_position}
+                onChange={pos => setFormData(prev => ({ ...prev, text_position: pos }))}
+              />
+              <PositionPicker
+                label="모바일 텍스트 위치"
+                value={formData.text_position_mobile}
+                onChange={pos => setFormData(prev => ({ ...prev, text_position_mobile: pos }))}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
