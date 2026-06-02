@@ -54,7 +54,8 @@ function formFromSlide(s: CarouselSlide): SlideFormData {
     subtitle_bold:     s.subtitle_bold     ?? false,
     subtitle_italic:   s.subtitle_italic   ?? false,
     subtitle_underline: s.subtitle_underline ?? false,
-    text_position:     (s.text_position as SlideFormData['text_position']) ?? 'mc',
+    text_position:        (s.text_position as SlideFormData['text_position']) ?? 'mc',
+    text_position_mobile: (s.text_position_mobile as SlideFormData['text_position_mobile']) ?? 'mc',
   };
 }
 

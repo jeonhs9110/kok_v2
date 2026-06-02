@@ -142,3 +142,33 @@ export function positionForKey(key: string | null | undefined): PositionOption {
   if (!key) return POSITION_BY_KEY.get('mc')!;
   return POSITION_BY_KEY.get(key) ?? POSITION_BY_KEY.get('mc')!;
 }
+
+/**
+ * sm:-prefixed lookup for the *desktop* breakpoint when a section uses
+ * separate mobile + desktop anchors (carousel migration 27 added
+ * text_position_mobile alongside the existing text_position desktop
+ * column). Written as literal class strings so Tailwind's JIT pickup
+ * sees every `sm:items-*`, `sm:justify-*`, `sm:text-*` it needs to
+ * generate — building these by string-concatenation at runtime would
+ * have Tailwind purge them as undetected.
+ */
+export const POSITION_DESKTOP_SM: Record<PositionKey, {
+  align: 'sm:items-start' | 'sm:items-center' | 'sm:items-end';
+  justify: 'sm:justify-start' | 'sm:justify-center' | 'sm:justify-end';
+  textAlign: 'sm:text-left' | 'sm:text-center' | 'sm:text-right';
+}> = {
+  tl: { align: 'sm:items-start',  justify: 'sm:justify-start',  textAlign: 'sm:text-left'   },
+  tc: { align: 'sm:items-start',  justify: 'sm:justify-center', textAlign: 'sm:text-center' },
+  tr: { align: 'sm:items-start',  justify: 'sm:justify-end',    textAlign: 'sm:text-right'  },
+  ml: { align: 'sm:items-center', justify: 'sm:justify-start',  textAlign: 'sm:text-left'   },
+  mc: { align: 'sm:items-center', justify: 'sm:justify-center', textAlign: 'sm:text-center' },
+  mr: { align: 'sm:items-center', justify: 'sm:justify-end',    textAlign: 'sm:text-right'  },
+  bl: { align: 'sm:items-end',    justify: 'sm:justify-start',  textAlign: 'sm:text-left'   },
+  bc: { align: 'sm:items-end',    justify: 'sm:justify-center', textAlign: 'sm:text-center' },
+  br: { align: 'sm:items-end',    justify: 'sm:justify-end',    textAlign: 'sm:text-right'  },
+};
+
+export function positionDesktopForKey(key: string | null | undefined) {
+  if (!key) return POSITION_DESKTOP_SM.mc;
+  return POSITION_DESKTOP_SM[key as PositionKey] ?? POSITION_DESKTOP_SM.mc;
+}
