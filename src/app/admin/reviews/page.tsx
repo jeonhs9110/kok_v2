@@ -43,6 +43,9 @@ export default function ReviewsAdminPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  // Naver auto-fill UX state. Keyed by row index so two cards being
+  // edited in parallel don't clobber each other's loading spinner.
+  const [naverIdx, setNaverIdx] = useState<number | null>(null);
   const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   const load = useCallback(async () => {
@@ -62,6 +65,44 @@ export default function ReviewsAdminPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Calls /api/reviews/scrape-naver with the row's link_url and patches
+  // any returned og:* fields into the row's title / image_url /
+  // content_html. Existing non-empty fields are NOT overwritten — admin
+  // can pre-fill anything they want kept.
+  async function autoFillFromNaver(i: number) {
+    const row = rows[i];
+    if (!row?.link_url) {
+      alert('먼저 외부 링크 칸에 네이버 블로그 / 포스트 URL을 입력해주세요.');
+      return;
+    }
+    setNaverIdx(i);
+    try {
+      const res = await fetch('/api/reviews/scrape-naver', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: row.link_url }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error === 'unsupported_host'
+          ? '네이버 블로그/포스트 URL만 자동 채우기를 지원합니다.'
+          : '자동 채우기에 실패했습니다.');
+        return;
+      }
+      const data: { title: string | null; image_url: string | null; description: string | null } = await res.json();
+      update(i, {
+        title: row.title || data.title || '',
+        image_url: row.image_url || data.image_url || '',
+        content_html: row.content_html || (data.description ? `<p>${data.description}</p>` : ''),
+      });
+    } catch (err) {
+      console.error('[admin/reviews] naver scrape failed:', err);
+      alert('자동 채우기 중 오류가 발생했습니다.');
+    } finally {
+      setNaverIdx(null);
+    }
+  }
 
   function update(i: number, patch: Partial<ReviewRow>) {
     setRows(prev => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r));
@@ -199,13 +240,27 @@ export default function ReviewsAdminPage() {
 
           <div>
             <label className="text-[10px] font-bold text-gray-500 uppercase">외부 링크 (선택)</label>
-            <input
-              type="text"
-              value={r.link_url}
-              onChange={e => update(i, { link_url: e.target.value })}
-              placeholder="https://... (지정하면 클릭 시 새 창에서 링크로 이동. 비워두면 아래 내용이 팝업으로 표시됩니다)"
-              className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 font-mono"
-            />
+            <div className="flex gap-2 mt-1">
+              <input
+                type="text"
+                value={r.link_url}
+                onChange={e => update(i, { link_url: e.target.value })}
+                placeholder="https://... (지정하면 클릭 시 새 창에서 링크로 이동. 비워두면 아래 내용이 팝업으로 표시됩니다)"
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 font-mono"
+              />
+              <button
+                type="button"
+                onClick={() => autoFillFromNaver(i)}
+                disabled={naverIdx === i || !r.link_url}
+                title="네이버 블로그/포스트 URL이면 제목·이미지·설명을 자동으로 채워요"
+                className="px-3 py-2 text-xs font-bold text-white bg-[#03c75a] hover:bg-[#02b14d] disabled:opacity-40 rounded-lg whitespace-nowrap flex items-center gap-1.5"
+              >
+                {naverIdx === i ? <><Loader2 className="w-3 h-3 animate-spin" />가져오는 중...</> : '네이버 자동 채우기'}
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">
+              네이버 블로그 / 포스트 / 네이버 단축 URL(naver.me)을 인식합니다. 이미 채워진 칸은 덮어쓰지 않아요.
+            </p>
           </div>
 
           <div>
