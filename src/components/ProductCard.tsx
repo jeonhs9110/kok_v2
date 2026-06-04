@@ -18,9 +18,17 @@ interface ProductCardProps {
   discountRate: number;
   imageUrl: string;
   canPurchase?: boolean;
+  /**
+   * Optional ingredient-tag chips shown above the product name. Each
+   * entry is the localised label already resolved by the parent (so
+   * ProductCard doesn't need its own ingredient_tags fetch). Allergens
+   * get an amber chip; everything else gets a neutral pill — matches
+   * the product detail page treatment.
+   */
+  tags?: { label: string; isAllergen?: boolean }[];
 }
 
-export default function ProductCard({ id, name, summary, price, originalPrice, discountRate, imageUrl, canPurchase = true }: ProductCardProps) {
+export default function ProductCard({ id, name, summary, price, originalPrice, discountRate, imageUrl, canPurchase = true, tags = [] }: ProductCardProps) {
   const { t, lang } = useI18n();
   const { addItem } = useCart();
   const wishlistCtx = useOptionalWishlist();
@@ -119,6 +127,30 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
       </div>
 
       <div className="flex flex-col space-y-1 px-1">
+        {/* Ingredient pills — first 3 only so the card height stays
+            consistent. Allergen tags get amber so they're spottable at
+            a glance even outside the PDP. */}
+        {tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-1">
+            {tags.slice(0, 3).map((t, i) => (
+              <span
+                key={i}
+                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+                  t.isAllergen
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-neutral-100 text-neutral-600'
+                }`}
+              >
+                {t.label}
+              </span>
+            ))}
+            {tags.length > 3 && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500">
+                +{tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
         <h3 className="text-[13px] font-bold text-neutral-800 leading-tight break-keep">{name}</h3>
         <p className="text-[12px] text-neutral-500 leading-tight line-clamp-1">{summary}</p>
 

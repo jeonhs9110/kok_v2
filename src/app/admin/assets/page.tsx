@@ -135,10 +135,44 @@ export default function AssetLibraryPage() {
   };
 
   const handleDelete = async (a: Asset) => {
-    const confirmMsg = `정말 삭제하시겠습니까?\n\n${a.bucket}/${a.key}\n\n이 파일을 참조하는 상품/배너가 있으면 깨질 수 있습니다.`;
-    if (!confirm(confirmMsg)) return;
     setDeletingKey(a.key);
     try {
+      // Check usage across the tables most likely to reference the
+      // asset's public URL before letting the admin orphan a product
+      // image. Cheap to do because each query is `select count` and
+      // the columns being scanned are all `text` / not indexed in a
+      // way that'd punish a single LIKE per delete. If any of the
+      // queries error (e.g. RLS denies the read), we fall through to
+      // a softer warning rather than blocking the delete.
+      const url = a.publicUrl;
+      const [products, sub_hero, carousel] = await Promise.all([
+        supabase.from('products').select('id, name').or(`image_url.eq.${url},detail_image_url.eq.${url}`).limit(5),
+        supabase.from('sub_hero_banners').select('id').eq('image_url', url).limit(5),
+        supabase.from('carousel_slides').select('id, badge').eq('image_url', url).limit(5),
+      ]);
+
+      const productRefs = products.data ?? [];
+      const subHeroRefs = sub_hero.data ?? [];
+      const carouselRefs = carousel.data ?? [];
+      const total = productRefs.length + subHeroRefs.length + carouselRefs.length;
+
+      let confirmMsg: string;
+      if (total > 0) {
+        const lines: string[] = [];
+        if (productRefs.length > 0) {
+          lines.push(`• 상품 ${productRefs.length}개 (${productRefs.slice(0, 3).map(p => p.name).filter(Boolean).join(', ')}${productRefs.length > 3 ? ' 외' : ''})`);
+        }
+        if (subHeroRefs.length > 0) lines.push(`• 서브 히어로 배너 ${subHeroRefs.length}개`);
+        if (carouselRefs.length > 0) lines.push(`• 메인 캐러셀 슬라이드 ${carouselRefs.length}개`);
+        confirmMsg = `⚠️ 이 이미지는 아래에서 사용 중입니다:\n\n${lines.join('\n')}\n\n${a.bucket}/${a.key}\n\n삭제하면 해당 위치에 이미지가 표시되지 않습니다. 계속 삭제하시겠습니까?`;
+      } else {
+        confirmMsg = `정말 삭제하시겠습니까?\n\n${a.bucket}/${a.key}\n\n(상품/서브 히어로/캐러셀에서는 참조하지 않는 것으로 확인됨)`;
+      }
+      if (!confirm(confirmMsg)) {
+        setDeletingKey(null);
+        return;
+      }
+
       const { error: removeErr } = await supabase.storage.from(a.bucket).remove([a.key]);
       if (removeErr) throw removeErr;
       setAssets(prev => prev.filter(x => !(x.bucket === a.bucket && x.key === a.key)));
