@@ -68,18 +68,26 @@ resource "aws_cloudwatch_metric_alarm" "tg_unhealthy" {
 }
 
 # ---- ALB: high p95 latency ----
-# 2s p95 means real users are waiting. Either app is overloaded, DB is
-# slow, or external API (Supabase / OpenAI) is degraded.
+# 3s p95 sustained over 15min means real users are waiting. Either app
+# is overloaded, DB is slow, or external API (Supabase / OpenAI) is
+# degraded. Originally tuned at 2s × 10min (2 datapoints), but that
+# fired every time a `terraform taint + apply` rolled the EC2 — the
+# cold cache window made p95 spike briefly above 2s before the
+# in-memory cache warmed. Adjusted to 3s × 15min (3 datapoints) so
+# routine deploys don't page the operator while real sustained
+# slowness still does. The `cache_warm_on_deploy` provisioner in
+# wait.tf also pre-warms the cache before the new instance joins the
+# TG, which should keep us well under threshold even during swaps.
 resource "aws_cloudwatch_metric_alarm" "alb_latency_high" {
   alarm_name          = "${var.project_name}-alb-latency-p95"
-  alarm_description   = "ALB target response time p95 > 2s for 10min — app is slow"
+  alarm_description   = "ALB target response time p95 > 3s for 15min — app is slow"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
+  evaluation_periods  = 3
   metric_name         = "TargetResponseTime"
   namespace           = "AWS/ApplicationELB"
   period              = 300
   extended_statistic  = "p95"
-  threshold           = 2
+  threshold           = 3
   treat_missing_data  = "notBreaching"
 
   dimensions = {
