@@ -134,11 +134,11 @@ async function ContactInfoView({ lang, displayTitle }: { lang: string; displayTi
       <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-10 tracking-widest flex-wrap gap-y-1">
         <Link href={`/${lang}`} className="hover:text-black transition-colors">{lb.home}</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
-        <span className="text-[#111111]">{lb.contact}</span>
+        <span className="text-brand-ink">{lb.contact}</span>
       </div>
       <div className="mb-12 border-b border-neutral-200 pb-8">
         <p className="text-[11px] font-bold tracking-[0.25em] text-neutral-400 uppercase mb-2">{lb.subtitle}</p>
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#111111]">{displayTitle}</h1>
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-brand-ink">{displayTitle}</h1>
       </div>
       {rows.length === 0 ? (
         <div className="text-center py-24 text-neutral-400 text-sm">{lb.empty}</div>
@@ -154,7 +154,7 @@ async function ContactInfoView({ lang, displayTitle }: { lang: string; displayTi
                   >
                     {r.label}
                   </th>
-                  <td className="px-4 md:px-6 py-4 md:py-5 text-sm text-[#111111] whitespace-pre-line align-top">
+                  <td className="px-4 md:px-6 py-4 md:py-5 text-sm text-brand-ink whitespace-pre-line align-top">
                     {r.href ? (
                       <a href={r.href} className="hover:underline underline-offset-4 break-all">{r.value}</a>
                     ) : (
@@ -202,7 +202,7 @@ export default async function MenuPage({ slug, lang, page }: Props) {
         <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
           <Link href={`/${lang}`} className="hover:text-black transition-colors">HOME</Link>
           <ChevronRight className="w-3 h-3 mx-2" />
-          <span className="text-[#111]">{displayTitle}</span>
+          <span className="text-brand-ink">{displayTitle}</span>
         </div>
         {cards.length === 0 ? (
           <div className="py-20 text-center text-neutral-400 text-sm">{lbEmpty}</div>
@@ -251,7 +251,7 @@ export default async function MenuPage({ slug, lang, page }: Props) {
         <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
           <Link href={`/${lang}`} className="hover:text-black transition-colors">HOME</Link>
           <ChevronRight className="w-3 h-3 mx-2" />
-          <span className="text-[#111]">{title}</span>
+          <span className="text-brand-ink">{title}</span>
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight mb-8">{title}</h1>
         {content ? (
@@ -280,7 +280,7 @@ export default async function MenuPage({ slug, lang, page }: Props) {
       <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
         <Link href={`/${lang}`} className="hover:text-black transition-colors">HOME</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
-        <span className="text-[#111]">{title}</span>
+        <span className="text-brand-ink">{title}</span>
       </div>
 
       <div className="flex items-end justify-between mb-8 pb-6 border-b-2 border-[#111]">
@@ -314,8 +314,8 @@ export default async function MenuPage({ slug, lang, page }: Props) {
               <Link key={post.id} href={`/${lang}/menus/${slug}/${post.id}`} className="block sm:grid sm:grid-cols-[1fr_120px_120px] sm:gap-4 py-4 hover:bg-neutral-50 transition-colors -mx-2 px-2 rounded">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-neutral-300 font-mono w-6 hidden sm:inline-block">{totalCount - ((currentPage - 1) * PAGE_SIZE) - idx}</span>
-                  <span className="text-[13px] font-semibold text-[#111] line-clamp-1">{post.title}</span>
-                  {post.is_admin_post && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-[#111] text-white rounded">공지</span>}
+                  <span className="text-[13px] font-semibold text-brand-ink line-clamp-1">{post.title}</span>
+                  {post.is_admin_post && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-brand-ink text-white rounded">공지</span>}
                 </div>
                 <span className="text-xs text-neutral-500 text-center hidden sm:block">{post.author_name}</span>
                 <span className="text-xs text-neutral-400 text-right hidden sm:block">{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>

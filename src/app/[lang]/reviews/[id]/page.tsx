@@ -42,11 +42,11 @@ export default async function ReviewDetailPage({
         <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest flex-wrap gap-y-1">
           <Link href={`/${lang}`} className="hover:text-black transition-colors">{lb.home}</Link>
           <ChevronRight className="w-3 h-3 mx-2" />
-          <span className="text-[#111111]">{lb.reviews}</span>
+          <span className="text-brand-ink">{lb.reviews}</span>
           {review.title && (
             <>
               <ChevronRight className="w-3 h-3 mx-2" />
-              <span className="text-[#111111] truncate max-w-xs">{review.title}</span>
+              <span className="text-brand-ink truncate max-w-xs">{review.title}</span>
             </>
           )}
         </div>
@@ -54,7 +54,7 @@ export default async function ReviewDetailPage({
         {/* Title */}
         {review.title && (
           <div className="mb-10 pb-8 border-b border-neutral-200">
-            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-[#111111] leading-tight">
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-brand-ink leading-tight">
               {review.title}
             </h1>
           </div>

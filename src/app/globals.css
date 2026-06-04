@@ -36,7 +36,14 @@
    - Fallback: system sans-serif.
    ────────────────────────────────────────────────────────── */
 body {
-  font-family: "tablet-gothic", "Tablet Gothic",
+  /* Admin theme token first (set via tokensToCss in lib/theme/tokens.ts
+     when an admin picks a font in /admin/theme), with the brand stack
+     as the fallback when the token is unset. Var fallback is written
+     inline (var(--name, FALLBACK)) so an undefined --font-body doesn't
+     kill the whole declaration to `initial`. Headings pick up
+     font_display the same way via the h1..h6 rule below. */
+  font-family: var(--font-body, "tablet-gothic"),
+               "Tablet Gothic",
                var(--font-freesentation),
                -apple-system, BlinkMacSystemFont,
                "Segoe UI", Roboto, sans-serif;
@@ -57,6 +64,23 @@ body {
      this; older Safari falls back to visible (the current behavior),
      so this is a progressive enhancement, not a regression. */
   overflow-x: clip;
+}
+
+/* Headings respect the admin's display-font token, falling back to the
+   body font when not set. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display, var(--font-body), inherit);
+}
+
+/* Admin radius_button token consumed by the storefront. Buttons that
+   don't pin their own rounded-* class inherit the admin's choice; if
+   the token is unset the existing visual stays the same (no radius
+   applied, components fall back to whatever Tailwind defaults give). */
+button:not([class*="rounded"]),
+[role="button"]:not([class*="rounded"]),
+input[type="submit"]:not([class*="rounded"]),
+input[type="button"]:not([class*="rounded"]) {
+  border-radius: var(--radius-button, 0);
 }
 
 

@@ -24,15 +24,15 @@ export default async function PostDetailPage({ slug, postId, lang }: Props) {
         <ChevronRight className="w-3 h-3 mx-2" />
         <Link href={`/${lang}/menus/${slug}`} className="hover:text-black transition-colors">{menuTitle}</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
-        <span className="text-[#111]">{lang === 'kr' ? '게시글' : 'Post'}</span>
+        <span className="text-brand-ink">{lang === 'kr' ? '게시글' : 'Post'}</span>
       </div>
 
       <article>
         <div className="border-b-2 border-[#111] pb-6 mb-8">
           <div className="flex items-center gap-2 mb-3">
-            {post.is_admin_post && <span className="px-2 py-0.5 text-[10px] font-bold bg-[#111] text-white rounded">공지</span>}
+            {post.is_admin_post && <span className="px-2 py-0.5 text-[10px] font-bold bg-brand-ink text-white rounded">공지</span>}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#111] mb-4">{post.title}</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-brand-ink mb-4">{post.title}</h1>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 text-xs text-neutral-400">
               <span>{post.author_name}</span>

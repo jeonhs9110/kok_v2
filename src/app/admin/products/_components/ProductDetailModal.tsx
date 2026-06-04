@@ -527,7 +527,7 @@ export default function ProductDetailModal({
                     {hasDiscount && (
                       <span className="text-[#f15a24] font-bold text-base mb-0.5 tracking-tight">{discountPct}%</span>
                     )}
-                    <span className="text-2xl font-extrabold tracking-tight text-[#111]">
+                    <span className="text-2xl font-extrabold tracking-tight text-brand-ink">
                       {p.toLocaleString()}<span className="text-base font-bold ml-0.5">원</span>
                     </span>
                     {hasDiscount && (
@@ -749,7 +749,7 @@ export default function ProductDetailModal({
                               }
                               className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition ${
                                 checked
-                                  ? 'bg-[#111] text-white border-[#111]'
+                                  ? 'bg-brand-ink text-white border-[#111]'
                                   : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                               }`}
                             >
@@ -807,7 +807,7 @@ export default function ProductDetailModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-[#111111] text-white px-8 py-2.5 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="bg-brand-ink text-white px-8 py-2.5 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>

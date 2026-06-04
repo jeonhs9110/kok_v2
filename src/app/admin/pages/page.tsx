@@ -193,7 +193,7 @@ export default function PagesAdminPage() {
           <p className="text-sm text-gray-500 mt-1">메뉴에 표시할 페이지를 추가하고 관리하세요 (다국어 지원)</p>
         </div>
         <button onClick={() => setIsModalOpen(true)}
-          className="bg-[#111111] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-black transition-colors flex items-center gap-2">
+          className="bg-brand-ink text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-black transition-colors flex items-center gap-2">
           <Plus className="w-4 h-4" /> 새 페이지
         </button>
       </div>
@@ -421,7 +421,7 @@ export default function PagesAdminPage() {
                   취소
                 </button>
                 <button type="submit" disabled={isSubmitting}
-                  className="bg-[#111111] text-white px-8 py-2.5 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-50 flex items-center gap-2">
+                  className="bg-brand-ink text-white px-8 py-2.5 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-50 flex items-center gap-2">
                   {isSubmitting ? (
                     <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 저장 중...</>
                   ) : editingId ? '수정 저장' : '페이지 저장'}

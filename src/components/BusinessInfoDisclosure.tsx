@@ -69,7 +69,7 @@ export default async function BusinessInfoDisclosure({ lang, variant = 'terms' }
 
   return (
     <section className="mt-12 pt-8 border-t border-neutral-200">
-      <h2 className="text-base font-bold text-[#111] mb-4">{L.title}</h2>
+      <h2 className="text-base font-bold text-brand-ink mb-4">{L.title}</h2>
       <dl className="text-sm text-neutral-600 grid grid-cols-1 sm:grid-cols-[max-content_1fr] gap-x-6 gap-y-2 leading-relaxed">
         {companyName && (<><dt className="font-semibold text-neutral-700">{L.company}</dt><dd>{companyName}</dd></>)}
         {biz.ceo_name && (<><dt className="font-semibold text-neutral-700">{L.ceo}</dt><dd>{biz.ceo_name}</dd></>)}
@@ -82,7 +82,7 @@ export default async function BusinessInfoDisclosure({ lang, variant = 'terms' }
 
       {showPrivacyBlock && (
         <div className="mt-6 pt-6 border-t border-neutral-100">
-          <h3 className="text-sm font-bold text-[#111] mb-2">{L.privacyOfficerTitle}</h3>
+          <h3 className="text-sm font-bold text-brand-ink mb-2">{L.privacyOfficerTitle}</h3>
           <p className="text-sm text-neutral-600">
             {biz.privacy_officer_name}
             {biz.privacy_officer_email && ` · ${biz.privacy_officer_email}`}

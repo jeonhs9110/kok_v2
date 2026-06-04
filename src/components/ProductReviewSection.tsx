@@ -130,8 +130,8 @@ export default function ProductReviewSection({ productId, lang }: Props) {
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <MessageCircle className="w-5 h-5 text-[#111]" />
-            <h2 className="text-lg font-bold tracking-widest uppercase text-[#111]">
+            <MessageCircle className="w-5 h-5 text-brand-ink" />
+            <h2 className="text-lg font-bold tracking-widest uppercase text-brand-ink">
               {lb.heading} <span className="text-neutral-400 font-normal">({reviews.length})</span>
             </h2>
             {reviews.length > 0 && (
@@ -144,7 +144,7 @@ export default function ProductReviewSection({ productId, lang }: Props) {
           <button
             type="button"
             onClick={() => { setShowForm(v => !v); setFeedback(null); }}
-            className="px-4 py-2 bg-[#111] text-white text-xs font-bold tracking-widest hover:bg-black transition-colors"
+            className="px-4 py-2 bg-brand-ink text-white text-xs font-bold tracking-widest hover:bg-black transition-colors"
           >
             {lb.write}
           </button>
@@ -194,7 +194,7 @@ export default function ProductReviewSection({ productId, lang }: Props) {
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex items-center gap-2 bg-[#111] text-white px-6 py-2.5 text-xs font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-50"
+                className="inline-flex items-center gap-2 bg-brand-ink text-white px-6 py-2.5 text-xs font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-50"
               >
                 {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 {submitting ? lb.submitting : lb.submit}
@@ -214,13 +214,13 @@ export default function ProductReviewSection({ productId, lang }: Props) {
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2.5">
                     <StarRow value={r.rating} size={14} />
-                    <span className="text-sm font-semibold text-[#111]">{r.author_name}</span>
+                    <span className="text-sm font-semibold text-brand-ink">{r.author_name}</span>
                   </div>
                   <span className="text-[11px] text-neutral-400">
                     {new Date(r.created_at).toLocaleDateString(lang === 'kr' ? 'ko-KR' : 'en-US')}
                   </span>
                 </div>
-                {r.title && <p className="text-sm font-bold text-[#111] mb-1">{r.title}</p>}
+                {r.title && <p className="text-sm font-bold text-brand-ink mb-1">{r.title}</p>}
                 <p className="text-sm text-neutral-700 leading-relaxed whitespace-pre-line break-words">
                   {r.content}
                 </p>

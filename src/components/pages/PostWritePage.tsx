@@ -118,9 +118,9 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
         <div className="w-16 h-16 rounded-full bg-neutral-50 flex items-center justify-center mx-auto mb-6">
           <LogIn className="w-7 h-7 text-neutral-400" />
         </div>
-        <h2 className="text-xl font-bold text-[#111] mb-2">{lang === 'kr' ? '로그인이 필요합니다' : 'Sign in required'}</h2>
+        <h2 className="text-xl font-bold text-brand-ink mb-2">{lang === 'kr' ? '로그인이 필요합니다' : 'Sign in required'}</h2>
         <p className="text-sm text-neutral-400 mb-6">{lang === 'kr' ? '게시글을 작성하려면 로그인해 주세요.' : 'Please sign in to write a post.'}</p>
-        <Link href="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-[#111] text-white text-sm font-bold tracking-wider hover:bg-black transition-colors">
+        <Link href="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-brand-ink text-white text-sm font-bold tracking-wider hover:bg-black transition-colors">
           <LogIn className="w-4 h-4" /> {lang === 'kr' ? '로그인하기' : 'Sign In'}
         </Link>
       </div>
@@ -138,7 +138,7 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
         <ChevronRight className="w-3 h-3 mx-2" />
         <Link href={`/${lang}/menus/${menuSlug}`} className="hover:text-black transition-colors">{menuTitle}</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
-        <span className="text-[#111]">{pageTitle}</span>
+        <span className="text-brand-ink">{pageTitle}</span>
       </div>
 
       <h1 className="text-2xl font-extrabold tracking-tight mb-8">{pageTitle}</h1>
@@ -151,7 +151,7 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
         {isAdmin && (
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={isNotice} onChange={e => setIsNotice(e.target.checked)} className="w-4 h-4 rounded accent-[#111]" />
-            <span className="text-sm font-semibold text-[#111]">{lang === 'kr' ? '공지로 등록' : 'Pin as Notice'}</span>
+            <span className="text-sm font-semibold text-brand-ink">{lang === 'kr' ? '공지로 등록' : 'Pin as Notice'}</span>
           </label>
         )}
         <div>
@@ -172,7 +172,7 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
           <Link href={`/${lang}/menus/${menuSlug}`} className="px-6 py-3 border border-neutral-200 text-neutral-600 text-sm font-semibold hover:bg-neutral-50 transition-colors">
             {lang === 'kr' ? '취소' : 'Cancel'}
           </Link>
-          <button type="submit" disabled={submitting} className="px-8 py-3 bg-[#111] text-white text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-50">
+          <button type="submit" disabled={submitting} className="px-8 py-3 bg-brand-ink text-white text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-50">
             {submitting
               ? (lang === 'kr' ? '저장 중...' : 'Saving...')
               : isEdit

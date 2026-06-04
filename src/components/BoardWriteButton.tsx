@@ -37,7 +37,7 @@ export default function BoardWriteButton({ href, label, alwaysShow = false }: Pr
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#111] text-white text-[13px] font-bold tracking-wider hover:bg-black transition-colors"
+      className="inline-flex items-center gap-2 px-5 py-2.5 bg-brand-ink text-white text-[13px] font-bold tracking-wider hover:bg-black transition-colors"
     >
       <Pencil className="w-3.5 h-3.5" />
       {label}

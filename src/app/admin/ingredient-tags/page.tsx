@@ -126,7 +126,7 @@ export default function IngredientTagsPage() {
               </div>
               <button
                 onClick={() => addRow(cat.value)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#111] text-white rounded text-xs font-semibold hover:bg-black"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-ink text-white rounded text-xs font-semibold hover:bg-black"
               >
                 <Plus className="w-3.5 h-3.5" /> 태그 추가
               </button>
@@ -169,7 +169,7 @@ export default function IngredientTagsPage() {
                         <button
                           onClick={() => save(i)}
                           disabled={saving === (r.id || `new-${i}`)}
-                          className="px-3 py-1.5 bg-[#111] text-white text-xs font-bold rounded hover:bg-black flex items-center gap-1 disabled:opacity-50"
+                          className="px-3 py-1.5 bg-brand-ink text-white text-xs font-bold rounded hover:bg-black flex items-center gap-1 disabled:opacity-50"
                         >
                           <Save className="w-3.5 h-3.5" />
                           {saving === (r.id || `new-${i}`) ? '저장 중' : (r.isNew ? '추가' : '저장')}

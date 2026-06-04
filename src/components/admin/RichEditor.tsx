@@ -262,7 +262,7 @@ export default function RichEditor({ content, onChange, uploadPath = 'editor', m
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="px-2.5 py-1.5 text-xs rounded bg-[#111] text-white hover:bg-black transition-colors flex items-center gap-1.5 disabled:opacity-60"
+          className="px-2.5 py-1.5 text-xs rounded bg-brand-ink text-white hover:bg-black transition-colors flex items-center gap-1.5 disabled:opacity-60"
         >
           {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
           {uploading ? '업로드 중...' : '이미지 업로드'}

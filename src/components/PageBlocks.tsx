@@ -111,7 +111,7 @@ function HeroBlock({
         {block.cta_text && block.cta_link && (
           <Link
             href={block.cta_link}
-            className="inline-flex items-center gap-2 self-start px-6 py-3 bg-[#111] text-white text-[12px] font-bold tracking-wider hover:bg-black transition-colors"
+            className="inline-flex items-center gap-2 self-start px-6 py-3 bg-brand-ink text-white text-[12px] font-bold tracking-wider hover:bg-black transition-colors"
           >
             {block.cta_text}
           </Link>
@@ -185,8 +185,8 @@ function CtaBlock({ block }: { block: Extract<PageBlock, { type: 'cta' }> }) {
   const justify = align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start';
   const buttonClass =
     style === 'primary'
-      ? 'bg-[#111] text-white hover:bg-black'
-      : 'bg-white text-[#111] border border-neutral-200 hover:bg-neutral-50';
+      ? 'bg-brand-ink text-white hover:bg-black'
+      : 'bg-white text-brand-ink border border-neutral-200 hover:bg-neutral-50';
   return (
     <section className={`flex ${justify} px-4 sm:px-6`}>
       <Link

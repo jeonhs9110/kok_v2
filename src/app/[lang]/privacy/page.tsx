@@ -23,9 +23,9 @@ export default async function PrivacyPage({ params }: { params: Promise<{ lang: 
       <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
         <Link href={`/${lang}`} className="hover:text-black transition-colors">HOME</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
-        <span className="text-[#111]">{title}</span>
+        <span className="text-brand-ink">{title}</span>
       </div>
-      <h1 className="text-3xl font-extrabold tracking-tight text-[#111] mb-8">{title}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink mb-8">{title}</h1>
       <div className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">{content}</div>
       <BusinessInfoDisclosure lang={lang} variant="privacy" />
     </div>

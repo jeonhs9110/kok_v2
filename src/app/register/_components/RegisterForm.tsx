@@ -202,9 +202,9 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
     return (
       <div className="w-full max-w-sm text-center">
         <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 font-extrabold text-2xl">✓</div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#111] mb-4">{t.successTitle}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-brand-ink mb-4">{t.successTitle}</h1>
         <p className="text-sm text-gray-500 mb-8">{t.successMsg}</p>
-        <Link href="/login" className="px-8 py-3 bg-[#111] text-white tracking-widest text-xs font-bold w-full block">{t.backToLogin}</Link>
+        <Link href="/login" className="px-8 py-3 bg-brand-ink text-white tracking-widest text-xs font-bold w-full block">{t.backToLogin}</Link>
       </div>
     );
   }
@@ -213,9 +213,9 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
         <div className="w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-5 bg-gray-50">
-          <UserPlus className="w-5 h-5 text-[#111]" />
+          <UserPlus className="w-5 h-5 text-brand-ink" />
         </div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-[#111] mb-2">{t.title}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight text-brand-ink mb-2">{t.title}</h1>
         <p className="text-sm text-gray-500">{t.subtitle}</p>
       </div>
 
@@ -264,7 +264,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
                     value={formData[f.key] || ''}
                     onChange={e => setFormData(p => ({ ...p, [f.key]: e.target.value }))}
                     required={f.required}
-                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-[#111] outline-none focus:border-black transition"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-brand-ink outline-none focus:border-black transition"
                   >
                     <option value="">{lang === 'kr' ? '선택해주세요' : 'Select...'}</option>
                     {options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -285,7 +285,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
                   onChange={e => setFormData(p => ({ ...p, [f.key]: e.target.value }))}
                   required={f.required}
                   placeholder={label}
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-[#111] placeholder:text-gray-400 outline-none focus:border-black transition"
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-brand-ink placeholder:text-gray-400 outline-none focus:border-black transition"
                 />
               </div>
             );
@@ -321,7 +321,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-[#111] text-white py-3.5 font-bold tracking-widest text-[13px] rounded-lg hover:bg-black hover:shadow-lg transition-all disabled:opacity-50"
+          className="w-full bg-brand-ink text-white py-3.5 font-bold tracking-widest text-[13px] rounded-lg hover:bg-black hover:shadow-lg transition-all disabled:opacity-50"
         >
           {isLoading ? t.creating : t.register}
         </button>

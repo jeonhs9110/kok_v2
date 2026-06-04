@@ -34,7 +34,7 @@ export default function RootRouteError({
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white px-6 text-center">
       <div className="max-w-md space-y-5">
-        <h1 className="text-xl font-bold text-[#111]">
+        <h1 className="text-xl font-bold text-brand-ink">
           일시적인 오류가 발생했어요
         </h1>
         <p className="text-sm text-neutral-500 leading-relaxed">
@@ -46,7 +46,7 @@ export default function RootRouteError({
           <button
             type="button"
             onClick={() => reset()}
-            className="bg-[#111] text-white px-6 py-2.5 text-sm font-bold tracking-wider hover:bg-black transition-colors"
+            className="bg-brand-ink text-white px-6 py-2.5 text-sm font-bold tracking-wider hover:bg-black transition-colors"
           >
             다시 시도
           </button>

@@ -15,7 +15,7 @@ export default function ReviewShowcase({ cards, title = 'REVIEW & COMMUNITY', su
     <section className="py-16 md:py-24">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
         <div className="text-center mb-10">
-          <h2 className="text-2xl font-extrabold text-[#111]">{title}</h2>
+          <h2 className="text-2xl font-extrabold text-brand-ink">{title}</h2>
           {subtitle && <p className="text-sm text-neutral-500 mt-2">{subtitle}</p>}
         </div>
 

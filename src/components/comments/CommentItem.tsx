@@ -46,9 +46,9 @@ export default function CommentItem({ comment, replies, lang, postId, onRefresh,
       <div className="py-4">
         {/* Header */}
         <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-[13px] font-semibold text-[#111]">{comment.author_name}</span>
+          <span className="text-[13px] font-semibold text-brand-ink">{comment.author_name}</span>
           {comment.is_admin_comment && (
-            <span className="px-1.5 py-0.5 text-[9px] font-bold bg-[#111] text-white rounded">{l.admin}</span>
+            <span className="px-1.5 py-0.5 text-[9px] font-bold bg-brand-ink text-white rounded">{l.admin}</span>
           )}
           <span className="text-xs text-neutral-400">{new Date(comment.created_at).toLocaleDateString('ko-KR')}</span>
         </div>
@@ -61,7 +61,7 @@ export default function CommentItem({ comment, replies, lang, postId, onRefresh,
           {!isReply && (
             <button
               onClick={() => setShowReplyForm(!showReplyForm)}
-              className="flex items-center gap-1 text-xs text-neutral-400 hover:text-[#111] transition-colors"
+              className="flex items-center gap-1 text-xs text-neutral-400 hover:text-brand-ink transition-colors"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               {l.reply}

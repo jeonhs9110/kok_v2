@@ -214,7 +214,7 @@ export default function PromoBannersAdminPage() {
               <button
                 onClick={() => handleSave(banner)}
                 disabled={saving === banner.id || !banner.image_url}
-                className="w-full bg-[#111111] text-white py-2.5 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full bg-brand-ink text-white py-2.5 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {saving === banner.id ? (
                   <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 저장 중...</>

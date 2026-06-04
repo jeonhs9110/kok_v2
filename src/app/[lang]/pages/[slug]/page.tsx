@@ -58,16 +58,16 @@ export default async function CmsPage({ params }: { params: Promise<{ lang: stri
       <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
         <Link href={`/${lang}`} className="hover:text-black transition-colors">HOME</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
-        <span className="text-[#111111]">{title}</span>
+        <span className="text-brand-ink">{title}</span>
       </div>
 
-      <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-[#111111] mb-8">{title}</h1>
+      <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-brand-ink mb-8">{title}</h1>
 
       {blocks && blocks.length > 0 ? (
         <PageBlocks blocks={blocks} />
       ) : (
         <div
-          className="prose prose-neutral max-w-none prose-headings:font-bold prose-headings:text-[#111111] prose-p:text-neutral-600 prose-a:text-blue-600 prose-img:rounded-lg"
+          className="prose prose-neutral max-w-none prose-headings:font-bold prose-headings:text-brand-ink prose-p:text-neutral-600 prose-a:text-blue-600 prose-img:rounded-lg"
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
         />
       )}

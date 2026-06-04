@@ -172,3 +172,30 @@ export function positionDesktopForKey(key: string | null | undefined) {
   if (!key) return POSITION_DESKTOP_SM.mc;
   return POSITION_DESKTOP_SM[key as PositionKey] ?? POSITION_DESKTOP_SM.mc;
 }
+
+/**
+ * md:-prefixed lookup, same idea as POSITION_DESKTOP_SM but for sections
+ * whose desktop layout kicks in at the md (768px) breakpoint. SubHero
+ * uses md: throughout (`text-3xl md:text-5xl`); routing its desktop
+ * anchor through this map matches the rest of its responsive utilities.
+ */
+export const POSITION_DESKTOP_MD: Record<PositionKey, {
+  align: 'md:items-start' | 'md:items-center' | 'md:items-end';
+  justify: 'md:justify-start' | 'md:justify-center' | 'md:justify-end';
+  textAlign: 'md:text-left' | 'md:text-center' | 'md:text-right';
+}> = {
+  tl: { align: 'md:items-start',  justify: 'md:justify-start',  textAlign: 'md:text-left'   },
+  tc: { align: 'md:items-start',  justify: 'md:justify-center', textAlign: 'md:text-center' },
+  tr: { align: 'md:items-start',  justify: 'md:justify-end',    textAlign: 'md:text-right'  },
+  ml: { align: 'md:items-center', justify: 'md:justify-start',  textAlign: 'md:text-left'   },
+  mc: { align: 'md:items-center', justify: 'md:justify-center', textAlign: 'md:text-center' },
+  mr: { align: 'md:items-center', justify: 'md:justify-end',    textAlign: 'md:text-right'  },
+  bl: { align: 'md:items-end',    justify: 'md:justify-start',  textAlign: 'md:text-left'   },
+  bc: { align: 'md:items-end',    justify: 'md:justify-center', textAlign: 'md:text-center' },
+  br: { align: 'md:items-end',    justify: 'md:justify-end',    textAlign: 'md:text-right'  },
+};
+
+export function positionDesktopMdForKey(key: string | null | undefined) {
+  if (!key) return POSITION_DESKTOP_MD.mc;
+  return POSITION_DESKTOP_MD[key as PositionKey] ?? POSITION_DESKTOP_MD.mc;
+}
