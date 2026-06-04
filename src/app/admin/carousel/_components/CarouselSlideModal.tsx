@@ -254,6 +254,10 @@ export default function CarouselSlideModal({
                   <Upload className="w-8 h-8 mb-2" />
                   <p className="text-sm font-semibold">클릭하여 이미지 업로드</p>
                   <p className="text-xs mt-1">JPG, PNG, WEBP, GIF, MP4 — 최대 20MB</p>
+                  <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+                    권장: <strong className="font-semibold">데스크탑 2400×1500px (16:10) 이상</strong>, 가급적 원본 화질로 업로드해주세요.<br />
+                    출시 시 자동으로 화면 크기에 맞춰 최적화되며 품질은 95%로 유지됩니다.
+                  </p>
                 </div>
               )}
             </div>
