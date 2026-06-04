@@ -136,6 +136,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                   alt={slide.title.replace('\n', ' ') || ''}
                   fill
                   sizes="100vw"
+                  quality={95}
                   priority={isFirst}
                   className="object-cover object-center"
                 />
@@ -242,6 +243,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         alt={slide.title.replace('\n', ' ')}
                         fill
                         sizes="100vw"
+                        quality={95}
                         priority={isFirst}
                         className="object-cover object-center"
                       />
@@ -317,6 +319,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                             alt={slide.title.replace('\n', ' ')}
                             fill
                             sizes="(max-width: 1024px) 50vw, 40vw"
+                            quality={95}
                             priority={isFirst}
                             className="object-cover"
                           />

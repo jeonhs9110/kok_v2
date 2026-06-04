@@ -37,6 +37,12 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // Next 16 requires `qualities` to whitelist every quality value used
+    // via the `quality` prop on <Image>. Hero / sub-hero slides ship at
+    // 95 (admin uploads product photography that needs to read sharp);
+    // everywhere else stays at the framework default (75) so product
+    // grids + thumbnails don't bloat the cache.
+    qualities: [75, 90, 95],
     remotePatterns: [
       // Supabase Storage
       {
