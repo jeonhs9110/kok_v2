@@ -53,7 +53,7 @@ export default function ShopWorldwide({ labels, retailers }: ShopWorldwideProps)
   return (
     <div className="min-h-screen bg-white">
       {/* ── Hero ──────────────────────────────────────────────────────── */}
-      <div className="relative bg-[#111111] text-white overflow-hidden">
+      <div className="relative bg-brand-ink text-white overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <svg viewBox="0 0 800 400" className="w-full h-full" aria-hidden="true">
             {Array.from({ length: 10 }).map((_, i) => (
@@ -236,7 +236,7 @@ export default function ShopWorldwide({ labels, retailers }: ShopWorldwideProps)
                   <p className="text-[10px] font-bold tracking-widest text-neutral-400 uppercase mb-0.5">
                     {country.countryEn}
                   </p>
-                  <p className="text-sm font-bold text-[#111111] leading-snug">{country.country}</p>
+                  <p className="text-sm font-bold text-brand-ink leading-snug">{country.country}</p>
                   <p className="text-[11px] text-neutral-500 mt-1 leading-tight">
                     {country.vendors.length === 1
                       ? country.vendors[0].storeName || '—'
@@ -259,7 +259,7 @@ export default function ShopWorldwide({ labels, retailers }: ShopWorldwideProps)
         <p className="text-[11px] font-bold tracking-widest text-neutral-400 uppercase mb-3">
           {labels.partner_badge}
         </p>
-        <h2 className="text-2xl font-black text-[#111111] mb-4">
+        <h2 className="text-2xl font-black text-brand-ink mb-4">
           {labels.partner_title}
         </h2>
         <p className="text-sm text-neutral-500 max-w-md mx-auto mb-6">
@@ -267,7 +267,7 @@ export default function ShopWorldwide({ labels, retailers }: ShopWorldwideProps)
         </p>
         <a
           href="mailto:global@kokkok.garden"
-          className="inline-flex items-center gap-2 bg-[#111111] text-white px-8 py-3 text-xs font-bold tracking-widest hover:bg-black transition-colors rounded-none"
+          className="inline-flex items-center gap-2 bg-brand-ink text-white px-8 py-3 text-xs font-bold tracking-widest hover:bg-black transition-colors rounded-none"
         >
           global@kokkok.garden
         </a>

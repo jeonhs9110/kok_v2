@@ -82,7 +82,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex h-screen bg-gray-50 font-sans">
       {/* 사이드바 */}
-      <aside className="w-64 bg-[#111111] text-white flex flex-col">
+      <aside className="w-64 bg-brand-ink text-white flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-gray-800">
           <span className="text-lg font-bold tracking-widest">관리자 포털</span>
         </div>

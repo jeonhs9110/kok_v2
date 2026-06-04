@@ -265,7 +265,7 @@ export default function InstagramAdminPage() {
           <button
             onClick={saveConfig}
             disabled={isSavingConfig}
-            className="bg-[#111] text-white px-6 py-2 rounded text-sm font-bold tracking-widest hover:bg-black transition disabled:opacity-40 flex items-center gap-2"
+            className="bg-brand-ink text-white px-6 py-2 rounded text-sm font-bold tracking-widest hover:bg-black transition disabled:opacity-40 flex items-center gap-2"
           >
             {isSavingConfig ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />저장 중...</> : <><Save className="w-4 h-4" />설정 저장</>}
           </button>
@@ -443,7 +443,7 @@ export default function InstagramAdminPage() {
                   <button
                     onClick={() => savePost(slot)}
                     disabled={savingSlot === slot || (!post.image_url && !post.post_url)}
-                    className="w-full bg-[#111] text-white py-1.5 rounded text-xs font-bold tracking-widest hover:bg-black transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1 mt-2"
+                    className="w-full bg-brand-ink text-white py-1.5 rounded text-xs font-bold tracking-widest hover:bg-black transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1 mt-2"
                   >
                     {savingSlot === slot
                       ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />저장 중</>

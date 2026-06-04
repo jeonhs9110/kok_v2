@@ -65,7 +65,7 @@ export default function CommentForm({ postId, parentId, lang, onSubmitted, onCan
         <button
           onClick={handleSubmit}
           disabled={submitting || !authorName.trim() || !content.trim()}
-          className="px-4 py-2 bg-[#111] text-white text-xs font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed rounded"
+          className="px-4 py-2 bg-brand-ink text-white text-xs font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed rounded"
         >
           {submitting ? '...' : l.submit}
         </button>

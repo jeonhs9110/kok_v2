@@ -61,18 +61,18 @@ export default function CartContent() {
         <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
           <Link href={homeHref} className="hover:text-black transition-colors">{lb.home}</Link>
           <ChevronRight className="w-3 h-3 mx-2" />
-          <span className="text-[#111]">{lb.cart}</span>
+          <span className="text-brand-ink">{lb.cart}</span>
         </div>
 
         <div className="min-h-[50vh] flex flex-col items-center justify-center text-center">
           <div className="w-20 h-20 rounded-full bg-neutral-50 flex items-center justify-center mb-6">
             <ShoppingBag className="w-8 h-8 text-neutral-300" />
           </div>
-          <h2 className="text-xl font-extrabold text-[#111] mb-2">{lb.empty}</h2>
+          <h2 className="text-xl font-extrabold text-brand-ink mb-2">{lb.empty}</h2>
           <p className="text-sm text-neutral-400 mb-8">{lb.emptyHint}</p>
           <Link
             href={productsHref}
-            className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#111] text-white text-[13px] font-bold tracking-wider hover:bg-black transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-brand-ink text-white text-[13px] font-bold tracking-wider hover:bg-black transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> {lb.goShop}
           </Link>
@@ -91,12 +91,12 @@ export default function CartContent() {
       <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
         <Link href={homeHref} className="hover:text-black transition-colors">{lb.home}</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
-        <span className="text-[#111]">{lb.cart}</span>
+        <span className="text-brand-ink">{lb.cart}</span>
       </div>
 
       <div className="flex items-end justify-between mb-8 pb-6 border-b-2 border-[#111]">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-[#111]">{lb.cart}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink">{lb.cart}</h1>
           <p className="text-xs text-neutral-400 mt-2">{lb.totalCount(totalCount)}</p>
         </div>
         <button
@@ -139,13 +139,13 @@ export default function CartContent() {
                     </Link>
                     <div className="flex flex-col justify-center min-w-0">
                       <Link href={productHref(item.productId)} className="hover:underline underline-offset-2">
-                        <h3 className="text-[13px] font-bold text-[#111] leading-snug line-clamp-2">{item.name}</h3>
+                        <h3 className="text-[13px] font-bold text-brand-ink leading-snug line-clamp-2">{item.name}</h3>
                       </Link>
                       <div className="flex items-center gap-2 mt-2">
                         {discount > 0 && (
                           <span className="text-[13px] font-extrabold text-[#f15a24]">{discount}%</span>
                         )}
-                        <span className="text-[14px] font-extrabold text-[#111]">{formatPrice(item.price, lang)}</span>
+                        <span className="text-[14px] font-extrabold text-brand-ink">{formatPrice(item.price, lang)}</span>
                       </div>
                       {item.originalPrice > item.price && (
                         <span className="text-[12px] text-neutral-400 line-through mt-0.5">{formatPrice(item.originalPrice, lang)}</span>
@@ -173,7 +173,7 @@ export default function CartContent() {
                   </div>
 
                   <div className="hidden sm:flex justify-end">
-                    <span className="text-[14px] font-extrabold text-[#111]">
+                    <span className="text-[14px] font-extrabold text-brand-ink">
                       {formatPrice(item.price * item.quantity, lang)}
                     </span>
                   </div>
@@ -188,7 +188,7 @@ export default function CartContent() {
                   </div>
 
                   <div className="flex sm:hidden items-center justify-between mt-3">
-                    <span className="text-[13px] font-extrabold text-[#111]">
+                    <span className="text-[13px] font-extrabold text-brand-ink">
                       {formatPrice(item.price * item.quantity, lang)}
                     </span>
                     <button
@@ -206,7 +206,7 @@ export default function CartContent() {
 
         <div className="lg:w-[340px] flex-shrink-0">
           <div className="lg:sticky lg:top-24 border border-neutral-100 rounded-xl p-6 sm:p-8 space-y-5">
-            <h3 className="text-sm font-bold tracking-widest text-[#111] uppercase pb-4 border-b border-neutral-100">{lb.summary}</h3>
+            <h3 className="text-sm font-bold tracking-widest text-brand-ink uppercase pb-4 border-b border-neutral-100">{lb.summary}</h3>
 
             <div className="space-y-3 text-[13px]">
               <div className="flex justify-between">
@@ -221,20 +221,20 @@ export default function CartContent() {
               )}
               <div className="flex justify-between">
                 <span className="text-neutral-500">{lb.shipping}</span>
-                <span className="font-semibold text-[#00693A]">{lb.free}</span>
+                <span className="font-semibold text-brand-primary">{lb.free}</span>
               </div>
             </div>
 
             <div className="pt-5 border-t border-neutral-100">
               <div className="flex justify-between items-end">
-                <span className="text-sm font-bold text-[#111]">{lb.grandTotal}</span>
-                <span className="text-2xl font-extrabold text-[#111]">{formatPrice(totalPrice, lang)}</span>
+                <span className="text-sm font-bold text-brand-ink">{lb.grandTotal}</span>
+                <span className="text-2xl font-extrabold text-brand-ink">{formatPrice(totalPrice, lang)}</span>
               </div>
             </div>
 
             <button
               onClick={() => alert(lb.checkoutWip)}
-              className="w-full py-4 bg-[#111] text-white text-[13px] font-bold tracking-widest hover:bg-black transition-colors"
+              className="w-full py-4 bg-brand-ink text-white text-[13px] font-bold tracking-widest hover:bg-black transition-colors"
             >
               {lb.checkout}
             </button>

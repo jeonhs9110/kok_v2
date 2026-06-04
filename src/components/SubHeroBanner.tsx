@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { fontFamilyForKey, positionForKey, type PositionKey } from '@/lib/typography/options';
+import { fontFamilyForKey, positionForKey, positionDesktopMdForKey, type PositionKey } from '@/lib/typography/options';
 
 export interface SubHeroBannerData {
   id: string;
@@ -23,6 +23,8 @@ export interface SubHeroBannerData {
   title_color?: string | null;
   subtitle_color?: string | null;
   text_position?: PositionKey | string | null;
+  // Migration 28: separate mobile anchor.
+  text_position_mobile?: PositionKey | string | null;
 }
 
 interface Props {
@@ -60,7 +62,12 @@ export default function SubHeroBanner({ banner }: Props) {
         // Resolve admin choices into Tailwind utilities + inline style.
         // Each helper has a sensible fallback so a freshly-migrated row
         // (all-NULL columns) renders the same as the pre-Phase-2 layout.
-        const pos = positionForKey(banner.text_position);
+        //
+        // Migration 28 added text_position_mobile. The mobile picker
+        // feeds the unprefixed utility; the desktop picker feeds the
+        // md:-prefixed lookup — same DOM element carries both.
+        const posMobile = positionForKey(banner.text_position_mobile);
+        const posDesktop = positionDesktopMdForKey(banner.text_position);
         const titleStyle: React.CSSProperties = {
           fontFamily: fontFamilyForKey(banner.title_font_family),
           fontWeight: banner.title_bold === false ? 400 : 900,
@@ -78,7 +85,7 @@ export default function SubHeroBanner({ banner }: Props) {
           ...(subtitleOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${subtitleOffset}px)` }),
         };
         return (
-          <div className={`absolute inset-0 flex flex-col px-6 text-white ${pos.align} ${pos.justify} ${pos.textAlign}`}>
+          <div className={`absolute inset-0 flex flex-col px-6 text-white ${posMobile.align} ${posDesktop.align} ${posMobile.justify} ${posDesktop.justify} ${posMobile.textAlign} ${posDesktop.textAlign}`}>
             {banner.subtitle && (
               <p
                 className={`text-sm md:text-base font-medium tracking-widest uppercase mb-3 opacity-80 max-w-full [word-break:keep-all] [overflow-wrap:break-word] ${subtitleOffset !== 0 ? 'md:text-[length:var(--subtitle-fs)]' : ''}`}

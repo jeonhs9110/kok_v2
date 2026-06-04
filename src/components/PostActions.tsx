@@ -56,7 +56,7 @@ export default function PostActions({ postId, authorId, slug, lang }: PostAction
       {canEdit && (
         <button
           onClick={() => router.push(`/${lang}/menus/${slug}/${postId}/edit`)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-neutral-500 border border-neutral-200 hover:bg-neutral-50 hover:text-[#111] transition-colors rounded"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-neutral-500 border border-neutral-200 hover:bg-neutral-50 hover:text-brand-ink transition-colors rounded"
         >
           <Pencil className="w-3.5 h-3.5" />
           {lang === 'kr' ? '수정' : 'Edit'}

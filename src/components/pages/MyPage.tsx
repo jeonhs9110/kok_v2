@@ -198,13 +198,13 @@ export default function MyPage({ lang }: { lang: string }) {
   const ProfileRow = ({ label, value }: { label: string; value: string }) => (
     <div className="flex justify-between items-center py-3 border-b border-neutral-100 last:border-0">
       <span className="text-sm text-neutral-500 font-medium">{label}</span>
-      <span className="text-sm font-semibold text-[#111]">{value || '—'}</span>
+      <span className="text-sm font-semibold text-brand-ink">{value || '—'}</span>
     </div>
   );
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 bg-white min-h-[60vh]">
-      <h1 className="text-2xl font-extrabold tracking-tight text-[#111] mb-8">{t.title}</h1>
+      <h1 className="text-2xl font-extrabold tracking-tight text-brand-ink mb-8">{t.title}</h1>
 
       <div className="flex gap-1 border-b border-neutral-200 mb-8">
         {tabs.map(({ key, label, icon: Icon }) => (
@@ -243,7 +243,7 @@ export default function MyPage({ lang }: { lang: string }) {
                     <button onClick={() => alert(isKr ? '비밀번호 변경은 추후 지원됩니다.' : 'Password change coming soon.')} className="px-6 py-3 border border-neutral-200 text-sm font-semibold text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors">
                       {t.changePw}
                     </button>
-                    <button onClick={handleLogout} className="px-6 py-3 bg-[#111] text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors flex items-center gap-2">
+                    <button onClick={handleLogout} className="px-6 py-3 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors flex items-center gap-2">
                       <LogOut className="w-4 h-4" />{t.logout}
                     </button>
                   </div>
@@ -298,7 +298,7 @@ export default function MyPage({ lang }: { lang: string }) {
                     <span className="text-sm text-neutral-600">{t.marketingConsent}</span>
                   </label>
                   <div className="flex gap-3 pt-2">
-                    <button onClick={handleSaveProfile} disabled={saving} className="px-6 py-2.5 bg-[#111] text-white text-sm font-semibold rounded-lg hover:bg-black transition flex items-center gap-2 disabled:opacity-50">
+                    <button onClick={handleSaveProfile} disabled={saving} className="px-6 py-2.5 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition flex items-center gap-2 disabled:opacity-50">
                       <Save className="w-4 h-4" />{saving ? '...' : t.save}
                     </button>
                     <button onClick={() => setEditMode(false)} className="px-6 py-2.5 border border-neutral-200 text-sm font-semibold text-neutral-600 rounded-lg hover:bg-neutral-50 transition">
@@ -335,7 +335,7 @@ export default function MyPage({ lang }: { lang: string }) {
                         {item.product_image && <Image src={item.product_image} alt={item.product_name} fill sizes="64px" className="object-cover" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-[#111] truncate">{item.product_name}</p>
+                        <p className="font-semibold text-sm text-brand-ink truncate">{item.product_name}</p>
                         <p className="text-sm text-neutral-500 mt-0.5">
                           {lang === 'kr' ? `${item.product_price.toLocaleString()}원` : `KRW ${item.product_price.toLocaleString()}`}
                         </p>

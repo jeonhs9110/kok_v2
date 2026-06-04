@@ -55,7 +55,7 @@ export default function RecentPage() {
           <p className="text-sm text-neutral-400 mb-8">{lb.emptyDesc}</p>
           <Link
             href={`/${lang}/products`}
-            className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#111] text-white text-[13px] font-bold tracking-wider hover:bg-black transition-colors"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-brand-ink text-white text-[13px] font-bold tracking-wider hover:bg-black transition-colors"
           >
             {lb.shop}
           </Link>
@@ -91,7 +91,7 @@ export default function RecentPage() {
                       {discount > 0 && (
                         <span className="text-[14px] font-extrabold text-[#f15a24]">{discount}%</span>
                       )}
-                      <span className="text-[14px] font-extrabold text-[#111]">
+                      <span className="text-[14px] font-extrabold text-brand-ink">
                         {lang === 'kr' ? `${item.price.toLocaleString()}원` : `KRW ${item.price.toLocaleString()}`}
                       </span>
                     </div>

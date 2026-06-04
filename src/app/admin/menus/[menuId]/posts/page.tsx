@@ -80,7 +80,7 @@ export default function PostsAdminPage() {
       </div>
 
       <div className="flex justify-end">
-        <button onClick={() => { setEditingId(null); setForm({ title: '', content: '', author_name: '관리자' }); setModalOpen(true); }} className="flex items-center gap-2 px-4 py-2.5 bg-[#111] text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
+        <button onClick={() => { setEditingId(null); setForm({ title: '', content: '', author_name: '관리자' }); setModalOpen(true); }} className="flex items-center gap-2 px-4 py-2.5 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
           <Plus className="w-4 h-4" /> 게시글 추가
         </button>
       </div>
@@ -149,7 +149,7 @@ export default function PostsAdminPage() {
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
               <button onClick={resetForm} className="px-4 py-2.5 text-sm text-gray-600">취소</button>
-              <button onClick={handleSave} className="px-6 py-2.5 bg-[#111] text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
+              <button onClick={handleSave} className="px-6 py-2.5 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
                 {editingId ? '수정' : '추가'}
               </button>
             </div>

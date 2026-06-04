@@ -138,7 +138,7 @@ export default function MenusAdminPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <p className="text-sm text-gray-500">헤더 내비게이션 메뉴를 관리합니다. 각 메뉴는 단순 페이지 또는 게시판 형태를 가질 수 있습니다.</p>
-        <button onClick={() => openAdd()} className="flex items-center gap-2 px-4 py-2.5 bg-[#111] text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
+        <button onClick={() => openAdd()} className="flex items-center gap-2 px-4 py-2.5 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
           <Plus className="w-4 h-4" /> 메뉴 추가
         </button>
       </div>
@@ -285,7 +285,7 @@ export default function MenusAdminPage() {
 
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
               <button onClick={() => setModalOpen(false)} className="px-4 py-2.5 text-sm text-gray-600 hover:text-black transition-colors">취소</button>
-              <button onClick={handleSave} className="px-6 py-2.5 bg-[#111] text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
+              <button onClick={handleSave} className="px-6 py-2.5 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
                 {editingId ? '수정' : '추가'}
               </button>
             </div>

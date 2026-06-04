@@ -148,7 +148,7 @@ export default function ReviewsAdminPage() {
 
       <button
         onClick={addRow}
-        className="flex items-center gap-2 px-4 py-2 bg-[#111] text-white rounded-lg text-sm font-semibold hover:bg-black transition"
+        className="flex items-center gap-2 px-4 py-2 bg-brand-ink text-white rounded-lg text-sm font-semibold hover:bg-black transition"
       >
         <Plus className="w-4 h-4" /> 리뷰 카드 추가
       </button>
@@ -246,7 +246,7 @@ export default function ReviewsAdminPage() {
               onClick={() => save(i)}
               disabled={saving === (r.id ?? `new-${i}`)}
               className={`px-5 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition ${
-                savedId && savedId === r.id ? 'bg-green-500 text-white' : 'bg-[#111] text-white hover:bg-black'
+                savedId && savedId === r.id ? 'bg-green-500 text-white' : 'bg-brand-ink text-white hover:bg-black'
               } disabled:opacity-50`}
             >
               <Save className="w-4 h-4" />

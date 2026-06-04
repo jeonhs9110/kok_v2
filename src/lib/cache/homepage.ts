@@ -84,7 +84,7 @@ export const getCachedSubHero = unstable_cache(
             title_font_family, subtitle_font_family,
             title_bold, title_italic, title_underline,
             subtitle_bold, subtitle_italic, subtitle_underline,
-            title_color, subtitle_color, text_position
+            title_color, subtitle_color, text_position, text_position_mobile
           `)
           .eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
         QUERY_BUDGET_MS
@@ -110,6 +110,7 @@ export const getCachedSubHero = unstable_cache(
         title_color: data.title_color,
         subtitle_color: data.subtitle_color,
         text_position: data.text_position,
+        text_position_mobile: data.text_position_mobile,
       };
     } catch (err) {
       console.error('[cache:subhero] failed:', err);

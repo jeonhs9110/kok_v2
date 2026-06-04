@@ -33,6 +33,10 @@ interface SubHero {
   title_color: string | null;
   subtitle_color: string | null;
   text_position: PositionKey;
+  // Migration 28: separate anchor for the mobile breakpoint so the
+  // admin can place text wherever doesn't collide with the product
+  // image on a phone, without changing the desktop layout.
+  text_position_mobile: PositionKey;
 }
 
 const EMPTY: SubHero = {
@@ -43,6 +47,7 @@ const EMPTY: SubHero = {
   subtitle_bold: false, subtitle_italic: false, subtitle_underline: false,
   title_color: null, subtitle_color: null,
   text_position: 'mc',
+  text_position_mobile: 'mc',
 };
 
 export default function SubHeroAdminPage() {
@@ -50,6 +55,10 @@ export default function SubHeroAdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  // Preview-only toggle so the admin can see how the banner reads at
+  // each breakpoint without leaving the page. Same pattern as the
+  // carousel modal preview.
+  const [previewView, setPreviewView] = useState<'pc' | 'mobile'>('pc');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { fetchBanner(); }, []);
@@ -112,6 +121,7 @@ export default function SubHeroAdminPage() {
         title_color: banner.title_color,
         subtitle_color: banner.subtitle_color,
         text_position: banner.text_position,
+        text_position_mobile: banner.text_position_mobile,
       };
       if (banner.id) {
         const { error } = await supabase.from('sub_hero_banners').update(payload).eq('id', banner.id);
@@ -151,9 +161,24 @@ export default function SubHeroAdminPage() {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">미리보기</label>
-            <span className="text-[10px] text-gray-400">실제 화면 비율 축소판</span>
+            <div className="inline-flex bg-gray-100 rounded p-0.5 text-[10px] font-bold">
+              {(['pc', 'mobile'] as const).map(v => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setPreviewView(v)}
+                  className={`px-2.5 py-1 rounded transition-colors ${
+                    previewView === v ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-black'
+                  }`}
+                >
+                  {v === 'pc' ? 'PC' : '모바일'}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="relative w-full aspect-[21/9] rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-100">
+          <div className={`relative rounded-lg overflow-hidden border border-gray-200 shadow-sm bg-gray-100 mx-auto ${
+            previewView === 'mobile' ? 'w-[220px] aspect-[9/14]' : 'w-full aspect-[21/9]'
+          }`}>
             {banner.image_url ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img src={banner.image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -166,7 +191,9 @@ export default function SubHeroAdminPage() {
               // Mirror SubHeroBanner.tsx so the admin sees the actual
               // anchor, font, weight, color, and decoration as they
               // toggle them. Sizes are still halved to fit the editor.
-              const pos = positionForKey(banner.text_position);
+              const pos = positionForKey(
+                previewView === 'mobile' ? banner.text_position_mobile : banner.text_position
+              );
               return (
                 <div className={`absolute inset-0 flex flex-col px-6 ${pos.align} ${pos.justify} ${pos.textAlign}`}>
                   {banner.title && (
@@ -374,10 +401,22 @@ export default function SubHeroAdminPage() {
             }))}
             defaultColor="#ffffff"
           />
-          <PositionPicker
-            value={banner.text_position}
-            onChange={pos => setBanner(prev => ({ ...prev, text_position: pos }))}
-          />
+          {/* Dual anchor: text can be placed differently on desktop vs
+              mobile (migration 28). Mirrors the carousel modal pattern
+              from PR #89 so the admin gets consistent controls across
+              both editors. */}
+          <div className="grid grid-cols-2 gap-3">
+            <PositionPicker
+              label="PC 텍스트 위치 (md+)"
+              value={banner.text_position}
+              onChange={pos => setBanner(prev => ({ ...prev, text_position: pos }))}
+            />
+            <PositionPicker
+              label="모바일 텍스트 위치"
+              value={banner.text_position_mobile}
+              onChange={pos => setBanner(prev => ({ ...prev, text_position_mobile: pos }))}
+            />
+          </div>
         </div>
 
         {/* Link URL */}
@@ -409,7 +448,7 @@ export default function SubHeroAdminPage() {
         <button
           onClick={handleSave}
           disabled={isSaving || !banner.image_url}
-          className="w-full bg-[#111111] text-white py-3 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full bg-brand-ink text-white py-3 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isSaving ? (
             <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 저장 중...</>

@@ -30,7 +30,7 @@ export default function Pagination({ currentPage, totalPages, basePath }: Pagina
   return (
     <nav className="flex items-center justify-center gap-1 mt-10 pt-6 border-t border-neutral-100">
       {currentPage > 1 ? (
-        <Link href={href(currentPage - 1)} className="w-8 h-8 flex items-center justify-center text-neutral-400 hover:text-[#111] transition-colors">
+        <Link href={href(currentPage - 1)} className="w-8 h-8 flex items-center justify-center text-neutral-400 hover:text-brand-ink transition-colors">
           <ChevronLeft className="w-4 h-4" />
         </Link>
       ) : (
@@ -43,18 +43,18 @@ export default function Pagination({ currentPage, totalPages, basePath }: Pagina
         p === '...' ? (
           <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-neutral-300 text-xs">···</span>
         ) : p === currentPage ? (
-          <span key={p} className="w-8 h-8 flex items-center justify-center text-[13px] font-bold text-white bg-[#111] rounded">
+          <span key={p} className="w-8 h-8 flex items-center justify-center text-[13px] font-bold text-white bg-brand-ink rounded">
             {p}
           </span>
         ) : (
-          <Link key={p} href={href(p)} className="w-8 h-8 flex items-center justify-center text-[13px] text-neutral-500 hover:text-[#111] hover:font-semibold transition-colors">
+          <Link key={p} href={href(p)} className="w-8 h-8 flex items-center justify-center text-[13px] text-neutral-500 hover:text-brand-ink hover:font-semibold transition-colors">
             {p}
           </Link>
         )
       )}
 
       {currentPage < totalPages ? (
-        <Link href={href(currentPage + 1)} className="w-8 h-8 flex items-center justify-center text-neutral-400 hover:text-[#111] transition-colors">
+        <Link href={href(currentPage + 1)} className="w-8 h-8 flex items-center justify-center text-neutral-400 hover:text-brand-ink transition-colors">
           <ChevronRight className="w-4 h-4" />
         </Link>
       ) : (

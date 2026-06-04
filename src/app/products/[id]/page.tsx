@@ -33,7 +33,7 @@ export default async function ProductDetail({ params }: { params: Promise<{ id: 
         <ChevronRight className="w-3 h-3 mx-2" />
         <Link href="/products" className="hover:text-black transition-colors">SHOP</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
-        <span className="text-[#111111]">{productData.ingredient}</span>
+        <span className="text-brand-ink">{productData.ingredient}</span>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-24">
@@ -44,7 +44,7 @@ export default async function ProductDetail({ params }: { params: Promise<{ id: 
               Target: 1000x1200 (5:6)
             </div>
             {id.includes('_new') && (
-              <span className="absolute top-4 left-4 bg-[#111111] text-white text-[10px] font-bold px-2 py-1 tracking-widest z-10">NEW</span>
+              <span className="absolute top-4 left-4 bg-brand-ink text-white text-[10px] font-bold px-2 py-1 tracking-widest z-10">NEW</span>
             )}
             <Image src={productData.imageUrl} alt={name} fill sizes="(max-width: 768px) 100vw, 50vw" priority className="object-cover mix-blend-multiply" />
           </div>
@@ -53,23 +53,23 @@ export default async function ProductDetail({ params }: { params: Promise<{ id: 
         {/* Product Info Block */}
         <div className="flex flex-col pt-4">
           <p className="text-[11px] font-bold tracking-widest text-neutral-400 mb-3 uppercase">{productData.ingredient}</p>
-          <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-[#111111] mb-4">{name}</h1>
+          <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-brand-ink mb-4">{name}</h1>
           <p className="text-neutral-500 text-sm font-medium mb-8 leading-relaxed">
             {productData.summary}
           </p>
           
           <div className="flex items-end gap-3 mb-10 pb-8 border-b border-neutral-100">
             {productData.originalPrice > productData.price && (
-              <span className="text-[#111111] font-bold text-lg mb-0.5 tracking-tight">{Math.round((productData.originalPrice - productData.price) / productData.originalPrice * 100)}%</span>
+              <span className="text-brand-ink font-bold text-lg mb-0.5 tracking-tight">{Math.round((productData.originalPrice - productData.price) / productData.originalPrice * 100)}%</span>
             )}
-            <span className="text-3xl font-extrabold tracking-tight text-[#111111]">{productData.price.toLocaleString()}<span className="text-xl font-bold ml-1">원</span></span>
+            <span className="text-3xl font-extrabold tracking-tight text-brand-ink">{productData.price.toLocaleString()}<span className="text-xl font-bold ml-1">원</span></span>
             {productData.originalPrice > productData.price && (
               <span className="text-neutral-400 line-through text-sm font-medium mb-1 ml-1">{productData.originalPrice.toLocaleString()}원</span>
             )}
           </div>
           
           <div className="space-y-6">
-            <h3 className="text-[12px] font-bold tracking-widest text-[#111111]">PRODUCT DETAILS</h3>
+            <h3 className="text-[12px] font-bold tracking-widest text-brand-ink">PRODUCT DETAILS</h3>
             <p className="text-neutral-600 text-[14px] leading-loose break-keep">
               {productData.description}
             </p>

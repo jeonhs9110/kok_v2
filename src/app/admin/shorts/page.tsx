@@ -221,7 +221,7 @@ export default function ShortsAdminPage() {
             placeholder="YouTube Shorts URL 또는 영상 ID 붙여넣기 (예: ho0EhuO3RNs)"
             className="flex-1 px-4 py-3 border border-gray-200 rounded-lg text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-black/5"
           />
-          <button type="submit" className="bg-[#111111] text-white px-6 py-3 rounded-lg text-sm font-semibold hover:bg-black transition-colors whitespace-nowrap flex items-center gap-2">
+          <button type="submit" className="bg-brand-ink text-white px-6 py-3 rounded-lg text-sm font-semibold hover:bg-black transition-colors whitespace-nowrap flex items-center gap-2">
             <Plus className="w-4 h-4" /> 피드에 추가
           </button>
         </form>

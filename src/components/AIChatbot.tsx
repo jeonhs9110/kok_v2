@@ -275,7 +275,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-[#6b9fd4] to-[#4a7ab5] shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center transition-all duration-200"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-brand-notice-to to-brand-notice-from shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center transition-all duration-200"
           aria-label="Open AI Chatbot"
         >
           <MessageCircle className="w-6 h-6 text-white" />
@@ -287,7 +287,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
         <div className="fixed bottom-6 right-3 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[380px] max-h-[min(80vh,600px)] sm:max-h-[600px] flex flex-col bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] border border-gray-200/80 overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200">
 
           {/* Header */}
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-[#6b9fd4] to-[#4a7ab5]">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-brand-notice-to to-brand-notice-from">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
                 <Bot className="w-4 h-4 text-white" />
@@ -313,7 +313,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
             {messages.map((msg) => (
               <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'assistant' && (
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#6b9fd4] to-[#4a7ab5] flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand-notice-to to-brand-notice-from flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5">
                     <Bot className="w-3 h-3 text-white" />
                   </div>
                 )}
@@ -321,7 +321,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
                   <div
                     className={`px-4 py-3 text-[13px] leading-relaxed ${
                       msg.role === 'user'
-                        ? 'bg-[#111] text-white rounded-2xl rounded-br-md'
+                        ? 'bg-brand-ink text-white rounded-2xl rounded-br-md'
                         : 'bg-gray-50 text-gray-800 rounded-2xl rounded-bl-md border border-gray-100'
                     }`}
                   >
@@ -346,7 +346,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
             {/* Contact form — only on escalation */}
             {showContactForm && !contactSubmitted && (
               <div className="flex justify-start">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#6b9fd4] to-[#4a7ab5] flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand-notice-to to-brand-notice-from flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5">
                   <Mail className="w-3 h-3 text-white" />
                 </div>
                 <div className="max-w-[80%] bg-gray-50 border border-gray-100 rounded-2xl rounded-bl-md p-4 space-y-2.5">
@@ -356,7 +356,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
                   <input type="text" placeholder={L.skinTypePlaceholder} value={contactForm.skinType} onChange={e => setContactForm(p => ({ ...p, skinType: e.target.value }))} className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#6b9fd4] bg-white" />
                   <input type="text" placeholder={L.countryPlaceholder} value={contactForm.country} onChange={e => setContactForm(p => ({ ...p, country: e.target.value }))} className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#6b9fd4] bg-white" />
                   <div className="flex gap-2 pt-1">
-                    <button onClick={handleContactSubmit} disabled={!contactForm.email.trim()} className="flex-1 flex items-center justify-center gap-1.5 bg-[#111] text-white text-xs font-semibold py-2 rounded-lg hover:bg-black transition disabled:opacity-40">
+                    <button onClick={handleContactSubmit} disabled={!contactForm.email.trim()} className="flex-1 flex items-center justify-center gap-1.5 bg-brand-ink text-white text-xs font-semibold py-2 rounded-lg hover:bg-black transition disabled:opacity-40">
                       {L.submit} <ArrowRight className="w-3 h-3" />
                     </button>
                     <button onClick={() => { setShowContactForm(false); setContactSubmitted(true); }} className="px-3 text-xs text-gray-400 hover:text-gray-600 transition">{L.skip}</button>
@@ -368,7 +368,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
             {/* Typing indicator */}
             {isTyping && (
               <div className="flex justify-start">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#6b9fd4] to-[#4a7ab5] flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-brand-notice-to to-brand-notice-from flex items-center justify-center flex-shrink-0 mr-2.5 mt-0.5">
                   <Bot className="w-3 h-3 text-white" />
                 </div>
                 <div className="bg-gray-50 border border-gray-100 px-4 py-3 rounded-2xl rounded-bl-md flex items-center gap-1.5">
@@ -417,7 +417,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isTyping}
-                className="w-8 h-8 rounded-lg bg-[#111] flex items-center justify-center flex-shrink-0 hover:bg-black transition-colors disabled:opacity-20"
+                className="w-8 h-8 rounded-lg bg-brand-ink flex items-center justify-center flex-shrink-0 hover:bg-black transition-colors disabled:opacity-20"
               >
                 <Send className="w-3.5 h-3.5 text-white" />
               </button>

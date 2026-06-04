@@ -94,13 +94,13 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
         {categoryName && (
           <>
             <ChevronRight className="w-3 h-3 mx-2" />
-            <span className="text-[#111111]">{categoryName}</span>
+            <span className="text-brand-ink">{categoryName}</span>
           </>
         )}
         {subcategoryName && (
           <>
             <ChevronRight className="w-3 h-3 mx-2" />
-            <span className="text-[#111111]">{subcategoryName}</span>
+            <span className="text-brand-ink">{subcategoryName}</span>
           </>
         )}
       </div>
@@ -129,7 +129,7 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
           {translated.ingredient && (
             <p className="text-[11px] font-bold tracking-widest text-neutral-400 mb-3 uppercase">{translated.ingredient}</p>
           )}
-          <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-[#111111] mb-4">{translated.name}</h1>
+          <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-brand-ink mb-4">{translated.name}</h1>
           <p className="text-neutral-500 text-sm font-medium mb-6 leading-relaxed">{translated.summary}</p>
 
           {tagsByCategory.length > 0 && (
@@ -162,7 +162,7 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
             {discountPct > 0 && (
               <span className="text-[#f15a24] font-bold text-lg mb-0.5 tracking-tight">{discountPct}%</span>
             )}
-            <span className="text-3xl font-extrabold tracking-tight text-[#111111]">
+            <span className="text-3xl font-extrabold tracking-tight text-brand-ink">
               {lang === 'kr' ? (
                 <>{productData.price.toLocaleString()}<span className="text-xl font-bold ml-1">원</span></>
               ) : (
@@ -178,7 +178,7 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
 
           {translated.description && (
             <div className="space-y-4 mb-8">
-              <h3 className="text-[12px] font-bold tracking-widest text-[#111111]">{lb.details}</h3>
+              <h3 className="text-[12px] font-bold tracking-widest text-brand-ink">{lb.details}</h3>
               <p className="text-neutral-600 text-[14px] leading-loose break-keep">{translated.description}</p>
             </div>
           )}
@@ -190,7 +190,7 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
               <p className="text-sm text-neutral-500">{lb.unavailable}</p>
               <Link
                 href="/kr"
-                className="inline-block bg-[#111111] text-white px-6 py-3 text-xs font-bold tracking-widest hover:bg-black transition-colors"
+                className="inline-block bg-brand-ink text-white px-6 py-3 text-xs font-bold tracking-widest hover:bg-black transition-colors"
               >
                 {lb.visitKr}
               </Link>

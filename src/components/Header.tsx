@@ -120,7 +120,7 @@ export default function Header({
       <div className="bg-white border-b border-neutral-100 hidden lg:block">
         <div className="max-w-[1600px] mx-auto px-8 flex justify-end items-center h-9 gap-5 text-[11px] text-neutral-500 font-medium tracking-wide">
           {isAdmin && (
-            <Link href="/admin" className="hover:text-black transition-colors text-[#00693A] font-bold">ADMIN</Link>
+            <Link href="/admin" className="hover:text-black transition-colors text-brand-primary font-bold">ADMIN</Link>
           )}
           {!isLoggedIn && (
             <Link href="/register" className="hover:text-black transition-colors">{util.join}</Link>
@@ -178,7 +178,7 @@ export default function Header({
                   className="h-8 md:h-10 w-auto object-contain"
                 />
               ) : (
-                <span className="text-[22px] font-black tracking-[0.12em] text-[#111111] uppercase">
+                <span className="text-[22px] font-black tracking-[0.12em] text-brand-ink uppercase">
                   KOKKOK<br className="hidden" /> GARDEN
                 </span>
               )}
@@ -198,7 +198,7 @@ export default function Header({
                 </button>
                 {/* Green underline indicator */}
                 {activeMenu === 'product' && (
-                  <span className="absolute bottom-0 left-4 right-4 h-[2.5px] bg-[#00693A] rounded-full" />
+                  <span className="absolute bottom-0 left-4 right-4 h-[2.5px] bg-brand-primary rounded-full" />
                 )}
               </div>
 
@@ -219,7 +219,7 @@ export default function Header({
                       {menuLabel}
                     </Link>
                     {activeMenu === `menu-${menu.slug}` && (
-                      <span className="absolute bottom-0 left-4 right-4 h-[2.5px] bg-[#00693A] rounded-full" />
+                      <span className="absolute bottom-0 left-4 right-4 h-[2.5px] bg-brand-primary rounded-full" />
                     )}
                   </div>
                 );
@@ -251,7 +251,7 @@ export default function Header({
                 <Link href="/cart" className="relative p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity flex" aria-label="Cart">
                   <ShoppingBag className="w-[21px] h-[21px]" />
                   {totalCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-[#111] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-brand-ink text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                       {totalCount > 99 ? '99' : totalCount}
                     </span>
                   )}
@@ -275,7 +275,7 @@ export default function Header({
                 <div key={col.slug}>
                   <Link
                     href={`/${lang}/products?category=${col.slug}`}
-                    className="text-[13px] font-bold text-neutral-900 hover:text-[#00693A] tracking-wide transition-colors"
+                    className="text-[13px] font-bold text-neutral-900 hover:text-brand-primary tracking-wide transition-colors"
                     onClick={() => setActiveMenu(null)}
                   >
                     {col.label}
@@ -315,7 +315,7 @@ export default function Header({
                   <Link
                     key={child.slug}
                     href={`/${lang}/menus/${child.slug}`}
-                    className="text-[13px] font-bold text-neutral-900 hover:text-[#00693A] tracking-wide transition-colors"
+                    className="text-[13px] font-bold text-neutral-900 hover:text-brand-primary tracking-wide transition-colors"
                     onClick={() => setActiveMenu(null)}
                   >
                     {child.title?.[lang] || child.title?.kr || child.title?.en || child.slug}
@@ -355,7 +355,7 @@ export default function Header({
                 placeholder={lang === 'kr' ? '상품명, 성분, 키워드 검색...' : 'Search products...'}
                 className="flex-1 text-sm bg-transparent outline-none placeholder:text-neutral-400"
               />
-              <button type="submit" className="px-4 py-2 bg-[#111111] text-white text-xs font-bold tracking-widest rounded hover:bg-black transition-colors">
+              <button type="submit" className="px-4 py-2 bg-brand-ink text-white text-xs font-bold tracking-widest rounded hover:bg-black transition-colors">
                 {lang === 'kr' ? '검색' : 'Search'}
               </button>
               <button type="button" onClick={() => { setSearchOpen(false); setSearchQuery(''); }} className="p-1.5 text-neutral-400 hover:text-black transition-colors">

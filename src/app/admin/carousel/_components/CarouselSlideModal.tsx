@@ -598,7 +598,7 @@ export default function CarouselSlideModal({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="bg-[#111111] text-white px-8 py-2.5 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="bg-brand-ink text-white px-8 py-2.5 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>

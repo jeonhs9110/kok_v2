@@ -105,13 +105,13 @@ export default async function ContactPage({ params }: { params: Promise<{ lang: 
       <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-10 tracking-widest flex-wrap gap-y-1">
         <Link href={`/${lang}`} className="hover:text-black transition-colors">{lb.home}</Link>
         <ChevronRight className="w-3 h-3 mx-2" />
-        <span className="text-[#111111]">{lb.contact}</span>
+        <span className="text-brand-ink">{lb.contact}</span>
       </div>
 
       {/* Title */}
       <div className="mb-12 border-b border-neutral-200 pb-8">
         <p className="text-[11px] font-bold tracking-[0.25em] text-neutral-400 uppercase mb-2">{lb.subtitle}</p>
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#111111]">{lb.title}</h1>
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight text-brand-ink">{lb.title}</h1>
       </div>
 
       {/* Info table */}
@@ -129,7 +129,7 @@ export default async function ContactPage({ params }: { params: Promise<{ lang: 
                   >
                     {r.label}
                   </th>
-                  <td className="px-4 md:px-6 py-4 md:py-5 text-sm text-[#111111] whitespace-pre-line align-top">
+                  <td className="px-4 md:px-6 py-4 md:py-5 text-sm text-brand-ink whitespace-pre-line align-top">
                     {r.href ? (
                       <a href={r.href} className="hover:underline underline-offset-4 break-all">{r.value}</a>
                     ) : (

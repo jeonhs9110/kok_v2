@@ -52,8 +52,8 @@ export default function CommentSection({ postId, lang }: CommentSectionProps) {
   return (
     <div>
       <div className="flex items-center gap-2 mb-6">
-        <MessageCircle className="w-5 h-5 text-[#111]" />
-        <h2 className="text-lg font-bold text-[#111]">
+        <MessageCircle className="w-5 h-5 text-brand-ink" />
+        <h2 className="text-lg font-bold text-brand-ink">
           {l.comments} <span className="text-neutral-400 font-normal">({comments.length})</span>
         </h2>
       </div>

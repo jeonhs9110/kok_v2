@@ -224,7 +224,7 @@ export default function LogoAdminPage() {
         </p>
 
         <div className="flex items-start gap-6 pb-6 border-b border-gray-100">
-          <div className="flex-shrink-0 w-48 h-24 bg-[#111111] rounded flex items-center justify-center overflow-hidden">
+          <div className="flex-shrink-0 w-48 h-24 bg-brand-ink rounded flex items-center justify-center overflow-hidden">
             {logoPreview ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={logoPreview} alt="logo preview" className="max-w-full max-h-full object-contain" />
@@ -253,7 +253,7 @@ export default function LogoAdminPage() {
             <button
               disabled={!logoPending || logoSaving}
               onClick={uploadLogo}
-              className="inline-flex items-center gap-2 bg-[#111111] text-white px-6 py-2.5 rounded text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 bg-brand-ink text-white px-6 py-2.5 rounded text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Upload className="w-4 h-4" />
               {logoSaving ? '업로드 중...' : '로고 업로드 및 저장'}
@@ -305,7 +305,7 @@ export default function LogoAdminPage() {
           <button
             disabled={!bgPending || bgUploading}
             onClick={uploadBackground}
-            className="inline-flex items-center gap-2 bg-[#111111] text-white px-6 py-2.5 rounded text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 bg-brand-ink text-white px-6 py-2.5 rounded text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Upload className="w-4 h-4" />
             {bgUploading ? '업로드 중...' : '배경 업로드'}
@@ -384,7 +384,7 @@ export default function LogoAdminPage() {
                           <button
                             disabled={busy}
                             onClick={() => activateBackground(bg.id)}
-                            className="flex-1 text-xs font-semibold px-2 py-1.5 rounded bg-[#111] text-white hover:bg-black transition-colors disabled:opacity-40"
+                            className="flex-1 text-xs font-semibold px-2 py-1.5 rounded bg-brand-ink text-white hover:bg-black transition-colors disabled:opacity-40"
                           >
                             활성화
                           </button>

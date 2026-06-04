@@ -56,7 +56,7 @@ export default function ProductActionButtons({ productId, productName, price, or
       {/* Total Price preview */}
       <div className="flex justify-between items-end pb-4 pt-2">
          <span className="text-sm font-semibold text-neutral-500">{lb.total}</span>
-         <span className="text-2xl font-extrabold text-[#111111]">
+         <span className="text-2xl font-extrabold text-brand-ink">
            {isKr ? `${(price * quantity).toLocaleString()}원` : `KRW ${(price * quantity).toLocaleString()}`}
          </span>
       </div>
@@ -68,7 +68,7 @@ export default function ProductActionButtons({ productId, productName, price, or
             <button
               onClick={handleAddToCart}
               className={`flex-1 border py-4.5 font-bold tracking-widest text-[13px] transition-colors ${
-                added ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-[#111111] text-[#111111] hover:bg-neutral-50'
+                added ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-[#111111] text-brand-ink hover:bg-neutral-50'
               }`}
             >
               {added ? lb.added : t('product.addToCart')}
@@ -77,7 +77,7 @@ export default function ProductActionButtons({ productId, productName, price, or
           {showBuyButton && (
             <button
               onClick={handleBuyNow}
-              className="flex-1 bg-[#111111] text-white py-4.5 font-bold tracking-widest text-[13px] hover:bg-black transition-colors shadow-lg shadow-black/10"
+              className="flex-1 bg-brand-ink text-white py-4.5 font-bold tracking-widest text-[13px] hover:bg-black transition-colors shadow-lg shadow-black/10"
             >
               {t('product.buyNow')}
             </button>
