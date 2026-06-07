@@ -1,6 +1,6 @@
 'use client';
 
-import { Package, Video, RefreshCw, Globe, Eye, Heart, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { Package, Video, RefreshCw, Globe, Eye, Heart, ArrowUpDown, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
@@ -10,6 +10,9 @@ const supabase = getSupabaseBrowser();
 interface DashboardStats {
   totalProducts: number;
   activeProducts: number;
+  // Inactive OR missing image_url — clicking the card drops the admin
+  // into /admin/products with the same filter pre-applied.
+  attentionProducts: number;
   totalShorts: number;
   totalVisits: number;
   isLive: boolean;
@@ -36,7 +39,7 @@ type SortDir = 'asc' | 'desc';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
-    totalProducts: 0, activeProducts: 0, totalShorts: 0, totalVisits: 0, isLive: false,
+    totalProducts: 0, activeProducts: 0, attentionProducts: 0, totalShorts: 0, totalVisits: 0, isLive: false,
   });
   const [countries, setCountries] = useState<CountryStat[]>([]);
   const [productClicks, setProductClicks] = useState<ProductClick[]>([]);
@@ -58,12 +61,21 @@ export default function AdminDashboard() {
 
       if (productsRes.error && activeRes.error) throw new Error('DB error');
 
-      // Fetch all analytics + products + wishlist in parallel
+      // Fetch all analytics + products + wishlist in parallel. Pull
+      // is_active + image_url alongside id/name so the "관심 필요" count can
+      // be derived from the same fetch (no extra round-trip).
       const [analyticsRes, allProductsRes, wishlistRes] = await Promise.all([
         supabase.from('analytics').select('country, path'),
-        supabase.from('products').select('id, name'),
+        supabase.from('products').select('id, name, is_active, image_url'),
         supabase.from('wishlist').select('product_id'),
       ]);
+
+      // "Needs attention" = inactive OR missing main image. These are the
+      // two states that visibly break a product card on the storefront.
+      const attentionProducts = (allProductsRes.data ?? []).filter(
+        (p: { is_active?: boolean; image_url?: string | null }) =>
+          !p.is_active || !p.image_url,
+      ).length;
 
       // Country breakdown
       const countryMap: Record<string, number> = {};
@@ -119,12 +131,13 @@ export default function AdminDashboard() {
       setStats({
         totalProducts: productsRes.count ?? 0,
         activeProducts: activeRes.count ?? 0,
+        attentionProducts,
         totalShorts: shortsRes.count ?? 0,
         totalVisits: visitsRes.count ?? 0,
         isLive: true,
       });
     } catch {
-      setStats({ totalProducts: 0, activeProducts: 0, totalShorts: 0, totalVisits: 0, isLive: false });
+      setStats({ totalProducts: 0, activeProducts: 0, attentionProducts: 0, totalShorts: 0, totalVisits: 0, isLive: false });
     } finally {
       setIsLoading(false);
     }
@@ -144,9 +157,13 @@ export default function AdminDashboard() {
 
   const cards = [
     { title: '전체 상품', value: stats.totalProducts, icon: Package, color: 'bg-blue-500', href: '/admin/products' },
-    { title: '게시중 상품', value: stats.activeProducts, icon: Package, color: 'bg-green-500', href: '/admin/products' },
+    { title: '게시중 상품', value: stats.activeProducts, icon: Package, color: 'bg-green-500', href: '/admin/products?filter=active' },
+    // "관심 필요" replaces the old dead "총 방문수" card link (which pointed
+    // at "#"). The actual visit count is still shown in the analytics
+    // section below; this slot now drives the admin toward the products
+    // that are visibly broken on the storefront.
+    { title: '관심 필요 상품', value: stats.attentionProducts, icon: AlertTriangle, color: 'bg-amber-500', href: '/admin/products?filter=attention' },
     { title: '등록 숏츠', value: stats.totalShorts, icon: Video, color: 'bg-purple-500', href: '/admin/shorts' },
-    { title: '총 방문수', value: stats.totalVisits, icon: Eye, color: 'bg-orange-500', href: '#' },
   ];
 
   return (

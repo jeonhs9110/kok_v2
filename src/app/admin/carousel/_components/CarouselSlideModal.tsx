@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { Upload, X } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
@@ -34,9 +35,15 @@ export default function CarouselSlideModal({
   onSaved,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [formData, setFormData] = useState<SlideFormData>(
-    initialForm ?? { ...emptyForm, badge: {}, title: {}, subtitle: {} },
+  const initialFormRef = useMemo(
+    () => initialForm ?? { ...emptyForm, badge: {}, title: {}, subtitle: {} },
+    // Snapshot once at mount; later edits compare against this. Re-snapshotting
+    // would defeat the unsaved-change guard.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
   );
+  const [formData, setFormData] = useState<SlideFormData>(initialFormRef);
+  useUnsavedChanges(JSON.stringify(formData) !== JSON.stringify(initialFormRef));
   const [previewUrl, setPreviewUrl] = useState(initialPreviewUrl);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'done' | 'error'>(
