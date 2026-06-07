@@ -74,27 +74,11 @@ export async function POST(request: Request): Promise<NextResponse<ScrapeResult 
   }
 
   try {
-    const res = await fetch(url, {
-      headers: {
-        // Naver returns mobile-flavored markup when it sees a mobile UA,
-        // and the mobile pages tend to have richer og:image data than
-        // the desktop iframe wrappers. Spoofing here makes the scrape
-        // succeed more often than not.
-        'User-Agent':
-          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-        'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.5',
-      },
-      // Match the timeout shape used elsewhere in the codebase
-      // (homepage cache uses 3s; pages here are admin-triggered so a
-      // touch longer is fine).
-      signal: AbortSignal.timeout(6000),
-    });
-
-    if (!res.ok) {
+    const html = await fetchAndFollowNaverRedirects(url, 0);
+    if (html === null) {
       return NextResponse.json({ title: null, image_url: null, description: null });
     }
 
-    const html = await res.text();
     const title = readOg(html, 'title');
     const image_url = readOg(html, 'image');
     const description = readOg(html, 'description');
@@ -108,4 +92,47 @@ export async function POST(request: Request): Promise<NextResponse<ScrapeResult 
     console.error('[scrape-naver] fetch failed:', err);
     return NextResponse.json({ title: null, image_url: null, description: null });
   }
+}
+
+/**
+ * Naver returns a 180-byte JS-redirect stub for blog.naver.com posts
+ * (`<script>top.location.replace('https://m.blog.naver.com/PostView.naver?...')</script>`)
+ * instead of the actual post HTML. The og: tags only appear on the
+ * PostView endpoint, so we sniff the redirect script and re-fetch.
+ * Capped at 2 hops because Naver occasionally chains a second redirect
+ * on smart-editor older posts.
+ *
+ * Returns the final HTML string or null on non-2xx / network error.
+ */
+async function fetchAndFollowNaverRedirects(url: string, hops: number): Promise<string | null> {
+  if (hops > 2) return null;
+
+  const res = await fetch(url, {
+    headers: {
+      // Mobile UA forces Naver to serve the m.blog.naver.com flavor that
+      // carries proper og:image meta tags. Desktop UA gets the same JS
+      // redirect dance plus an iframe-wrapped post body where the og:
+      // tags live in the wrapper page only.
+      'User-Agent':
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.5',
+    },
+    signal: AbortSignal.timeout(6000),
+  });
+
+  if (!res.ok) return null;
+  const html = await res.text();
+
+  // Detect the JS-redirect stub: short body + a top.location.replace call
+  // pointing at another Naver URL. Match unescaped and escaped slashes
+  // since Naver emits the URL with backslash-escaped /.
+  const redirectMatch = html.match(/top\.location\.replace\(\s*['"]([^'"]+)['"]\s*\)/i);
+  if (redirectMatch) {
+    const next = redirectMatch[1].replace(/\\\//g, '/');
+    if (/^https?:\/\/(?:m\.)?(?:blog|post)\.naver\.com\b/i.test(next)) {
+      return fetchAndFollowNaverRedirects(next, hops + 1);
+    }
+  }
+
+  return html;
 }
