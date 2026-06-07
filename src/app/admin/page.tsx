@@ -62,19 +62,24 @@ export default function AdminDashboard() {
       if (productsRes.error && activeRes.error) throw new Error('DB error');
 
       // Fetch all analytics + products + wishlist in parallel. Pull
-      // is_active + image_url alongside id/name so the "관심 필요" count can
+      // is_active + images alongside id/name so the "관심 필요" count can
       // be derived from the same fetch (no extra round-trip).
       const [analyticsRes, allProductsRes, wishlistRes] = await Promise.all([
         supabase.from('analytics').select('country, path'),
-        supabase.from('products').select('id, name, is_active, image_url'),
+        // `images` is a JSONB array on the products table; the storefront
+        // and admin both read `images[0]` as the main image (see
+        // src/lib/api/products.ts → imageUrl mapping). There is no
+        // `image_url` column — selecting one PostgREST-errors the whole
+        // Promise.all and silently zeros every dashboard card.
+        supabase.from('products').select('id, name, is_active, images'),
         supabase.from('wishlist').select('product_id'),
       ]);
 
       // "Needs attention" = inactive OR missing main image. These are the
       // two states that visibly break a product card on the storefront.
       const attentionProducts = (allProductsRes.data ?? []).filter(
-        (p: { is_active?: boolean; image_url?: string | null }) =>
-          !p.is_active || !p.image_url,
+        (p: { is_active?: boolean; images?: unknown }) =>
+          !p.is_active || !Array.isArray(p.images) || p.images.length === 0,
       ).length;
 
       // Country breakdown
