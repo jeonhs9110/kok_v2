@@ -89,15 +89,28 @@ export default function AdminSearchModal({ open, onClose }: { open: boolean; onC
     setLoading(true);
     const handle = setTimeout(async () => {
       if (!supabase) { setLoading(false); return; }
-      const q = trimmed;
+      // Strip PostgREST .or() tree-parser special chars from the user's
+      // query before interpolating. Letters (Latin + Hangul + other scripts),
+      // digits, and whitespace survive; commas / periods / parens / ::
+      // would otherwise terminate the OR expression early or be parsed as
+      // operator boundaries.
+      const safeQ = trimmed.replace(/[^\p{L}\p{N}\s]/gu, ' ').trim();
+      if (!safeQ) { setResults([]); setLoading(false); return; }
+      // JSONB title/name columns store { kr, en, jp, cn, vn, th }. We OR
+      // ilike across each language path via the documented PostgREST
+      // arrow-extract syntax (->>lang). The earlier `.filter('col::text',
+      // 'ilike', …)` shape isn't a documented PostgREST cast and silently
+      // returned nothing in supabase-js.
+      const LANGS = ['kr', 'en', 'jp', 'cn', 'vn', 'th'];
+      const orJsonb = (col: string) =>
+        LANGS.map(l => `${col}->>${l}.ilike.%${safeQ}%`).join(',');
       const [products, menus, pages, posts] = await Promise.all([
-        // JSONB column ::text lets us ilike across every language key at
-        // once without a CASE for each lang. Cheap because the catalog is
-        // small (hundreds of rows max).
-        supabase.from('products').select('id,name').filter('name::text', 'ilike', `%${q}%`).limit(8),
-        supabase.from('menus').select('id,slug,title').filter('title::text', 'ilike', `%${q}%`).limit(8),
-        supabase.from('pages').select('id,slug,title').filter('title::text', 'ilike', `%${q}%`).limit(8),
-        supabase.from('posts').select('id,title,menu_id').filter('title::text', 'ilike', `%${q}%`).limit(8),
+        supabase.from('products').select('id,name').or(orJsonb('name')).limit(8),
+        supabase.from('menus').select('id,slug,title').or(orJsonb('title')).limit(8),
+        supabase.from('pages').select('id,slug,title').or(orJsonb('title')).limit(8),
+        // posts.title is plain text (single-language), so a flat ilike
+        // hits it directly — see src/lib/api/menus.ts Post interface.
+        supabase.from('posts').select('id,title,menu_id').ilike('title', `%${safeQ}%`).limit(8),
       ]);
       const rs: Result[] = [];
       for (const p of (products.data ?? [])) {
