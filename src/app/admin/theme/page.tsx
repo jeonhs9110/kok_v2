@@ -10,6 +10,7 @@ import {
   type ThemeTokens,
 } from '@/lib/theme/tokens';
 import { FONT_OPTIONS } from '@/lib/typography/options';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 // Session-aware client. site_settings writes require admin JWT (Phase 2 RLS).
 const supabase = getSupabaseBrowser();
@@ -103,6 +104,7 @@ export default function ThemePage() {
   };
 
   const isDirty = JSON.stringify(tokens) !== JSON.stringify(savedTokens);
+  useUnsavedChanges(isDirty);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">

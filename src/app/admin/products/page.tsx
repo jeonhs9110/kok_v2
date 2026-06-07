@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Plus, X } from 'lucide-react';
 import type { Product } from '@/lib/api/products';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
@@ -33,7 +34,44 @@ import ProductDetailModal from './_components/ProductDetailModal';
  *     null the modal unmounts and discards its state, so the next open
  *     starts clean without a manual reset.
  */
+type FilterKey = 'all' | 'active' | 'inactive' | 'attention';
+
+const FILTER_LABELS: Record<FilterKey, string> = {
+  all: '전체',
+  active: '게시중',
+  inactive: '숨김',
+  attention: '관심 필요 (숨김 / 이미지 없음)',
+};
+
 export default function ProductsAdminPage() {
+  // Next.js 16 requires useSearchParams to live inside a Suspense boundary so
+  // the page can opt into client-side rendering cleanly. The inner component
+  // owns all the actual page logic; this outer wrapper exists solely for the
+  // Suspense boundary.
+  return (
+    <Suspense fallback={<div className="bg-white rounded-xl shadow-sm border border-gray-100 min-h-[400px]" />}>
+      <ProductsAdminPageInner />
+    </Suspense>
+  );
+}
+
+function ProductsAdminPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // URL-driven filter chip. Dashboard cards deep-link here with ?filter=active
+  // / ?filter=attention so the admin lands already-scoped instead of scrolling
+  // a hundred-row table looking for the broken ones.
+  const filter: FilterKey = (() => {
+    const v = searchParams?.get('filter');
+    return v === 'active' || v === 'inactive' || v === 'attention' ? v : 'all';
+  })();
+  const setFilter = (next: FilterKey) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (next === 'all') params.delete('filter');
+    else params.set('filter', next);
+    const qs = params.toString();
+    router.replace(qs ? `/admin/products?${qs}` : '/admin/products');
+  };
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -132,24 +170,45 @@ export default function ProductsAdminPage() {
     }
   };
 
+  const filteredProducts = useMemo(() => {
+    if (filter === 'all') return products;
+    if (filter === 'active') return products.filter(p => p.is_active);
+    if (filter === 'inactive') return products.filter(p => !p.is_active);
+    // 'attention' — products visibly broken on the storefront: inactive,
+    // or active-but-missing main image (which renders as a gray box).
+    return products.filter(p => !p.is_active || !p.imageUrl);
+  }, [products, filter]);
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative">
-      <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+      <div className="p-6 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3 bg-gray-50/50">
         <div>
           <h2 className="text-lg font-bold text-gray-800">상품 재고</h2>
           <p className="text-sm text-gray-500 mt-1">스토어 상품 및 카탈로그를 관리하세요</p>
         </div>
-        <button
-          onClick={() => setEditing({ product: null })}
-          className="bg-brand-ink text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-black transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" /> 상품 추가
-        </button>
+        <div className="flex items-center gap-2">
+          {filter !== 'all' && (
+            <button
+              type="button"
+              onClick={() => setFilter('all')}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors"
+            >
+              {FILTER_LABELS[filter]}
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          <button
+            onClick={() => setEditing({ product: null })}
+            className="bg-brand-ink text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-black transition-colors flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> 상품 추가
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto min-h-[400px]">
         <ProductList
-          products={products}
+          products={filteredProducts}
           isLoading={isLoading}
           loadError={loadError}
           onRetry={fetchProducts}

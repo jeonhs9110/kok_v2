@@ -7,6 +7,7 @@ import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { TypographyPanel, PositionPicker } from '@/components/admin/TypographyPanel';
 import { fontFamilyForKey, positionForKey, type PositionKey } from '@/lib/typography/options';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 // Session-aware client. Phase 2 RLS lockdown on `sub_hero_banners` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -52,6 +53,9 @@ const EMPTY: SubHero = {
 
 export default function SubHeroAdminPage() {
   const [banner, setBanner] = useState<SubHero>(EMPTY);
+  // Snapshot of last persisted state so we can detect unsaved local edits
+  // (drives the navigation-away prompt below).
+  const [savedBanner, setSavedBanner] = useState<SubHero>(EMPTY);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -73,10 +77,15 @@ export default function SubHeroAdminPage() {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (data) setBanner(data);
+      if (data) {
+        setBanner(data);
+        setSavedBanner(data);
+      }
     } catch { /* use empty */ }
     finally { setIsLoading(false); }
   }
+
+  useUnsavedChanges(JSON.stringify(banner) !== JSON.stringify(savedBanner));
 
   const handleFileUpload = async (file: File) => {
     if (!supabase) return;
@@ -123,14 +132,17 @@ export default function SubHeroAdminPage() {
         text_position: banner.text_position,
         text_position_mobile: banner.text_position_mobile,
       };
+      let savedId = banner.id;
       if (banner.id) {
         const { error } = await supabase.from('sub_hero_banners').update(payload).eq('id', banner.id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase.from('sub_hero_banners').insert([payload]).select().single();
         if (error) throw error;
+        savedId = data.id;
         setBanner(prev => ({ ...prev, id: data.id }));
       }
+      setSavedBanner({ ...banner, id: savedId });
       revalidateHomepageData('sub_hero');
       alert('서브 히어로 배너가 저장되었습니다.');
     } catch (e) {
