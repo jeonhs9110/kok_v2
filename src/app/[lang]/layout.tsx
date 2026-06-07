@@ -61,7 +61,15 @@ export default async function LangLayout({
         <style id="kokkok-theme-tokens" dangerouslySetInnerHTML={{ __html: tokensToCss(themeTokens) }} />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){if(window.parent===window)return;window.addEventListener('message',function(e){if(!e.data||e.data.type!=='kokkok-theme-tokens')return;var s=document.getElementById('kokkok-theme-tokens');if(s)s.textContent=e.data.css;});})();`,
+            // Bulletproof postMessage listener for the /admin/theme live
+            // preview. Previously mutated <style>.textContent in place;
+            // that's supposed to re-parse the rule but admins reported
+            // not seeing the change. Now we REPLACE the entire <style>
+            // element — old node out, new node in — which guarantees
+            // CSS recompute in every browser. The iframe-only guard
+            // (window.parent !== window) keeps a standalone /kr load
+            // from wasting a message-listener slot.
+            __html: `(function(){if(window.parent===window)return;window.addEventListener('message',function(e){if(!e.data||e.data.type!=='kokkok-theme-tokens')return;var old=document.getElementById('kokkok-theme-tokens');if(!old||!old.parentNode)return;var fresh=document.createElement('style');fresh.id='kokkok-theme-tokens';fresh.textContent=e.data.css;old.parentNode.replaceChild(fresh,old);});})();`,
           }}
         />
         <div className="flex flex-col min-h-screen">

@@ -21,7 +21,14 @@
    18 explicit class names which is exactly what
    POSITION_DESKTOP_SM × POSITION_DESKTOP_MD needs.
    ────────────────────────────────────────────────────────── */
-@source inline("{sm,md}:{items-start,items-center,items-end} {sm,md}:{justify-start,justify-center,justify-end} {sm,md}:{text-left,text-center,text-right}");
+@source inline("sm:items-start sm:items-center sm:items-end sm:justify-start sm:justify-center sm:justify-end sm:text-left sm:text-center sm:text-right md:items-start md:items-center md:items-end md:justify-start md:justify-center md:justify-end md:text-left md:text-center md:text-right");
+
+/* Social-login provider button colors — defined as values inside the
+   SOCIAL_BUTTONS Record in src/app/register/_components/RegisterForm.tsx,
+   which Tailwind v4's source scanner doesn't reliably extract (same
+   class-of-bug as the position-picker safelist above). Without this,
+   the Kakao + Naver login buttons render as unstyled rectangles. */
+@source inline("bg-[#FEE500] bg-[#FDD800] bg-[#03C75A] bg-[#02b350] hover:bg-[#FDD800] hover:bg-[#02b350]");
 
 
 /* ──────────────────────────────────────────────────────────
