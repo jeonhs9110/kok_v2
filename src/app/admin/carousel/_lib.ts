@@ -51,6 +51,11 @@ export interface SlideFormData {
   // admin can place text wherever doesn't collide with the product
   // image on a phone, without changing the desktop layout.
   text_position_mobile: PositionKey;
+  // Migration 29: per-breakpoint image focal point. Desktop-authored
+  // images often have the product on the right side; mobile crop needs
+  // a different center than desktop to keep the product visible.
+  image_position: PositionKey;
+  image_position_mobile: PositionKey;
 }
 
 export const emptyForm: SlideFormData = {
@@ -79,6 +84,8 @@ export const emptyForm: SlideFormData = {
   subtitle_bold: false, subtitle_italic: false, subtitle_underline: false,
   text_position: 'mc',
   text_position_mobile: 'mc',
+  image_position: 'mc',
+  image_position_mobile: 'mc',
 };
 
 export async function uploadSlideAsset(file: File): Promise<string> {

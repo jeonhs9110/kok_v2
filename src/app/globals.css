@@ -1,6 +1,52 @@
 @import "tailwindcss";
 
 /* ──────────────────────────────────────────────────────────
+   Safelist for breakpoint-prefixed position utilities.
+
+   Why: HeroSlider and SubHeroBanner read the dual text-anchor
+   pickers (PR #89 + PR #91) by composing className from values
+   sitting inside src/lib/typography/options.ts's POSITION_DESKTOP_SM
+   and POSITION_DESKTOP_MD records. Tailwind v4's source scanner
+   doesn't reliably extract class strings sitting as values inside
+   TypeScript object literals like
+     { align: 'sm:items-start', ... }
+   so the build was shipping the bundle WITHOUT any of the
+   sm:items-*, sm:justify-*, sm:text-*, md:items-*, md:justify-*,
+   md:text-* rules. The class strings rendered into the DOM but
+   no matching CSS existed — text always stayed at middle-center
+   regardless of what the admin picked.
+
+   @source inline forces Tailwind to generate every variant we use.
+   Brace expansion keeps the line short; the rule below resolves to
+   18 explicit class names which is exactly what
+   POSITION_DESKTOP_SM × POSITION_DESKTOP_MD needs.
+   ────────────────────────────────────────────────────────── */
+@source inline("{sm,md}:{items-start,items-center,items-end} {sm,md}:{justify-start,justify-center,justify-end} {sm,md}:{text-left,text-center,text-right}");
+
+
+/* ──────────────────────────────────────────────────────────
+   Carousel image focal point (migration 29).
+
+   HeroSlider sets two CSS variables on each <Image>:
+     --img-pos-mobile  → object-position for xs
+     --img-pos-desktop → object-position for sm+
+
+   Tailwind's responsive utilities can't pick between two
+   custom values per breakpoint via inline style alone, so
+   we plumb both through one class + a media query here.
+   Defaults to `center` if either var is unset, matching the
+   pre-migration behavior for rows that haven't been touched.
+   ────────────────────────────────────────────────────────── */
+.hero-image-focal {
+  object-position: var(--img-pos-mobile, center);
+}
+@media (min-width: 640px) {
+  .hero-image-focal {
+    object-position: var(--img-pos-desktop, center);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────
    Design tokens (Tailwind v4 @theme) — surfaces a token both
    as a utility (e.g. text-brand-ink) and as var(--color-brand-ink).
    ────────────────────────────────────────────────────────── */

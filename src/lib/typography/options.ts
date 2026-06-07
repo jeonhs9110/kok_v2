@@ -199,3 +199,23 @@ export function positionDesktopMdForKey(key: string | null | undefined) {
   if (!key) return POSITION_DESKTOP_MD.mc;
   return POSITION_DESKTOP_MD[key as PositionKey] ?? POSITION_DESKTOP_MD.mc;
 }
+
+/**
+ * Map a 9-cell anchor key to the corresponding CSS `object-position`
+ * value. Used by HeroSlider + CarouselSlidePreview to honor
+ * carousel_slides.image_position / image_position_mobile (migration 29).
+ *
+ * 'tl' → 'left top', 'tc' → 'center top', 'tr' → 'right top'
+ * 'ml' → 'left center', 'mc' → 'center', 'mr' → 'right center'
+ * 'bl' → 'left bottom', 'bc' → 'center bottom', 'br' → 'right bottom'
+ */
+const OBJECT_POSITION_BY_KEY: Record<PositionKey, string> = {
+  tl: 'left top',     tc: 'center top',    tr: 'right top',
+  ml: 'left center',  mc: 'center',        mr: 'right center',
+  bl: 'left bottom',  bc: 'center bottom', br: 'right bottom',
+};
+
+export function objectPositionForKey(key: string | null | undefined): string {
+  if (!key) return OBJECT_POSITION_BY_KEY.mc;
+  return OBJECT_POSITION_BY_KEY[key as PositionKey] ?? OBJECT_POSITION_BY_KEY.mc;
+}

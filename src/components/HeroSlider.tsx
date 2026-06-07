@@ -8,7 +8,7 @@ import Autoplay from 'embla-carousel-autoplay';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Lang } from '@/lib/i18n/types';
 import type { CarouselSlide } from '@/lib/api/carousel';
-import { fontFamilyForKey, positionForKey, positionDesktopForKey } from '@/lib/typography/options';
+import { fontFamilyForKey, positionForKey, positionDesktopForKey, objectPositionForKey } from '@/lib/typography/options';
 
 
 interface HeroSliderProps {
@@ -66,6 +66,12 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       // string holds both breakpoints' flex utilities.
       positionMobile: positionForKey(s.text_position_mobile),
       positionDesktop: positionDesktopForKey(s.text_position),
+      // Migration 29: per-breakpoint image focal point. Render code
+      // pipes these into `--img-pos-mobile` / `--img-pos-desktop` CSS
+      // variables that the .hero-image-focal class consumes via a
+      // breakpoint-aware object-position rule in globals.css.
+      imgPosMobile: objectPositionForKey(s.image_position_mobile),
+      imgPosDesktop: objectPositionForKey(s.image_position),
     };
   }), [dbSlides, lang]);
 
@@ -122,13 +128,24 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
             const isFullpage = slide.displayMode === 'fullpage';
             const isFirst = slideIdx === 0;
 
+            // Build the object-position CSS vars once per slide; spread
+            // them onto every media element so admin-picked focal point
+            // applies across fullpage img/video AND default-mode mobile
+            // bg + desktop framed image. The hero-image-focal class in
+            // globals.css consumes both vars via a breakpoint switch.
+            const focalStyle = {
+              ['--img-pos-mobile' as string]: slide.imgPosMobile,
+              ['--img-pos-desktop' as string]: slide.imgPosDesktop,
+            } as React.CSSProperties;
+
             const MediaEl = slide.image ? (
               slide.mediaType === 'video' ? (
                 <video
                   src={slide.image}
                   autoPlay muted loop playsInline
                   aria-label={slide.title.replace('\n', ' ') || 'Hero video'}
-                  className="w-full h-full object-cover object-center"
+                  className="w-full h-full object-cover hero-image-focal"
+                  style={focalStyle}
                 />
               ) : (
                 <Image
@@ -138,7 +155,8 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                   sizes="100vw"
                   quality={95}
                   priority={isFirst}
-                  className="object-cover object-center"
+                  className="object-cover hero-image-focal"
+                  style={focalStyle}
                 />
               )
             ) : (
@@ -235,7 +253,8 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                       <video
                         src={slide.image}
                         autoPlay muted loop playsInline
-                        className="w-full h-full object-cover object-center"
+                        className="w-full h-full object-cover hero-image-focal"
+                        style={focalStyle}
                       />
                     ) : (
                       <Image
@@ -245,7 +264,8 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         sizes="100vw"
                         quality={95}
                         priority={isFirst}
-                        className="object-cover object-center"
+                        className="object-cover hero-image-focal"
+                        style={focalStyle}
                       />
                     )
                   ) : (
