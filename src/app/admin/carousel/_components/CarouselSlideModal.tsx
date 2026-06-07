@@ -109,6 +109,8 @@ export default function CarouselSlideModal({
         subtitle_underline: formData.subtitle_underline,
         text_position: formData.text_position,
         text_position_mobile: formData.text_position_mobile,
+        image_position: formData.image_position,
+        image_position_mobile: formData.image_position_mobile,
       };
       if (!supabase) throw new Error('클라이언트 없음');
       if (editingId) {
@@ -555,6 +557,32 @@ export default function CarouselSlideModal({
                 value={formData.text_position_mobile}
                 onChange={pos => setFormData(prev => ({ ...prev, text_position_mobile: pos }))}
               />
+            </div>
+
+            {/* Image focal point (migration 29). When the uploaded
+                source was authored for desktop (product on the right),
+                mobile crops to portrait via object-cover; admin picks
+                where to anchor that crop so the product stays visible.
+                For example: PC = 'mc' (center) leaves the wide image
+                centered; mobile = 'mr' (middle-right) keeps the
+                product-on-right composition in frame. */}
+            <div>
+              <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-1">이미지 중심점</p>
+              <p className="text-[10px] text-gray-400 mb-2">
+                업로드한 이미지가 잘릴 때 어느 지점을 중심으로 보일지 정합니다. (PC와 모바일을 따로 설정)
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <PositionPicker
+                  label="PC 이미지 중심점 (sm+)"
+                  value={formData.image_position}
+                  onChange={pos => setFormData(prev => ({ ...prev, image_position: pos }))}
+                />
+                <PositionPicker
+                  label="모바일 이미지 중심점"
+                  value={formData.image_position_mobile}
+                  onChange={pos => setFormData(prev => ({ ...prev, image_position_mobile: pos }))}
+                />
+              </div>
             </div>
           </div>
 

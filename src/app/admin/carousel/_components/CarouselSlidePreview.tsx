@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { type SlideFormData } from '../_lib';
-import { fontFamilyForKey, positionForKey } from '@/lib/typography/options';
+import { fontFamilyForKey, positionForKey, objectPositionForKey } from '@/lib/typography/options';
 
 interface Props {
   form: SlideFormData;
@@ -62,12 +62,20 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
     textDecoration: form.subtitle_underline ? 'underline' : 'none',
   };
 
+  // Migration 29: image focal point. Preview only needs one value at a
+  // time (it shows one view), so we just resolve whichever picker is
+  // active for the current PC/모바일 toggle and apply inline.
+  const focalObjectPosition = objectPositionForKey(
+    isMobileView ? form.image_position_mobile : form.image_position
+  );
+  const focalImgStyle: React.CSSProperties = { objectPosition: focalObjectPosition };
+
   const MediaEl = mediaUrl ? (
     isVideo ? (
-      <video src={mediaUrl} autoPlay muted loop playsInline className="w-full h-full object-cover object-center" />
+      <video src={mediaUrl} autoPlay muted loop playsInline className="w-full h-full object-cover" style={focalImgStyle} />
     ) : (
       /* eslint-disable-next-line @next/next/no-img-element */
-      <img src={mediaUrl} alt="" className="w-full h-full object-cover object-center" />
+      <img src={mediaUrl} alt="" className="w-full h-full object-cover" style={focalImgStyle} />
     )
   ) : (
     <div className="w-full h-full bg-gradient-to-br from-neutral-100 to-neutral-200 flex items-center justify-center">

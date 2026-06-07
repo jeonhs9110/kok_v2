@@ -36,6 +36,9 @@ export interface CarouselSlide {
   text_position?: string | null;
   // Migration 27: separate anchor for the mobile breakpoint.
   text_position_mobile?: string | null;
+  // Migration 29: per-breakpoint image focal point.
+  image_position?: string | null;
+  image_position_mobile?: string | null;
 }
 
 export async function getActiveSlides(): Promise<CarouselSlide[]> {
