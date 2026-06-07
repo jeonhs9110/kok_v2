@@ -145,16 +145,33 @@ export default function AssetLibraryPage() {
       // queries error (e.g. RLS denies the read), we fall through to
       // a softer warning rather than blocking the delete.
       const url = a.publicUrl;
-      const [products, sub_hero, carousel] = await Promise.all([
+      // Expanded to also check promo_banners (homepage banner pair),
+      // review_cards (review showcase thumbnails), and instagram_posts
+      // (IG grid) — those were three of the four tables the hostile
+      // audit caught the usage warning silently skipping. (shorts only
+      // stores youtube_id; thumbnails are auto-pulled from
+      // i.ytimg.com/vi/${id}/hqdefault.jpg, so no cover_url column to
+      // check.) page_blocks (admin/pages JSONB) also isn't covered;
+      // the JSONB shape varies and a simple column query can't reach
+      // image URLs nested inside the block array. Both gaps surfaced
+      // in the confirm prompt below.
+      const [products, sub_hero, carousel, promo, reviews, ig] = await Promise.all([
         supabase.from('products').select('id, name').or(`image_url.eq.${url},detail_image_url.eq.${url}`).limit(5),
         supabase.from('sub_hero_banners').select('id').eq('image_url', url).limit(5),
         supabase.from('carousel_slides').select('id, badge').eq('image_url', url).limit(5),
+        supabase.from('promo_banners').select('id').eq('image_url', url).limit(5),
+        supabase.from('review_cards').select('id, title').eq('image_url', url).limit(5),
+        supabase.from('instagram_posts').select('id').eq('image_url', url).limit(5),
       ]);
 
       const productRefs = products.data ?? [];
       const subHeroRefs = sub_hero.data ?? [];
       const carouselRefs = carousel.data ?? [];
-      const total = productRefs.length + subHeroRefs.length + carouselRefs.length;
+      const promoRefs = promo.data ?? [];
+      const reviewRefs = reviews.data ?? [];
+      const igRefs = ig.data ?? [];
+      const total = productRefs.length + subHeroRefs.length + carouselRefs.length
+                  + promoRefs.length + reviewRefs.length + igRefs.length;
 
       let confirmMsg: string;
       if (total > 0) {
@@ -164,9 +181,16 @@ export default function AssetLibraryPage() {
         }
         if (subHeroRefs.length > 0) lines.push(`• 서브 히어로 배너 ${subHeroRefs.length}개`);
         if (carouselRefs.length > 0) lines.push(`• 메인 캐러셀 슬라이드 ${carouselRefs.length}개`);
+        if (promoRefs.length > 0)    lines.push(`• 프로모 배너 ${promoRefs.length}개`);
+        if (reviewRefs.length > 0)   lines.push(`• 리뷰 카드 ${reviewRefs.length}개`);
+        if (igRefs.length > 0)       lines.push(`• 인스타 슬롯 ${igRefs.length}개`);
         confirmMsg = `⚠️ 이 이미지는 아래에서 사용 중입니다:\n\n${lines.join('\n')}\n\n${a.bucket}/${a.key}\n\n삭제하면 해당 위치에 이미지가 표시되지 않습니다. 계속 삭제하시겠습니까?`;
       } else {
-        confirmMsg = `정말 삭제하시겠습니까?\n\n${a.bucket}/${a.key}\n\n(상품/서브 히어로/캐러셀에서는 참조하지 않는 것으로 확인됨)`;
+        // Caveat: page-builder blocks (admin/pages JSONB) aren't
+        // queryable with a simple column eq; surface that the check
+        // is best-effort so the admin doesn't trust a "no references"
+        // result for a build-your-own-page block image.
+        confirmMsg = `정말 삭제하시겠습니까?\n\n${a.bucket}/${a.key}\n\n(상품/서브 히어로/캐러셀/프로모/리뷰/인스타에서는 참조하지 않는 것으로 확인됨. 페이지 빌더 블록 내부 이미지는 자동 검사 대상이 아닙니다.)`;
       }
       if (!confirm(confirmMsg)) {
         setDeletingKey(null);
