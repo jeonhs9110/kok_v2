@@ -155,8 +155,19 @@ export default function AssetLibraryPage() {
       // the JSONB shape varies and a simple column query can't reach
       // image URLs nested inside the block array. Both gaps surfaced
       // in the confirm prompt below.
+      // products.images is a text[] (verified live: { "images": ["https://…"] }),
+      // not the singular `image_url` / `detail_image_url` columns the earlier
+      // OR-eq targeted — neither of those exists, so PostgREST errored, the
+      // try-catch silently swallowed the products check, and admins could
+      // delete an image that products were still using. .contains() builds
+      // the right `images=cs.{url}` array-containment filter for text[].
+      //
+      // Detail-section images live inside detail_body (HTML) and
+      // detail_components (JSONB array). A column-level eq can't reach
+      // either; both gaps are surfaced in the "best-effort" caveat at the
+      // bottom of the confirm prompt.
       const [products, sub_hero, carousel, promo, reviews, ig] = await Promise.all([
-        supabase.from('products').select('id, name').or(`image_url.eq.${url},detail_image_url.eq.${url}`).limit(5),
+        supabase.from('products').select('id, name').contains('images', [url]).limit(5),
         supabase.from('sub_hero_banners').select('id').eq('image_url', url).limit(5),
         supabase.from('carousel_slides').select('id, badge').eq('image_url', url).limit(5),
         supabase.from('promo_banners').select('id').eq('image_url', url).limit(5),
@@ -190,7 +201,7 @@ export default function AssetLibraryPage() {
         // queryable with a simple column eq; surface that the check
         // is best-effort so the admin doesn't trust a "no references"
         // result for a build-your-own-page block image.
-        confirmMsg = `정말 삭제하시겠습니까?\n\n${a.bucket}/${a.key}\n\n(상품/서브 히어로/캐러셀/프로모/리뷰/인스타에서는 참조하지 않는 것으로 확인됨. 페이지 빌더 블록 내부 이미지는 자동 검사 대상이 아닙니다.)`;
+        confirmMsg = `정말 삭제하시겠습니까?\n\n${a.bucket}/${a.key}\n\n(상품 메인 이미지/서브 히어로/캐러셀/프로모/리뷰/인스타에서는 참조하지 않는 것으로 확인됨. 상품 상세 본문(에디터 내부 이미지) · 페이지 빌더 블록 내부 이미지는 자동 검사 대상이 아닙니다.)`;
       }
       if (!confirm(confirmMsg)) {
         setDeletingKey(null);
