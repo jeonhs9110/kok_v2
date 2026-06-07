@@ -10,6 +10,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 // JWT for cross-author updates/deletes — see migration 19.
 const supabase = getSupabaseBrowser();
 import type { Post, Menu } from '@/lib/api/menus';
+import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
 export default function PostsAdminPage() {
   const { menuId } = useParams<{ menuId: string }>();
@@ -57,6 +58,9 @@ export default function PostsAdminPage() {
       } else {
         await supabase.from('posts').insert(payload);
       }
+      // Menu pages render the post list server-side; bust the same memo
+      // the menus admin invalidates so the new post shows immediately.
+      await revalidateHeaderData();
       resetForm();
       fetchAll();
     } catch { alert('저장 실패'); }
@@ -66,6 +70,7 @@ export default function PostsAdminPage() {
     if (!confirm('이 게시글을 삭제하시겠습니까?')) return;
     if (!supabase) return;
     await supabase.from('posts').delete().eq('id', id);
+    await revalidateHeaderData();
     fetchAll();
   };
 

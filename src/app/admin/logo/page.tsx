@@ -8,6 +8,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 // site_backgrounds writes — see migration 18.
 const supabase = getSupabaseBrowser();
 import { getSiteSetting, setSiteSetting } from '@/lib/api/site-settings';
+import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
 const BUCKET = 'site-assets';
 
@@ -81,6 +82,9 @@ export default function LogoAdminPage() {
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
       const ok = await setSiteSetting(supabase, 'logo_url', data.publicUrl);
       if (!ok) throw new Error('저장 실패');
+      // Header memo caches the logo URL alongside menus + categories;
+      // bust it so the new logo shows immediately on the public site.
+      await revalidateHeaderData();
       setLogoUrl(data.publicUrl);
       setLogoPreview(data.publicUrl);
       setLogoPending(null);
@@ -100,6 +104,7 @@ export default function LogoAdminPage() {
     setLogoSaving(true);
     const ok = await setSiteSetting(supabase, 'logo_url', '');
     if (ok) {
+      await revalidateHeaderData();
       setLogoUrl('');
       setLogoPreview('');
       setLogoPending(null);

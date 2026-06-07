@@ -28,7 +28,7 @@
    which Tailwind v4's source scanner doesn't reliably extract (same
    class-of-bug as the position-picker safelist above). Without this,
    the Kakao + Naver login buttons render as unstyled rectangles. */
-@source inline("bg-[#FEE500] bg-[#FDD800] bg-[#03C75A] bg-[#02b350] hover:bg-[#FDD800] hover:bg-[#02b350]");
+@source inline("bg-[#FEE500] bg-[#FDD800] bg-[#03C75A] bg-[#02b350] hover:bg-[#FDD800] hover:bg-[#02b350] text-[#391B1B]");
 
 
 /* ──────────────────────────────────────────────────────────
