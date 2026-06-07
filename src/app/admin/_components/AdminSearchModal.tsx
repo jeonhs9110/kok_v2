@@ -98,25 +98,33 @@ export default function AdminSearchModal({ open, onClose }: { open: boolean; onC
       // operator boundaries.
       const safeQ = trimmed.replace(/[^\p{L}\p{N}\s]/gu, ' ').trim();
       if (!safeQ) { setResults([]); setLoading(false); return; }
-      // JSONB title/name columns store { kr, en, jp, cn, vn, th }. We OR
-      // ilike across each language path via the documented PostgREST
-      // arrow-extract syntax (->>lang). The earlier `.filter('col::text',
-      // 'ilike', …)` shape isn't a documented PostgREST cast and silently
-      // returned nothing in supabase-js.
+      // menus.title + pages.title are JSONB { kr, en, jp, cn, vn, th } —
+      // OR ilike across each language path via PostgREST's arrow-extract
+      // syntax (->>lang). The earlier `.filter('col::text', 'ilike', …)`
+      // shape wasn't a documented PostgREST cast and silently returned
+      // nothing in supabase-js.
+      //
+      // products.name and posts.title are plain text (single-language),
+      // verified live against the production Supabase REST API:
+      //   GET /rest/v1/products?select=name → { "name": "콕콕가든 PDRN ..." }
+      // (not { kr: ..., en: ... }). The src/lib/api/products.ts Product
+      // interface confirms `name: string` (line 18). A flat ilike hits
+      // them directly; the JSONB OR pattern targets paths that don't
+      // exist and returns empty.
       const LANGS = ['kr', 'en', 'jp', 'cn', 'vn', 'th'];
       const orJsonb = (col: string) =>
         LANGS.map(l => `${col}->>${l}.ilike.%${safeQ}%`).join(',');
       const [products, menus, pages, posts] = await Promise.all([
-        supabase.from('products').select('id,name').or(orJsonb('name')).limit(8),
+        supabase.from('products').select('id,name').ilike('name', `%${safeQ}%`).limit(8),
         supabase.from('menus').select('id,slug,title').or(orJsonb('title')).limit(8),
         supabase.from('pages').select('id,slug,title').or(orJsonb('title')).limit(8),
-        // posts.title is plain text (single-language), so a flat ilike
-        // hits it directly — see src/lib/api/menus.ts Post interface.
         supabase.from('posts').select('id,title,menu_id').ilike('title', `%${safeQ}%`).limit(8),
       ]);
       const rs: Result[] = [];
       for (const p of (products.data ?? [])) {
-        rs.push({ kind: 'product', id: p.id, label: pickLabel((p as { name: LangMap }).name, '(이름 없음)'), href: `/admin/products` });
+        // products.name is a plain string (see Product interface
+        // src/lib/api/products.ts:18); pickLabel handles strings directly.
+        rs.push({ kind: 'product', id: p.id, label: pickLabel((p as { name: string }).name, '(이름 없음)'), href: `/admin/products` });
       }
       for (const m of (menus.data ?? [])) {
         const mm = m as { id: string; slug: string; title: LangMap };
