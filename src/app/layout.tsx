@@ -3,6 +3,7 @@ import localFont from 'next/font/local';
 import './globals.css';
 import StorefrontLayoutWrapper from '@/components/StorefrontLayoutWrapper';
 import SiteBackground from '@/components/SiteBackground';
+import TailwindSafelist from '@/components/TailwindSafelist';
 
 const freesentation = localFont({
   src: [
@@ -62,6 +63,7 @@ export default function RootLayout({
       </head>
       <body className={`${freesentation.className} text-neutral-950 antialiased min-h-screen`}>
         <SiteBackground />
+        <TailwindSafelist />
         <StorefrontLayoutWrapper>
           {children}
         </StorefrontLayoutWrapper>
