@@ -31,6 +31,13 @@ export interface ThemeTokens {
   font_body: string;
   /** Font-family string for display / headings. Empty falls through. */
   font_display: string;
+  /**
+   * Header navigation menu font size. CSS length value (e.g. "13.5px",
+   * "15px"). Drives both the desktop top-nav links and the mobile drawer
+   * via the --header-menu-font-size variable. Added 2026-06 after 한송이
+   * relayed customer feedback that the menu text felt too small.
+   */
+  header_menu_font_size: string;
 }
 
 export const DEFAULT_THEME_TOKENS: ThemeTokens = {
@@ -43,6 +50,7 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   radius_button: '0px',
   font_body: '',
   font_display: '',
+  header_menu_font_size: '13.5px',
 };
 
 export function parseThemeTokens(raw: unknown): ThemeTokens {
@@ -65,6 +73,7 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     radius_button: partial.radius_button ?? DEFAULT_THEME_TOKENS.radius_button,
     font_body: partial.font_body ?? '',
     font_display: partial.font_display ?? '',
+    header_menu_font_size: partial.header_menu_font_size || DEFAULT_THEME_TOKENS.header_menu_font_size,
   };
 }
 
@@ -81,6 +90,7 @@ export function tokensToCss(t: ThemeTokens): string {
     `--color-brand-notice-from: ${t.color_brand_notice_from};`,
     `--color-brand-notice-to: ${t.color_brand_notice_to};`,
     `--radius-button: ${t.radius_button};`,
+    `--header-menu-font-size: ${t.header_menu_font_size};`,
   ];
   if (t.font_body) lines.push(`--font-body: ${t.font_body};`);
   if (t.font_display) lines.push(`--font-display: ${t.font_display};`);
