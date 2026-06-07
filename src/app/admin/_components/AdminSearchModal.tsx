@@ -53,7 +53,9 @@ export default function AdminSearchModal({ open, onClose }: { open: boolean; onC
   // prop owned by the parent, no render cycle.
   useEffect(() => {
     if (open) {
-      setTimeout(() => inputRef.current?.focus(), 50);
+      // Defer to next tick so the input has mounted; 0ms is enough — a
+      // 50ms delay would drop the first keystroke if the user types fast.
+      setTimeout(() => inputRef.current?.focus(), 0);
     } else {
       /* eslint-disable react-hooks/set-state-in-effect */
       setQuery('');
@@ -118,7 +120,10 @@ export default function AdminSearchModal({ open, onClose }: { open: boolean; onC
       }
       for (const m of (menus.data ?? [])) {
         const mm = m as { id: string; slug: string; title: LangMap };
-        rs.push({ kind: 'menu', id: mm.id, label: `${pickLabel(mm.title, mm.slug)} · /${mm.slug}`, href: `/admin/menus/${mm.id}` });
+        // /admin/menus/[menuId] has no page.tsx (only a posts/ subroute);
+        // direct edit happens inline on the list page. Navigating to the
+        // [menuId] route directly would 404, so we land on the list.
+        rs.push({ kind: 'menu', id: mm.id, label: `${pickLabel(mm.title, mm.slug)} · /${mm.slug}`, href: `/admin/menus` });
       }
       for (const p of (pages.data ?? [])) {
         const pp = p as { id: string; slug: string; title: LangMap };
