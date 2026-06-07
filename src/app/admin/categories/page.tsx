@@ -8,6 +8,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 const supabase = getSupabaseBrowser();
 import type { Category } from '@/lib/api/categories';
 import { SUPPORTED_LANGS, LANG_LABELS } from '@/lib/i18n/types';
+import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
 interface FormData {
   slug: string;
@@ -85,6 +86,10 @@ export default function CategoriesAdminPage() {
         const { error } = await supabase.from('categories').insert(payload);
         if (error) throw error;
       }
+      // Header mega-menu reads the categories tree from the same memo
+      // the menus admin invalidates — without this call the public site
+      // shows the old category list for up to 60s after a save.
+      await revalidateHeaderData();
       setModalOpen(false);
       fetchAll();
     } catch (err: unknown) {
@@ -100,6 +105,7 @@ export default function CategoriesAdminPage() {
     if (!confirm(msg)) return;
     if (!supabase) return;
     await supabase.from('categories').delete().eq('id', id);
+    await revalidateHeaderData();
     fetchAll();
   };
 
