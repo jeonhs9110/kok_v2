@@ -32,6 +32,16 @@
 
 
 /* ──────────────────────────────────────────────────────────
+   Header navigation menu font size — adjustable from /admin/theme
+   via the --header-menu-font-size token (see src/lib/theme/tokens.ts).
+   Customer feedback (2026-06 via 한송이) was that 13.5px felt too
+   small; admin can now bump to 15/17/19 without code changes.
+   ────────────────────────────────────────────────────────── */
+.kokkok-nav-menu-text {
+  font-size: var(--header-menu-font-size, 13.5px);
+}
+
+/* ──────────────────────────────────────────────────────────
    Carousel image focal point (migration 29).
 
    HeroSlider sets two CSS variables on each <Image>:

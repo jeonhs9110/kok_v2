@@ -166,6 +166,35 @@ export default function ThemePage() {
                     ))}
                   </div>
                 </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">헤더 메뉴 글씨 크기</label>
+                  {/* Preset picker mirrors the button-radius UX; each option
+                      previews at its own font-size so the admin sees the
+                      relative difference at a glance. */}
+                  <div className="grid grid-cols-4 gap-1.5 mt-1">
+                    {[
+                      { v: '13.5px', l: '기본' },
+                      { v: '15px',   l: '크게' },
+                      { v: '17px',   l: '더 크게' },
+                      { v: '19px',   l: '가장 크게' },
+                    ].map(opt => (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        onClick={() => setTokens(t => ({ ...t, header_menu_font_size: opt.v }))}
+                        className={`p-2 font-semibold border rounded ${
+                          tokens.header_menu_font_size === opt.v
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                        }`}
+                        style={{ fontSize: opt.v }}
+                      >
+                        {opt.l}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-400">홈페이지 상단 메뉴 (상품·메뉴·Shop Worldwide) 글씨 크기. 모바일 메뉴도 함께 조절됩니다.</p>
+                </div>
               </Section>
 
               <Section title="타이포그래피 (선택)">

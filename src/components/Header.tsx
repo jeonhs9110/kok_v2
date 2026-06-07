@@ -193,7 +193,7 @@ export default function Header({
                 onMouseEnter={() => openMenu('product')}
                 onMouseLeave={closeMenu}
               >
-                <button className={`flex items-center gap-1 px-4 h-full text-[13.5px] font-semibold tracking-wide transition-colors ${activeMenu === 'product' ? 'text-black' : 'text-neutral-800 hover:text-black'}`}>
+                <button className={`flex items-center gap-1 px-4 h-full kokkok-nav-menu-text font-semibold tracking-wide transition-colors ${activeMenu === 'product' ? 'text-black' : 'text-neutral-800 hover:text-black'}`}>
                   {nav.product}
                 </button>
                 {/* Green underline indicator */}
@@ -208,14 +208,14 @@ export default function Header({
                 const menuLabel = menu.title?.[lang] || menu.title?.kr || menu.title?.en || menu.slug;
                 if (!hasChildren) {
                   return (
-                    <Link key={menu.slug} href={`/${lang}/menus/${menu.slug}`} className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors">
+                    <Link key={menu.slug} href={`/${lang}/menus/${menu.slug}`} className="px-4 h-full flex items-center kokkok-nav-menu-text font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors">
                       {menuLabel}
                     </Link>
                   );
                 }
                 return (
                   <div key={menu.slug} className="relative h-full flex items-center" onMouseEnter={() => openMenu(`menu-${menu.slug}`)} onMouseLeave={closeMenu}>
-                    <Link href={`/${lang}/menus/${menu.slug}`} className={`flex items-center gap-1 px-4 h-full text-[13.5px] font-semibold tracking-wide transition-colors ${activeMenu === `menu-${menu.slug}` ? 'text-black' : 'text-neutral-800 hover:text-black'}`}>
+                    <Link href={`/${lang}/menus/${menu.slug}`} className={`flex items-center gap-1 px-4 h-full kokkok-nav-menu-text font-semibold tracking-wide transition-colors ${activeMenu === `menu-${menu.slug}` ? 'text-black' : 'text-neutral-800 hover:text-black'}`}>
                       {menuLabel}
                     </Link>
                     {activeMenu === `menu-${menu.slug}` && (
@@ -228,7 +228,7 @@ export default function Header({
               {/* Shop Worldwide — direct link */}
               <Link
                 href={`/${lang}/worldwide`}
-                className="px-4 h-full flex items-center text-[13.5px] font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors"
+                className="px-4 h-full flex items-center kokkok-nav-menu-text font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors"
               >
                 {nav.global}
               </Link>
@@ -329,11 +329,11 @@ export default function Header({
       {/* ── Mobile Menu Drawer ───────────────────────────────────────── */}
         {mobileOpen && (
           <div className="lg:hidden bg-white border-t border-neutral-100 px-6 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
-            <Link href={`/${lang}/products`} className="block text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{nav.product}</Link>
+            <Link href={`/${lang}/products`} className="block kokkok-nav-menu-text font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{nav.product}</Link>
             {navMenus.map(menu => (
-              <Link key={menu.slug} href={`/${lang}/menus/${menu.slug}`} className="block text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{menu.title?.[lang] || menu.title?.kr || menu.title?.en || ''}</Link>
+              <Link key={menu.slug} href={`/${lang}/menus/${menu.slug}`} className="block kokkok-nav-menu-text font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{menu.title?.[lang] || menu.title?.kr || menu.title?.en || ''}</Link>
             ))}
-            <Link href={`/${lang}/worldwide`} className="flex items-center gap-2 text-sm font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>
+            <Link href={`/${lang}/worldwide`} className="flex items-center gap-2 kokkok-nav-menu-text font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>
               <Globe className="w-4 h-4" /> {nav.worldwide}
             </Link>
             <div className="pt-2 flex gap-4 text-[12px] text-neutral-400">
