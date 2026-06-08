@@ -112,8 +112,14 @@ export type PositionKey =
 export interface PositionOption {
   key: PositionKey;
   /** Justify-content along the cross axis (horizontal). */
+  /**
+   * In all consumers (HeroSlider / SubHeroBanner / CarouselSlidePreview)
+   * the container is `flex flex-col`, so `justify-*` aligns on the MAIN
+   * axis (vertical) and `items-*` aligns on the CROSS axis (horizontal).
+   * The earlier table had these flipped and 5 of the 9 positions
+   * rendered to the wrong cell — fixed 2026-06-09.
+   */
   justify: 'justify-start' | 'justify-center' | 'justify-end';
-  /** Align-items along the main axis (vertical). */
   align: 'items-start' | 'items-center' | 'items-end';
   /** Inline text-align so multi-line titles read sensibly. */
   textAlign: 'text-left' | 'text-center' | 'text-right';
@@ -121,13 +127,13 @@ export interface PositionOption {
 
 export const POSITION_OPTIONS: PositionOption[] = [
   { key: 'tl', justify: 'justify-start',  align: 'items-start',  textAlign: 'text-left'   },
-  { key: 'tc', justify: 'justify-center', align: 'items-start',  textAlign: 'text-center' },
-  { key: 'tr', justify: 'justify-end',    align: 'items-start',  textAlign: 'text-right'  },
-  { key: 'ml', justify: 'justify-start',  align: 'items-center', textAlign: 'text-left'   },
+  { key: 'tc', justify: 'justify-start',  align: 'items-center', textAlign: 'text-center' },
+  { key: 'tr', justify: 'justify-start',  align: 'items-end',    textAlign: 'text-right'  },
+  { key: 'ml', justify: 'justify-center', align: 'items-start',  textAlign: 'text-left'   },
   { key: 'mc', justify: 'justify-center', align: 'items-center', textAlign: 'text-center' },
-  { key: 'mr', justify: 'justify-end',    align: 'items-center', textAlign: 'text-right'  },
-  { key: 'bl', justify: 'justify-start',  align: 'items-end',    textAlign: 'text-left'   },
-  { key: 'bc', justify: 'justify-center', align: 'items-end',    textAlign: 'text-center' },
+  { key: 'mr', justify: 'justify-center', align: 'items-end',    textAlign: 'text-right'  },
+  { key: 'bl', justify: 'justify-end',    align: 'items-start',  textAlign: 'text-left'   },
+  { key: 'bc', justify: 'justify-end',    align: 'items-center', textAlign: 'text-center' },
   { key: 'br', justify: 'justify-end',    align: 'items-end',    textAlign: 'text-right'  },
 ];
 
@@ -157,14 +163,15 @@ export const POSITION_DESKTOP_SM: Record<PositionKey, {
   justify: 'sm:justify-start' | 'sm:justify-center' | 'sm:justify-end';
   textAlign: 'sm:text-left' | 'sm:text-center' | 'sm:text-right';
 }> = {
+  // Same flex-col axis correction as POSITION_OPTIONS above.
   tl: { align: 'sm:items-start',  justify: 'sm:justify-start',  textAlign: 'sm:text-left'   },
-  tc: { align: 'sm:items-start',  justify: 'sm:justify-center', textAlign: 'sm:text-center' },
-  tr: { align: 'sm:items-start',  justify: 'sm:justify-end',    textAlign: 'sm:text-right'  },
-  ml: { align: 'sm:items-center', justify: 'sm:justify-start',  textAlign: 'sm:text-left'   },
+  tc: { align: 'sm:items-center', justify: 'sm:justify-start',  textAlign: 'sm:text-center' },
+  tr: { align: 'sm:items-end',    justify: 'sm:justify-start',  textAlign: 'sm:text-right'  },
+  ml: { align: 'sm:items-start',  justify: 'sm:justify-center', textAlign: 'sm:text-left'   },
   mc: { align: 'sm:items-center', justify: 'sm:justify-center', textAlign: 'sm:text-center' },
-  mr: { align: 'sm:items-center', justify: 'sm:justify-end',    textAlign: 'sm:text-right'  },
-  bl: { align: 'sm:items-end',    justify: 'sm:justify-start',  textAlign: 'sm:text-left'   },
-  bc: { align: 'sm:items-end',    justify: 'sm:justify-center', textAlign: 'sm:text-center' },
+  mr: { align: 'sm:items-end',    justify: 'sm:justify-center', textAlign: 'sm:text-right'  },
+  bl: { align: 'sm:items-start',  justify: 'sm:justify-end',    textAlign: 'sm:text-left'   },
+  bc: { align: 'sm:items-center', justify: 'sm:justify-end',    textAlign: 'sm:text-center' },
   br: { align: 'sm:items-end',    justify: 'sm:justify-end',    textAlign: 'sm:text-right'  },
 };
 
@@ -184,14 +191,15 @@ export const POSITION_DESKTOP_MD: Record<PositionKey, {
   justify: 'md:justify-start' | 'md:justify-center' | 'md:justify-end';
   textAlign: 'md:text-left' | 'md:text-center' | 'md:text-right';
 }> = {
+  // Same flex-col axis correction as POSITION_OPTIONS above.
   tl: { align: 'md:items-start',  justify: 'md:justify-start',  textAlign: 'md:text-left'   },
-  tc: { align: 'md:items-start',  justify: 'md:justify-center', textAlign: 'md:text-center' },
-  tr: { align: 'md:items-start',  justify: 'md:justify-end',    textAlign: 'md:text-right'  },
-  ml: { align: 'md:items-center', justify: 'md:justify-start',  textAlign: 'md:text-left'   },
+  tc: { align: 'md:items-center', justify: 'md:justify-start',  textAlign: 'md:text-center' },
+  tr: { align: 'md:items-end',    justify: 'md:justify-start',  textAlign: 'md:text-right'  },
+  ml: { align: 'md:items-start',  justify: 'md:justify-center', textAlign: 'md:text-left'   },
   mc: { align: 'md:items-center', justify: 'md:justify-center', textAlign: 'md:text-center' },
-  mr: { align: 'md:items-center', justify: 'md:justify-end',    textAlign: 'md:text-right'  },
-  bl: { align: 'md:items-end',    justify: 'md:justify-start',  textAlign: 'md:text-left'   },
-  bc: { align: 'md:items-end',    justify: 'md:justify-center', textAlign: 'md:text-center' },
+  mr: { align: 'md:items-end',    justify: 'md:justify-center', textAlign: 'md:text-right'  },
+  bl: { align: 'md:items-start',  justify: 'md:justify-end',    textAlign: 'md:text-left'   },
+  bc: { align: 'md:items-center', justify: 'md:justify-end',    textAlign: 'md:text-center' },
   br: { align: 'md:items-end',    justify: 'md:justify-end',    textAlign: 'md:text-right'  },
 };
 
