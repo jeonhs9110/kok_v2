@@ -48,7 +48,7 @@ const L: Record<Lang, {
     marketingConsent: '(선택) 마케팅 정보 수신에 동의합니다.',
     required: '필수', optional: '선택',
     orSocialLogin: '또는 소셜 계정으로 가입',
-    minChars: '비밀번호는 6자 이상이어야 합니다.',
+    minChars: '비밀번호는 8자 이상이어야 합니다.',
     agreeAll: '전체 동의',
   },
   en: {
@@ -61,7 +61,7 @@ const L: Record<Lang, {
     marketingConsent: '(Optional) I agree to receive marketing communications.',
     required: 'Required', optional: 'Optional',
     orSocialLogin: 'or sign up with',
-    minChars: 'Password must be at least 6 characters.',
+    minChars: 'Password must be at least 8 characters.',
     agreeAll: 'Agree to all',
   },
 };
@@ -127,7 +127,10 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
       }
     }
 
-    if ((formData.password?.length || 0) < 6) {
+    // Align register with reset (which already required 8). Previously 6
+    // here, 8 in reset — a user registering at 7 chars then resetting was
+    // forced to pick a fresh longer password. Same min everywhere now.
+    if ((formData.password?.length || 0) < 8) {
       setError(t.minChars);
       setIsLoading(false);
       return;
