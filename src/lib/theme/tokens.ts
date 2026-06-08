@@ -38,6 +38,13 @@ export interface ThemeTokens {
    * relayed customer feedback that the menu text felt too small.
    */
   header_menu_font_size: string;
+  /**
+   * Header logo height. CSS length value (e.g. "40px"). Drives the
+   * <img class="kokkok-header-logo"> in src/components/Header.tsx.
+   * Added 2026-06-09 so /admin/logo can offer 작게/기본/크게/더 크게
+   * presets next to the file upload control.
+   */
+  header_logo_height: string;
 }
 
 export const DEFAULT_THEME_TOKENS: ThemeTokens = {
@@ -55,6 +62,9 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   // any preset (13.5 / 15 / 17 / 19) from /admin/theme; this only moves
   // the out-of-box value for installs without a saved row.
   header_menu_font_size: '15px',
+  // 40px matches the pre-token h-10 desktop height, so installs without
+  // a saved row paint identically to today.
+  header_logo_height: '40px',
 };
 
 export function parseThemeTokens(raw: unknown): ThemeTokens {
@@ -78,6 +88,7 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     font_body: partial.font_body ?? '',
     font_display: partial.font_display ?? '',
     header_menu_font_size: partial.header_menu_font_size || DEFAULT_THEME_TOKENS.header_menu_font_size,
+    header_logo_height: partial.header_logo_height || DEFAULT_THEME_TOKENS.header_logo_height,
   };
 }
 
@@ -95,6 +106,7 @@ export function tokensToCss(t: ThemeTokens): string {
     `--color-brand-notice-to: ${t.color_brand_notice_to};`,
     `--radius-button: ${t.radius_button};`,
     `--header-menu-font-size: ${t.header_menu_font_size};`,
+    `--header-logo-height: ${t.header_logo_height};`,
   ];
   if (t.font_body) lines.push(`--font-body: ${t.font_body};`);
   if (t.font_display) lines.push(`--font-display: ${t.font_display};`);

@@ -48,6 +48,20 @@
 }
 
 /* ──────────────────────────────────────────────────────────
+   Header logo height — adjustable from /admin/logo via the
+   --header-logo-height token (see src/lib/theme/tokens.ts).
+   Customer feedback was that the logo felt small at h-10 on
+   wider screens; admin can now pick 32/40/48/56 without code
+   changes. Fallback matches the pre-token default so installs
+   without a saved row look identical to before.
+   ────────────────────────────────────────────────────────── */
+.kokkok-header-logo {
+  height: var(--header-logo-height, 40px);
+  width: auto;
+  object-fit: contain;
+}
+
+/* ──────────────────────────────────────────────────────────
    Carousel image focal point (migration 29).
 
    HeroSlider sets two CSS variables on each <Image>:
