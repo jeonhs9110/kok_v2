@@ -402,23 +402,27 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
         <ChevronRight className="w-10 h-10 stroke-[1.5] drop-shadow-md" aria-hidden="true" />
       </button>
 
-      {/* Pagination Dots — visible dot stays tiny, but hitbox is 32×32 via padding */}
-      <div className="absolute bottom-6 left-0 right-0 flex justify-center">
+      {/* Pagination Stripes — anua.kr-style long horizontal bars.
+          Each stripe is the same width; the active one fills white while
+          the others read at white/40. The button keeps a 32×32 hitbox via
+          the p-3 padding so mobile taps remain easy even though the
+          visible stripe is just a 3px-tall line. */}
+      <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-1.5 sm:gap-2">
         {slides.map((_, index) => (
           <button
             key={index}
             type="button"
             aria-label={`Go to slide ${index + 1}`}
             aria-current={index === selectedIndex ? 'true' : undefined}
-            className="p-3 group/dot"
+            className="p-3 group/stripe"
             onClick={() => emblaApi && emblaApi.scrollTo(index)}
           >
             <span
               aria-hidden="true"
-              className={`block h-2 rounded-full transition-all ${
+              className={`block h-[3px] w-12 sm:w-16 rounded-sm transition-colors ${
                 index === selectedIndex
-                  ? 'bg-white w-6 shadow-md'
-                  : 'bg-white/60 w-2 group-hover/dot:bg-white/90'
+                  ? 'bg-white shadow-md'
+                  : 'bg-white/40 group-hover/stripe:bg-white/70'
               }`}
             />
           </button>
