@@ -110,6 +110,24 @@ body {
                var(--font-freesentation),
                -apple-system, BlinkMacSystemFont,
                "Segoe UI", Roboto, sans-serif;
+
+  /* Body base size — bumped from the browser default (16px) per
+     2026-06-08 송이 feedback that customers find the overall
+     copy too small ("메뉴랑 전체적은 폰트 사이즈도 키웠으면").
+     Components that pin their own text-[12px] / text-sm utility
+     stay where they are; this only lifts unstyled paragraph copy. */
+  font-size: 17px;
+
+  /* Glyph-rendering hints — 송이 also said customers describe the
+     text as "흐릿하다" (blurry) and want it to read "쨍하게" (crisp).
+     The antialiased + grayscale pair sharpens strokes on macOS/iOS;
+     optimizeLegibility turns on kerning + ligatures on Chrome /
+     Safari without measurable LCP cost at this DOM size. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern", "liga";
+
   /* Stop iOS Safari from auto-inflating text on landscape rotation.
      Without this, paragraphs with an admin-set fontSize can render
      ~20% larger after a device flip and re-trigger the overflow we

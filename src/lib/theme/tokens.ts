@@ -50,7 +50,11 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   radius_button: '0px',
   font_body: '',
   font_display: '',
-  header_menu_font_size: '13.5px',
+  // Bumped 2026-06-08 from 13.5px to 15px after 송이 forwarded customer
+  // feedback that the homepage menu read too small. Admins can still pin
+  // any preset (13.5 / 15 / 17 / 19) from /admin/theme; this only moves
+  // the out-of-box value for installs without a saved row.
+  header_menu_font_size: '15px',
 };
 
 export function parseThemeTokens(raw: unknown): ThemeTokens {
