@@ -61,7 +61,16 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className={`${freesentation.className} text-neutral-950 antialiased min-h-screen`}>
+      {/* Dropping freesentation.className from the body — that class set
+          font-family directly on the body element and beat the
+          `body { font-family: var(--font-body, …) }` CSS rule on
+          specificity, so the admin's /admin/theme → 본문 폰트 picker
+          silently did nothing. The freesentation.variable on <html>
+          above still exposes --font-freesentation, and globals.css's
+          body rule references that var in its fallback stack, so
+          customers who haven't picked an admin font still see
+          Freesentation as before. */}
+      <body className="text-neutral-950 antialiased min-h-screen">
         <SiteBackground />
         <TailwindSafelist />
         <StorefrontLayoutWrapper>
