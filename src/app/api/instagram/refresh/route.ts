@@ -51,6 +51,27 @@ export async function POST() {
       );
     }
 
+    // SSRF defense: rss_feed_url comes from a DB row an admin edits, so a
+    // compromised or curious admin could otherwise point us at
+    // http://169.254.169.254/ (AWS metadata) or http://127.0.0.1:<port> to
+    // exfiltrate internal services. Enforce HTTPS + a small allowlist of
+    // legitimate Instagram-RSS hosts (rss.app / rsshub / superfeedr).
+    let parsedRss: URL;
+    try {
+      parsedRss = new URL(rssUrl);
+    } catch {
+      return NextResponse.json({ error: 'RSS URL 형식이 올바르지 않습니다.' }, { status: 400 });
+    }
+    const ALLOWED_HOSTS = ['rss.app', 'rsshub.app', 'feed.superfeedr.com'];
+    const isHttps = parsedRss.protocol === 'https:';
+    const isAllowedHost = ALLOWED_HOSTS.some(h => parsedRss.hostname === h || parsedRss.hostname.endsWith('.' + h));
+    if (!isHttps || !isAllowedHost) {
+      return NextResponse.json(
+        { error: `RSS URL은 다음 호스트만 허용됩니다 (HTTPS): ${ALLOWED_HOSTS.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
     // Fetch RSS
     const res = await fetch(rssUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0 KokKokGardenRefresh/1.0' },
