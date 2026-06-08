@@ -39,6 +39,14 @@ export interface CarouselSlide {
   // Migration 29: per-breakpoint image focal point.
   image_position?: string | null;
   image_position_mobile?: string | null;
+  // Migration 30: continuous (x, y) anchors replacing the 9-cell pickers.
+  // Stored as JSONB { x: 0-100, y: 0-100 }. Code reads via resolveAnchor()
+  // which prefers the new column when populated and falls back to the
+  // legacy *_position key on older rows.
+  text_anchor?: unknown;
+  text_anchor_mobile?: unknown;
+  image_anchor?: unknown;
+  image_anchor_mobile?: unknown;
 }
 
 export async function getActiveSlides(): Promise<CarouselSlide[]> {

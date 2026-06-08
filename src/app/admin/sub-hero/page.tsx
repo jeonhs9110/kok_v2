@@ -5,8 +5,9 @@ import Image from 'next/image';
 import { Upload, ImageIcon } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { TypographyPanel, PositionPicker } from '@/components/admin/TypographyPanel';
-import { fontFamilyForKey, positionForKey, type PositionKey } from '@/lib/typography/options';
+import { TypographyPanel } from '@/components/admin/TypographyPanel';
+import ContinuousPositionPicker from '@/components/admin/ContinuousPositionPicker';
+import { fontFamilyForKey, anchorTextStyle, resolveAnchor, type PositionAnchor, type PositionKey } from '@/lib/typography/options';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 // Session-aware client. Phase 2 RLS lockdown on `sub_hero_banners` requires admin JWT.
@@ -38,6 +39,9 @@ interface SubHero {
   // admin can place text wherever doesn't collide with the product
   // image on a phone, without changing the desktop layout.
   text_position_mobile: PositionKey;
+  // Migration 30: continuous (x, y) anchors replacing the 9-cell pickers.
+  text_anchor: PositionAnchor;
+  text_anchor_mobile: PositionAnchor;
 }
 
 const EMPTY: SubHero = {
@@ -49,6 +53,8 @@ const EMPTY: SubHero = {
   title_color: null, subtitle_color: null,
   text_position: 'mc',
   text_position_mobile: 'mc',
+  text_anchor: { x: 50, y: 50 },
+  text_anchor_mobile: { x: 50, y: 50 },
 };
 
 export default function SubHeroAdminPage() {
@@ -78,8 +84,15 @@ export default function SubHeroAdminPage() {
         .limit(1)
         .maybeSingle();
       if (data) {
-        setBanner(data);
-        setSavedBanner(data);
+        // Resolve continuous anchors with the legacy 9-cell key as
+        // fallback for rows saved before migration 30.
+        const hydrated: SubHero = {
+          ...(data as SubHero),
+          text_anchor:        resolveAnchor(data.text_anchor, data.text_position),
+          text_anchor_mobile: resolveAnchor(data.text_anchor_mobile, data.text_position_mobile),
+        };
+        setBanner(hydrated);
+        setSavedBanner(hydrated);
       }
     } catch { /* use empty */ }
     finally { setIsLoading(false); }
@@ -131,6 +144,9 @@ export default function SubHeroAdminPage() {
         subtitle_color: banner.subtitle_color,
         text_position: banner.text_position,
         text_position_mobile: banner.text_position_mobile,
+        // Migration 30 anchors — saved in both forms for rollback safety.
+        text_anchor: banner.text_anchor,
+        text_anchor_mobile: banner.text_anchor_mobile,
       };
       let savedId = banner.id;
       if (banner.id) {
@@ -200,14 +216,13 @@ export default function SubHeroAdminPage() {
               </div>
             )}
             {(banner.title || banner.subtitle) && (() => {
-              // Mirror SubHeroBanner.tsx so the admin sees the actual
-              // anchor, font, weight, color, and decoration as they
-              // toggle them. Sizes are still halved to fit the editor.
-              const pos = positionForKey(
-                previewView === 'mobile' ? banner.text_position_mobile : banner.text_position
-              );
+              // Mirror SubHeroBanner.tsx — anchor + edge-aware inline
+              // styles, picked from the breakpoint the preview toggle
+              // is showing.
+              const anchor = previewView === 'mobile' ? banner.text_anchor_mobile : banner.text_anchor;
               return (
-                <div className={`absolute inset-0 flex flex-col px-6 ${pos.align} ${pos.justify} ${pos.textAlign}`}>
+                <div className="absolute inset-0 px-6">
+                  <div style={anchorTextStyle(anchor)}>
                   {banner.title && (
                     <h3
                       className="drop-shadow-lg whitespace-pre-line mb-1"
@@ -238,6 +253,7 @@ export default function SubHeroAdminPage() {
                       {banner.subtitle}
                     </p>
                   )}
+                  </div>
                 </div>
               );
             })()}
@@ -417,17 +433,27 @@ export default function SubHeroAdminPage() {
               mobile (migration 28). Mirrors the carousel modal pattern
               from PR #89 so the admin gets consistent controls across
               both editors. */}
-          <div className="grid grid-cols-2 gap-3">
-            <PositionPicker
-              label="PC 텍스트 위치 (md+)"
-              value={banner.text_position}
-              onChange={pos => setBanner(prev => ({ ...prev, text_position: pos }))}
-            />
-            <PositionPicker
-              label="모바일 텍스트 위치"
-              value={banner.text_position_mobile}
-              onChange={pos => setBanner(prev => ({ ...prev, text_position_mobile: pos }))}
-            />
+          <div>
+            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-1">텍스트 위치</p>
+            <p className="text-[10px] text-gray-400 mb-2">
+              미리보기에서 원하는 위치를 클릭하거나 흰 점을 드래그하세요. (PC와 모바일을 따로 설정)
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <ContinuousPositionPicker
+                label="PC 텍스트 위치"
+                value={banner.text_anchor}
+                onChange={a => setBanner(prev => ({ ...prev, text_anchor: a }))}
+                aspectRatio="aspect-[16/7]"
+                backgroundImage={banner.image_url || undefined}
+              />
+              <ContinuousPositionPicker
+                label="모바일 텍스트 위치"
+                value={banner.text_anchor_mobile}
+                onChange={a => setBanner(prev => ({ ...prev, text_anchor_mobile: a }))}
+                aspectRatio="aspect-[9/14]"
+                backgroundImage={banner.image_url || undefined}
+              />
+            </div>
           </div>
         </div>
 

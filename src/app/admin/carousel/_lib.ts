@@ -13,7 +13,7 @@ const supabase = getSupabaseBrowser();
 const BUCKET = 'product-images';
 export const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
-import type { PositionKey } from '@/lib/typography/options';
+import type { PositionAnchor, PositionKey } from '@/lib/typography/options';
 
 export interface SlideFormData {
   badge: Record<string, string>;
@@ -46,16 +46,21 @@ export interface SlideFormData {
   subtitle_bold: boolean;
   subtitle_italic: boolean;
   subtitle_underline: boolean;
+  // Legacy 9-cell columns (migrations 25/27/29). Kept for backward
+  // safety until the next minor sweep — every consumer now reads the
+  // _anchor pairs below and only falls back to these when an old row
+  // is missing the new anchor.
   text_position: PositionKey;
-  // Migration 27: separate anchor for the mobile breakpoint so the
-  // admin can place text wherever doesn't collide with the product
-  // image on a phone, without changing the desktop layout.
   text_position_mobile: PositionKey;
-  // Migration 29: per-breakpoint image focal point. Desktop-authored
-  // images often have the product on the right side; mobile crop needs
-  // a different center than desktop to keep the product visible.
   image_position: PositionKey;
   image_position_mobile: PositionKey;
+  // Migration 30 (2026-06-09): continuous (x, y) percent anchors that
+  // replace the 9-cell pickers. Admin clicks anywhere in the preview
+  // box and the marker drops at the exact (x, y) inside the slide.
+  text_anchor: PositionAnchor;
+  text_anchor_mobile: PositionAnchor;
+  image_anchor: PositionAnchor;
+  image_anchor_mobile: PositionAnchor;
 }
 
 export const emptyForm: SlideFormData = {
@@ -86,6 +91,10 @@ export const emptyForm: SlideFormData = {
   text_position_mobile: 'mc',
   image_position: 'mc',
   image_position_mobile: 'mc',
+  text_anchor: { x: 50, y: 50 },
+  text_anchor_mobile: { x: 50, y: 50 },
+  image_anchor: { x: 50, y: 50 },
+  image_anchor_mobile: { x: 50, y: 50 },
 };
 
 export async function uploadSlideAsset(file: File): Promise<string> {
