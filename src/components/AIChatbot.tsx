@@ -275,7 +275,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-brand-notice-to to-brand-notice-from shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center transition-all duration-200"
+          className="kokkok-keep-radius fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-brand-notice-to to-brand-notice-from shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center transition-all duration-200"
           aria-label="Open AI Chatbot"
         >
           <MessageCircle className="w-6 h-6 text-white" />
