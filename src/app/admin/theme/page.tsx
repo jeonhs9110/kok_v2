@@ -172,11 +172,15 @@ export default function ThemePage() {
                       previews at its own font-size so the admin sees the
                       relative difference at a glance. */}
                   <div className="grid grid-cols-4 gap-1.5 mt-1">
+                    {/* Labels renamed 2026-06-08 after the default moved
+                        13.5px → 15px (tokens.ts). The picker now anchors
+                        '기본' on the new 15px default so 송이 doesn't see
+                        '크게' selected by default on a fresh install. */}
                     {[
-                      { v: '13.5px', l: '기본' },
-                      { v: '15px',   l: '크게' },
-                      { v: '17px',   l: '더 크게' },
-                      { v: '19px',   l: '가장 크게' },
+                      { v: '13.5px', l: '작게' },
+                      { v: '15px',   l: '기본' },
+                      { v: '17px',   l: '크게' },
+                      { v: '19px',   l: '더 크게' },
                     ].map(opt => (
                       <button
                         key={opt.v}
