@@ -175,7 +175,7 @@ export default function Header({
                 <img
                   src={logoUrl}
                   alt="KOKKOK GARDEN"
-                  className="h-8 md:h-10 w-auto object-contain"
+                  className="kokkok-header-logo"
                 />
               ) : (
                 <span className="text-[22px] font-black tracking-[0.12em] text-brand-ink uppercase">
