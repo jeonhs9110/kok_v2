@@ -1,12 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Save, FileText, Building2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Session-aware client. legal_pages and business_info have admin-only
+// write policies (auth.uid() IN role='admin'); the bare anon createClient()
+// the page used before this PR didn't carry the admin's JWT, so every
+// save was either silently failing or — if the policy was never applied
+// to production — running as anon and letting anyone with the public anon
+// key write garbage to these rows. Either way, switching to
+// getSupabaseBrowser() is the right pattern (matches every other admin
+// page after the RLS lockdown).
+const supabase = getSupabaseBrowser();
 
 interface LegalPage { id: number; slug: string; title_kr: string; title_en: string; content_kr: string; content_en: string; is_published: boolean; }
 interface BusinessInfo { company_name_kr: string; company_name_en: string; ceo_name: string; business_reg_number: string; mail_order_number: string; address_kr: string; address_en: string; phone: string; email: string; bank_name: string; bank_account: string; bank_holder: string; instagram_url: string; youtube_url: string; cs_hours_kr: string; cs_hours_en: string; cs_lunch_kr: string; cs_lunch_en: string; cs_holiday_kr: string; cs_holiday_en: string; privacy_officer_name: string; privacy_officer_email: string; hidden_fields: string[]; }
