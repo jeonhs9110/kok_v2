@@ -107,7 +107,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
     }
     return (
       <div
-        className="w-full h-[600px] sm:h-[780px] lg:h-[880px] bg-gradient-to-br from-neutral-100 to-neutral-200 animate-pulse motion-reduce:animate-none"
+        className="w-full h-[700px] sm:h-[900px] lg:h-[1000px] bg-gradient-to-br from-neutral-100 to-neutral-200 animate-pulse motion-reduce:animate-none"
         role="img"
         aria-label="Hero loading"
         aria-busy="true"
@@ -117,7 +117,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
 
   return (
     <div
-      className="relative w-full h-[600px] sm:h-[780px] lg:h-[880px] overflow-hidden group"
+      className="relative w-full h-[700px] sm:h-[900px] lg:h-[1000px] overflow-hidden group"
       role="region"
       aria-roledescription="carousel"
       aria-label="Featured products"
@@ -388,7 +388,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       <button
         type="button"
         aria-label="Previous slide"
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white focus-visible:text-white transition-colors opacity-70 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30"
+        className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white focus-visible:text-white transition-colors opacity-70 hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30"
         onClick={scrollPrev}
       >
         <ChevronLeft className="w-10 h-10 stroke-[1.5] drop-shadow-md" aria-hidden="true" />
@@ -396,7 +396,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       <button
         type="button"
         aria-label="Next slide"
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white focus-visible:text-white transition-colors opacity-70 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30"
+        className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center text-gray-400 hover:text-white focus-visible:text-white transition-colors opacity-70 hover:opacity-100 focus-visible:opacity-100 disabled:opacity-30"
         onClick={scrollNext}
       >
         <ChevronRight className="w-10 h-10 stroke-[1.5] drop-shadow-md" aria-hidden="true" />
