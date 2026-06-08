@@ -159,15 +159,24 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display, var(--font-body), inherit);
 }
 
-/* Admin radius_button token consumed by the storefront. Buttons that
-   don't pin their own rounded-* class inherit the admin's choice; if
-   the token is unset the existing visual stays the same (no radius
-   applied, components fall back to whatever Tailwind defaults give). */
-button:not([class*="rounded"]),
-[role="button"]:not([class*="rounded"]),
-input[type="submit"]:not([class*="rounded"]),
-input[type="button"]:not([class*="rounded"]) {
-  border-radius: var(--radius-button, 0);
+/* Admin radius_button token consumed by the storefront. The earlier
+   version of this rule used :not([class*="rounded"]) so any button
+   pinning Tailwind's rounded-lg / rounded-full was skipped — which
+   meant the /admin/theme picker only affected raw unstyled buttons
+   and the 송이 testing pass turned up "where do I see this change?".
+   This version flips the model: the rule wins by specificity over
+   Tailwind utilities (compound element + pseudo beats a single class),
+   so every <button>/[role=button]/submit/input adopts the admin's
+   choice unless it explicitly opts out with .kokkok-keep-radius.
+   The fallback is 0.5rem (8px) — equivalent to the rounded-lg most
+   CTAs were pinning before — so an install without an admin choice
+   looks identical to the pre-PR state. Marked-with-opt-out targets:
+   - AIChatbot launcher (circular bubble, must stay round) */
+button:not(.kokkok-keep-radius),
+[role="button"]:not(.kokkok-keep-radius),
+input[type="submit"]:not(.kokkok-keep-radius),
+input[type="button"]:not(.kokkok-keep-radius) {
+  border-radius: var(--radius-button, 0.5rem);
 }
 
 
