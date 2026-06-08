@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { type SlideFormData } from '../_lib';
-import { fontFamilyForKey, positionForKey, objectPositionForKey } from '@/lib/typography/options';
+import { fontFamilyForKey, anchorToObjectPosition, anchorTextStyle } from '@/lib/typography/options';
 
 interface Props {
   form: SlideFormData;
@@ -40,9 +40,12 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
   const [view, setView] = useState<'pc' | 'mobile'>('pc');
   const isMobileView = view === 'mobile';
 
-  // Phase 3 typography resolvers — surfaced once so we don't repeat the
-  // ternaries inside the JSX for both render modes.
-  const pos = positionForKey(isMobileView ? form.text_position_mobile : form.text_position);
+  // Migration 30: continuous anchors. Replaces the 9-cell positionForKey
+  // lookup with a (x, y) percentage that the helper turns into inline
+  // styles (edge-aware so corner clicks pin to the corner instead of
+  // translating off-screen).
+  const textAnchor = isMobileView ? form.text_anchor_mobile : form.text_anchor;
+  const textWrapperStyle = anchorTextStyle(textAnchor);
   const badgeStyle: React.CSSProperties = {
     fontFamily: fontFamilyForKey(form.badge_font_family),
     fontWeight: form.badge_bold ? 700 : 500,
@@ -62,13 +65,9 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
     textDecoration: form.subtitle_underline ? 'underline' : 'none',
   };
 
-  // Migration 29: image focal point. Preview only needs one value at a
-  // time (it shows one view), so we just resolve whichever picker is
-  // active for the current PC/모바일 toggle and apply inline.
-  const focalObjectPosition = objectPositionForKey(
-    isMobileView ? form.image_position_mobile : form.image_position
-  );
-  const focalImgStyle: React.CSSProperties = { objectPosition: focalObjectPosition };
+  // Image focal point (now continuous via migration 30 anchor).
+  const focalAnchor = isMobileView ? form.image_anchor_mobile : form.image_anchor;
+  const focalImgStyle: React.CSSProperties = { objectPosition: anchorToObjectPosition(focalAnchor) };
 
   const MediaEl = mediaUrl ? (
     isVideo ? (
@@ -118,8 +117,8 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
           <>
             <div className="absolute inset-0">{MediaEl}</div>
             {(badge || title || subtitle) && (
-              <div className={`absolute inset-0 flex flex-col px-6 ${pos.align} ${pos.justify} ${pos.textAlign}`}>
-                <div className="max-w-lg">
+              <div style={textWrapperStyle}>
+                <div>
                   {badge && (
                     <span
                       className="inline-block px-2 py-1 rounded-full mb-2 backdrop-blur-sm"
@@ -164,9 +163,10 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
           </>
         ) : (
           <div className="absolute inset-0 grid grid-cols-2">
-            {/* Text side — position picker drives where the block sits
-                within the left half. */}
-            <div className={`flex flex-col px-6 py-4 ${pos.align} ${pos.justify} ${pos.textAlign}`}>
+            {/* Text side — anchor pins the block within the left half
+                via the same edge-aware inline styles as fullpage mode. */}
+            <div className="relative px-6 py-4">
+              <div style={textWrapperStyle}>
               {badge && (
                 <span
                   className="inline-block w-fit px-2 py-1 rounded-full mb-2"
@@ -202,6 +202,7 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
                   {subtitle}
                 </p>
               )}
+              </div>
             </div>
             {/* Media side */}
             <div className="p-4 flex items-center justify-end">

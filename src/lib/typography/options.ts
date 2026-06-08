@@ -227,3 +227,127 @@ export function objectPositionForKey(key: string | null | undefined): string {
   if (!key) return OBJECT_POSITION_BY_KEY.mc;
   return OBJECT_POSITION_BY_KEY[key as PositionKey] ?? OBJECT_POSITION_BY_KEY.mc;
 }
+
+/* ──────────────────────────────────────────────────────────
+   Continuous position anchors (migration 30, 2026-06-09)
+
+   Replaces the 9-cell PositionKey with a continuous (x, y)
+   percentage. Stored as JSONB in *_anchor columns; admin picks
+   any point in a live preview, render places the text block /
+   object-position there. The 9-cell helpers above are kept so
+   storefront code can read both new and legacy rows without a
+   second migration pass.
+   ────────────────────────────────────────────────────────── */
+
+/** Percent anchor — both x and y are 0..100, top-left origin. */
+export interface PositionAnchor {
+  x: number;
+  y: number;
+}
+
+/** Cell-to-anchor map used when backfill is missing and we have a legacy key. */
+const ANCHOR_BY_KEY: Record<PositionKey, PositionAnchor> = {
+  tl: { x: 0,   y: 0   }, tc: { x: 50,  y: 0   }, tr: { x: 100, y: 0   },
+  ml: { x: 0,   y: 50  }, mc: { x: 50,  y: 50  }, mr: { x: 100, y: 50  },
+  bl: { x: 0,   y: 100 }, bc: { x: 50,  y: 100 }, br: { x: 100, y: 100 },
+};
+
+/**
+ * Resolve the on-render anchor. Order of precedence:
+ *   1. explicit JSONB anchor from the new *_anchor column (preferred)
+ *   2. derived from the legacy 9-cell key column
+ *   3. center (50, 50) fallback
+ *
+ * Accepts whatever Supabase hands back — JSONB rides through as a plain
+ * object, but unsanitized rows may still be strings, so we cope with both.
+ */
+export function resolveAnchor(
+  jsonAnchor: unknown,
+  legacyKey: string | null | undefined,
+): PositionAnchor {
+  // 1. New column wins when populated.
+  const parsed = parseAnchorValue(jsonAnchor);
+  if (parsed) return parsed;
+  // 2. Fall back to the 9-cell key the row was saved with before migration 30.
+  if (legacyKey && (legacyKey in ANCHOR_BY_KEY)) {
+    return ANCHOR_BY_KEY[legacyKey as PositionKey];
+  }
+  // 3. No signal at all — center.
+  return { x: 50, y: 50 };
+}
+
+function parseAnchorValue(raw: unknown): PositionAnchor | null {
+  if (!raw) return null;
+  let obj: unknown = raw;
+  if (typeof raw === 'string') {
+    try { obj = JSON.parse(raw); } catch { return null; }
+  }
+  if (typeof obj !== 'object' || obj === null) return null;
+  const { x, y } = obj as { x?: unknown; y?: unknown };
+  if (typeof x !== 'number' || typeof y !== 'number') return null;
+  return { x: clamp(x), y: clamp(y) };
+}
+
+function clamp(n: number): number {
+  if (!Number.isFinite(n)) return 50;
+  if (n < 0) return 0;
+  if (n > 100) return 100;
+  return n;
+}
+
+/**
+ * CSS `object-position` value for an image focal anchor. Drives the
+ * <img> / <video> object-position so the focal point stays in view
+ * when the slide is letterboxed / pillarboxed.
+ */
+export function anchorToObjectPosition(anchor: PositionAnchor): string {
+  return `${anchor.x}% ${anchor.y}%`;
+}
+
+/**
+ * Inline styles for the text block. Uses edge-aware anchoring:
+ *
+ *   - x ≤ 25%  → pin to the left edge with a 4% margin, text-align: left
+ *   - x ≥ 75%  → pin to the right edge with a 4% margin, text-align: right
+ *   - 25–75%   → center horizontally around x via translateX(-50%),
+ *                text-align: center
+ *
+ * Vertical axis follows the same edge-aware shape. Without this the
+ * marker dropped at (0, 0) would translate(-50%, -50%) off-screen and
+ * the title would be invisible. With it, clicking any corner lands the
+ * text block snug in that corner, and any interior point centers
+ * cleanly around the anchor.
+ */
+export function anchorTextStyle(anchor: PositionAnchor): React.CSSProperties {
+  const style: React.CSSProperties = {
+    position: 'absolute',
+    maxWidth: '85%',
+  };
+  const transforms: string[] = [];
+
+  // Horizontal
+  if (anchor.x <= 25) {
+    style.left = `${Math.max(anchor.x, 4)}%`;
+    style.textAlign = 'left';
+  } else if (anchor.x >= 75) {
+    style.right = `${Math.max(100 - anchor.x, 4)}%`;
+    style.textAlign = 'right';
+  } else {
+    style.left = `${anchor.x}%`;
+    transforms.push('translateX(-50%)');
+    style.textAlign = 'center';
+  }
+
+  // Vertical
+  if (anchor.y <= 25) {
+    style.top = `${Math.max(anchor.y, 4)}%`;
+  } else if (anchor.y >= 75) {
+    style.bottom = `${Math.max(100 - anchor.y, 4)}%`;
+  } else {
+    style.top = `${anchor.y}%`;
+    transforms.push('translateY(-50%)');
+  }
+
+  if (transforms.length) style.transform = transforms.join(' ');
+  return style;
+}

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { fontFamilyForKey, positionForKey, positionDesktopMdForKey, type PositionKey } from '@/lib/typography/options';
+import { fontFamilyForKey, anchorTextStyle, resolveAnchor, type PositionKey } from '@/lib/typography/options';
 
 export interface SubHeroBannerData {
   id: string;
@@ -23,6 +23,10 @@ export interface SubHeroBannerData {
   title_color?: string | null;
   subtitle_color?: string | null;
   text_position?: PositionKey | string | null;
+  // Migration 30: continuous (x, y) anchors. Read first; legacy
+  // text_position is the fallback for pre-migration rows.
+  text_anchor?: unknown;
+  text_anchor_mobile?: unknown;
   // Migration 28: separate mobile anchor.
   text_position_mobile?: PositionKey | string | null;
 }
@@ -63,11 +67,12 @@ export default function SubHeroBanner({ banner }: Props) {
         // Each helper has a sensible fallback so a freshly-migrated row
         // (all-NULL columns) renders the same as the pre-Phase-2 layout.
         //
-        // Migration 28 added text_position_mobile. The mobile picker
-        // feeds the unprefixed utility; the desktop picker feeds the
-        // md:-prefixed lookup — same DOM element carries both.
-        const posMobile = positionForKey(banner.text_position_mobile);
-        const posDesktop = positionDesktopMdForKey(banner.text_position);
+        // Migration 30: continuous (x, y) anchors with legacy 9-cell
+        // fallback. Per-breakpoint placement is achieved by rendering
+        // two text overlays — sm:hidden mobile + hidden sm:block
+        // desktop — each carrying its own anchorTextStyle inline.
+        const anchorMobile  = resolveAnchor(banner.text_anchor_mobile, banner.text_position_mobile);
+        const anchorDesktop = resolveAnchor(banner.text_anchor, banner.text_position);
         const titleStyle: React.CSSProperties = {
           fontFamily: fontFamilyForKey(banner.title_font_family),
           fontWeight: banner.title_bold === false ? 400 : 900,
@@ -84,8 +89,8 @@ export default function SubHeroBanner({ banner }: Props) {
           color: banner.subtitle_color ?? undefined,
           ...(subtitleOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${subtitleOffset}px)` }),
         };
-        return (
-          <div className={`absolute inset-0 flex flex-col px-6 text-white ${posMobile.align} ${posDesktop.align} ${posMobile.justify} ${posDesktop.justify} ${posMobile.textAlign} ${posDesktop.textAlign}`}>
+        const TextContent = (
+          <>
             {banner.subtitle && (
               <p
                 className={`text-sm md:text-base font-medium tracking-widest uppercase mb-3 opacity-80 max-w-full [word-break:keep-all] [overflow-wrap:break-word] ${subtitleOffset !== 0 ? 'md:text-[length:var(--subtitle-fs)]' : ''}`}
@@ -102,6 +107,16 @@ export default function SubHeroBanner({ banner }: Props) {
                 {banner.title}
               </h2>
             )}
+          </>
+        );
+        return (
+          <div className="absolute inset-0 px-6 text-white pointer-events-none">
+            <div className="md:hidden h-full w-full relative">
+              <div style={anchorTextStyle(anchorMobile)}>{TextContent}</div>
+            </div>
+            <div className="hidden md:block h-full w-full relative">
+              <div style={anchorTextStyle(anchorDesktop)}>{TextContent}</div>
+            </div>
           </div>
         );
       })()}

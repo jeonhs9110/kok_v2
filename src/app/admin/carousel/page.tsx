@@ -7,6 +7,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 const supabase = getSupabaseBrowser();
 import type { CarouselSlide } from '@/lib/api/carousel';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { resolveAnchor } from '@/lib/typography/options';
 import CarouselList from './_components/CarouselList';
 import CarouselSlideModal from './_components/CarouselSlideModal';
 import { emptyForm, type SlideFormData } from './_lib';
@@ -58,6 +59,13 @@ function formFromSlide(s: CarouselSlide): SlideFormData {
     text_position_mobile:  (s.text_position_mobile as SlideFormData['text_position_mobile']) ?? 'mc',
     image_position:        (s.image_position as SlideFormData['image_position']) ?? 'mc',
     image_position_mobile: (s.image_position_mobile as SlideFormData['image_position_mobile']) ?? 'mc',
+    // Migration 30 anchors. resolveAnchor() prefers the new column when
+    // populated and falls back to the legacy 9-cell key on rows from
+    // before the migration ran.
+    text_anchor:          resolveAnchor(s.text_anchor, s.text_position),
+    text_anchor_mobile:   resolveAnchor(s.text_anchor_mobile, s.text_position_mobile),
+    image_anchor:         resolveAnchor(s.image_anchor, s.image_position),
+    image_anchor_mobile:  resolveAnchor(s.image_anchor_mobile, s.image_position_mobile),
   };
 }
 

@@ -17,7 +17,8 @@ import {
   type SlideFormData,
 } from '../_lib';
 import CarouselSlidePreview from './CarouselSlidePreview';
-import { TypographyPanel, PositionPicker } from '@/components/admin/TypographyPanel';
+import { TypographyPanel } from '@/components/admin/TypographyPanel';
+import ContinuousPositionPicker from '@/components/admin/ContinuousPositionPicker';
 
 interface Props {
   editingId: string | null;
@@ -114,10 +115,17 @@ export default function CarouselSlideModal({
         subtitle_bold: formData.subtitle_bold,
         subtitle_italic: formData.subtitle_italic,
         subtitle_underline: formData.subtitle_underline,
+        // Legacy 9-cell keys (kept in sync as a backward-compat rollback
+        // safety until the next minor sweep can drop the old columns).
         text_position: formData.text_position,
         text_position_mobile: formData.text_position_mobile,
         image_position: formData.image_position,
         image_position_mobile: formData.image_position_mobile,
+        // Migration 30 — JSONB anchors are the real source of truth now.
+        text_anchor: formData.text_anchor,
+        text_anchor_mobile: formData.text_anchor_mobile,
+        image_anchor: formData.image_anchor,
+        image_anchor_mobile: formData.image_anchor_mobile,
       };
       if (!supabase) throw new Error('클라이언트 없음');
       if (editingId) {
@@ -547,47 +555,62 @@ export default function CarouselSlideModal({
               defaultColor="#111111"
               hideColor
             />
-            {/* Dual anchor: text position can differ between desktop
-                and mobile — admin places text where it doesn't collide
-                with the product on each device. The migration 27 schema
-                holds text_position (desktop / sm+) and
-                text_position_mobile (xs); the public render uses the
-                same key, just at different breakpoints. */}
-            <div className="grid grid-cols-2 gap-3">
-              <PositionPicker
-                label="PC 텍스트 위치 (sm+)"
-                value={formData.text_position}
-                onChange={pos => setFormData(prev => ({ ...prev, text_position: pos }))}
-              />
-              <PositionPicker
-                label="모바일 텍스트 위치"
-                value={formData.text_position_mobile}
-                onChange={pos => setFormData(prev => ({ ...prev, text_position_mobile: pos }))}
-              />
+            {/* Text position — continuous picker (migration 30). Admin
+                clicks anywhere in the box to place text; PC and 모바일
+                anchors stored separately because the product image
+                often forces different layouts on each breakpoint. The
+                preview image inside the picker is the same uploaded
+                slide media so the admin aims relative to the actual
+                photo, not a blank rectangle. */}
+            <div>
+              <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-1">텍스트 위치</p>
+              <p className="text-[10px] text-gray-400 mb-2">
+                미리보기에서 원하는 위치를 클릭하거나 흰 점을 드래그하세요. (PC와 모바일을 따로 설정)
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <ContinuousPositionPicker
+                  label="PC 텍스트 위치"
+                  value={formData.text_anchor}
+                  onChange={a => setFormData(prev => ({ ...prev, text_anchor: a }))}
+                  aspectRatio="aspect-[16/7]"
+                  backgroundImage={previewUrl || formData.imageUrl || undefined}
+                />
+                <ContinuousPositionPicker
+                  label="모바일 텍스트 위치"
+                  value={formData.text_anchor_mobile}
+                  onChange={a => setFormData(prev => ({ ...prev, text_anchor_mobile: a }))}
+                  aspectRatio="aspect-[9/14]"
+                  backgroundImage={previewUrl || formData.imageUrl || undefined}
+                />
+              </div>
             </div>
 
-            {/* Image focal point (migration 29). When the uploaded
-                source was authored for desktop (product on the right),
-                mobile crops to portrait via object-cover; admin picks
-                where to anchor that crop so the product stays visible.
-                For example: PC = 'mc' (center) leaves the wide image
-                centered; mobile = 'mr' (middle-right) keeps the
-                product-on-right composition in frame. */}
+            {/* Image focal point — same picker, but the anchor drives
+                CSS object-position instead of text placement. Picking
+                a point near a product feature pins that feature in
+                view even when the wide-source image crops to portrait
+                on mobile. */}
             <div>
               <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-1">이미지 중심점</p>
               <p className="text-[10px] text-gray-400 mb-2">
-                업로드한 이미지가 잘릴 때 어느 지점을 중심으로 보일지 정합니다. (PC와 모바일을 따로 설정)
+                이미지가 잘릴 때 어느 지점을 중심으로 보일지 정합니다. 원하는 부분을 클릭하세요.
               </p>
               <div className="grid grid-cols-2 gap-3">
-                <PositionPicker
-                  label="PC 이미지 중심점 (sm+)"
-                  value={formData.image_position}
-                  onChange={pos => setFormData(prev => ({ ...prev, image_position: pos }))}
+                <ContinuousPositionPicker
+                  label="PC 이미지 중심점"
+                  value={formData.image_anchor}
+                  onChange={a => setFormData(prev => ({ ...prev, image_anchor: a }))}
+                  aspectRatio="aspect-[16/7]"
+                  backgroundImage={previewUrl || formData.imageUrl || undefined}
+                  markerColor="#facc15"
                 />
-                <PositionPicker
+                <ContinuousPositionPicker
                   label="모바일 이미지 중심점"
-                  value={formData.image_position_mobile}
-                  onChange={pos => setFormData(prev => ({ ...prev, image_position_mobile: pos }))}
+                  value={formData.image_anchor_mobile}
+                  onChange={a => setFormData(prev => ({ ...prev, image_anchor_mobile: a }))}
+                  aspectRatio="aspect-[9/14]"
+                  backgroundImage={previewUrl || formData.imageUrl || undefined}
+                  markerColor="#facc15"
                 />
               </div>
             </div>

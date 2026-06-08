@@ -8,7 +8,7 @@ import Autoplay from 'embla-carousel-autoplay';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Lang } from '@/lib/i18n/types';
 import type { CarouselSlide } from '@/lib/api/carousel';
-import { fontFamilyForKey, positionForKey, positionDesktopForKey, objectPositionForKey } from '@/lib/typography/options';
+import { fontFamilyForKey, anchorToObjectPosition, anchorTextStyle, resolveAnchor } from '@/lib/typography/options';
 
 
 interface HeroSliderProps {
@@ -61,17 +61,19 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       subtitleBold: s.subtitle_bold ?? false,
       subtitleItalic: s.subtitle_italic ?? false,
       subtitleUnderline: s.subtitle_underline ?? false,
-      // Mobile uses the unprefixed PositionOption (applies at xs).
-      // Desktop uses the sm:-prefixed lookup so the same template
-      // string holds both breakpoints' flex utilities.
-      positionMobile: positionForKey(s.text_position_mobile),
-      positionDesktop: positionDesktopForKey(s.text_position),
-      // Migration 29: per-breakpoint image focal point. Render code
-      // pipes these into `--img-pos-mobile` / `--img-pos-desktop` CSS
-      // variables that the .hero-image-focal class consumes via a
-      // breakpoint-aware object-position rule in globals.css.
-      imgPosMobile: objectPositionForKey(s.image_position_mobile),
-      imgPosDesktop: objectPositionForKey(s.image_position),
+      // Migration 30: continuous text anchors. Resolved with the
+      // legacy 9-cell key as a fallback so any row that hasn't been
+      // re-saved through the new picker still renders correctly.
+      textAnchorMobile:  resolveAnchor(s.text_anchor_mobile, s.text_position_mobile),
+      textAnchorDesktop: resolveAnchor(s.text_anchor, s.text_position),
+      // Image focal points — anchorToObjectPosition emits the
+      // `${x}% ${y}%` string the .hero-image-focal CSS class consumes.
+      imgPosMobile: anchorToObjectPosition(
+        resolveAnchor(s.image_anchor_mobile, s.image_position_mobile),
+      ),
+      imgPosDesktop: anchorToObjectPosition(
+        resolveAnchor(s.image_anchor, s.image_position),
+      ),
     };
   }), [dbSlides, lang]);
 
@@ -173,8 +175,13 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
               <div className="relative w-full h-full">
                 {MediaEl}
                 {(slide.badge || slide.title || slide.subtitle) && (
-                  <div className={`absolute inset-0 flex flex-col px-8 ${slide.positionMobile.align} ${slide.positionDesktop.align} ${slide.positionMobile.justify} ${slide.positionDesktop.justify} ${slide.positionMobile.textAlign} ${slide.positionDesktop.textAlign}`}>
-                    <div className="max-w-lg">
+                  /* Per-breakpoint anchor — same badge/title/subtitle
+                     rendered twice (mobile-only + desktop-only) so each
+                     can carry its own anchorTextStyle inline placement.
+                     Wrappers use sm:hidden / hidden sm:block to swap. */
+                  <div className="absolute inset-0 px-8 pointer-events-none">
+                    <div className="sm:hidden h-full w-full relative">
+                      <div style={anchorTextStyle(slide.textAnchorMobile)}>
                       {slide.badge && (
                         <span
                           className={`inline-block text-xs px-3 py-1.5 rounded-full mb-4 backdrop-blur-sm ${slide.badgeSizeOffset !== 0 ? 'sm:text-[length:var(--badge-fs)]' : ''}`}
@@ -227,6 +234,57 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                           {slide.subtitle}
                         </p>
                       )}
+                      </div>
+                    </div>
+                    <div className="hidden sm:block h-full w-full relative">
+                      <div style={anchorTextStyle(slide.textAnchorDesktop)}>
+                        {slide.badge && (
+                          <span
+                            className={`inline-block text-xs px-3 py-1.5 rounded-full mb-4 backdrop-blur-sm ${slide.badgeSizeOffset !== 0 ? 'sm:text-[length:var(--badge-fs)]' : ''}`}
+                            style={{
+                              backgroundColor: slide.badgeBgColor || 'rgba(0,0,0,0.7)',
+                              color: slide.badgeTextColor || '#ffffff',
+                              fontFamily: slide.badgeFontFamily,
+                              fontWeight: slide.badgeBold ? 700 : 600,
+                              fontStyle: slide.badgeItalic ? 'italic' : 'normal',
+                              textDecoration: slide.badgeUnderline ? 'underline' : 'none',
+                              ...(slide.badgeSizeOffset !== 0 && { ['--badge-fs' as string]: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
+                            } as React.CSSProperties}
+                          >
+                            {slide.badge}
+                          </span>
+                        )}
+                        {slide.title && (
+                          <h2
+                            className={`text-3xl sm:text-5xl leading-[1.3] whitespace-pre-line max-w-full mb-3 drop-shadow-lg [word-break:keep-all] [overflow-wrap:break-word] ${slide.titleSizeOffset !== 0 ? 'sm:text-[length:var(--title-fs)]' : ''}`}
+                            style={{
+                              color: slide.textColor || '#ffffff',
+                              fontFamily: slide.titleFontFamily,
+                              fontWeight: slide.titleBold === false ? 400 : 700,
+                              fontStyle: slide.titleItalic ? 'italic' : 'normal',
+                              textDecoration: slide.titleUnderline ? 'underline' : 'none',
+                              ...(slide.titleSizeOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${slide.titleSizeOffset}px)` }),
+                            } as React.CSSProperties}
+                          >
+                            {slide.title}
+                          </h2>
+                        )}
+                        {slide.subtitle && (
+                          <p
+                            className={`text-sm sm:text-base drop-shadow-md ${slide.subtitleSizeOffset !== 0 ? 'sm:text-[length:var(--subtitle-fs)]' : ''}`}
+                            style={{
+                              color: slide.textColor ? slide.textColor : 'rgba(255,255,255,0.9)',
+                              fontFamily: slide.subtitleFontFamily,
+                              fontWeight: slide.subtitleBold ? 700 : 400,
+                              fontStyle: slide.subtitleItalic ? 'italic' : 'normal',
+                              textDecoration: slide.subtitleUnderline ? 'underline' : 'none',
+                              ...(slide.subtitleSizeOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
+                            } as React.CSSProperties}
+                          >
+                            {slide.subtitle}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
