@@ -38,7 +38,13 @@
    small; admin can now bump to 15/17/19 without code changes.
    ────────────────────────────────────────────────────────── */
 .kokkok-nav-menu-text {
-  font-size: var(--header-menu-font-size, 13.5px);
+  /* Fallback raised 2026-06-08 from 13.5px → 15px to match the new
+     header_menu_font_size default in src/lib/theme/tokens.ts. Pages
+     outside the /[lang] tree (e.g. /login, /register, /cart) don't
+     get the kokkok-theme-tokens <style> injection, so they would
+     otherwise render the menu at 13.5px while /kr and /en showed
+     15px — a visible regression at the route boundary. */
+  font-size: var(--header-menu-font-size, 15px);
 }
 
 /* ──────────────────────────────────────────────────────────
