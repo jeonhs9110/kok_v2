@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 import {
   Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare,
   Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard,
   Scale, Globe, ImagePlus, Star, FileText, FolderOpen, Palette, Layers, Search,
-  Menu as MenuIcon, X, Eye, Home as HomeIcon, ArrowLeft,
+  Menu as MenuIcon, X, Eye, Home as HomeIcon,
 } from 'lucide-react';
 import AdminSearchModal from './_components/AdminSearchModal';
+import BackToHubLink from './_components/BackToHubLink';
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> };
 type NavSection = { title: string | null; items: NavItem[] };
@@ -134,8 +135,6 @@ function previewUrlFor(pathname: string): string | null {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const fromHub = searchParams?.get('from') === 'homepage';
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -254,18 +253,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <MenuIcon className="w-6 h-6" />
             </button>
             {/* Back-to-hub breadcrumb — appears whenever an admin landed on
-                this page via the homepage builder (?from=homepage). Keeps
-                Songyi from having to relocate the hub in the sidebar after
-                a quick edit. */}
-            {fromHub && pathname !== '/admin/homepage' && (
-              <Link
-                href="/admin/homepage"
-                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-brand-primary hover:text-brand-ink border border-brand-primary/30 rounded-md hover:bg-brand-primary/5 transition-colors"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                홈페이지 빌더로 돌아가기
-              </Link>
-            )}
+                this page via the homepage builder (?from=homepage). Wrapped
+                in <Suspense> because useSearchParams() inside bails out of
+                Next.js 16's static prerender pass. Suspense lets the page
+                shell prerender while the breadcrumb hydrates on the client. */}
+            <Suspense fallback={null}>
+              <BackToHubLink />
+            </Suspense>
             <h1 className="text-xl font-semibold text-gray-800 truncate">{title}</h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
