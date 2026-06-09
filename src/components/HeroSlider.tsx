@@ -174,11 +174,20 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                 </>
               ) : (
                 <>
+                  {/* Mobile keeps priority on the first slide — most
+                      traffic is mobile and the LCP candidate that
+                      shows up below the sm breakpoint should be
+                      the one the browser fetches first. The desktop
+                      twin (when present) gets `loading="eager"` via
+                      Next.js Image's default so it still arrives
+                      promptly, just without LCP priority — eliminates
+                      the dual-priority Core Web Vitals fragility
+                      flagged in the 2026-06-10 debug pass. */}
                   <Image
                     src={slide.mobileImage}
                     alt={slide.title.replace('\n', ' ') || ''}
                     fill
-                    sizes="100vw"
+                    sizes={hasSeparateMobile ? '(max-width: 639px) 100vw, 1px' : '100vw'}
                     quality={95}
                     priority={isFirst}
                     className={`object-cover hero-image-focal ${hasSeparateMobile ? 'sm:hidden' : ''}`}
@@ -189,9 +198,8 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                       src={slide.image}
                       alt={slide.title.replace('\n', ' ') || ''}
                       fill
-                      sizes="100vw"
+                      sizes="(min-width: 640px) 100vw, 1px"
                       quality={95}
-                      priority={isFirst}
                       className="hidden sm:block object-cover hero-image-focal"
                       style={focalStyle}
                     />
