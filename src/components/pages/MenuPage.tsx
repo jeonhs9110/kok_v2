@@ -190,6 +190,13 @@ export default async function MenuPage({ slug, lang, page }: Props) {
 
   // Special case 2: Review/community menus surface the curated review_cards
   // showcase (admin-managed) instead of a plain post list.
+  //
+  // Two-layer behavior:
+  //   - if any card has is_featured=true, its full post body renders inline
+  //     (the admin's pick is the first thing the customer sees — no thumbnail
+  //     click step) plus a small "다른 리뷰" strip at the bottom links to the
+  //     other active cards
+  //   - if no card is featured, fall back to the grid so the section isn't empty
   if (REVIEW_SLUGS.has(slugLower)) {
     const [menu, cards] = await Promise.all([
       getMenuBySlug(slug),
@@ -197,6 +204,85 @@ export default async function MenuPage({ slug, lang, page }: Props) {
     ]);
     const displayTitle = menu?.title?.[lang] || menu?.title?.kr || menu?.title?.en || 'Review & Community';
     const lbEmpty = lang === 'kr' ? '등록된 리뷰가 없습니다.' : 'No reviews yet.';
+    const featured = cards.find(c => c.is_featured) ?? null;
+    const others = featured ? cards.filter(c => c.id !== featured.id) : cards;
+    const lbOtherReviews = lang === 'kr' ? '다른 리뷰' : 'Other reviews';
+
+    if (featured) {
+      return (
+        <div className="bg-white animate-in fade-in duration-500">
+          {featured.image_url && (
+            <div className="w-full bg-neutral-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={featured.image_url}
+                alt={featured.title}
+                className="w-full max-h-[60vh] object-cover"
+              />
+            </div>
+          )}
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-16">
+            <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest flex-wrap gap-y-1">
+              <Link href={`/${lang}`} className="hover:text-black transition-colors">HOME</Link>
+              <ChevronRight className="w-3 h-3 mx-2" />
+              <span className="text-brand-ink">{displayTitle}</span>
+            </div>
+            {featured.title && (
+              <div className="mb-10 pb-8 border-b border-neutral-200">
+                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-brand-ink leading-tight">
+                  {featured.title}
+                </h1>
+              </div>
+            )}
+            {featured.content_html ? (
+              <div
+                className="detail-body"
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(featured.content_html) }}
+              />
+            ) : (
+              <p className="text-neutral-400 text-sm">{lbEmpty}</p>
+            )}
+
+            {others.length > 0 && (
+              <div className="mt-16 pt-10 border-t border-neutral-200">
+                <h2 className="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-6">
+                  {lbOtherReviews}
+                </h2>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {others.map(c => (
+                    <Link
+                      key={c.id}
+                      href={`/${lang}/reviews/${c.id}`}
+                      className="group block relative aspect-square overflow-hidden rounded-lg border border-neutral-100 hover:shadow-md transition-all hover:-translate-y-0.5"
+                    >
+                      {c.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.image_url}
+                          alt={c.title || 'review'}
+                          loading="lazy"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-neutral-100 flex items-center justify-center text-neutral-400 text-xs">
+                          {c.title || 'REVIEW'}
+                        </div>
+                      )}
+                      {c.title && (
+                        <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/50 to-transparent flex items-end p-3">
+                          <p className="text-white text-[11px] font-bold line-clamp-2 drop-shadow-md">{c.title}</p>
+                        </div>
+                      )}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-in fade-in duration-500">
         <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
@@ -209,16 +295,17 @@ export default async function MenuPage({ slug, lang, page }: Props) {
         ) : (
           <div className="flex flex-wrap justify-center gap-6 md:gap-8 pb-8">
             {cards.map(card => (
-              <div
+              <Link
                 key={card.id}
-                className="relative w-full max-w-[420px] sm:w-[calc(50%-1rem)] md:w-[calc(33.333%-1.333rem)] lg:w-[calc(25%-1.5rem)] aspect-square overflow-hidden rounded-lg border border-neutral-100"
+                href={`/${lang}/reviews/${card.id}`}
+                className="group relative w-full max-w-[420px] sm:w-[calc(50%-1rem)] md:w-[calc(33.333%-1.333rem)] lg:w-[calc(25%-1.5rem)] aspect-square overflow-hidden rounded-lg border border-neutral-100 hover:shadow-md transition-all hover:-translate-y-0.5"
               >
                 {card.image_url ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={card.image_url}
                     alt={card.title || 'review'}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-neutral-100 text-neutral-400 text-sm">
@@ -226,11 +313,11 @@ export default async function MenuPage({ slug, lang, page }: Props) {
                   </div>
                 )}
                 {card.title && (
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                    <p className="text-white text-[13px] font-bold line-clamp-2">{card.title}</p>
+                  <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/50 to-transparent flex items-end p-4">
+                    <p className="text-white text-[13px] font-bold line-clamp-2 drop-shadow-md">{card.title}</p>
                   </div>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         )}
