@@ -77,7 +77,7 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
 
   return (
     <article className="group relative">
-      <div className="relative aspect-[5/6] w-full rounded-[16px] overflow-hidden bg-neutral-100 mb-4">
+      <div className="kokkok-product-image relative aspect-[5/6] w-full rounded-[16px] overflow-hidden bg-neutral-100 mb-4">
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -152,7 +152,7 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
           </div>
         )}
         <h3 className="kokkok-product-name font-bold text-neutral-800 leading-tight break-keep">{name}</h3>
-        <p className="text-[12px] text-neutral-500 leading-tight line-clamp-1">{summary}</p>
+        <p className="kokkok-product-summary text-[12px] text-neutral-500 leading-tight line-clamp-1">{summary}</p>
 
         <div className="flex items-center space-x-1.5 mt-2">
           {discountRate > 0 && (

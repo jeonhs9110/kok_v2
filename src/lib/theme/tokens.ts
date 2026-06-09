@@ -108,6 +108,21 @@ export interface ThemeTokens {
    * an admin can swap one without touching the other).
    */
   product_price_size: string;
+  /**
+   * Summary text under the product name inside the homepage BEST SELLER
+   * cards. Scoped to .kokkok-home-products so the /products listing
+   * keeps its compact baseline. Added 2026-06-10 boss-meeting follow-up.
+   */
+  home_product_summary_size: string;
+  /**
+   * Aspect ratio of the product card image inside the homepage
+   * BEST SELLER row. CSS aspect-ratio string ("5/6", "1/1", etc).
+   * Empty falls through to the storefront default 5/6 (Tailwind
+   * aspect-[5/6]). Bumping the second number makes images visually
+   * taller / more imposing — admin's lever for "make the products
+   * row read bigger".
+   */
+  home_product_image_ratio: string;
 }
 
 export const DEFAULT_THEME_TOKENS: ThemeTokens = {
@@ -155,6 +170,12 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   // 17px (vs. pre-token 15px) — same reason; prices read alongside
   // the bumped product name without looking cramped.
   product_price_size: '17px',
+  // 12px matches the existing hardcoded text-[12px] on ProductCard's
+  // summary so installs without a saved row look identical.
+  home_product_summary_size: '12px',
+  // Default 5/6 matches the storefront's existing Tailwind
+  // aspect-[5/6] so existing installs paint identically.
+  home_product_image_ratio: '5/6',
 };
 
 export function parseThemeTokens(raw: unknown): ThemeTokens {
@@ -186,6 +207,8 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     product_section_title_size: partial.product_section_title_size || DEFAULT_THEME_TOKENS.product_section_title_size,
     product_name_size: partial.product_name_size || DEFAULT_THEME_TOKENS.product_name_size,
     product_price_size: partial.product_price_size || DEFAULT_THEME_TOKENS.product_price_size,
+    home_product_summary_size: partial.home_product_summary_size || DEFAULT_THEME_TOKENS.home_product_summary_size,
+    home_product_image_ratio: partial.home_product_image_ratio || DEFAULT_THEME_TOKENS.home_product_image_ratio,
     hero_height_mobile: partial.hero_height_mobile || DEFAULT_THEME_TOKENS.hero_height_mobile,
     hero_height_tablet: partial.hero_height_tablet || DEFAULT_THEME_TOKENS.hero_height_tablet,
     hero_height_desktop: partial.hero_height_desktop || DEFAULT_THEME_TOKENS.hero_height_desktop,
@@ -212,6 +235,8 @@ export function tokensToCss(t: ThemeTokens): string {
     `--product-section-title-size: ${t.product_section_title_size};`,
     `--product-name-size: ${t.product_name_size};`,
     `--product-price-size: ${t.product_price_size};`,
+    `--home-product-summary-size: ${t.home_product_summary_size};`,
+    `--home-product-image-ratio: ${t.home_product_image_ratio};`,
     `--hero-height-mobile: ${t.hero_height_mobile};`,
     `--hero-height-tablet: ${t.hero_height_tablet};`,
     `--hero-height-desktop: ${t.hero_height_desktop};`,
