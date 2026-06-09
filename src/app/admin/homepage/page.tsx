@@ -84,17 +84,20 @@ export default function HomepageBuilderPage() {
   const [selectedKey, setSelectedKey] = useState<string>('carousel');
   const [iframeKey, setIframeKey] = useState(0);
   const [counts, setCounts] = useState<SectionCounts>(EMPTY_COUNTS);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initial isLoading derives from supabase availability so we don't have
+  // to call setIsLoading(false) synchronously inside the effect below —
+  // React 19's no-sync-set-state-in-effect rule (react-hooks/set-state-
+  // in-effect) flags that pattern as a cascading-render risk. When
+  // supabase is null (server build / no env) we start ready and skip
+  // the fetch entirely.
+  const [isLoading, setIsLoading] = useState(supabase !== null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Load every section's count concurrently. Errors per query degrade
   // to 0 instead of crashing the whole hub — Songyi should never see a
   // blank page just because one of seven queries hiccuped.
   useEffect(() => {
-    if (!supabase) {
-      setIsLoading(false);
-      return;
-    }
+    if (!supabase) return;
     (async () => {
       const [
         carouselAll, carouselActive,
