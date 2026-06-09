@@ -86,6 +86,19 @@
 .kokkok-home-products .kokkok-price {
   font-size: var(--product-price-size, 17px);
 }
+/* Summary text under the product name — home-only so the products
+   browse page stays at the hardcoded text-[12px] baseline. */
+.kokkok-home-products .kokkok-product-summary {
+  font-size: var(--home-product-summary-size, 12px);
+}
+/* Image aspect ratio override — admin's lever for "make products
+   read bigger". Two-class specificity (.kokkok-home-products
+   .kokkok-product-image) beats the single-class Tailwind aspect-[5/6]
+   utility deterministically, regardless of source order. Default
+   5/6 matches the storefront pre-token look. */
+.kokkok-home-products .kokkok-product-image {
+  aspect-ratio: var(--home-product-image-ratio, 5/6);
+}
 
 /* font_button token — applied to every <button> / [role=button] /
    <input type="submit"|"button"> unless it explicitly opts out with
