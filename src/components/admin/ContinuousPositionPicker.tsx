@@ -92,9 +92,13 @@ export default function ContinuousPositionPicker({
           isDragging ? 'ring-2 ring-brand-primary/50' : ''
         }`}
         style={{ touchAction: 'none' }}
-        role="slider"
-        aria-label={label || 'Position picker'}
-        aria-valuetext={`x ${value.x}, y ${value.y}`}
+        /* No ARIA role declared — neither slider (which demands a 1D
+           aria-valuenow) nor application (which doesn't accept
+           aria-valuetext) cleanly models this 2D positioning control.
+           The aria-label conveys the picker's purpose; the snap-preset
+           chips below give keyboard-only users a 9-cell escape hatch
+           if they can't use pointer events. */
+        aria-label={`${label || 'Position picker'} (x ${value.x}, y ${value.y})`}
         tabIndex={0}
       >
         {backgroundImage && (
