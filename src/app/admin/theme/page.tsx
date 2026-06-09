@@ -199,16 +199,122 @@ export default function ThemePage() {
                   </div>
                   <p className="mt-1 text-[10px] text-gray-400">홈페이지 상단 메뉴 (상품·메뉴·Shop Worldwide) 글씨 크기. 모바일 메뉴도 함께 조절됩니다.</p>
                 </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">서브 히어로 배너 — 서브타이틀 글씨 크기</label>
+                  <div className="grid grid-cols-5 gap-1.5 mt-1">
+                    {[
+                      { v: '14px', l: '아주 작게' },
+                      { v: '16px', l: '작게' },
+                      { v: '18px', l: '기본' },
+                      { v: '20px', l: '크게' },
+                      { v: '24px', l: '더 크게' },
+                    ].map(opt => (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        onClick={() => setTokens(t => ({ ...t, subhero_subtitle_size: opt.v }))}
+                        className={`p-2 font-semibold border rounded ${
+                          tokens.subhero_subtitle_size === opt.v
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                        }`}
+                        style={{ fontSize: opt.v }}
+                      >
+                        {opt.l}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Direct numeric input for any value the presets don't
+                      cover (e.g. 17px between 작게 16 and 기본 18).
+                      Range-clamped to 12–28px so a typo can't blow up
+                      the layout. Saves on blur via the same dirty-state
+                      bottom save bar. */}
+                  <div className="mt-2 flex items-center gap-2">
+                    <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                      직접 입력
+                    </label>
+                    <input
+                      type="number"
+                      min={12}
+                      max={28}
+                      step={1}
+                      value={parseInt(tokens.subhero_subtitle_size, 10) || 18}
+                      onChange={e => {
+                        const raw = parseInt(e.target.value, 10);
+                        if (!Number.isFinite(raw)) return;
+                        const clamped = Math.max(12, Math.min(28, raw));
+                        setTokens(t => ({ ...t, subhero_subtitle_size: `${clamped}px` }));
+                      }}
+                      className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+                    />
+                    <span className="text-[10px] text-gray-500">px (12–28)</span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-400">메인 히어로 캐러셀 아래 서브 배너의 작은 부제목 글씨 크기. 개별 배너 옵션(/admin/sub-hero)에서 추가 조정 가능.</p>
+                </div>
+              </Section>
+
+              <Section title="홈 추천 상품 글씨">
+                <SizePicker
+                  label="섹션 제목 (BEST SELLER)"
+                  value={tokens.product_section_title_size}
+                  fallback={24}
+                  presets={[
+                    { v: '20px', l: '작게' },
+                    { v: '24px', l: '기본' },
+                    { v: '28px', l: '크게' },
+                    { v: '32px', l: '더 크게' },
+                  ]}
+                  min={16}
+                  max={48}
+                  onChange={v => setTokens(t => ({ ...t, product_section_title_size: v }))}
+                />
+                <SizePicker
+                  label="제품명"
+                  value={tokens.product_name_size}
+                  fallback={15}
+                  presets={[
+                    { v: '12px', l: '아주 작게' },
+                    { v: '13px', l: '작게' },
+                    { v: '15px', l: '기본' },
+                    { v: '17px', l: '크게' },
+                  ]}
+                  min={11}
+                  max={22}
+                  onChange={v => setTokens(t => ({ ...t, product_name_size: v }))}
+                />
+                <SizePicker
+                  label="가격"
+                  value={tokens.product_price_size}
+                  fallback={17}
+                  presets={[
+                    { v: '13px', l: '작게' },
+                    { v: '15px', l: '보통' },
+                    { v: '17px', l: '기본' },
+                    { v: '20px', l: '크게' },
+                  ]}
+                  min={11}
+                  max={24}
+                  onChange={v => setTokens(t => ({ ...t, product_price_size: v }))}
+                />
+                <p className="text-[10px] text-gray-400">홈페이지 메인 디스플레이 + 모든 제품 카드에 적용됩니다. (어드민 패널, 장바구니 제외)</p>
               </Section>
 
               <Section title="타이포그래피 (선택)">
                 <FontRow label="본문 폰트" value={tokens.font_body}
                   onChange={v => setTokens(t => ({ ...t, font_body: v }))} />
-                <FontRow label="제목 폰트" value={tokens.font_display}
+                <FontRow label="제목 폰트 (H1~H6)" value={tokens.font_display}
                   onChange={v => setTokens(t => ({ ...t, font_display: v }))} />
+                <FontRow label="헤더 / 메뉴 폰트" value={tokens.font_header}
+                  onChange={v => setTokens(t => ({ ...t, font_header: v }))} />
+                <FontRow label="버튼 폰트 (CTA)" value={tokens.font_button}
+                  onChange={v => setTokens(t => ({ ...t, font_button: v }))} />
+                <FontRow label="가격 폰트 (숫자)" value={tokens.font_price}
+                  onChange={v => setTokens(t => ({ ...t, font_price: v }))} />
                 <p className="text-[10px] text-gray-400">
                   드롭다운에서 사이트가 미리 로드한 8개 폰트 중 하나를 고르거나, &quot;기타 (직접 입력)&quot;를
                   선택해 시스템에 설치된 폰트명 또는 Google Fonts 폰트 패밀리 문자열을 직접 입력할 수 있습니다.
+                  비워두면 본문 폰트(또는 브랜드 기본값)를 따릅니다.
                 </p>
               </Section>
             </>
@@ -331,19 +437,62 @@ function ColorRow({
   );
 }
 
-function TextRow({
-  label, value, placeholder, onChange,
-}: { label: string; value: string; placeholder?: string; onChange: (v: string) => void }) {
+/**
+ * Reusable preset+numeric size picker for px-string tokens. Mirrors the
+ * inline pattern used by the header_menu_font_size and subhero_subtitle
+ * controls, extracted so the new product-text tokens (section title,
+ * name, price) don't each carry their own copy of the chrome.
+ */
+function SizePicker({
+  label, value, fallback, presets, min, max, onChange,
+}: {
+  label: string;
+  value: string;
+  fallback: number;
+  presets: { v: string; l: string }[];
+  min: number;
+  max: number;
+  onChange: (v: string) => void;
+}) {
+  const parsed = parseInt(value, 10);
+  const safe = Number.isFinite(parsed) ? parsed : fallback;
   return (
     <div>
       <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
-      <input
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        onChange={e => onChange(e.target.value)}
-        className="w-full mt-1 border border-gray-200 rounded px-2 py-1.5 text-xs font-mono outline-none focus:border-black"
-      />
+      <div className="grid grid-cols-4 gap-1.5 mt-1">
+        {presets.map(opt => (
+          <button
+            key={opt.v}
+            type="button"
+            onClick={() => onChange(opt.v)}
+            className={`p-2 font-semibold border rounded ${
+              value === opt.v
+                ? 'bg-black text-white border-black'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+            }`}
+            style={{ fontSize: opt.v }}
+          >
+            {opt.l}
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">직접 입력</label>
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={1}
+          value={safe}
+          onChange={e => {
+            const raw = parseInt(e.target.value, 10);
+            if (!Number.isFinite(raw)) return;
+            onChange(`${Math.max(min, Math.min(max, raw))}px`);
+          }}
+          className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+        />
+        <span className="text-[10px] text-gray-500">px ({min}–{max})</span>
+      </div>
     </div>
   );
 }

@@ -23,6 +23,11 @@ export interface InstagramData {
   bg_color?: string | null;
   bg_media_url?: string | null;
   bg_media_type?: string | null;
+  // Migration 34 — header (@handle) style. NULL falls back to text-lg /
+  // neutral-800 / no plate.
+  header_font_size?: string | null;
+  header_text_color?: string | null;
+  header_bg_color?: string | null;
 }
 
 interface Props {
@@ -75,10 +80,21 @@ export default function InstagramSection({ data }: Props) {
             href={profileUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-2 text-neutral-800 hover:text-[#E1306C] transition-colors group"
+            className="flex items-center gap-2 transition-colors group hover:text-[#E1306C]"
+            style={{
+              color: data.header_text_color ?? '#262626', // ~ neutral-800
+              backgroundColor: data.header_bg_color ?? undefined,
+              padding: data.header_bg_color ? '0.5rem 1rem' : undefined,
+              borderRadius: data.header_bg_color ? '0.375rem' : undefined,
+            }}
           >
             <IgIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
-            <span className="text-lg font-bold tracking-wide">@{handle}</span>
+            <span
+              className="font-bold tracking-wide"
+              style={{ fontSize: data.header_font_size ?? '18px' }}
+            >
+              @{handle}
+            </span>
           </a>
           <p className="mt-2 text-sm text-neutral-400">{description}</p>
         </div>

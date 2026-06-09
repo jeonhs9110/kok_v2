@@ -111,7 +111,7 @@ export default function SubHeroBanner({ banner }: Props) {
           <>
             {banner.subtitle && (
               <p
-                className={`text-sm md:text-base font-medium tracking-widest uppercase mb-3 opacity-80 max-w-full [word-break:keep-all] [overflow-wrap:break-word] ${subtitleOffset !== 0 ? 'md:text-[length:var(--subtitle-fs)]' : ''}`}
+                className={`kokkok-subhero-subtitle font-medium tracking-widest uppercase mb-3 opacity-80 max-w-full [word-break:keep-all] [overflow-wrap:break-word] ${subtitleOffset !== 0 ? 'md:text-[length:var(--subtitle-fs)]' : ''}`}
                 style={subtitleStyle}
               >
                 {banner.subtitle}

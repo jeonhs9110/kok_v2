@@ -45,6 +45,49 @@
      otherwise render the menu at 13.5px while /kr and /en showed
      15px — a visible regression at the route boundary. */
   font-size: var(--header-menu-font-size, 15px);
+  /* font_header token from /admin/theme. Falls through to the body
+     font when unset, matching pre-token behavior. */
+  font-family: var(--font-header, inherit);
+}
+.kokkok-header-logo-text {
+  /* Text-fallback logo (KOKKOK GARDEN) when no logo image is uploaded.
+     Same font_header token so the text logo + menu stay consistent. */
+  font-family: var(--font-header, inherit);
+}
+
+/* font_price token — drives ProductCard's price spans (and any other
+   .kokkok-price element). Tabular numerics often want a different
+   font than the body copy. The size comes from product_price_size
+   so admins can tune family and size independently. */
+.kokkok-price {
+  font-family: var(--font-price, inherit);
+  font-size: var(--product-price-size, 15px);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ──────────────────────────────────────────────────────────
+   ProductCard text sizes — adjustable from /admin/theme via
+   product_section_title_size + product_name_size tokens.
+   Bosses said the BEST SELLER row read too small at the
+   2026-06-10 meeting; new defaults sit slightly above the
+   pre-token values so a fresh install renders bigger.
+   ────────────────────────────────────────────────────────── */
+.kokkok-product-section-title {
+  font-size: var(--product-section-title-size, 24px);
+}
+.kokkok-product-name {
+  font-size: var(--product-name-size, 13px);
+}
+
+/* font_button token — applied to every <button> / [role=button] /
+   <input type="submit"|"button"> unless it explicitly opts out with
+   .kokkok-keep-font. Pairs with the radius_button rule below that
+   uses the same pin-everything-unless-opt-out pattern. */
+button:not(.kokkok-keep-font),
+[role="button"]:not(.kokkok-keep-font),
+input[type="submit"]:not(.kokkok-keep-font),
+input[type="button"]:not(.kokkok-keep-font) {
+  font-family: var(--font-button, inherit);
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -59,6 +102,18 @@
   height: var(--header-logo-height, 40px);
   width: auto;
   object-fit: contain;
+}
+
+/* ──────────────────────────────────────────────────────────
+   SubHero banner subtitle font size — adjustable from
+   /admin/theme via the --subhero-subtitle-size token (see
+   src/lib/theme/tokens.ts). Per-banner offsets in
+   /admin/sub-hero still stack on top via --subtitle-fs. The
+   18px fallback matches the post-2026-06-10 default after
+   bosses said the pre-token 14/16px pair felt too small.
+   ────────────────────────────────────────────────────────── */
+.kokkok-subhero-subtitle {
+  font-size: var(--subhero-subtitle-size, 18px);
 }
 
 /* ──────────────────────────────────────────────────────────

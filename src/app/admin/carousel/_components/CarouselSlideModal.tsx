@@ -36,6 +36,7 @@ export default function CarouselSlideModal({
   onSaved,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mobileFileInputRef = useRef<HTMLInputElement>(null);
   const initialFormRef = useMemo(
     () => initialForm ?? { ...emptyForm, badge: {}, title: {}, subtitle: {} },
     // Snapshot once at mount; later edits compare against this. Re-snapshotting
@@ -46,6 +47,7 @@ export default function CarouselSlideModal({
   const [formData, setFormData] = useState<SlideFormData>(initialFormRef);
   useUnsavedChanges(JSON.stringify(formData) !== JSON.stringify(initialFormRef));
   const [previewUrl, setPreviewUrl] = useState(initialPreviewUrl);
+  const [mobilePreviewUrl, setMobilePreviewUrl] = useState(initialForm?.mobileImageUrl ?? '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'done' | 'error'>(
     'idle',
@@ -90,6 +92,17 @@ export default function CarouselSlideModal({
     setFormData(prev => ({ ...prev, [field]: { ...prev[field], [lang]: value } }));
   }
 
+  function handleMobileFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE) {
+      alert('파일 크기가 20MB를 초과합니다.');
+      return;
+    }
+    setMobilePreviewUrl(URL.createObjectURL(file));
+    setFormData(prev => ({ ...prev, mobileImageFile: file, mobileImageUrl: '' }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -105,11 +118,23 @@ export default function CarouselSlideModal({
           finalImageUrl = '';
         }
       }
+      // Mobile image — independent upload. We don't block the slide save
+      // if it fails (admin can re-upload later); only the desktop image
+      // is required for the slide to be useful at all.
+      let finalMobileImageUrl = formData.mobileImageUrl;
+      if (formData.mobileImageFile) {
+        try {
+          finalMobileImageUrl = await uploadSlideAsset(formData.mobileImageFile);
+        } catch {
+          finalMobileImageUrl = formData.mobileImageUrl;
+        }
+      }
       const payload = {
         badge: formData.badge,
         title: formData.title,
         subtitle: formData.subtitle,
         image_url: finalImageUrl || null,
+        mobile_image_url: finalMobileImageUrl || null,
         bg_color: formData.bg_color,
         text_color: formData.text_color,
         badge_bg_color: formData.badge_bg_color,
@@ -169,7 +194,11 @@ export default function CarouselSlideModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      {/* Two-pane modal — wider on lg+ so the storefront-accurate preview
+          can sit beside the form. Below lg the preview drops above the
+          form (handled by the grid below) so the modal still fits on
+          tablet without horizontal scrolling. Boss 2026-06-10 ask. */}
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh]">
         <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <h3 className="font-bold text-lg">
             {editingId ? '슬라이드 수정' : '새 슬라이드 추가'}
@@ -182,7 +211,12 @@ export default function CarouselSlideModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
+        <form onSubmit={handleSubmit} className="overflow-y-auto">
+          {/* Two-column layout: form on the left, sticky live preview on
+              the right (lg+). Below lg the preview drops above the form
+              automatically thanks to grid-cols-1. */}
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 p-6">
+            <div className="space-y-5 min-w-0">
           <CarouselSlidePreview form={formData} lang={activeLang} previewImageUrl={previewUrl} />
 
           <div className="space-y-2">
@@ -232,7 +266,7 @@ export default function CarouselSlideModal({
 
           <div className="space-y-2">
             <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
-              슬라이드 이미지
+              슬라이드 이미지 — PC (가로형, 필수)
             </label>
             {/* 권장 해상도 안내. 메인 배너 (HeroSlider) 가 lg:h-[1000px]
                 까지 늘어나기 때문에, 세로 픽셀이 모자란 소스 (예: 2400×800)
@@ -328,6 +362,80 @@ export default function CarouselSlideModal({
                     setPreviewUrl(e.target.value);
                   }}
                   placeholder="https://example.com/image.jpg"
+                  className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
+                />
+              </>
+            )}
+          </div>
+
+          {/* Migration 35 — optional mobile-specific composition. If the
+              admin leaves this empty, HeroSlider falls back to the
+              desktop image at every breakpoint, matching pre-2026-06-10
+              behavior on rows from before this PR. */}
+          <div className="space-y-2">
+            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+              슬라이드 이미지 — 모바일 (세로형, 선택)
+            </label>
+            <p className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1.5">
+              모바일 전용 이미지를 업로드하면 작은 화면에서 자동으로 이 이미지가 표시됩니다. <strong>비워두면 PC 이미지를 그대로 사용</strong>합니다. 권장: 1200 × 1500 px (4:5) 또는 1080 × 1920 px (9:16).
+            </p>
+            <div
+              className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer group ${
+                mobilePreviewUrl ? 'border-gray-200' : 'border-gray-200 hover:border-gray-400'
+              }`}
+              onClick={() => mobileFileInputRef.current?.click()}
+            >
+              {mobilePreviewUrl ? (
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={mobilePreviewUrl}
+                    alt="모바일 미리보기"
+                    className="w-full h-44 object-contain rounded-xl bg-gray-50"
+                  />
+                  <button
+                    type="button"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setMobilePreviewUrl('');
+                      setFormData(prev => ({ ...prev, mobileImageFile: null, mobileImageUrl: '' }));
+                      if (mobileFileInputRef.current) mobileFileInputRef.current.value = '';
+                    }}
+                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="h-28 flex flex-col items-center justify-center text-gray-400 group-hover:text-gray-600 transition-colors">
+                  <Upload className="w-6 h-6 mb-1.5" />
+                  <p className="text-xs font-semibold">클릭하여 모바일 이미지 업로드</p>
+                  <p className="text-[10px] mt-0.5">선택 사항 — 비워두면 PC 이미지 사용</p>
+                </div>
+              )}
+            </div>
+            <input
+              ref={mobileFileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={handleMobileFileSelect}
+            />
+            {!formData.mobileImageFile && (
+              <>
+                <div className="flex items-center gap-2 mt-2">
+                  <div className="h-px flex-1 bg-gray-100" />
+                  <span className="text-[10px] text-gray-400 font-semibold">또는 URL 직접 입력</span>
+                  <div className="h-px flex-1 bg-gray-100" />
+                </div>
+                <input
+                  type="url"
+                  value={formData.mobileImageUrl}
+                  onChange={e => {
+                    setFormData(prev => ({ ...prev, mobileImageUrl: e.target.value }));
+                    setMobilePreviewUrl(e.target.value);
+                  }}
+                  placeholder="https://example.com/mobile.jpg"
                   className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
                 />
               </>
@@ -695,6 +803,21 @@ export default function CarouselSlideModal({
                 '슬라이드 저장'
               )}
             </button>
+          </div>
+            </div>
+            {/* Sticky live preview pane — stays in view as the admin
+                scrolls the form. Mirrors the activeLang tab so the
+                language being edited is the language being previewed.
+                On mobile/tablet (below lg) this just stacks above the
+                form via the parent grid's grid-cols-1 fallback. */}
+            <aside className="lg:sticky lg:top-0 lg:self-start">
+              <CarouselSlidePreview
+                form={formData}
+                lang={activeLang}
+                previewImageUrl={previewUrl}
+                previewMobileImageUrl={mobilePreviewUrl}
+              />
+            </aside>
           </div>
         </form>
       </div>

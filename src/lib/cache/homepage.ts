@@ -2,7 +2,6 @@ import { unstable_cache } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import { getProducts, type Product } from '@/lib/api/products';
 import { getActiveSlides, type CarouselSlide } from '@/lib/api/carousel';
-import { getActiveReviewCards, type ReviewCard } from '@/lib/api/reviews';
 import { withTimeout } from '@/lib/async-utils';
 import type { PromoBanner } from '@/components/PromoBannersSection';
 import type { SubHeroBannerData } from '@/components/SubHeroBanner';
@@ -37,12 +36,6 @@ export const getCachedSlides = unstable_cache(
   () => tryQuery<CarouselSlide[]>(getActiveSlides(), 'slides', []),
   ['homepage:slides'],
   { revalidate: REVALIDATE, tags: [...TAGS, 'carousel'] }
-);
-
-export const getCachedReviewCards = unstable_cache(
-  () => tryQuery<ReviewCard[]>(getActiveReviewCards(), 'reviews', []),
-  ['homepage:reviews'],
-  { revalidate: REVALIDATE, tags: [...TAGS, 'reviews'] }
 );
 
 export const getCachedPromoBanners = unstable_cache(
@@ -129,7 +122,7 @@ export const getCachedInstagram = unstable_cache(
       const [configRes, postsRes] = await withTimeout(
         Promise.all([
           c.from('instagram_config')
-            .select('handle, description, bg_type, bg_color, bg_media_url, bg_media_type')
+            .select('handle, description, bg_type, bg_color, bg_media_url, bg_media_type, header_font_size, header_text_color, header_bg_color')
             .maybeSingle(),
           c.from('instagram_posts').select('id, image_url, link_url, post_url, sort_order').eq('is_active', true).order('sort_order').limit(6),
         ]),
@@ -157,6 +150,9 @@ export const getCachedInstagram = unstable_cache(
         bg_color: configRes.data.bg_color ?? null,
         bg_media_url: configRes.data.bg_media_url ?? null,
         bg_media_type: configRes.data.bg_media_type ?? null,
+        header_font_size: configRes.data.header_font_size ?? null,
+        header_text_color: configRes.data.header_text_color ?? null,
+        header_bg_color: configRes.data.header_bg_color ?? null,
       };
     } catch (err) {
       console.error('[cache:instagram] failed:', err);
@@ -172,6 +168,13 @@ export interface ShortsBgConfig {
   bg_color: string | null;
   bg_media_url: string | null;
   bg_media_type: string | null;
+  /** Migration 33 — admin-editable title text + style. NULL falls
+   *  through to the pre-2026-06-10 hardcoded "BRAND SHORTS" / white /
+   *  15px / no plate look. */
+  header_text: string | null;
+  header_font_size: string | null;
+  header_text_color: string | null;
+  header_bg_color: string | null;
 }
 
 export const getCachedShortsBg = unstable_cache(
@@ -181,7 +184,7 @@ export const getCachedShortsBg = unstable_cache(
     try {
       const { data, error } = await withTimeout(
         c.from('shorts_config')
-          .select('bg_type, bg_color, bg_media_url, bg_media_type')
+          .select('bg_type, bg_color, bg_media_url, bg_media_type, header_text, header_font_size, header_text_color, header_bg_color')
           .limit(1).maybeSingle(),
         QUERY_BUDGET_MS
       );
@@ -192,6 +195,10 @@ export const getCachedShortsBg = unstable_cache(
         bg_color: data.bg_color ?? null,
         bg_media_url: data.bg_media_url ?? null,
         bg_media_type: data.bg_media_type ?? null,
+        header_text: data.header_text ?? null,
+        header_font_size: data.header_font_size ?? null,
+        header_text_color: data.header_text_color ?? null,
+        header_bg_color: data.header_bg_color ?? null,
       };
     } catch (err) {
       console.error('[cache:shorts_bg] failed:', err);

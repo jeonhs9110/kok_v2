@@ -32,6 +32,26 @@ export interface ThemeTokens {
   /** Font-family string for display / headings. Empty falls through. */
   font_display: string;
   /**
+   * Font-family for the top-nav menu + the text-fallback logo. Empty
+   * falls through to the body font, matching pre-token behavior.
+   * Added at the 2026-06-10 boss meeting so the header can carry a
+   * different tone (e.g. serif) from the body copy.
+   */
+  font_header: string;
+  /**
+   * Font-family for CTA buttons site-wide. Targets the same selectors
+   * the existing radius_button rule pins (every <button> / [role=button]
+   * that doesn't opt out via .kokkok-keep-font). Empty falls through
+   * to the body font.
+   */
+  font_button: string;
+  /**
+   * Font-family for product prices and other tabular numerics. Drives
+   * the .kokkok-price class wired on ProductCard's price spans.
+   * Empty falls through to the body font.
+   */
+  font_price: string;
+  /**
    * Header navigation menu font size. CSS length value (e.g. "13.5px",
    * "15px"). Drives both the desktop top-nav links and the mobile drawer
    * via the --header-menu-font-size variable. Added 2026-06 after 한송이
@@ -45,6 +65,32 @@ export interface ThemeTokens {
    * presets next to the file upload control.
    */
   header_logo_height: string;
+  /**
+   * SubHero banner subtitle font size — the line above the big title
+   * inside SubHeroBanner.tsx. Bosses asked at 2026-06-10 to bump the
+   * default and add a global knob; this token feeds the
+   * --subhero-subtitle-size CSS var consumed by .kokkok-subhero-subtitle.
+   * Per-banner offsets in /admin/sub-hero still stack on top of this.
+   */
+  subhero_subtitle_size: string;
+  /**
+   * "BEST SELLER" / "추천 상품" style product-section title. Drives the
+   * h2 on the homepage's pickBestSellers section + any future section
+   * that opts in via .kokkok-product-section-title. Added 2026-06-10.
+   */
+  product_section_title_size: string;
+  /**
+   * ProductCard's product-name <h3>. Drives every product card in the
+   * site via .kokkok-product-name. The bosses called out the homepage
+   * BEST SELLER row as too small at 2026-06-10.
+   */
+  product_name_size: string;
+  /**
+   * ProductCard price span + discount %. Pairs with the .kokkok-price
+   * font-family set under font_price (the family vs size is split so
+   * an admin can swap one without touching the other).
+   */
+  product_price_size: string;
 }
 
 export const DEFAULT_THEME_TOKENS: ThemeTokens = {
@@ -57,14 +103,33 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   radius_button: '0px',
   font_body: '',
   font_display: '',
+  font_header: '',
+  font_button: '',
+  font_price: '',
   // Bumped 2026-06-08 from 13.5px to 15px after 송이 forwarded customer
   // feedback that the homepage menu read too small. Admins can still pin
   // any preset (13.5 / 15 / 17 / 19) from /admin/theme; this only moves
   // the out-of-box value for installs without a saved row.
   header_menu_font_size: '15px',
-  // 40px matches the pre-token h-10 desktop height, so installs without
-  // a saved row paint identically to today.
-  header_logo_height: '40px',
+  // 56px default — bosses asked for a larger logo at 2026-06-10 meeting;
+  // admins can still pin any preset (32/40/48/56) or any pixel value
+  // 20–80 from /admin/logo. Saved rows keep their override.
+  header_logo_height: '56px',
+  // 18px default — bosses said the sub-header read too small at the
+  // 2026-06-10 meeting. Bumped from the pre-token 14/16px Tailwind
+  // text-sm/md:text-base pair so a fresh install lands at 18px both
+  // breakpoints; /admin/theme can dial down or up (12–28).
+  subhero_subtitle_size: '18px',
+  // 24px matches the pre-token text-2xl for the BEST SELLER heading.
+  // Bumping defaults here would shift the homepage on every install;
+  // keep parity, let admin pick from /admin/theme.
+  product_section_title_size: '24px',
+  // 15px (vs. pre-token 13px) — bosses said the product names on the
+  // homepage looked small next to the bigger BEST SELLER row above.
+  product_name_size: '15px',
+  // 17px (vs. pre-token 15px) — same reason; prices read alongside
+  // the bumped product name without looking cramped.
+  product_price_size: '17px',
 };
 
 export function parseThemeTokens(raw: unknown): ThemeTokens {
@@ -87,8 +152,15 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     radius_button: partial.radius_button ?? DEFAULT_THEME_TOKENS.radius_button,
     font_body: partial.font_body ?? '',
     font_display: partial.font_display ?? '',
+    font_header: partial.font_header ?? '',
+    font_button: partial.font_button ?? '',
+    font_price: partial.font_price ?? '',
     header_menu_font_size: partial.header_menu_font_size || DEFAULT_THEME_TOKENS.header_menu_font_size,
     header_logo_height: partial.header_logo_height || DEFAULT_THEME_TOKENS.header_logo_height,
+    subhero_subtitle_size: partial.subhero_subtitle_size || DEFAULT_THEME_TOKENS.subhero_subtitle_size,
+    product_section_title_size: partial.product_section_title_size || DEFAULT_THEME_TOKENS.product_section_title_size,
+    product_name_size: partial.product_name_size || DEFAULT_THEME_TOKENS.product_name_size,
+    product_price_size: partial.product_price_size || DEFAULT_THEME_TOKENS.product_price_size,
   };
 }
 
@@ -107,8 +179,15 @@ export function tokensToCss(t: ThemeTokens): string {
     `--radius-button: ${t.radius_button};`,
     `--header-menu-font-size: ${t.header_menu_font_size};`,
     `--header-logo-height: ${t.header_logo_height};`,
+    `--subhero-subtitle-size: ${t.subhero_subtitle_size};`,
+    `--product-section-title-size: ${t.product_section_title_size};`,
+    `--product-name-size: ${t.product_name_size};`,
+    `--product-price-size: ${t.product_price_size};`,
   ];
   if (t.font_body) lines.push(`--font-body: ${t.font_body};`);
   if (t.font_display) lines.push(`--font-display: ${t.font_display};`);
+  if (t.font_header) lines.push(`--font-header: ${t.font_header};`);
+  if (t.font_button) lines.push(`--font-button: ${t.font_button};`);
+  if (t.font_price) lines.push(`--font-price: ${t.font_price};`);
   return `:root { ${lines.join(' ')} }`;
 }

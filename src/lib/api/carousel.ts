@@ -6,6 +6,9 @@ export interface CarouselSlide {
   title: Record<string, string>;
   subtitle: Record<string, string>;
   image_url: string | null;
+  /** Migration 35 — optional mobile-specific hero image. NULL falls
+   *  back to image_url. HeroSlider swaps via the sm breakpoint. */
+  mobile_image_url?: string | null;
   bg_color: string;
   text_color?: string;
   badge_bg_color?: string;

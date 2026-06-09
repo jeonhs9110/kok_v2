@@ -35,6 +35,16 @@ export default function ShortsAdminPage() {
   const [bg, setBg] = useState<SectionBgValue>(EMPTY_BG);
   const [savingBg, setSavingBg] = useState(false);
   const [bgSaved, setBgSaved] = useState(false);
+  // Migration 33 — admin-editable section title + style. Null fields
+  // fall back to the pre-2026-06-10 hardcoded "BRAND SHORTS" / white /
+  // 15px / transparent look so existing installs don't shift.
+  const [headerText, setHeaderText] = useState('');
+  const [headerFontSize, setHeaderFontSize] = useState('15');
+  const [headerTextColor, setHeaderTextColor] = useState('#ffffff');
+  const [headerBgEnabled, setHeaderBgEnabled] = useState(false);
+  const [headerBgColor, setHeaderBgColor] = useState('#000000');
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [headerSaved, setHeaderSaved] = useState(false);
 
   useEffect(() => {
     fetchShorts();
@@ -46,7 +56,7 @@ export default function ShortsAdminPage() {
     if (!supabase) return;
     const { data } = await supabase
       .from('shorts_config')
-      .select('id, bg_type, bg_color, bg_media_url, bg_media_type')
+      .select('id, bg_type, bg_color, bg_media_url, bg_media_type, header_text, header_font_size, header_text_color, header_bg_color')
       .limit(1).maybeSingle();
     if (data) {
       setBgConfigId(data.id);
@@ -56,6 +66,41 @@ export default function ShortsAdminPage() {
         mediaUrl: data.bg_media_url ?? null,
         mediaType: (data.bg_media_type as 'image' | 'video' | null) ?? null,
       });
+      setHeaderText(data.header_text ?? '');
+      setHeaderFontSize(String(parseInt(data.header_font_size ?? '15', 10) || 15));
+      setHeaderTextColor(data.header_text_color ?? '#ffffff');
+      setHeaderBgEnabled(!!data.header_bg_color);
+      setHeaderBgColor(data.header_bg_color ?? '#000000');
+    }
+  }
+
+  async function saveHeader() {
+    if (!supabase) return;
+    setSavingHeader(true);
+    try {
+      const size = Math.max(10, Math.min(48, parseInt(headerFontSize, 10) || 15));
+      const payload = {
+        header_text: headerText.trim() || null,
+        header_font_size: `${size}px`,
+        header_text_color: headerTextColor || null,
+        header_bg_color: headerBgEnabled ? headerBgColor : null,
+      };
+      if (bgConfigId) {
+        const { error } = await supabase.from('shorts_config').update(payload).eq('id', bgConfigId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('shorts_config').insert([payload]).select('id').single();
+        if (error) throw error;
+        setBgConfigId(data.id);
+      }
+      revalidateHomepageData('shorts');
+      setHeaderSaved(true);
+      setTimeout(() => setHeaderSaved(false), 2000);
+    } catch (err) {
+      console.error('[admin/shorts] header save failed:', err);
+      alert('제목 스타일 저장에 실패했습니다.');
+    } finally {
+      setSavingHeader(false);
     }
   }
 
@@ -184,6 +229,115 @@ export default function ShortsAdminPage() {
 
   return (
     <div className="space-y-8">
+      {/* 섹션 제목 스타일 (migration 33) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-lg font-bold text-gray-800">섹션 제목</h2>
+          <p className="text-xs text-gray-400">기본은 &ldquo;BRAND SHORTS&rdquo; · 흰색 · 15px.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">제목 텍스트</label>
+            <input
+              type="text"
+              value={headerText}
+              onChange={e => setHeaderText(e.target.value)}
+              placeholder="BRAND SHORTS"
+              className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">비워두면 기본값 &ldquo;BRAND SHORTS&rdquo;가 표시됩니다.</p>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">글자 크기 (px)</label>
+            <input
+              type="number"
+              min={10}
+              max={48}
+              step={1}
+              value={headerFontSize}
+              onChange={e => setHeaderFontSize(e.target.value)}
+              className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">10–48 사이. 기본 15.</p>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">글자 색상</label>
+            <div className="flex items-center gap-2 mt-1">
+              <input
+                type="color"
+                value={headerTextColor}
+                onChange={e => setHeaderTextColor(e.target.value)}
+                className="w-10 h-10 rounded border border-gray-200 cursor-pointer p-0"
+              />
+              <input
+                type="text"
+                value={headerTextColor}
+                onChange={e => setHeaderTextColor(e.target.value)}
+                className="flex-1 px-3 py-2 text-sm font-mono border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider cursor-pointer">
+              <input
+                type="checkbox"
+                checked={headerBgEnabled}
+                onChange={e => setHeaderBgEnabled(e.target.checked)}
+                className="w-3.5 h-3.5"
+              />
+              제목 뒤 배경 색상 사용
+            </label>
+            <div className={`flex items-center gap-2 mt-1 ${!headerBgEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
+              <input
+                type="color"
+                value={headerBgColor}
+                onChange={e => setHeaderBgColor(e.target.value)}
+                className="w-10 h-10 rounded border border-gray-200 cursor-pointer p-0"
+              />
+              <input
+                type="text"
+                value={headerBgColor}
+                onChange={e => setHeaderBgColor(e.target.value)}
+                className="flex-1 px-3 py-2 text-sm font-mono border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+              />
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">체크 해제 시 섹션 배경 위에 그대로 노출됩니다.</p>
+          </div>
+        </div>
+
+        {/* Live preview chip so the admin sees the combined effect
+            without scrolling to the storefront iframe. */}
+        <div className="pt-3 border-t border-gray-100">
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">미리보기</p>
+          <div className="flex justify-center py-6 bg-neutral-900 rounded">
+            <h3
+              className="font-bold tracking-widest uppercase"
+              style={{
+                color: headerTextColor,
+                fontSize: `${Math.max(10, Math.min(48, parseInt(headerFontSize, 10) || 15))}px`,
+                backgroundColor: headerBgEnabled ? headerBgColor : undefined,
+                padding: headerBgEnabled ? '0.5rem 1rem' : undefined,
+                borderRadius: headerBgEnabled ? '0.25rem' : undefined,
+              }}
+            >
+              {headerText.trim() || 'BRAND SHORTS'}
+            </h3>
+          </div>
+        </div>
+
+        <button
+          onClick={saveHeader}
+          disabled={savingHeader}
+          className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
+            headerSaved ? 'bg-green-600 text-white' : 'bg-black/80 text-white hover:bg-black'
+          } disabled:opacity-50`}
+        >
+          <Save className="w-3.5 h-3.5" />
+          {savingHeader ? '저장 중...' : headerSaved ? '✓ 저장 완료' : '제목 스타일 저장'}
+        </button>
+      </div>
+
       {/* 섹션 배경 설정 (migration 26) */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
         <div className="flex items-baseline justify-between">

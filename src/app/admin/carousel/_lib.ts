@@ -30,6 +30,10 @@ export interface SlideFormData {
   is_active: boolean;
   imageUrl: string;
   imageFile: File | null;
+  /** Migration 35: optional mobile-specific image. Empty/null leaves
+   *  HeroSlider falling back to the desktop image. */
+  mobileImageUrl: string;
+  mobileImageFile: File | null;
   link_url: string;
   display_mode: 'default' | 'fullpage';
   media_type: 'image' | 'video' | 'gif';
@@ -78,6 +82,8 @@ export const emptyForm: SlideFormData = {
   is_active: true,
   imageUrl: '',
   imageFile: null,
+  mobileImageUrl: '',
+  mobileImageFile: null,
   link_url: '',
   display_mode: 'default',
   media_type: 'image',

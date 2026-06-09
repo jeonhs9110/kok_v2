@@ -11,12 +11,24 @@ export interface ShortItem {
   productUrl?: string;
 }
 
+export interface ShortsHeaderStyle {
+  /** NULL → "BRAND SHORTS" */
+  text: string | null;
+  /** NULL → 15px */
+  fontSize: string | null;
+  /** NULL → white */
+  textColor: string | null;
+  /** NULL → no plate (transparent) */
+  bgColor: string | null;
+}
+
 interface Props {
   shorts: ShortItem[];
   bgConfig?: SectionBackgroundConfig | null;
+  header?: ShortsHeaderStyle;
 }
 
-export default function ShortsFeed({ shorts, bgConfig = null }: Props) {
+export default function ShortsFeed({ shorts, bgConfig = null, header }: Props) {
   const { lang } = useI18n();
   const viewLabel = lang === 'kr' ? '사용 제품 보기 →' : 'View product →';
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -56,8 +68,17 @@ export default function ShortsFeed({ shorts, bgConfig = null }: Props) {
     >
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-center items-end mb-10">
-          <h2 className="text-white text-[15px] font-bold tracking-widest uppercase">
-            BRAND SHORTS
+          <h2
+            className="font-bold tracking-widest uppercase"
+            style={{
+              color: header?.textColor ?? '#ffffff',
+              fontSize: header?.fontSize ?? '15px',
+              backgroundColor: header?.bgColor ?? undefined,
+              padding: header?.bgColor ? '0.5rem 1rem' : undefined,
+              borderRadius: header?.bgColor ? '0.25rem' : undefined,
+            }}
+          >
+            {header?.text || 'BRAND SHORTS'}
           </h2>
         </div>
 

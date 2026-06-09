@@ -40,6 +40,8 @@ function formFromSlide(s: CarouselSlide): SlideFormData {
     is_active: s.is_active,
     imageUrl: s.image_url || '',
     imageFile: null,
+    mobileImageUrl: s.mobile_image_url || '',
+    mobileImageFile: null,
     link_url: s.link_url || '',
     display_mode: s.display_mode || 'default',
     media_type: s.media_type || 'image',
