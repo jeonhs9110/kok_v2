@@ -153,15 +153,18 @@ export default function Header({
         data-builder-section="menus"
       >
         <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-          {/* Header bar grows with the logo: min-height = max(66px,
-              logo_height + 24px). At small logos this stays at 66px
-              like before; at the new 20-150 range's tall end the bar
-              expands so the logo doesn't crop. 24px breathing room
-              keeps the logo from touching the top/bottom borders. */}
+          {/* Header bar grows with WHICHEVER is tallest among:
+                - the 66px floor (pre-token default)
+                - the logo height + 24px breathing room
+                - the menu font size + 36px (font + line-height + padding)
+              so neither a 150px logo nor a 40px menu font crops. Each
+              admin slider works independently — Songyi can push the
+              menu to 32px without touching the logo and the bar
+              expands cleanly. */}
           <div
             className="kokkok-header-bar flex items-center gap-4 py-3"
             style={{
-              minHeight: 'max(66px, calc(var(--header-logo-height, 40px) + 24px))',
+              minHeight: 'max(66px, calc(var(--header-logo-height, 40px) + 24px), calc(var(--header-menu-font-size, 15px) + 36px))',
             }}
           >
 
