@@ -51,6 +51,55 @@ function readOg(html: string, name: 'title' | 'image' | 'description'): string |
   return html.match(propFirst)?.[1] ?? html.match(contentFirst)?.[1] ?? null;
 }
 
+/**
+ * Find the opening tag that matches `openTagRegex`, then walk forward
+ * counting <div ...> opens and </div> closes until depth returns to 0
+ * — that's the matching close of the outer container. Returns the
+ * raw HTML between the opening tag's `>` and the matching closing
+ * `</div>`, or null if no match / unbalanced markup.
+ *
+ * Necessary because Naver's SmartEditor 3.0 main container is the
+ * outer of a deeply nested tree (each "component" — paragraph,
+ * sticker, image, divider — adds 3-4 nested divs). A non-greedy
+ * regex match terminates at the first </div> and captures ~1% of
+ * the body. Greedy doesn't help either because comments / footer
+ * blocks sit AFTER the real container close and would get swallowed.
+ */
+function balancedDivContent(html: string, openTagRegex: RegExp): string | null {
+  const openMatch = openTagRegex.exec(html);
+  if (!openMatch) return null;
+
+  // Position right after the opening tag's `>`.
+  const startIdx = openMatch.index;
+  const openEnd = html.indexOf('>', startIdx + openMatch[0].length - 1);
+  if (openEnd === -1) return null;
+  const contentStart = openEnd + 1;
+
+  let depth = 1;
+  let pos = contentStart;
+  const openTagRe = /<div\b/gi;
+  const closeTagRe = /<\/div\s*>/gi;
+
+  while (depth > 0 && pos < html.length) {
+    openTagRe.lastIndex = pos;
+    closeTagRe.lastIndex = pos;
+    const nextOpen = openTagRe.exec(html);
+    const nextClose = closeTagRe.exec(html);
+    if (!nextClose) return null; // malformed — bail rather than over-capture
+    if (nextOpen && nextOpen.index < nextClose.index) {
+      depth++;
+      pos = nextOpen.index + 4;
+    } else {
+      depth--;
+      if (depth === 0) {
+        return html.slice(contentStart, nextClose.index);
+      }
+      pos = nextClose.index + nextClose[0].length;
+    }
+  }
+  return null;
+}
+
 function decodeHtmlEntities(input: string): string {
   return input
     .replace(/&amp;/g, '&')
@@ -126,14 +175,17 @@ export async function POST(request: Request): Promise<NextResponse<ScrapeResult 
  * actually appear when rendered outside Naver's loader.
  */
 function extractNaverPostBody(html: string): string | null {
-  let body: string | null = null;
-
-  const se = html.match(/<div[^>]*class="[^"]*se-main-container[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?:<\/div>\s*<\/div>|<!--|<div\s+class="se-footer)/i);
-  if (se) body = se[1];
+  // SmartEditor 3.0 container — newer posts. Use balanced div counting
+  // (not regex) because the body is deeply nested and a non-greedy
+  // regex matches the FIRST closing </div> which is just the leading
+  // sticker / cover element, capturing maybe 700 chars instead of the
+  // 20-50KB real post body. balancedDivContent walks the HTML
+  // counting <div / </div> until depth returns to 0.
+  let body = balancedDivContent(html, /<div[^>]*class="[^"]*se-main-container[^"]*"[^>]*>/i);
 
   if (!body) {
-    const pv = html.match(/<div[^>]*id="postViewArea"[^>]*>([\s\S]*?)<\/div>\s*(?:<div\s+class="post_footer"|<div\s+class="postCommentSection|<\/div>\s*<\/div>)/i);
-    if (pv) body = pv[1];
+    // Legacy 스마트에디터 2.0 container — older or imported posts.
+    body = balancedDivContent(html, /<div[^>]*id="postViewArea"[^>]*>/i);
   }
 
   if (!body) return null;
