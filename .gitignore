@@ -51,6 +51,10 @@ yarn-error.log*
 /claude-memory/
 /docs/
 /email-drafts/
+# Claude Code session state — must never enter git (per durable user pref)
+.claude/
+# Local scratch directory for one-off audit / probe scripts and screenshots
+/tmp/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
