@@ -33,10 +33,10 @@ const ACCEPT_BG = 'image/png,image/jpeg,image/webp,image/gif,video/mp4,video/web
 const MAX_BG_SIZE = 50 * 1024 * 1024; // 50MB
 
 const LOGO_HEIGHT_PRESETS: { v: string; l: string }[] = [
-  { v: '32px', l: '작게' },
-  { v: '40px', l: '기본' },
-  { v: '48px', l: '크게' },
-  { v: '56px', l: '더 크게' },
+  { v: '40px', l: '작게' },
+  { v: '48px', l: '보통' },
+  { v: '56px', l: '기본' },
+  { v: '64px', l: '크게' },
 ];
 
 export default function LogoAdminPage() {
@@ -404,7 +404,7 @@ export default function LogoAdminPage() {
               min={20}
               max={80}
               step={1}
-              value={parseInt(tokens.header_logo_height, 10) || 40}
+              value={parseInt(tokens.header_logo_height, 10) || 56}
               onChange={(e) => {
                 const raw = parseInt(e.target.value, 10);
                 if (!Number.isFinite(raw)) return;

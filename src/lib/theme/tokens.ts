@@ -62,9 +62,10 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   // any preset (13.5 / 15 / 17 / 19) from /admin/theme; this only moves
   // the out-of-box value for installs without a saved row.
   header_menu_font_size: '15px',
-  // 40px matches the pre-token h-10 desktop height, so installs without
-  // a saved row paint identically to today.
-  header_logo_height: '40px',
+  // 56px default — bosses asked for a larger logo at 2026-06-10 meeting;
+  // admins can still pin any preset (32/40/48/56) or any pixel value
+  // 20–80 from /admin/logo. Saved rows keep their override.
+  header_logo_height: '56px',
 };
 
 export function parseThemeTokens(raw: unknown): ThemeTokens {
