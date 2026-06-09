@@ -81,6 +81,10 @@ export default function HomepageBuilderPage() {
   // when open. The matching SectionDef is looked up from `grouped` to
   // get the display name + href for the iframe url.
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  // When the editor drawer is open, the rail hides off-screen. Hovering
+  // the left edge brings it back. Reset on each new edit so opening the
+  // drawer always starts with the rail hidden.
+  const [railHover, setRailHover] = useState(false);
   // Initial isLoading derives from supabase availability so we never sync
   // setState inside the effect below (react-hooks/set-state-in-effect).
   const [isLoading, setIsLoading] = useState(supabase !== null);
@@ -234,6 +238,25 @@ export default function HomepageBuilderPage() {
 
   const handleReload = () => setIframeKey(k => k + 1);
 
+  // Bridge: any embedded editor (theme, logo, etc.) posts its live-
+  // preview tokens up to this window. We forward them to the central
+  // storefront iframe so the admin sees changes against the real site
+  // while editing inside the drawer — no in-drawer iframe needed.
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      if (!e.data || typeof e.data !== 'object') return;
+      // Whitelist the message types we relay. Everything else is
+      // either ours-only (highlight, drawer close) or unrelated.
+      if (e.data.type !== 'kokkok-theme-tokens') return;
+      const iframe = iframeRef.current;
+      if (!iframe?.contentWindow) return;
+      iframe.contentWindow.postMessage(e.data, window.location.origin);
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
   // Scroll + highlight the matching section inside the storefront iframe
   // when the admin clicks a card. The iframe's [lang]/layout script
   // listens for the 'kokkok-builder-highlight' postMessage and applies
@@ -256,10 +279,12 @@ export default function HomepageBuilderPage() {
   function handleEdit(key: string) {
     setSelectedKey(key);
     setEditingKey(key);
+    setRailHover(false);
   }
 
   function handleDrawerClose() {
     setEditingKey(null);
+    setRailHover(false);
     // Bump the preview iframe key so it remounts and pulls fresh data
     // — covers the "I saved inside the drawer, now show me the result"
     // flow without needing each editor to broadcast a save event.
@@ -298,9 +323,30 @@ export default function HomepageBuilderPage() {
         onReload={handleReload}
       />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* ── LEFT RAIL: section list ──────────────────────────── */}
-        <aside className="w-[320px] bg-white border-r border-[#e5e7eb] flex flex-col overflow-hidden flex-shrink-0">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left-edge hover strip — slides the rail back into view when
+            the drawer is open and the admin moves the cursor to the
+            very left of the viewport. 12px wide, transparent, sits
+            above the dimmed preview pane. Only mounts while the drawer
+            is open so it doesn't interfere with normal use. */}
+        {editingKey && (
+          <div
+            className="absolute top-0 left-0 bottom-0 w-3 z-[55]"
+            onMouseEnter={() => setRailHover(true)}
+            aria-hidden="true"
+          />
+        )}
+        {/* ── LEFT RAIL: section list ──────────────────────────────
+            When the editor drawer is open the rail slides off to the
+            left so the central preview reclaims its space — Songyi's
+            2026-06-10 ask. Hovering the left-edge strip above brings
+            the rail back; moving away closes it again. */}
+        <aside
+          onMouseLeave={() => editingKey && setRailHover(false)}
+          className={`w-[320px] bg-white border-r border-[#e5e7eb] flex flex-col overflow-hidden flex-shrink-0 transition-transform duration-200 ease-out ${
+            editingKey && !railHover ? '-translate-x-full' : 'translate-x-0'
+          } ${editingKey ? 'absolute top-0 left-0 bottom-0 z-[60] shadow-2xl' : ''}`}
+        >
           {/* Tabs — only 섹션 is active for the MVP; 스타일 deep-links
               to /admin/theme since that's exactly the styles surface.
               확장 is a placeholder for the Phase 3 plugin shell. */}
