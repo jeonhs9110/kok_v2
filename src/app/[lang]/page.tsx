@@ -9,7 +9,6 @@ import ProductGrid, { type GridProduct } from '@/components/ProductGrid';
 import PromoBannersSection from '@/components/PromoBannersSection';
 import ShortsFeedSection, { ShortsFeedSkeleton } from '@/components/sections/ShortsFeedSection';
 import SubHeroSection, { SubHeroSkeleton } from '@/components/sections/SubHeroSection';
-import ReviewShowcaseSection, { ReviewShowcaseSkeleton } from '@/components/sections/ReviewShowcaseSection';
 import InstagramFeedSection, { InstagramFeedSkeleton } from '@/components/sections/InstagramFeedSection';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
@@ -126,12 +125,6 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
       <SectionErrorBoundary label="SubHero">
         <Suspense fallback={<SubHeroSkeleton />}>
           <SubHeroSection />
-        </Suspense>
-      </SectionErrorBoundary>
-
-      <SectionErrorBoundary label="ReviewShowcase">
-        <Suspense fallback={<ReviewShowcaseSkeleton />}>
-          <ReviewShowcaseSection lang={lang} />
         </Suspense>
       </SectionErrorBoundary>
 
