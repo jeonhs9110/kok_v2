@@ -160,6 +160,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const previewUrl = previewUrlFor(pathname);
   const title = PAGE_TITLE[pathname] ?? pathname.split('/').pop() ?? '관리자';
 
+  // /admin/homepage is the Cafe24-style builder that owns its own chrome
+  // (top toolbar + section list + preview). Render its children straight
+  // through so the global sidebar + header don't compete with it visually.
+  // Songyi can leave via the builder's own 종료 (exit) button which deep-
+  // links to /admin (dashboard).
+  if (pathname === '/admin/homepage') {
+    return (
+      <div className="h-screen w-screen bg-[#f5f6f8] font-sans overflow-hidden">
+        {children}
+        <AdminSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-50 font-sans">
       {/* Mobile backdrop — sits between content and drawer; tap to dismiss. */}

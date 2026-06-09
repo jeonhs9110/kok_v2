@@ -59,7 +59,9 @@ export default function AdminDashboard() {
         supabase.from('analytics').select('id', { count: 'exact', head: true }),
       ]);
 
-      if (productsRes.error && activeRes.error) throw new Error('DB error');
+      // Throw on EITHER error (was `&&`, which meant a single-side failure
+      // silently continued with zero counts — debug audit 2026-06-10).
+      if (productsRes.error || activeRes.error) throw new Error('DB error');
 
       // Fetch all analytics + products + wishlist in parallel. Pull
       // is_active + images alongside id/name so the "관심 필요" count can

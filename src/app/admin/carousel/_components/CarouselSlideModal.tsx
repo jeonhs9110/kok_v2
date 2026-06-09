@@ -75,6 +75,11 @@ export default function CarouselSlideModal({
     // banner on a 27" monitor.
     if (!isVideo) {
       const img = new Image();
+      // Track the object URL so we can revoke it after the image is decoded
+      // — previously every file pick orphaned the blob in memory (debug
+      // audit 2026-06-10).
+      const objectUrl = URL.createObjectURL(file);
+      const cleanup = () => URL.revokeObjectURL(objectUrl);
       img.onload = () => {
         if (img.naturalHeight < 1000) {
           alert(
@@ -83,8 +88,10 @@ export default function CarouselSlideModal({
             `2400 × 1200 이상의 원본을 권장합니다.`,
           );
         }
+        cleanup();
       };
-      img.src = URL.createObjectURL(file);
+      img.onerror = cleanup;
+      img.src = objectUrl;
     }
   }
 
