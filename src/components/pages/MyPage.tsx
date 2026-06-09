@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { User, Package, Heart, LogOut, Save, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -47,10 +48,23 @@ const GENDER_OPTIONS_EN = ['Male', 'Female', 'Other', 'Prefer not to say'];
 const SKIN_OPTIONS_KR = ['건성', '지성', '복합성', '민감성', '중성'];
 const SKIN_OPTIONS_EN = ['Dry', 'Oily', 'Combination', 'Sensitive', 'Normal'];
 
+type MyPageTab = 'profile' | 'orders' | 'wishlist';
+function isValidTab(v: string | null): v is MyPageTab {
+  return v === 'profile' || v === 'orders' || v === 'wishlist';
+}
+
 export default function MyPage({ lang }: { lang: string }) {
   const t = L[lang] ?? L['en'];
   const isKr = lang === 'kr';
-  const [tab, setTab] = useState<'profile' | 'orders' | 'wishlist'>('profile');
+  // Deep-link support — Header's "주문조회" link points at
+  // `/${lang}/mypage?tab=orders` instead of a dedicated /orders route
+  // (which 404'd before the 2026-06-10 audit). Falls back to profile
+  // when the param is missing or unrecognized.
+  const searchParams = useSearchParams();
+  const initialTab: MyPageTab = isValidTab(searchParams?.get('tab') ?? null)
+    ? (searchParams!.get('tab') as MyPageTab)
+    : 'profile';
+  const [tab, setTab] = useState<MyPageTab>(initialTab);
   const [userEmail, setUserEmail] = useState('');
   const [userCreated, setUserCreated] = useState('');
   const [userId, setUserId] = useState('');
