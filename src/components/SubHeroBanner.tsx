@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { fontFamilyForKey, anchorTextStyle, resolveAnchor, type PositionKey } from '@/lib/typography/options';
+import { fontFamilyForKey, anchorTextStyle, anchorToObjectPosition, resolveAnchor, type PositionKey } from '@/lib/typography/options';
 
 export interface SubHeroBannerData {
   id: string;
@@ -27,6 +27,11 @@ export interface SubHeroBannerData {
   // text_position is the fallback for pre-migration rows.
   text_anchor?: unknown;
   text_anchor_mobile?: unknown;
+  // Migration 31: image focal point per breakpoint, same shape as
+  // the carousel's. NULL on rows saved before the picker shipped;
+  // resolveAnchor's center default keeps them readable.
+  image_anchor?: unknown;
+  image_anchor_mobile?: unknown;
   // Migration 28: separate mobile anchor.
   text_position_mobile?: PositionKey | string | null;
 }
@@ -51,7 +56,20 @@ export default function SubHeroBanner({ banner }: Props) {
           width={1600}
           height={560}
           loading="lazy"
-          className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
+          /* Image focal point — same approach as HeroSlider:
+             CSS vars set inline on the element are consumed by the
+             sub-hero-image-focal class via a 768px media query in
+             globals.css. NULL anchors fall through to center via
+             resolveAnchor. */
+          className="w-full h-full object-cover sub-hero-image-focal transition-transform duration-700 group-hover:scale-[1.03]"
+          style={{
+            ['--img-pos-mobile' as string]: anchorToObjectPosition(
+              resolveAnchor(banner.image_anchor_mobile, null),
+            ),
+            ['--img-pos-desktop' as string]: anchorToObjectPosition(
+              resolveAnchor(banner.image_anchor, null),
+            ),
+          } as React.CSSProperties}
         />
       ) : (
         <div className="w-full h-full bg-neutral-200" />

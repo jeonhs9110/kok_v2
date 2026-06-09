@@ -83,6 +83,20 @@
   }
 }
 
+/* Same focal-point trick for the sub-hero banner, but its
+   mobile/desktop transition lives at md (768px) instead of sm
+   (640px). Separate class so the breakpoint pairs with the
+   sub-hero's own h-[360px] md:h-[560px] / text overlay md:hidden
+   responsive shape. Added migration 31 (2026-06-09). */
+.sub-hero-image-focal {
+  object-position: var(--img-pos-mobile, center);
+}
+@media (min-width: 768px) {
+  .sub-hero-image-focal {
+    object-position: var(--img-pos-desktop, center);
+  }
+}
+
 /* ──────────────────────────────────────────────────────────
    Design tokens (Tailwind v4 @theme) — surfaces a token both
    as a utility (e.g. text-brand-ink) and as var(--color-brand-ink).

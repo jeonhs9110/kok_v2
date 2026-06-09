@@ -42,6 +42,9 @@ interface SubHero {
   // Migration 30: continuous (x, y) anchors replacing the 9-cell pickers.
   text_anchor: PositionAnchor;
   text_anchor_mobile: PositionAnchor;
+  // Migration 31: image focal point per breakpoint (matches carousel).
+  image_anchor: PositionAnchor;
+  image_anchor_mobile: PositionAnchor;
 }
 
 const EMPTY: SubHero = {
@@ -55,6 +58,8 @@ const EMPTY: SubHero = {
   text_position_mobile: 'mc',
   text_anchor: { x: 50, y: 50 },
   text_anchor_mobile: { x: 50, y: 50 },
+  image_anchor: { x: 50, y: 50 },
+  image_anchor_mobile: { x: 50, y: 50 },
 };
 
 export default function SubHeroAdminPage() {
@@ -90,6 +95,8 @@ export default function SubHeroAdminPage() {
           ...(data as SubHero),
           text_anchor:        resolveAnchor(data.text_anchor, data.text_position),
           text_anchor_mobile: resolveAnchor(data.text_anchor_mobile, data.text_position_mobile),
+          image_anchor:       resolveAnchor(data.image_anchor, null),
+          image_anchor_mobile: resolveAnchor(data.image_anchor_mobile, null),
         };
         setBanner(hydrated);
         setSavedBanner(hydrated);
@@ -147,6 +154,9 @@ export default function SubHeroAdminPage() {
         // Migration 30 anchors — saved in both forms for rollback safety.
         text_anchor: banner.text_anchor,
         text_anchor_mobile: banner.text_anchor_mobile,
+        // Migration 31 anchors — image focal point per breakpoint.
+        image_anchor: banner.image_anchor,
+        image_anchor_mobile: banner.image_anchor_mobile,
       };
       let savedId = banner.id;
       if (banner.id) {
@@ -452,6 +462,35 @@ export default function SubHeroAdminPage() {
                 onChange={a => setBanner(prev => ({ ...prev, text_anchor_mobile: a }))}
                 aspectRatio="aspect-[9/14]"
                 backgroundImage={banner.image_url || undefined}
+              />
+            </div>
+          </div>
+
+          {/* Image focal point (migration 31) — matches the carousel
+              modal's image picker. When the wide-source image crops
+              to portrait on mobile via object-cover, the focal point
+              keeps the product visible. */}
+          <div>
+            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-1">이미지 중심점</p>
+            <p className="text-[10px] text-gray-400 mb-2">
+              이미지가 잘릴 때 어느 지점을 중심으로 보일지 정합니다. 원하는 부분을 클릭하세요.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <ContinuousPositionPicker
+                label="PC 이미지 중심점"
+                value={banner.image_anchor}
+                onChange={a => setBanner(prev => ({ ...prev, image_anchor: a }))}
+                aspectRatio="aspect-[16/7]"
+                backgroundImage={banner.image_url || undefined}
+                markerColor="#facc15"
+              />
+              <ContinuousPositionPicker
+                label="모바일 이미지 중심점"
+                value={banner.image_anchor_mobile}
+                onChange={a => setBanner(prev => ({ ...prev, image_anchor_mobile: a }))}
+                aspectRatio="aspect-[9/14]"
+                backgroundImage={banner.image_url || undefined}
+                markerColor="#facc15"
               />
             </div>
           </div>
