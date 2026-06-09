@@ -13,12 +13,21 @@ export default async function ShortsFeedSection({ lang }: { lang: string }) {
     embedUrl: `https://www.youtube.com/embed/${d.youtube_id}`,
     productUrl: d.product_id ? `/${lang}/products/${d.product_id}` : undefined,
   }));
-  return <ShortsFeed shorts={shorts} bgConfig={bg ? {
-    type: bg.bg_type,
-    color: bg.bg_color,
-    media_url: bg.bg_media_url,
-    media_type: bg.bg_media_type,
-  } : null} />;
+  return <ShortsFeed
+    shorts={shorts}
+    bgConfig={bg ? {
+      type: bg.bg_type,
+      color: bg.bg_color,
+      media_url: bg.bg_media_url,
+      media_type: bg.bg_media_type,
+    } : null}
+    header={{
+      text: bg?.header_text ?? null,
+      fontSize: bg?.header_font_size ?? null,
+      textColor: bg?.header_text_color ?? null,
+      bgColor: bg?.header_bg_color ?? null,
+    }}
+  />;
 }
 
 export function ShortsFeedSkeleton() {

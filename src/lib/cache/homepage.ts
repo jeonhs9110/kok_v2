@@ -165,6 +165,13 @@ export interface ShortsBgConfig {
   bg_color: string | null;
   bg_media_url: string | null;
   bg_media_type: string | null;
+  /** Migration 33 — admin-editable title text + style. NULL falls
+   *  through to the pre-2026-06-10 hardcoded "BRAND SHORTS" / white /
+   *  15px / no plate look. */
+  header_text: string | null;
+  header_font_size: string | null;
+  header_text_color: string | null;
+  header_bg_color: string | null;
 }
 
 export const getCachedShortsBg = unstable_cache(
@@ -174,7 +181,7 @@ export const getCachedShortsBg = unstable_cache(
     try {
       const { data, error } = await withTimeout(
         c.from('shorts_config')
-          .select('bg_type, bg_color, bg_media_url, bg_media_type')
+          .select('bg_type, bg_color, bg_media_url, bg_media_type, header_text, header_font_size, header_text_color, header_bg_color')
           .limit(1).maybeSingle(),
         QUERY_BUDGET_MS
       );
@@ -185,6 +192,10 @@ export const getCachedShortsBg = unstable_cache(
         bg_color: data.bg_color ?? null,
         bg_media_url: data.bg_media_url ?? null,
         bg_media_type: data.bg_media_type ?? null,
+        header_text: data.header_text ?? null,
+        header_font_size: data.header_font_size ?? null,
+        header_text_color: data.header_text_color ?? null,
+        header_bg_color: data.header_bg_color ?? null,
       };
     } catch (err) {
       console.error('[cache:shorts_bg] failed:', err);
