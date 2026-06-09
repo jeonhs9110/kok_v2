@@ -104,15 +104,36 @@ export default function LogoAdminPage() {
   // new CSS so the logo height changes without a save / refresh.
   useEffect(() => {
     const handle = requestAnimationFrame(() => {
+      const css = tokensToCss(tokens);
       const iframe = iframeRef.current;
-      if (!iframe || !iframe.contentWindow) return;
-      iframe.contentWindow.postMessage(
-        { type: 'kokkok-theme-tokens', css: tokensToCss(tokens) },
-        window.location.origin,
-      );
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage(
+          { type: 'kokkok-theme-tokens', css },
+          window.location.origin,
+        );
+      }
+      // When this page is rendered inside the /admin/homepage builder
+      // drawer (?embedded=true), bubble the same tokens up to the
+      // parent so the hub's central iframe stays in sync. The hub
+      // re-broadcasts to its storefront preview.
+      if (typeof window !== 'undefined' && window.parent !== window) {
+        window.parent.postMessage(
+          { type: 'kokkok-theme-tokens', css },
+          window.location.origin,
+        );
+      }
     });
     return () => cancelAnimationFrame(handle);
   }, [tokens]);
+
+  // Embedded mode hides the local preview pane — the parent hub's
+  // central iframe shows it instead. Read after mount so SSR + this
+  // 'use client' page agree on the initial render.
+  const [isEmbedded, setIsEmbedded] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsEmbedded(new URLSearchParams(window.location.search).get('embedded') === 'true');
+  }, []);
 
   const tokensDirty = JSON.stringify(tokens) !== JSON.stringify(savedTokens);
 
@@ -295,7 +316,7 @@ export default function LogoAdminPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-6">
+    <div className={isEmbedded ? 'block' : 'grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-6'}>
       {/* ── Controls pane (left) ────────────────────────────────────── */}
       <div className="space-y-6 min-w-0">
         {/* 사이트 로고 */}
@@ -575,7 +596,10 @@ export default function LogoAdminPage() {
         </div>
       </div>
 
-      {/* ── Live preview pane (right) ───────────────────────────────── */}
+      {/* ── Live preview pane (right) — hidden in embedded mode ─────
+          The parent hub shows the live preview in its central iframe
+          instead, fed by the bubbled-up postMessage tokens above. */}
+      {!isEmbedded && (
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-2rem)]">
         <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <div className="flex items-center gap-2">
@@ -611,6 +635,7 @@ export default function LogoAdminPage() {
           />
         </div>
       </section>
+      )}
     </div>
   );
 }

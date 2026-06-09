@@ -146,13 +146,17 @@ export default function ContinuousPositionPicker({
         </div>
       </div>
 
-      {/* Quick presets — let admins still snap to the 9 canonical anchors
-          for layouts that should be exactly centered or pinned. */}
+      {/* Quick presets — 9 snap cells.
+          Anchors land at the CENTER of each 3x3 grid cell (≈ 16.67 /
+          50 / 83.33%) rather than the extreme edges. 송이's 2026-06-10
+          feedback: clicking "top-left" used to pin text to the very
+          corner — that was the box's edge, not the box's center. Now
+          each snap reads as the center of the third the admin clicked. */}
       <div className="grid grid-cols-3 gap-1 max-w-[160px]">
         {([
-          { x: 0,   y: 0   }, { x: 50,  y: 0   }, { x: 100, y: 0   },
-          { x: 0,   y: 50  }, { x: 50,  y: 50  }, { x: 100, y: 50  },
-          { x: 0,   y: 100 }, { x: 50,  y: 100 }, { x: 100, y: 100 },
+          { x: 17, y: 17 }, { x: 50, y: 17 }, { x: 83, y: 17 },
+          { x: 17, y: 50 }, { x: 50, y: 50 }, { x: 83, y: 50 },
+          { x: 17, y: 83 }, { x: 50, y: 83 }, { x: 83, y: 83 },
         ] as const).map((preset, i) => {
           const active = value.x === preset.x && value.y === preset.y;
           return (

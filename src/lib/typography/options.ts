@@ -218,9 +218,11 @@ export function positionDesktopMdForKey(key: string | null | undefined) {
  * 'bl' → 'left bottom', 'bc' → 'center bottom', 'br' → 'right bottom'
  */
 const OBJECT_POSITION_BY_KEY: Record<PositionKey, string> = {
-  tl: 'left top',     tc: 'center top',    tr: 'right top',
-  ml: 'left center',  mc: 'center',        mr: 'right center',
-  bl: 'left bottom',  bc: 'center bottom', br: 'right bottom',
+  // Center-of-cell percentages, matching the updated ANCHOR_BY_KEY
+  // and the snap presets in ContinuousPositionPicker (2026-06-10).
+  tl: '17% 17%',  tc: '50% 17%',  tr: '83% 17%',
+  ml: '17% 50%',  mc: '50% 50%',  mr: '83% 50%',
+  bl: '17% 83%',  bc: '50% 83%',  br: '83% 83%',
 };
 
 export function objectPositionForKey(key: string | null | undefined): string {
@@ -245,11 +247,17 @@ export interface PositionAnchor {
   y: number;
 }
 
-/** Cell-to-anchor map used when backfill is missing and we have a legacy key. */
+/** Cell-to-anchor map used when backfill is missing and we have a
+ *  legacy 9-cell key. Each cell points at the CENTER of its grid
+ *  third (≈ 16.67 / 50 / 83.33 %), matching the snap presets in
+ *  ContinuousPositionPicker — both updated 2026-06-10 per 송이's
+ *  feedback that edge-pinning didn't match what the visual grid
+ *  implied. Legacy banners saved with these keys will shift by ~17%
+ *  on first render, then stay put once the new anchor is saved. */
 const ANCHOR_BY_KEY: Record<PositionKey, PositionAnchor> = {
-  tl: { x: 0,   y: 0   }, tc: { x: 50,  y: 0   }, tr: { x: 100, y: 0   },
-  ml: { x: 0,   y: 50  }, mc: { x: 50,  y: 50  }, mr: { x: 100, y: 50  },
-  bl: { x: 0,   y: 100 }, bc: { x: 50,  y: 100 }, br: { x: 100, y: 100 },
+  tl: { x: 17, y: 17 }, tc: { x: 50, y: 17 }, tr: { x: 83, y: 17 },
+  ml: { x: 17, y: 50 }, mc: { x: 50, y: 50 }, mr: { x: 83, y: 50 },
+  bl: { x: 17, y: 83 }, bc: { x: 50, y: 83 }, br: { x: 83, y: 83 },
 };
 
 /**

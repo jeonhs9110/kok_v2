@@ -60,17 +60,42 @@ export default function ThemePage() {
 
   // Push live updates to the iframe on every token change. Debounced
   // via rAF to coalesce rapid color-picker drags into one paint.
+  //
+  // When this page renders inside the /admin/homepage builder's
+  // slide-in drawer (?embedded=true), the local iframe is hidden
+  // and we forward the same message to the parent window — the hub
+  // re-broadcasts it to ITS central preview iframe so Songyi sees
+  // changes against the actual storefront while editing in the
+  // drawer (no redundant in-drawer iframe stealing space).
   useEffect(() => {
     const handle = requestAnimationFrame(() => {
+      const css = tokensToCss(tokens);
       const iframe = iframeRef.current;
-      if (!iframe || !iframe.contentWindow) return;
-      iframe.contentWindow.postMessage(
-        { type: 'kokkok-theme-tokens', css: tokensToCss(tokens) },
-        window.location.origin,
-      );
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage(
+          { type: 'kokkok-theme-tokens', css },
+          window.location.origin,
+        );
+      }
+      // Bubble to parent hub when embedded.
+      if (typeof window !== 'undefined' && window.parent !== window) {
+        window.parent.postMessage(
+          { type: 'kokkok-theme-tokens', css },
+          window.location.origin,
+        );
+      }
     });
     return () => cancelAnimationFrame(handle);
   }, [tokens]);
+
+  // Embedded detection — hides the local preview pane and uses the
+  // parent hub's central iframe instead. Reads ?embedded=true from
+  // window.location after mount (safe — this is a 'use client' page).
+  const [isEmbedded, setIsEmbedded] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsEmbedded(new URLSearchParams(window.location.search).get('embedded') === 'true');
+  }, []);
 
   const handleSave = async () => {
     if (!supabase) return;
@@ -107,7 +132,7 @@ export default function ThemePage() {
   useUnsavedChanges(isDirty);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6">
+    <div className={isEmbedded ? 'block' : 'grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6'}>
       {/* Editor pane */}
       <aside className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col max-h-[calc(100vh-180px)]">
         <div className="p-5 border-b border-gray-100 bg-gray-50/50">
@@ -447,7 +472,9 @@ export default function ThemePage() {
         </div>
       </aside>
 
-      {/* Preview pane */}
+      {/* Preview pane — hidden in embedded mode; the parent hub's
+          central iframe shows the live preview instead. */}
+      {!isEmbedded && (
       <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
         <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <div className="flex items-center gap-2">
@@ -488,6 +515,7 @@ export default function ThemePage() {
           />
         </div>
       </section>
+      )}
     </div>
   );
 }
