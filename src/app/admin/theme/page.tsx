@@ -254,6 +254,87 @@ export default function ThemePage() {
                 </div>
               </Section>
 
+              <Section title="메인 배너 (히어로) 크기">
+                <SizePicker
+                  label="높이 — 모바일 (640px 미만)"
+                  value={tokens.hero_height_mobile}
+                  fallback={700}
+                  presets={[
+                    { v: '480px',  l: '낮게' },
+                    { v: '600px',  l: '보통' },
+                    { v: '700px',  l: '기본' },
+                    { v: '820px',  l: '높게' },
+                  ]}
+                  min={320}
+                  max={1200}
+                  onChange={v => setTokens(t => ({ ...t, hero_height_mobile: v }))}
+                />
+                <SizePicker
+                  label="높이 — 태블릿 (640–1023px)"
+                  value={tokens.hero_height_tablet}
+                  fallback={900}
+                  presets={[
+                    { v: '640px',  l: '낮게' },
+                    { v: '800px',  l: '보통' },
+                    { v: '900px',  l: '기본' },
+                    { v: '1040px', l: '높게' },
+                  ]}
+                  min={480}
+                  max={1400}
+                  onChange={v => setTokens(t => ({ ...t, hero_height_tablet: v }))}
+                />
+                <SizePicker
+                  label="높이 — 데스크탑 (1024px 이상)"
+                  value={tokens.hero_height_desktop}
+                  fallback={1000}
+                  presets={[
+                    { v: '720px',  l: '낮게' },
+                    { v: '880px',  l: '보통' },
+                    { v: '1000px', l: '기본' },
+                    { v: '1200px', l: '높게' },
+                  ]}
+                  min={520}
+                  max={1600}
+                  onChange={v => setTokens(t => ({ ...t, hero_height_desktop: v }))}
+                />
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">가로 최대 너비 (선택)</label>
+                  <div className="grid grid-cols-4 gap-1.5 mt-1">
+                    {[
+                      { v: '',       l: '전체 폭' },
+                      { v: '1920px', l: '1920' },
+                      { v: '1600px', l: '1600' },
+                      { v: '1280px', l: '1280' },
+                    ].map(opt => (
+                      <button
+                        key={opt.v || 'full'}
+                        type="button"
+                        onClick={() => setTokens(t => ({ ...t, hero_max_width: opt.v }))}
+                        className={`p-2 font-semibold border rounded text-xs ${
+                          tokens.hero_max_width === opt.v
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                        }`}
+                      >
+                        {opt.l}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">직접 입력</label>
+                    <input
+                      type="text"
+                      placeholder="예: 1440px / 100% / 비워두면 전체"
+                      value={tokens.hero_max_width}
+                      onChange={e => setTokens(t => ({ ...t, hero_max_width: e.target.value }))}
+                      className="flex-1 px-2 py-1 text-xs font-mono border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+                    />
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-400">기본은 화면 전체. 값을 넣으면 그 폭으로 가운데 정렬됩니다 (와이드 모니터에서 letterbox).</p>
+                </div>
+                <p className="text-[10px] text-gray-400">메인 페이지 상단 캐러셀의 세 화면 크기별 높이 + 가로 너비. 미리보기에 실시간으로 반영됩니다.</p>
+              </Section>
+
               <Section title="홈 추천 상품 글씨">
                 <SizePicker
                   label="섹션 제목 (BEST SELLER)"

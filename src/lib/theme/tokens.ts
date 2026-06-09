@@ -74,6 +74,23 @@ export interface ThemeTokens {
    */
   subhero_subtitle_size: string;
   /**
+   * Main hero carousel height — three breakpoints to match what the
+   * storefront actually uses. Pre-token values were hardcoded as
+   * h-[700px] sm:h-[900px] lg:h-[1000px] inside HeroSlider.tsx.
+   * Bosses asked at the 2026-06-10 follow-up to make the banner size
+   * admin-tunable so the brand can dial down on shorter campaigns
+   * without a code release.
+   */
+  hero_height_mobile: string;
+  hero_height_tablet: string;
+  hero_height_desktop: string;
+  /**
+   * Optional max-width cap on the hero region. Empty string -> uncapped
+   * (full viewport width). Useful when the brand wants a centered band
+   * with letterbox margins on ultra-wide monitors.
+   */
+  hero_max_width: string;
+  /**
    * "BEST SELLER" / "추천 상품" style product-section title. Drives the
    * h2 on the homepage's pickBestSellers section + any future section
    * that opts in via .kokkok-product-section-title. Added 2026-06-10.
@@ -120,6 +137,14 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   // text-sm/md:text-base pair so a fresh install lands at 18px both
   // breakpoints; /admin/theme can dial down or up (12–28).
   subhero_subtitle_size: '18px',
+  // Defaults match the pre-token Tailwind classes (h-[700px] sm:h-[900px]
+  // lg:h-[1000px]) so existing installs paint identically to before.
+  hero_height_mobile: '700px',
+  hero_height_tablet: '900px',
+  hero_height_desktop: '1000px',
+  // Empty -> uncapped (matches today). When set, HeroSlider centers
+  // the carousel under a max-w wrapper at the given CSS length.
+  hero_max_width: '',
   // 24px matches the pre-token text-2xl for the BEST SELLER heading.
   // Bumping defaults here would shift the homepage on every install;
   // keep parity, let admin pick from /admin/theme.
@@ -161,6 +186,10 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     product_section_title_size: partial.product_section_title_size || DEFAULT_THEME_TOKENS.product_section_title_size,
     product_name_size: partial.product_name_size || DEFAULT_THEME_TOKENS.product_name_size,
     product_price_size: partial.product_price_size || DEFAULT_THEME_TOKENS.product_price_size,
+    hero_height_mobile: partial.hero_height_mobile || DEFAULT_THEME_TOKENS.hero_height_mobile,
+    hero_height_tablet: partial.hero_height_tablet || DEFAULT_THEME_TOKENS.hero_height_tablet,
+    hero_height_desktop: partial.hero_height_desktop || DEFAULT_THEME_TOKENS.hero_height_desktop,
+    hero_max_width: partial.hero_max_width ?? '',
   };
 }
 
@@ -183,7 +212,14 @@ export function tokensToCss(t: ThemeTokens): string {
     `--product-section-title-size: ${t.product_section_title_size};`,
     `--product-name-size: ${t.product_name_size};`,
     `--product-price-size: ${t.product_price_size};`,
+    `--hero-height-mobile: ${t.hero_height_mobile};`,
+    `--hero-height-tablet: ${t.hero_height_tablet};`,
+    `--hero-height-desktop: ${t.hero_height_desktop};`,
   ];
+  // Empty hero_max_width -> no var emission -> CSS falls through to
+  // "none" so the carousel stays full-width on every viewport. Setting
+  // a value makes .kokkok-hero-region pick up the cap.
+  if (t.hero_max_width) lines.push(`--hero-max-width: ${t.hero_max_width};`);
   if (t.font_body) lines.push(`--font-body: ${t.font_body};`);
   if (t.font_display) lines.push(`--font-display: ${t.font_display};`);
   if (t.font_header) lines.push(`--font-header: ${t.font_header};`);

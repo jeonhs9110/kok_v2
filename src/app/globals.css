@@ -117,6 +117,31 @@ input[type="button"]:not(.kokkok-keep-font) {
 }
 
 /* ──────────────────────────────────────────────────────────
+   Main hero carousel size — admin-tunable from /admin/theme.
+   Heights stack at the same breakpoints the pre-token Tailwind
+   classes used (sm = 640, lg = 1024). hero_max_width is opt-in:
+   when unset, --hero-max-width is undefined and the var fallback
+   `none` keeps the carousel full-width like today. When set, the
+   region centers under a max-width cap with auto margins.
+   ────────────────────────────────────────────────────────── */
+.kokkok-hero-region {
+  height: var(--hero-height-mobile, 700px);
+  max-width: var(--hero-max-width, none);
+  margin-left: auto;
+  margin-right: auto;
+}
+@media (min-width: 640px) {
+  .kokkok-hero-region {
+    height: var(--hero-height-tablet, 900px);
+  }
+}
+@media (min-width: 1024px) {
+  .kokkok-hero-region {
+    height: var(--hero-height-desktop, 1000px);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────
    Carousel image focal point (migration 29).
 
    HeroSlider sets two CSS variables on each <Image>:
