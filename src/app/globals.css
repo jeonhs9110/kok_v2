@@ -57,10 +57,26 @@
 
 /* font_price token — drives ProductCard's price spans (and any other
    .kokkok-price element). Tabular numerics often want a different
-   font than the body copy. */
+   font than the body copy. The size comes from product_price_size
+   so admins can tune family and size independently. */
 .kokkok-price {
   font-family: var(--font-price, inherit);
+  font-size: var(--product-price-size, 15px);
   font-variant-numeric: tabular-nums;
+}
+
+/* ──────────────────────────────────────────────────────────
+   ProductCard text sizes — adjustable from /admin/theme via
+   product_section_title_size + product_name_size tokens.
+   Bosses said the BEST SELLER row read too small at the
+   2026-06-10 meeting; new defaults sit slightly above the
+   pre-token values so a fresh install renders bigger.
+   ────────────────────────────────────────────────────────── */
+.kokkok-product-section-title {
+  font-size: var(--product-section-title-size, 24px);
+}
+.kokkok-product-name {
+  font-size: var(--product-name-size, 13px);
 }
 
 /* font_button token — applied to every <button> / [role=button] /

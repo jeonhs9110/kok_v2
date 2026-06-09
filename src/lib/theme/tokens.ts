@@ -73,6 +73,24 @@ export interface ThemeTokens {
    * Per-banner offsets in /admin/sub-hero still stack on top of this.
    */
   subhero_subtitle_size: string;
+  /**
+   * "BEST SELLER" / "추천 상품" style product-section title. Drives the
+   * h2 on the homepage's pickBestSellers section + any future section
+   * that opts in via .kokkok-product-section-title. Added 2026-06-10.
+   */
+  product_section_title_size: string;
+  /**
+   * ProductCard's product-name <h3>. Drives every product card in the
+   * site via .kokkok-product-name. The bosses called out the homepage
+   * BEST SELLER row as too small at 2026-06-10.
+   */
+  product_name_size: string;
+  /**
+   * ProductCard price span + discount %. Pairs with the .kokkok-price
+   * font-family set under font_price (the family vs size is split so
+   * an admin can swap one without touching the other).
+   */
+  product_price_size: string;
 }
 
 export const DEFAULT_THEME_TOKENS: ThemeTokens = {
@@ -102,6 +120,16 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   // text-sm/md:text-base pair so a fresh install lands at 18px both
   // breakpoints; /admin/theme can dial down or up (12–28).
   subhero_subtitle_size: '18px',
+  // 24px matches the pre-token text-2xl for the BEST SELLER heading.
+  // Bumping defaults here would shift the homepage on every install;
+  // keep parity, let admin pick from /admin/theme.
+  product_section_title_size: '24px',
+  // 15px (vs. pre-token 13px) — bosses said the product names on the
+  // homepage looked small next to the bigger BEST SELLER row above.
+  product_name_size: '15px',
+  // 17px (vs. pre-token 15px) — same reason; prices read alongside
+  // the bumped product name without looking cramped.
+  product_price_size: '17px',
 };
 
 export function parseThemeTokens(raw: unknown): ThemeTokens {
@@ -130,6 +158,9 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     header_menu_font_size: partial.header_menu_font_size || DEFAULT_THEME_TOKENS.header_menu_font_size,
     header_logo_height: partial.header_logo_height || DEFAULT_THEME_TOKENS.header_logo_height,
     subhero_subtitle_size: partial.subhero_subtitle_size || DEFAULT_THEME_TOKENS.subhero_subtitle_size,
+    product_section_title_size: partial.product_section_title_size || DEFAULT_THEME_TOKENS.product_section_title_size,
+    product_name_size: partial.product_name_size || DEFAULT_THEME_TOKENS.product_name_size,
+    product_price_size: partial.product_price_size || DEFAULT_THEME_TOKENS.product_price_size,
   };
 }
 
@@ -149,6 +180,9 @@ export function tokensToCss(t: ThemeTokens): string {
     `--header-menu-font-size: ${t.header_menu_font_size};`,
     `--header-logo-height: ${t.header_logo_height};`,
     `--subhero-subtitle-size: ${t.subhero_subtitle_size};`,
+    `--product-section-title-size: ${t.product_section_title_size};`,
+    `--product-name-size: ${t.product_name_size};`,
+    `--product-price-size: ${t.product_price_size};`,
   ];
   if (t.font_body) lines.push(`--font-body: ${t.font_body};`);
   if (t.font_display) lines.push(`--font-display: ${t.font_display};`);

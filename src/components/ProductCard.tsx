@@ -151,18 +151,21 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
             )}
           </div>
         )}
-        <h3 className="text-[13px] font-bold text-neutral-800 leading-tight break-keep">{name}</h3>
+        <h3 className="kokkok-product-name font-bold text-neutral-800 leading-tight break-keep">{name}</h3>
         <p className="text-[12px] text-neutral-500 leading-tight line-clamp-1">{summary}</p>
 
         <div className="flex items-center space-x-1.5 mt-2">
           {discountRate > 0 && (
-            <span className="kokkok-price text-[15px] font-extrabold text-brand-accent">{discountRate}%</span>
+            <span className="kokkok-price font-extrabold text-brand-accent">{discountRate}%</span>
           )}
-          <span className="kokkok-price text-[15px] font-extrabold text-brand-ink">{priceText}</span>
+          <span className="kokkok-price font-extrabold text-brand-ink">{priceText}</span>
         </div>
 
         {originalPrice > price && (
-          <span className="kokkok-price text-[13px] text-neutral-500 line-through block mt-0.5">{originalPriceText}</span>
+          /* Striked original price stays at a fixed smaller size so the
+             active price reads as the primary value; not wired to the
+             product_price_size token on purpose. */
+          <span className="text-[13px] text-neutral-500 line-through block mt-0.5">{originalPriceText}</span>
         )}
 
         {!canPurchase && (

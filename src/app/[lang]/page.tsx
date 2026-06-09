@@ -105,7 +105,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
 
       <section className="relative">
         <div className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-16 md:pt-24 flex flex-col items-center text-center">
-          <h2 className="text-2xl font-extrabold text-brand-ink">{BEST_SELLER_LABEL[lang]}</h2>
+          <h2 className="kokkok-product-section-title font-extrabold text-brand-ink">{BEST_SELLER_LABEL[lang]}</h2>
           <Link
             href={`/${lang}/products`}
             className="mt-2 text-[13px] font-semibold text-neutral-500 hover:text-black tracking-wide transition-colors underline underline-offset-4"
