@@ -102,7 +102,14 @@ export default function ContinuousPositionPicker({
           <img
             src={backgroundImage}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+            /* object-contain instead of object-cover so the full source
+               image is visible in both PC (16:7) and 모바일 (9:14) picker
+               boxes — 송이's first round of testing pointed out that
+               object-cover on a wide source in a tall mobile box hid
+               most of the artwork, making it impossible to aim at
+               content that exists in the source. With object-contain
+               the marker can target every pixel of the actual image. */
+            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             draggable={false}
           />
         )}
