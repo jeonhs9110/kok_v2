@@ -391,6 +391,31 @@ export default function LogoAdminPage() {
             ))}
           </div>
 
+          {/* Numeric input for any height the presets don't cover (e.g.
+              44px between 기본 40 and 크게 48). Range-clamped to
+              20–80px — outside that the logo either disappears or
+              breaks the 66px header bar. */}
+          <div className="mt-3 flex items-center gap-2">
+            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+              직접 입력
+            </label>
+            <input
+              type="number"
+              min={20}
+              max={80}
+              step={1}
+              value={parseInt(tokens.header_logo_height, 10) || 40}
+              onChange={(e) => {
+                const raw = parseInt(e.target.value, 10);
+                if (!Number.isFinite(raw)) return;
+                const clamped = Math.max(20, Math.min(80, raw));
+                setTokens(t => ({ ...t, header_logo_height: `${clamped}px` }));
+              }}
+              className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+            />
+            <span className="text-xs text-gray-500">px (20–80)</span>
+          </div>
+
           <div className="mt-4 flex items-center gap-3">
             <button
               type="button"
