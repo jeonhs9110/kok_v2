@@ -33,10 +33,10 @@ const ACCEPT_BG = 'image/png,image/jpeg,image/webp,image/gif,video/mp4,video/web
 const MAX_BG_SIZE = 50 * 1024 * 1024; // 50MB
 
 const LOGO_HEIGHT_PRESETS: { v: string; l: string }[] = [
-  { v: '40px', l: '작게' },
-  { v: '48px', l: '보통' },
-  { v: '56px', l: '기본' },
-  { v: '64px', l: '크게' },
+  { v: '40px',  l: '작게' },
+  { v: '56px',  l: '기본' },
+  { v: '80px',  l: '크게' },
+  { v: '120px', l: '아주 크게' },
 ];
 
 export default function LogoAdminPage() {
@@ -402,19 +402,26 @@ export default function LogoAdminPage() {
             <input
               type="number"
               min={20}
-              max={80}
+              max={150}
               step={1}
               value={parseInt(tokens.header_logo_height, 10) || 56}
               onChange={(e) => {
                 const raw = parseInt(e.target.value, 10);
                 if (!Number.isFinite(raw)) return;
-                const clamped = Math.max(20, Math.min(80, raw));
+                // Range bumped from 20–80 to 20–150 at the 2026-06-10
+                // boss meeting. The header grows with the logo via
+                // .kokkok-header-bar's min-height = calc(logo + 24px)
+                // so the larger sizes don't crop.
+                const clamped = Math.max(20, Math.min(150, raw));
                 setTokens(t => ({ ...t, header_logo_height: `${clamped}px` }));
               }}
               className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-gray-400"
             />
-            <span className="text-xs text-gray-500">px (20–80)</span>
+            <span className="text-xs text-gray-500">px (20–150)</span>
           </div>
+          <p className="mt-2 text-[10px] text-gray-500">
+            로고가 커지면 상단 헤더 바도 자동으로 함께 커집니다 — 잘리지 않습니다.
+          </p>
 
           <div className="mt-4 flex items-center gap-3">
             <button

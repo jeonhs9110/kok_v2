@@ -255,87 +255,10 @@ export default function ThemePage() {
               </Section>
 
               <Section title="메인 배너 (히어로) 크기">
-                <SizePicker
-                  label="높이 — 모바일 (640px 미만)"
-                  value={tokens.hero_height_mobile}
-                  fallback={700}
-                  presets={[
-                    { v: '480px',  l: '낮게' },
-                    { v: '600px',  l: '보통' },
-                    { v: '700px',  l: '기본' },
-                    { v: '820px',  l: '높게' },
-                  ]}
-                  min={320}
-                  max={1200}
-                  onChange={v => setTokens(t => ({ ...t, hero_height_mobile: v }))}
-                />
-                <SizePicker
-                  label="높이 — 태블릿 (640–1023px)"
-                  value={tokens.hero_height_tablet}
-                  fallback={900}
-                  presets={[
-                    { v: '640px',  l: '낮게' },
-                    { v: '800px',  l: '보통' },
-                    { v: '900px',  l: '기본' },
-                    { v: '1040px', l: '높게' },
-                  ]}
-                  min={480}
-                  max={1400}
-                  onChange={v => setTokens(t => ({ ...t, hero_height_tablet: v }))}
-                />
-                <SizePicker
-                  label="높이 — 데스크탑 (1024px 이상)"
-                  value={tokens.hero_height_desktop}
-                  fallback={1000}
-                  presets={[
-                    { v: '720px',  l: '낮게' },
-                    { v: '880px',  l: '보통' },
-                    { v: '1000px', l: '기본' },
-                    { v: '1200px', l: '높게' },
-                  ]}
-                  min={520}
-                  max={1600}
-                  onChange={v => setTokens(t => ({ ...t, hero_height_desktop: v }))}
-                />
-                <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">가로 최대 너비 (선택)</label>
-                  <div className="grid grid-cols-4 gap-1.5 mt-1">
-                    {[
-                      { v: '',       l: '전체 폭' },
-                      { v: '1920px', l: '1920' },
-                      { v: '1600px', l: '1600' },
-                      { v: '1280px', l: '1280' },
-                    ].map(opt => (
-                      <button
-                        key={opt.v || 'full'}
-                        type="button"
-                        onClick={() => setTokens(t => ({ ...t, hero_max_width: opt.v }))}
-                        className={`p-2 font-semibold border rounded text-xs ${
-                          tokens.hero_max_width === opt.v
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-                        }`}
-                      >
-                        {opt.l}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">직접 입력</label>
-                    <input
-                      type="text"
-                      placeholder="예: 1440px / 100% / 비워두면 전체"
-                      value={tokens.hero_max_width}
-                      onChange={e => setTokens(t => ({ ...t, hero_max_width: e.target.value }))}
-                      className="flex-1 px-2 py-1 text-xs font-mono border border-gray-200 rounded focus:outline-none focus:border-gray-400"
-                    />
-                  </div>
-                  <p className="mt-1 text-[10px] text-gray-400">기본은 화면 전체. 값을 넣으면 그 폭으로 가운데 정렬됩니다 (와이드 모니터에서 letterbox).</p>
-                </div>
-                <p className="text-[10px] text-gray-400">메인 페이지 상단 캐러셀의 세 화면 크기별 높이 + 가로 너비. 미리보기에 실시간으로 반영됩니다.</p>
+                <HeroSizeCompact tokens={tokens} setTokens={setTokens} />
               </Section>
 
-              <Section title="홈 추천 상품 글씨">
+              <Section title="홈 메인 추천 상품 (BEST SELLER) 글씨 — 홈에만 적용">
                 <SizePicker
                   label="섹션 제목 (BEST SELLER)"
                   value={tokens.product_section_title_size}
@@ -378,7 +301,10 @@ export default function ThemePage() {
                   max={24}
                   onChange={v => setTokens(t => ({ ...t, product_price_size: v }))}
                 />
-                <p className="text-[10px] text-gray-400">홈페이지 메인 디스플레이 + 모든 제품 카드에 적용됩니다. (어드민 패널, 장바구니 제외)</p>
+                <p className="text-[10px] text-gray-400">
+                  <strong>홈 메인 페이지의 추천 상품 행에만</strong> 적용됩니다.
+                  /products 목록 페이지나 카트는 기본 크기를 유지합니다 (브라우징 가독성).
+                </p>
               </Section>
 
               <Section title="타이포그래피 (선택)">
@@ -479,6 +405,140 @@ export default function ThemePage() {
           />
         </div>
       </section>
+    </div>
+  );
+}
+
+/**
+ * HeroSizeCompact — single-tab-then-picker layout for the main hero
+ * height + max-width tokens. Replaces the previous three-stacked
+ * SizePicker rows that dominated the /admin/theme sidebar; admin
+ * picks a viewport tab (모바일 / 태블릿 / 데스크탑) and the controls
+ * below only edit that viewport's height. Saves ~75% of vertical
+ * space without losing any control.
+ *
+ * Why a tab UI instead of one slider with breakpoints: the responsive
+ * heights aren't interchangeable — Songyi wants different defaults at
+ * each device (mobile shorter, desktop taller). Tabs make this
+ * explicit.
+ */
+function HeroSizeCompact({
+  tokens, setTokens,
+}: {
+  tokens: ThemeTokens;
+  setTokens: React.Dispatch<React.SetStateAction<ThemeTokens>>;
+}) {
+  const [vp, setVp] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  const config = {
+    mobile:  { key: 'hero_height_mobile' as const,  label: '모바일',  range: '640px 미만',     fallback: 700,
+               presets: [{v:'480px',l:'낮게'},{v:'600px',l:'보통'},{v:'700px',l:'기본'},{v:'820px',l:'높게'}],
+               min: 320, max: 1200 },
+    tablet:  { key: 'hero_height_tablet' as const,  label: '태블릿',  range: '640–1023px',     fallback: 900,
+               presets: [{v:'640px',l:'낮게'},{v:'800px',l:'보통'},{v:'900px',l:'기본'},{v:'1040px',l:'높게'}],
+               min: 480, max: 1400 },
+    desktop: { key: 'hero_height_desktop' as const, label: '데스크탑', range: '1024px 이상',    fallback: 1000,
+               presets: [{v:'720px',l:'낮게'},{v:'880px',l:'보통'},{v:'1000px',l:'기본'},{v:'1200px',l:'높게'}],
+               min: 520, max: 1600 },
+  } satisfies Record<'mobile'|'tablet'|'desktop', {
+    key: 'hero_height_mobile' | 'hero_height_tablet' | 'hero_height_desktop';
+    label: string; range: string; fallback: number;
+    presets: { v: string; l: string }[];
+    min: number; max: number;
+  }>;
+  const c = config[vp];
+  const value = tokens[c.key];
+  const parsed = parseInt(value, 10);
+  const safe = Number.isFinite(parsed) ? parsed : c.fallback;
+
+  return (
+    <div className="space-y-2">
+      {/* Compact viewport tabs */}
+      <div className="inline-flex bg-gray-100 rounded p-0.5 text-[11px] font-bold w-full">
+        {(['mobile','tablet','desktop'] as const).map(k => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setVp(k)}
+            className={`flex-1 px-2 py-1 rounded transition-colors ${
+              vp === k ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
+            }`}
+            aria-pressed={vp === k}
+          >
+            {config[k].label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[10px] text-gray-400 -mt-0.5">{c.label} ({c.range}) 화면에서 보이는 높이</p>
+
+      {/* Inline preset row + numeric input — one row each */}
+      <div className="grid grid-cols-4 gap-1">
+        {c.presets.map(opt => (
+          <button
+            key={opt.v}
+            type="button"
+            onClick={() => setTokens(t => ({ ...t, [c.key]: opt.v }))}
+            className={`px-1.5 py-1.5 text-[11px] font-semibold border rounded ${
+              value === opt.v
+                ? 'bg-black text-white border-black'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+            }`}
+          >
+            {opt.l}
+            <div className="text-[9px] opacity-60 font-normal">{parseInt(opt.v, 10)}</div>
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={c.min}
+          max={c.max}
+          step={10}
+          value={safe}
+          onChange={e => {
+            const raw = parseInt(e.target.value, 10);
+            if (!Number.isFinite(raw)) return;
+            const clamped = Math.max(c.min, Math.min(c.max, raw));
+            setTokens(t => ({ ...t, [c.key]: `${clamped}px` }));
+          }}
+          className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+        />
+        <span className="text-[10px] text-gray-500">px ({c.min}–{c.max})</span>
+      </div>
+
+      {/* Max-width — compact single-row */}
+      <div className="pt-2 mt-1 border-t border-gray-100">
+        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">가로 최대 너비</label>
+        <div className="flex items-center gap-1 mt-1">
+          {[
+            { v: '',       l: '전체' },
+            { v: '1920px', l: '1920' },
+            { v: '1600px', l: '1600' },
+            { v: '1280px', l: '1280' },
+          ].map(opt => (
+            <button
+              key={opt.v || 'full'}
+              type="button"
+              onClick={() => setTokens(t => ({ ...t, hero_max_width: opt.v }))}
+              className={`flex-1 px-1 py-1 text-[11px] font-semibold border rounded ${
+                tokens.hero_max_width === opt.v
+                  ? 'bg-black text-white border-black'
+                  : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+              }`}
+            >
+              {opt.l}
+            </button>
+          ))}
+        </div>
+        <input
+          type="text"
+          placeholder="직접 입력 (예: 1440px) — 비워두면 전체"
+          value={tokens.hero_max_width}
+          onChange={e => setTokens(t => ({ ...t, hero_max_width: e.target.value }))}
+          className="w-full mt-1 px-2 py-1 text-[11px] font-mono border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+        />
+      </div>
+      <p className="text-[10px] text-gray-400">실시간 미리보기에 반영됩니다.</p>
     </div>
   );
 }
