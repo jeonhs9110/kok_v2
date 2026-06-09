@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import AdminSearchModal from './_components/AdminSearchModal';
 import BackToHubLink from './_components/BackToHubLink';
+import EmbeddedShell from './_components/EmbeddedShell';
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> };
 type NavSection = { title: string | null; items: NavItem[] };
@@ -174,7 +175,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  return (
+  const normalChrome = (
     <div className="flex h-screen bg-gray-50 font-sans">
       {/* Mobile backdrop — sits between content and drawer; tap to dismiss. */}
       {drawerOpen && (
@@ -307,5 +308,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       <AdminSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
+  );
+
+  // When loaded inside /admin/homepage's slide-in editor drawer
+  // (`?embedded=true`), EmbeddedShell strips the sidebar + header so
+  // the editor fills the drawer pane. Suspense fallback is the normal
+  // chrome so the SSR'd HTML matches the unembedded common case —
+  // avoids a sidebar flash on iframe load in the drawer.
+  return (
+    <Suspense fallback={normalChrome}>
+      <EmbeddedShell fallback={normalChrome}>
+        {children}
+      </EmbeddedShell>
+    </Suspense>
   );
 }

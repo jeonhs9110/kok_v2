@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { Pencil, Eye, EyeOff, GripVertical, ChevronRight } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -31,9 +30,10 @@ interface Props {
   section: SectionDef;
   selected: boolean;
   onSelect: () => void;
+  onEdit: () => void;
 }
 
-export default function SectionCard({ section, selected, onSelect }: Props) {
+export default function SectionCard({ section, selected, onSelect, onEdit }: Props) {
   const Icon = section.icon;
   return (
     <div
@@ -78,17 +78,20 @@ export default function SectionCard({ section, selected, onSelect }: Props) {
         {section.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
       </div>
 
-      {/* Edit chevron — deep-link to the existing /admin/<section> page
-          with ?from=homepage so the layout shows the back-to-hub link. */}
-      <Link
-        href={`${section.href}?from=homepage`}
-        onClick={e => e.stopPropagation()}
+      {/* Edit chevron — opens the inline EditorDrawer instead of
+          navigating out. Songyi stays in the builder context the
+          whole time. Shift/Ctrl/Cmd-click could fall back to the
+          regular full-page route, but for the MVP we keep behavior
+          consistent (always opens the drawer). */}
+      <button
+        type="button"
+        onClick={e => { e.stopPropagation(); onEdit(); }}
         className="flex-shrink-0 p-1 text-[#9ca3af] hover:text-[#3b82f6] hover:bg-[#eff6ff] rounded transition-colors"
         title="편집"
         aria-label={`${section.name} 편집`}
       >
         {selected ? <Pencil className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-      </Link>
+      </button>
     </div>
   );
 }
