@@ -108,7 +108,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
         <PromoBannersSection banners={promoBanners} />
       </div>
 
-      <section className="relative" data-builder-section="products">
+      <section className="kokkok-home-products relative" data-builder-section="products">
         <div className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-16 md:pt-24 flex flex-col items-center text-center">
           <h2 className="kokkok-product-section-title font-extrabold text-brand-ink">{BEST_SELLER_LABEL[lang]}</h2>
           <Link

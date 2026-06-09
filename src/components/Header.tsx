@@ -153,7 +153,17 @@ export default function Header({
         data-builder-section="menus"
       >
         <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
-          <div className="flex items-center h-[66px] gap-4">
+          {/* Header bar grows with the logo: min-height = max(66px,
+              logo_height + 24px). At small logos this stays at 66px
+              like before; at the new 20-150 range's tall end the bar
+              expands so the logo doesn't crop. 24px breathing room
+              keeps the logo from touching the top/bottom borders. */}
+          <div
+            className="kokkok-header-bar flex items-center gap-4 py-3"
+            style={{
+              minHeight: 'max(66px, calc(var(--header-logo-height, 40px) + 24px))',
+            }}
+          >
 
             {/* Mobile hamburger */}
             <button

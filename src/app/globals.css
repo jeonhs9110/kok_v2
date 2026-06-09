@@ -55,28 +55,36 @@
   font-family: var(--font-header, inherit);
 }
 
-/* font_price token — drives ProductCard's price spans (and any other
-   .kokkok-price element). Tabular numerics often want a different
-   font than the body copy. The size comes from product_price_size
-   so admins can tune family and size independently. */
+/* font_price token — drives every ProductCard price span (font-family
+   is site-wide; SIZE is split — see the comment below the next block). */
 .kokkok-price {
   font-family: var(--font-price, inherit);
-  font-size: var(--product-price-size, 15px);
+  font-size: 15px;
   font-variant-numeric: tabular-nums;
 }
 
 /* ──────────────────────────────────────────────────────────
-   ProductCard text sizes — adjustable from /admin/theme via
-   product_section_title_size + product_name_size tokens.
-   Bosses said the BEST SELLER row read too small at the
-   2026-06-10 meeting; new defaults sit slightly above the
-   pre-token values so a fresh install renders bigger.
+   ProductCard text sizes — admin-tunable via /admin/theme,
+   but SCOPED to .kokkok-home-products so the boss-meeting
+   follow-up (2026-06-10) only affects the homepage BEST
+   SELLER row. The /products listing page keeps a compact
+   baseline (13px name, 15px price) for browse density;
+   the homepage featured row reads bigger via the tokens.
+
+   .kokkok-product-section-title is already home-only — its
+   only consumer is the BEST SELLER h2 in [lang]/page.tsx.
    ────────────────────────────────────────────────────────── */
 .kokkok-product-section-title {
   font-size: var(--product-section-title-size, 24px);
 }
 .kokkok-product-name {
-  font-size: var(--product-name-size, 13px);
+  font-size: 13px;
+}
+.kokkok-home-products .kokkok-product-name {
+  font-size: var(--product-name-size, 15px);
+}
+.kokkok-home-products .kokkok-price {
+  font-size: var(--product-price-size, 17px);
 }
 
 /* font_button token — applied to every <button> / [role=button] /
