@@ -229,6 +229,25 @@ export default function HomepageBuilderPage() {
 
   const handleReload = () => setIframeKey(k => k + 1);
 
+  // Scroll + highlight the matching section inside the storefront iframe
+  // when the admin clicks a card. The iframe's [lang]/layout script
+  // listens for the 'kokkok-builder-highlight' postMessage and applies
+  // a temporary outline (.kokkok-builder-highlight) + smooth-scrolls
+  // the target into view.
+  //
+  // Section keys here map 1:1 onto the data-builder-section attribute
+  // on the storefront DOM. Keys without a matching element (e.g.
+  // 'theme' — global tokens, no specific node) silently no-op.
+  function handleSelect(key: string) {
+    setSelectedKey(key);
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentWindow) return;
+    iframe.contentWindow.postMessage(
+      { type: 'kokkok-builder-highlight', sectionKey: key },
+      window.location.origin,
+    );
+  }
+
   // ── Preview pane sizing ──
   // 'pc'    → fixed 1440 frame
   // 'mobile'→ fixed 390 phone frame (rounded corners + border)
@@ -277,7 +296,7 @@ export default function HomepageBuilderPage() {
                         key={section.key}
                         section={section}
                         selected={selectedKey === section.key}
-                        onSelect={() => setSelectedKey(section.key)}
+                        onSelect={() => handleSelect(section.key)}
                       />
                     ))}
                   </div>

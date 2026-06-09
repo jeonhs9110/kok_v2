@@ -121,7 +121,7 @@ export default async function Footer({ lang }: { lang: Lang }) {
   const holderLabel    = isKr ? '예금주' : 'Account Holder';
 
   return (
-    <footer className="bg-white border-t border-neutral-200 py-16 text-brand-ink">
+    <footer className="bg-white border-t border-neutral-200 py-16 text-brand-ink" data-builder-section="footer">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
         <div className="flex flex-col lg:flex-row justify-between lg:space-x-12 space-y-12 lg:space-y-0">
 

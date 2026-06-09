@@ -148,7 +148,10 @@ export default function Header({
       </div>
 
       {/* ── MAIN HEADER ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-white border-b border-neutral-100 shadow-[0_1px_0_rgba(0,0,0,0.04)]">
+      <header
+        className="sticky top-0 z-40 bg-white border-b border-neutral-100 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+        data-builder-section="menus"
+      >
         <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
           <div className="flex items-center h-[66px] gap-4">
 
@@ -172,6 +175,7 @@ export default function Header({
               href={`/${lang}`}
               className="flex-shrink-0 mr-2 lg:mr-8 flex items-center"
               aria-label="Kokkok Garden"
+              data-builder-section="logo"
             >
               {logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
