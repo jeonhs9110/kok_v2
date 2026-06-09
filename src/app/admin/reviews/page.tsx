@@ -20,11 +20,12 @@ interface ReviewRow {
   link_url: string;
   sort_order: number;
   is_active: boolean;
+  is_featured: boolean;
 }
 
 const EMPTY: ReviewRow = {
   id: null, image_url: '', title: '', content_html: '', link_url: '',
-  sort_order: 0, is_active: true,
+  sort_order: 0, is_active: true, is_featured: false,
 };
 
 async function uploadImage(file: File): Promise<string> {
@@ -65,6 +66,7 @@ export default function ReviewsAdminPage() {
       link_url: (r.link_url as string) ?? '',
       sort_order: (r.sort_order as number) ?? 0,
       is_active: r.is_active !== false,
+      is_featured: r.is_featured === true,
     })));
     setLoading(false);
   }, []);
@@ -127,6 +129,35 @@ export default function ReviewsAdminPage() {
     setRows(prev => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r));
   }
 
+  /**
+   * Featured toggle — at most one card may be featured at a time. The
+   * storefront query picks the first match if multiple are flagged
+   * (graceful degradation), but the admin path enforces exclusivity:
+   * setting one true flips every other row's is_featured to false,
+   * persisted immediately in two batched updates so a page refresh
+   * mid-flow doesn't leave two rows marked. Setting one false just
+   * clears that row.
+   */
+  async function setFeatured(i: number, next: boolean) {
+    const target = rows[i];
+    if (!target) return;
+    setRows(prev => prev.map((r, idx) => ({
+      ...r,
+      is_featured: next ? idx === i : (idx === i ? false : r.is_featured),
+    })));
+    if (!supabase) return;
+    if (next) {
+      // Clear other rows first so a race doesn't leave two featured.
+      await supabase.from('review_cards').update({ is_featured: false }).neq('id', target.id ?? '__none__');
+      if (target.id) {
+        await supabase.from('review_cards').update({ is_featured: true }).eq('id', target.id);
+      }
+    } else if (target.id) {
+      await supabase.from('review_cards').update({ is_featured: false }).eq('id', target.id);
+    }
+    revalidateHomepageData('reviews');
+  }
+
   function addRow() {
     const nextSort = rows.length > 0 ? Math.max(...rows.map(r => r.sort_order)) + 10 : 10;
     setRows(prev => [...prev, { ...EMPTY, sort_order: nextSort }]);
@@ -143,6 +174,7 @@ export default function ReviewsAdminPage() {
       link_url: r.link_url || null,
       sort_order: r.sort_order,
       is_active: r.is_active,
+      is_featured: r.is_featured === true,
       updated_at: new Date().toISOString(),
     };
     const res = r.id
@@ -255,6 +287,14 @@ export default function ReviewsAdminPage() {
                   {!r.is_active && (
                     <span className="absolute bottom-1 right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
                       비공개
+                    </span>
+                  )}
+                  {r.is_featured && (
+                    /* Star badge in the corner so admins see at a glance
+                       which card is currently the featured (and only
+                       featured) one rendered at /menus/review. */
+                    <span className="absolute top-1 right-1 bg-amber-400 text-amber-950 text-[9px] font-bold px-1.5 py-0.5 rounded shadow flex items-center gap-0.5">
+                      ★ 노출
                     </span>
                   )}
                 </button>
@@ -378,6 +418,21 @@ export default function ReviewsAdminPage() {
                 className="w-4 h-4 rounded"
               />
               공개
+            </label>
+            {/* Featured radio — only one card can be featured at a time.
+                When checked, this card's full content renders inline at
+                /menus/review (no thumbnail-click step for customers).
+                Clicking ON this row flips every other row OFF in the DB
+                immediately, so the admin can't accidentally double-feature. */}
+            <label className="flex items-center gap-2 text-sm mt-5 cursor-pointer" title="Review & Community 클릭 시 이 카드의 본문이 바로 표시됩니다.">
+              <input
+                type="checkbox"
+                checked={r.is_featured}
+                onChange={e => setFeatured(i, e.target.checked)}
+                disabled={!r.id}
+                className="w-4 h-4 rounded accent-amber-500"
+              />
+              <span className={r.is_featured ? 'text-amber-600 font-bold' : ''}>★ 메인 노출</span>
             </label>
           </div>
 
