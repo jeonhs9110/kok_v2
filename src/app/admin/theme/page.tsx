@@ -197,18 +197,51 @@ export default function ThemePage() {
                       </button>
                     ))}
                   </div>
-                  <p className="mt-1 text-[10px] text-gray-400">홈페이지 상단 메뉴 (상품·메뉴·Shop Worldwide) 글씨 크기. 모바일 메뉴도 함께 조절됩니다.</p>
+                  {/* Numeric input for any value the presets don't cover
+                      (e.g. 22 between 19 and the next preset). Range
+                      10–48 — the header bar's min-height calc in
+                      Header.tsx grows automatically above the floor
+                      so even 40px+ menus don't crop. */}
+                  <div className="mt-2 flex items-center gap-2">
+                    <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                      직접 입력
+                    </label>
+                    <input
+                      type="number"
+                      min={10}
+                      max={48}
+                      step={1}
+                      value={parseInt(tokens.header_menu_font_size, 10) || 15}
+                      onChange={e => {
+                        const raw = parseInt(e.target.value, 10);
+                        if (!Number.isFinite(raw)) return;
+                        const clamped = Math.max(10, Math.min(48, raw));
+                        setTokens(t => ({ ...t, header_menu_font_size: `${clamped}px` }));
+                      }}
+                      className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+                    />
+                    <span className="text-[10px] text-gray-500">px (10–48)</span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-400">
+                    홈페이지 상단 메뉴 (상품·메뉴·Shop Worldwide) 글씨 크기. 모바일 메뉴도 함께 조절됩니다.
+                    글씨가 커지면 헤더 바도 자동으로 함께 커집니다.
+                  </p>
                 </div>
 
                 <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">서브 히어로 배너 — 서브타이틀 글씨 크기</label>
                   <div className="grid grid-cols-5 gap-1.5 mt-1">
+                    {/* Preset row goes up to 32px now. Anything bigger
+                        goes through the numeric input below (range
+                        extended from 12-28 to 12-72 per the 2026-06-10
+                        boss-meeting follow-up — admin said 24 was
+                        capping their seasonal-banner copy too tightly). */}
                     {[
-                      { v: '14px', l: '아주 작게' },
                       { v: '16px', l: '작게' },
                       { v: '18px', l: '기본' },
-                      { v: '20px', l: '크게' },
-                      { v: '24px', l: '더 크게' },
+                      { v: '24px', l: '크게' },
+                      { v: '28px', l: '더 크게' },
+                      { v: '32px', l: '아주 크게' },
                     ].map(opt => (
                       <button
                         key={opt.v}
@@ -225,11 +258,6 @@ export default function ThemePage() {
                       </button>
                     ))}
                   </div>
-                  {/* Direct numeric input for any value the presets don't
-                      cover (e.g. 17px between 작게 16 and 기본 18).
-                      Range-clamped to 12–28px so a typo can't blow up
-                      the layout. Saves on blur via the same dirty-state
-                      bottom save bar. */}
                   <div className="mt-2 flex items-center gap-2">
                     <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
                       직접 입력
@@ -237,18 +265,18 @@ export default function ThemePage() {
                     <input
                       type="number"
                       min={12}
-                      max={28}
+                      max={72}
                       step={1}
                       value={parseInt(tokens.subhero_subtitle_size, 10) || 18}
                       onChange={e => {
                         const raw = parseInt(e.target.value, 10);
                         if (!Number.isFinite(raw)) return;
-                        const clamped = Math.max(12, Math.min(28, raw));
+                        const clamped = Math.max(12, Math.min(72, raw));
                         setTokens(t => ({ ...t, subhero_subtitle_size: `${clamped}px` }));
                       }}
                       className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
                     />
-                    <span className="text-[10px] text-gray-500">px (12–28)</span>
+                    <span className="text-[10px] text-gray-500">px (12–72)</span>
                   </div>
                   <p className="mt-1 text-[10px] text-gray-400">메인 히어로 캐러셀 아래 서브 배너의 작은 부제목 글씨 크기. 개별 배너 옵션(/admin/sub-hero)에서 추가 조정 가능.</p>
                 </div>
