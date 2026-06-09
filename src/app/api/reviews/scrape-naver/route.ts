@@ -24,6 +24,16 @@ interface ScrapeResult {
   title: string | null;
   image_url: string | null;
   description: string | null;
+  /**
+   * Sanitized HTML body of the Naver post — the SmartEditor content
+   * inside `<div class="se-main-container">` (newer posts) or the
+   * `<div id="postViewArea">` (older posts). Naver-specific elements
+   * (sponsor badges, sharing widgets, sticky CTAs, iframes, scripts,
+   * inline event handlers) are stripped so the storefront can drop
+   * the result straight into the review viewer page with the same
+   * `.detail-body` typography as product detail.
+   */
+  body_html: string | null;
 }
 
 // Pull <meta property="og:NAME" content="VALUE"> OR
@@ -76,22 +86,76 @@ export async function POST(request: Request): Promise<NextResponse<ScrapeResult 
   try {
     const html = await fetchAndFollowNaverRedirects(url, 0);
     if (html === null) {
-      return NextResponse.json({ title: null, image_url: null, description: null });
+      return NextResponse.json({ title: null, image_url: null, description: null, body_html: null });
     }
 
     const title = readOg(html, 'title');
     const image_url = readOg(html, 'image');
     const description = readOg(html, 'description');
+    const body_html = extractNaverPostBody(html);
 
     return NextResponse.json({
       title: title ? decodeHtmlEntities(title) : null,
       image_url: image_url ? decodeHtmlEntities(image_url) : null,
       description: description ? decodeHtmlEntities(description) : null,
+      body_html,
     });
   } catch (err) {
     console.error('[scrape-naver] fetch failed:', err);
-    return NextResponse.json({ title: null, image_url: null, description: null });
+    return NextResponse.json({ title: null, image_url: null, description: null, body_html: null });
   }
+}
+
+/**
+ * Pull the actual Naver post body out of the raw HTML and strip the
+ * page chrome so the storefront review viewer can render it inline
+ * with kokkok's own typography.
+ *
+ * Two known shapes:
+ *
+ *   - SmartEditor 3.0 (newer posts) — body sits inside
+ *     `<div class="se-main-container">`. Used for almost every post
+ *     written from the redesigned editor (2018+).
+ *   - Legacy / 스마트에디터 2.0 — body sits inside
+ *     `<div id="postViewArea">`. Older or imported posts.
+ *
+ * After extraction we strip <script>, <style>, <iframe>, inline event
+ * handlers, and Naver-specific structural classes (sponsor banner,
+ * sticky neighbor CTA, comment-count widgets). Images get their
+ * lazy-load `data-lazy-src` / `data-src` swapped into `src` so they
+ * actually appear when rendered outside Naver's loader.
+ */
+function extractNaverPostBody(html: string): string | null {
+  let body: string | null = null;
+
+  const se = html.match(/<div[^>]*class="[^"]*se-main-container[^"]*"[^>]*>([\s\S]*?)<\/div>\s*(?:<\/div>\s*<\/div>|<!--|<div\s+class="se-footer)/i);
+  if (se) body = se[1];
+
+  if (!body) {
+    const pv = html.match(/<div[^>]*id="postViewArea"[^>]*>([\s\S]*?)<\/div>\s*(?:<div\s+class="post_footer"|<div\s+class="postCommentSection|<\/div>\s*<\/div>)/i);
+    if (pv) body = pv[1];
+  }
+
+  if (!body) return null;
+
+  return body
+    // Remove scripts + styles + iframes outright — none of them belong
+    // in a review viewer that uses kokkok's own font + theme tokens.
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe>/gi, '')
+    // Strip inline event handlers (onclick, onload, etc.) — defense
+    // in depth even though we render this through dangerouslySetInnerHTML
+    // which doesn't execute handlers anyway.
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\son\w+\s*=\s*'[^']*'/gi, '')
+    // Naver's lazy-image loader: rewrite data-lazy-src / data-src into
+    // src so the images actually paint when rendered off Naver.
+    .replace(/<img\b[^>]*\bdata-lazy-src=["']([^"']+)["'][^>]*>/gi,
+             (m, u) => m.replace(/\bsrc=["'][^"']*["']/i, '').replace(/<img/i, `<img src="${u}"`))
+    .replace(/<img\b[^>]*\bdata-src=["']([^"']+)["'][^>]*>/gi,
+             (m, u) => m.replace(/\bsrc=["'][^"']*["']/i, '').replace(/<img/i, `<img src="${u}"`))
+    .trim();
 }
 
 /**

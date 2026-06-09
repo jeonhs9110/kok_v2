@@ -46,7 +46,12 @@ export default function ReviewsAdminPage() {
   // Naver auto-fill UX state. Keyed by row index so two cards being
   // edited in parallel don't clobber each other's loading spinner.
   const [naverIdx, setNaverIdx] = useState<number | null>(null);
+  // Index of the currently-highlighted card; driven by the thumbnail
+  // strip click handler so the matching card below gets a brand-ink
+  // border and the strip cell shows the selected ring.
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
   const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const cardRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -90,11 +95,25 @@ export default function ReviewsAdminPage() {
           : '자동 채우기에 실패했습니다.');
         return;
       }
-      const data: { title: string | null; image_url: string | null; description: string | null } = await res.json();
+      const data: {
+        title: string | null;
+        image_url: string | null;
+        description: string | null;
+        body_html: string | null;
+      } = await res.json();
+      // Preferred content: the actual Naver post body parsed out of the
+      // se-main-container / postViewArea. Falls back to og:description
+      // for older posts where the extractor can't find the body block.
+      const newContent =
+        data.body_html ||
+        (data.description ? `<p>${data.description}</p>` : '');
       update(i, {
         title: row.title || data.title || '',
         image_url: row.image_url || data.image_url || '',
-        content_html: row.content_html || (data.description ? `<p>${data.description}</p>` : ''),
+        // Body content always wins over existing content_html when the
+        // scraper returns a non-empty body — admins typically hit 자동
+        // 채우기 specifically to refresh the body, not the title.
+        content_html: newContent || row.content_html,
       });
     } catch (err) {
       console.error('[admin/reviews] naver scrape failed:', err);
@@ -184,18 +203,84 @@ export default function ReviewsAdminPage() {
     <div className="space-y-4 max-w-4xl">
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
         <p className="font-semibold mb-1">💡 리뷰 쇼케이스</p>
-        <p>이미지를 클릭하면 메인 페이지에서 내용(HTML)이 팝업으로 표시됩니다. 외부 링크(link_url)를 지정하면 대신 새 창에서 링크가 열립니다.</p>
+        <p>리뷰 카드를 클릭하면 메인 페이지에서 콘텐츠가 인라인으로 표시됩니다. 네이버 블로그 URL을 입력하고 &ldquo;네이버 자동 채우기&rdquo;를 누르면 제목 · 썸네일 · 본문이 자동으로 가져와집니다.</p>
       </div>
 
-      <button
-        onClick={addRow}
-        className="flex items-center gap-2 px-4 py-2 bg-brand-ink text-white rounded-lg text-sm font-semibold hover:bg-black transition"
-      >
-        <Plus className="w-4 h-4" /> 리뷰 카드 추가
-      </button>
+      {/* Thumbnail strip — quick visual index of every saved card so the
+          admin can click to jump to a specific row without scrolling.
+          Active card gets a brand-ink border + ring; hover shows the
+          card's sort order on top. 송이's request: see everything at a
+          glance, then pick which one to edit. */}
+      {rows.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">전체 리뷰 카드 ({rows.length})</p>
+            <button
+              onClick={addRow}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-ink text-white rounded text-xs font-semibold hover:bg-black transition"
+            >
+              <Plus className="w-3.5 h-3.5" /> 새 리뷰 카드
+            </button>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            {rows.map((r, i) => {
+              const active = focusedIdx === i;
+              return (
+                <button
+                  key={r.id ?? `thumb-${i}`}
+                  type="button"
+                  onClick={() => {
+                    setFocusedIdx(i);
+                    // Smooth-scroll the matching card into view so the admin
+                    // can edit it without manual scrolling on long lists.
+                    cardRefs.current[i]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className={`group relative aspect-square overflow-hidden rounded border-2 transition-all ${
+                    active ? 'border-brand-ink ring-2 ring-brand-ink/20' : 'border-gray-200 hover:border-gray-400'
+                  } ${!r.is_active ? 'opacity-50' : ''}`}
+                  title={r.title || '(제목 없음)'}
+                >
+                  {r.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={r.image_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center text-[9px] font-bold text-gray-400">
+                      NO IMG
+                    </div>
+                  )}
+                  {/* Sort-order badge — visible on hover only so the thumbnails read clean by default. */}
+                  <span className="absolute top-1 left-1 bg-black/70 text-white text-[9px] font-mono px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                    {r.sort_order}
+                  </span>
+                  {!r.is_active && (
+                    <span className="absolute bottom-1 right-1 bg-red-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                      비공개
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {rows.length === 0 && (
+        <button
+          onClick={addRow}
+          className="flex items-center gap-2 px-4 py-2 bg-brand-ink text-white rounded-lg text-sm font-semibold hover:bg-black transition"
+        >
+          <Plus className="w-4 h-4" /> 리뷰 카드 추가
+        </button>
+      )}
 
       {rows.map((r, i) => (
-        <div key={r.id ?? `new-${i}`} className="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
+        <div
+          key={r.id ?? `new-${i}`}
+          ref={el => { cardRefs.current[i] = el; }}
+          className={`bg-white rounded-xl border p-5 space-y-4 transition-shadow ${
+            focusedIdx === i ? 'border-brand-ink shadow-md' : 'border-gray-200'
+          }`}
+        >
           <div className="flex items-center justify-between">
             <p className="text-sm font-bold">{r.title || '(제목 없음)'}</p>
             <div className="flex gap-1">
