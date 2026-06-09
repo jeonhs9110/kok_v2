@@ -36,6 +36,10 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       title: s.title?.[lang] || s.title?.kr || s.title?.en || '',
       subtitle: s.subtitle?.[lang] || s.subtitle?.kr || s.subtitle?.en || '',
       image: s.image_url || '',
+      // Migration 35: admin-uploaded mobile composition. Empty string
+      // (or NULL row) falls back to the desktop image so pre-2026-06-10
+      // slides keep rendering at every breakpoint.
+      mobileImage: s.mobile_image_url || s.image_url || '',
       bgColor: s.bg_color || '#eef4f7',
       textColor: s.text_color || '',
       badgeBgColor: s.badge_bg_color || '',
@@ -140,26 +144,59 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
               ['--img-pos-desktop' as string]: slide.imgPosDesktop,
             } as React.CSSProperties;
 
+            // Migration 35: separate mobile / desktop images. When the
+            // admin has uploaded different files for the two breakpoints
+            // we render both — only the matching one is visible per
+            // Tailwind's sm: utility. Falling back to the same URL on
+            // both (slide.mobileImage defaulted to slide.image in the
+            // memo above) means rows from before the migration still
+            // ship the desktop image at every breakpoint.
+            const hasSeparateMobile = slide.mobileImage !== slide.image;
             const MediaEl = slide.image ? (
               slide.mediaType === 'video' ? (
-                <video
-                  src={slide.image}
-                  autoPlay muted loop playsInline
-                  aria-label={slide.title.replace('\n', ' ') || 'Hero video'}
-                  className="w-full h-full object-cover hero-image-focal"
-                  style={focalStyle}
-                />
+                <>
+                  <video
+                    src={slide.mobileImage}
+                    autoPlay muted loop playsInline
+                    aria-label={slide.title.replace('\n', ' ') || 'Hero video'}
+                    className={`w-full h-full object-cover hero-image-focal ${hasSeparateMobile ? 'sm:hidden' : ''}`}
+                    style={focalStyle}
+                  />
+                  {hasSeparateMobile && (
+                    <video
+                      src={slide.image}
+                      autoPlay muted loop playsInline
+                      aria-label={slide.title.replace('\n', ' ') || 'Hero video'}
+                      className="hidden sm:block w-full h-full object-cover hero-image-focal"
+                      style={focalStyle}
+                    />
+                  )}
+                </>
               ) : (
-                <Image
-                  src={slide.image}
-                  alt={slide.title.replace('\n', ' ') || ''}
-                  fill
-                  sizes="100vw"
-                  quality={95}
-                  priority={isFirst}
-                  className="object-cover hero-image-focal"
-                  style={focalStyle}
-                />
+                <>
+                  <Image
+                    src={slide.mobileImage}
+                    alt={slide.title.replace('\n', ' ') || ''}
+                    fill
+                    sizes="100vw"
+                    quality={95}
+                    priority={isFirst}
+                    className={`object-cover hero-image-focal ${hasSeparateMobile ? 'sm:hidden' : ''}`}
+                    style={focalStyle}
+                  />
+                  {hasSeparateMobile && (
+                    <Image
+                      src={slide.image}
+                      alt={slide.title.replace('\n', ' ') || ''}
+                      fill
+                      sizes="100vw"
+                      quality={95}
+                      priority={isFirst}
+                      className="hidden sm:block object-cover hero-image-focal"
+                      style={focalStyle}
+                    />
+                  )}
+                </>
               )
             ) : (
               <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-sm">No Image</div>
@@ -306,17 +343,21 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                     bottom-left text region in a dark tone — works for
                     both bright and dark images. */}
                 <div className="absolute inset-0 sm:hidden">
-                  {slide.image ? (
+                  {/* slide.mobileImage falls back to slide.image when the
+                      admin hasn't uploaded a mobile-specific composition
+                      (migration 35). Either way this only renders below
+                      the sm breakpoint thanks to the wrapper's sm:hidden. */}
+                  {slide.mobileImage ? (
                     slide.mediaType === 'video' ? (
                       <video
-                        src={slide.image}
+                        src={slide.mobileImage}
                         autoPlay muted loop playsInline
                         className="w-full h-full object-cover hero-image-focal"
                         style={focalStyle}
                       />
                     ) : (
                       <Image
-                        src={slide.image}
+                        src={slide.mobileImage}
                         alt={slide.title.replace('\n', ' ')}
                         fill
                         sizes="100vw"
