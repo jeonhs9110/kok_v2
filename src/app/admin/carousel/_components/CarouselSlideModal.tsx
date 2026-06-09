@@ -65,6 +65,25 @@ export default function CarouselSlideModal({
     setPreviewUrl(URL.createObjectURL(file));
     setFormData(prev => ({ ...prev, imageFile: file, imageUrl: '', media_type: mediaType }));
     setUploadProgress('idle');
+
+    // Soft warning if the source is shorter than the lg hero's 1000px —
+    // Next.js will upscale on big screens and the result reads as blurry.
+    // We don't block the upload (admin may have a one-off reason), just
+    // alert so the underlying issue isn't invisible until 송이 sees the
+    // banner on a 27" monitor.
+    if (!isVideo) {
+      const img = new Image();
+      img.onload = () => {
+        if (img.naturalHeight < 1000) {
+          alert(
+            `이 이미지의 세로 픽셀이 ${img.naturalHeight}px 입니다.\n` +
+            `데스크탑 메인 배너는 최대 1000px까지 늘어나기 때문에 큰 화면에서 흐릿하게 보일 수 있습니다.\n` +
+            `2400 × 1200 이상의 원본을 권장합니다.`,
+          );
+        }
+      };
+      img.src = URL.createObjectURL(file);
+    }
   }
 
   function updateField(field: 'badge' | 'title' | 'subtitle', lang: string, value: string) {
@@ -215,6 +234,13 @@ export default function CarouselSlideModal({
             <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
               슬라이드 이미지
             </label>
+            {/* 권장 해상도 안내. 메인 배너 (HeroSlider) 가 lg:h-[1000px]
+                까지 늘어나기 때문에, 세로 픽셀이 모자란 소스 (예: 2400×800)
+                는 데스크탑에서 25% 이상 업스케일되며 흐릿하게 보입니다.
+                2400×1200(2:1) 이상이 가장 안전합니다. */}
+            <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+              <strong className="font-bold">권장 해상도</strong> · 2400 × 1200 px (2:1) 이상 · 가로폭은 1920 px 이상이면 OK · 세로폭이 1000 px 미만이면 큰 화면에서 흐릿하게 보일 수 있습니다.
+            </p>
             <div
               className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer group ${
                 previewUrl ? 'border-gray-200' : 'border-gray-200 hover:border-gray-400'
