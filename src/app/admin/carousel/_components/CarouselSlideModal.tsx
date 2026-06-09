@@ -194,7 +194,11 @@ export default function CarouselSlideModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      {/* Two-pane modal — wider on lg+ so the storefront-accurate preview
+          can sit beside the form. Below lg the preview drops above the
+          form (handled by the grid below) so the modal still fits on
+          tablet without horizontal scrolling. Boss 2026-06-10 ask. */}
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh]">
         <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <h3 className="font-bold text-lg">
             {editingId ? '슬라이드 수정' : '새 슬라이드 추가'}
@@ -207,7 +211,12 @@ export default function CarouselSlideModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
+        <form onSubmit={handleSubmit} className="overflow-y-auto">
+          {/* Two-column layout: form on the left, sticky live preview on
+              the right (lg+). Below lg the preview drops above the form
+              automatically thanks to grid-cols-1. */}
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 p-6">
+            <div className="space-y-5 min-w-0">
           <CarouselSlidePreview form={formData} lang={activeLang} previewImageUrl={previewUrl} />
 
           <div className="space-y-2">
@@ -794,6 +803,21 @@ export default function CarouselSlideModal({
                 '슬라이드 저장'
               )}
             </button>
+          </div>
+            </div>
+            {/* Sticky live preview pane — stays in view as the admin
+                scrolls the form. Mirrors the activeLang tab so the
+                language being edited is the language being previewed.
+                On mobile/tablet (below lg) this just stacks above the
+                form via the parent grid's grid-cols-1 fallback. */}
+            <aside className="lg:sticky lg:top-0 lg:self-start">
+              <CarouselSlidePreview
+                form={formData}
+                lang={activeLang}
+                previewImageUrl={previewUrl}
+                previewMobileImageUrl={mobilePreviewUrl}
+              />
+            </aside>
           </div>
         </form>
       </div>

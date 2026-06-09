@@ -10,6 +10,10 @@ interface Props {
   lang: string;
   /** Object URL for an unsaved imageFile (`URL.createObjectURL(file)`), or empty. */
   previewImageUrl: string;
+  /** Object URL for the unsaved mobileImageFile (migration 35). Falls back
+   *  to previewImageUrl when the admin hasn't picked a mobile-specific
+   *  file/URL — matching the storefront's HeroSlider fallback. */
+  previewMobileImageUrl?: string;
 }
 
 /**
@@ -22,11 +26,12 @@ interface Props {
  * import the editor's form type without dragging the editor schema
  * into the public chrome.
  */
-export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Props) {
+export default function CarouselSlidePreview({ form, lang, previewImageUrl, previewMobileImageUrl }: Props) {
   const badge = form.badge[lang] || form.badge.kr || '';
   const title = form.title[lang] || form.title.kr || '';
   const subtitle = form.subtitle[lang] || form.subtitle.kr || '';
-  const mediaUrl = previewImageUrl || form.imageUrl || '';
+  const desktopMediaUrl = previewImageUrl || form.imageUrl || '';
+  const mobileMediaUrl = previewMobileImageUrl || form.mobileImageUrl || desktopMediaUrl;
   const isVideo = form.media_type === 'video';
   const isFullpage = form.display_mode === 'fullpage';
 
@@ -69,6 +74,7 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl }: Pr
   const focalAnchor = isMobileView ? form.image_anchor_mobile : form.image_anchor;
   const focalImgStyle: React.CSSProperties = { objectPosition: anchorToObjectPosition(focalAnchor) };
 
+  const mediaUrl = isMobileView ? mobileMediaUrl : desktopMediaUrl;
   const MediaEl = mediaUrl ? (
     isVideo ? (
       <video src={mediaUrl} autoPlay muted loop playsInline className="w-full h-full object-cover" style={focalImgStyle} />
