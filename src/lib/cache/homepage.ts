@@ -2,7 +2,6 @@ import { unstable_cache } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import { getProducts, type Product } from '@/lib/api/products';
 import { getActiveSlides, type CarouselSlide } from '@/lib/api/carousel';
-import { getActiveReviewCards, type ReviewCard } from '@/lib/api/reviews';
 import { withTimeout } from '@/lib/async-utils';
 import type { PromoBanner } from '@/components/PromoBannersSection';
 import type { SubHeroBannerData } from '@/components/SubHeroBanner';
@@ -37,12 +36,6 @@ export const getCachedSlides = unstable_cache(
   () => tryQuery<CarouselSlide[]>(getActiveSlides(), 'slides', []),
   ['homepage:slides'],
   { revalidate: REVALIDATE, tags: [...TAGS, 'carousel'] }
-);
-
-export const getCachedReviewCards = unstable_cache(
-  () => tryQuery<ReviewCard[]>(getActiveReviewCards(), 'reviews', []),
-  ['homepage:reviews'],
-  { revalidate: REVALIDATE, tags: [...TAGS, 'reviews'] }
 );
 
 export const getCachedPromoBanners = unstable_cache(

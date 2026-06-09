@@ -8,10 +8,6 @@ export interface ReviewCard {
   link_url: string | null;
   sort_order: number;
   is_active: boolean;
-  /** Migration 32 — true on the card the storefront /menus/review
-   *  surfaces inline (no thumbnail-click step). At most one row at
-   *  a time per the admin write handler. */
-  is_featured: boolean;
 }
 
 interface ReviewCardRow {
@@ -22,7 +18,6 @@ interface ReviewCardRow {
   link_url: string | null;
   sort_order: number;
   is_active: boolean;
-  is_featured?: boolean | null;
 }
 
 export async function getActiveReviewCards(): Promise<ReviewCard[]> {
@@ -42,7 +37,6 @@ export async function getActiveReviewCards(): Promise<ReviewCard[]> {
       link_url: r.link_url,
       sort_order: r.sort_order,
       is_active: r.is_active,
-      is_featured: r.is_featured === true,
     }));
   } catch {
     return [];
@@ -67,40 +61,6 @@ export async function getReviewCard(id: string): Promise<ReviewCard | null> {
       link_url: r.link_url,
       sort_order: r.sort_order,
       is_active: r.is_active,
-      is_featured: r.is_featured === true,
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Fetches the currently-featured review card (is_featured = true AND
- * is_active = true). Returns null when none is featured — the
- * storefront falls back to the grid in that case.
- */
-export async function getFeaturedReviewCard(): Promise<ReviewCard | null> {
-  if (!supabase) return null;
-  try {
-    const { data, error } = await supabase
-      .from('review_cards')
-      .select('*')
-      .eq('is_featured', true)
-      .eq('is_active', true)
-      .order('sort_order', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (error || !data) return null;
-    const r = data as ReviewCardRow;
-    return {
-      id: r.id,
-      image_url: r.image_url ?? '',
-      title: r.title ?? '',
-      content_html: r.content_html ?? '',
-      link_url: r.link_url,
-      sort_order: r.sort_order,
-      is_active: r.is_active,
-      is_featured: true,
     };
   } catch {
     return null;
@@ -123,7 +83,6 @@ export async function getAllReviewCards(): Promise<ReviewCard[]> {
       link_url: r.link_url,
       sort_order: r.sort_order,
       is_active: r.is_active,
-      is_featured: r.is_featured === true,
     }));
   } catch {
     return [];

@@ -191,12 +191,11 @@ export default async function MenuPage({ slug, lang, page }: Props) {
   // Special case 2: Review/community menus surface the curated review_cards
   // showcase (admin-managed) instead of a plain post list.
   //
-  // Two-layer behavior:
-  //   - if any card has is_featured=true, its full post body renders inline
-  //     (the admin's pick is the first thing the customer sees — no thumbnail
-  //     click step) plus a small "다른 리뷰" strip at the bottom links to the
-  //     other active cards
-  //   - if no card is featured, fall back to the grid so the section isn't empty
+  // Count-driven layout (decided at the 2026-06-10 boss meeting):
+  //   - 0 cards → empty-state copy
+  //   - 1 card  → render its full body inline (no thumbnail-click step;
+  //               clicking is pointless with a single card)
+  //   - >1 cards → thumbnail grid; customer clicks a card to open the body
   if (REVIEW_SLUGS.has(slugLower)) {
     const [menu, cards] = await Promise.all([
       getMenuBySlug(slug),
@@ -204,19 +203,17 @@ export default async function MenuPage({ slug, lang, page }: Props) {
     ]);
     const displayTitle = menu?.title?.[lang] || menu?.title?.kr || menu?.title?.en || 'Review & Community';
     const lbEmpty = lang === 'kr' ? '등록된 리뷰가 없습니다.' : 'No reviews yet.';
-    const featured = cards.find(c => c.is_featured) ?? null;
-    const others = featured ? cards.filter(c => c.id !== featured.id) : cards;
-    const lbOtherReviews = lang === 'kr' ? '다른 리뷰' : 'Other reviews';
 
-    if (featured) {
+    if (cards.length === 1) {
+      const only = cards[0];
       return (
         <div className="bg-white animate-in fade-in duration-500">
-          {featured.image_url && (
+          {only.image_url && (
             <div className="w-full bg-neutral-100">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={featured.image_url}
-                alt={featured.title}
+                src={only.image_url}
+                alt={only.title}
                 className="w-full max-h-[60vh] object-cover"
               />
             </div>
@@ -227,56 +224,20 @@ export default async function MenuPage({ slug, lang, page }: Props) {
               <ChevronRight className="w-3 h-3 mx-2" />
               <span className="text-brand-ink">{displayTitle}</span>
             </div>
-            {featured.title && (
+            {only.title && (
               <div className="mb-10 pb-8 border-b border-neutral-200">
                 <h1 className="text-3xl md:text-4xl font-black tracking-tight text-brand-ink leading-tight">
-                  {featured.title}
+                  {only.title}
                 </h1>
               </div>
             )}
-            {featured.content_html ? (
+            {only.content_html ? (
               <div
                 className="detail-body"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(featured.content_html) }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(only.content_html) }}
               />
             ) : (
               <p className="text-neutral-400 text-sm">{lbEmpty}</p>
-            )}
-
-            {others.length > 0 && (
-              <div className="mt-16 pt-10 border-t border-neutral-200">
-                <h2 className="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-6">
-                  {lbOtherReviews}
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {others.map(c => (
-                    <Link
-                      key={c.id}
-                      href={`/${lang}/reviews/${c.id}`}
-                      className="group block relative aspect-square overflow-hidden rounded-lg border border-neutral-100 hover:shadow-md transition-all hover:-translate-y-0.5"
-                    >
-                      {c.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={c.image_url}
-                          alt={c.title || 'review'}
-                          loading="lazy"
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-neutral-100 flex items-center justify-center text-neutral-400 text-xs">
-                          {c.title || 'REVIEW'}
-                        </div>
-                      )}
-                      {c.title && (
-                        <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/50 to-transparent flex items-end p-3">
-                          <p className="text-white text-[11px] font-bold line-clamp-2 drop-shadow-md">{c.title}</p>
-                        </div>
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              </div>
             )}
           </div>
         </div>
