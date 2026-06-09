@@ -22,6 +22,7 @@ import {
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import SectionCard, { type SectionDef } from './_components/SectionCard';
 import TopToolbar from './_components/TopToolbar';
+import EditorDrawer from './_components/EditorDrawer';
 import type { ViewportMode } from './_components/types';
 
 // Session-aware client. Only read-side count queries below.
@@ -76,6 +77,10 @@ export default function HomepageBuilderPage() {
   const [selectedKey, setSelectedKey] = useState<string>('carousel');
   const [iframeKey, setIframeKey] = useState(0);
   const [counts, setCounts] = useState<SectionCounts>(EMPTY_COUNTS);
+  // Drawer state — null when closed, holds the section key being edited
+  // when open. The matching SectionDef is looked up from `grouped` to
+  // get the display name + href for the iframe url.
+  const [editingKey, setEditingKey] = useState<string | null>(null);
   // Initial isLoading derives from supabase availability so we never sync
   // setState inside the effect below (react-hooks/set-state-in-effect).
   const [isLoading, setIsLoading] = useState(supabase !== null);
@@ -248,6 +253,30 @@ export default function HomepageBuilderPage() {
     );
   }
 
+  function handleEdit(key: string) {
+    setSelectedKey(key);
+    setEditingKey(key);
+  }
+
+  function handleDrawerClose() {
+    setEditingKey(null);
+    // Bump the preview iframe key so it remounts and pulls fresh data
+    // — covers the "I saved inside the drawer, now show me the result"
+    // flow without needing each editor to broadcast a save event.
+    setIframeKey(k => k + 1);
+  }
+
+  // Find the section currently being edited so we can hand the drawer
+  // its name + href without re-searching at render time.
+  const editingSection = useMemo(() => {
+    if (!editingKey) return null;
+    for (const group of grouped) {
+      const found = group.sections.find(s => s.key === editingKey);
+      if (found) return found;
+    }
+    return null;
+  }, [editingKey, grouped]);
+
   // ── Preview pane sizing ──
   // 'pc'    → fixed 1440 frame
   // 'mobile'→ fixed 390 phone frame (rounded corners + border)
@@ -297,6 +326,7 @@ export default function HomepageBuilderPage() {
                         section={section}
                         selected={selectedKey === section.key}
                         onSelect={() => handleSelect(section.key)}
+                        onEdit={() => handleEdit(section.key)}
                       />
                     ))}
                   </div>
@@ -366,6 +396,19 @@ export default function HomepageBuilderPage() {
           </div>
         </section>
       </div>
+
+      {/* Slide-in editor drawer — opens when a section card's pencil
+          is clicked. Iframes the section's /admin/<route>?embedded=true
+          so Songyi stays in the builder context the whole time. */}
+      {editingSection && (
+        <EditorDrawer
+          open={editingKey !== null}
+          sectionKey={editingSection.key}
+          sectionName={editingSection.name}
+          href={editingSection.href}
+          onClose={handleDrawerClose}
+        />
+      )}
     </div>
   );
 }
