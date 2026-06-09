@@ -122,7 +122,7 @@ export const getCachedInstagram = unstable_cache(
       const [configRes, postsRes] = await withTimeout(
         Promise.all([
           c.from('instagram_config')
-            .select('handle, description, bg_type, bg_color, bg_media_url, bg_media_type')
+            .select('handle, description, bg_type, bg_color, bg_media_url, bg_media_type, header_font_size, header_text_color, header_bg_color')
             .maybeSingle(),
           c.from('instagram_posts').select('id, image_url, link_url, post_url, sort_order').eq('is_active', true).order('sort_order').limit(6),
         ]),
@@ -150,6 +150,9 @@ export const getCachedInstagram = unstable_cache(
         bg_color: configRes.data.bg_color ?? null,
         bg_media_url: configRes.data.bg_media_url ?? null,
         bg_media_type: configRes.data.bg_media_type ?? null,
+        header_font_size: configRes.data.header_font_size ?? null,
+        header_text_color: configRes.data.header_text_color ?? null,
+        header_bg_color: configRes.data.header_bg_color ?? null,
       };
     } catch (err) {
       console.error('[cache:instagram] failed:', err);
