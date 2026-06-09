@@ -65,6 +65,14 @@ export interface ThemeTokens {
    * presets next to the file upload control.
    */
   header_logo_height: string;
+  /**
+   * SubHero banner subtitle font size — the line above the big title
+   * inside SubHeroBanner.tsx. Bosses asked at 2026-06-10 to bump the
+   * default and add a global knob; this token feeds the
+   * --subhero-subtitle-size CSS var consumed by .kokkok-subhero-subtitle.
+   * Per-banner offsets in /admin/sub-hero still stack on top of this.
+   */
+  subhero_subtitle_size: string;
 }
 
 export const DEFAULT_THEME_TOKENS: ThemeTokens = {
@@ -89,6 +97,11 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   // admins can still pin any preset (32/40/48/56) or any pixel value
   // 20–80 from /admin/logo. Saved rows keep their override.
   header_logo_height: '56px',
+  // 18px default — bosses said the sub-header read too small at the
+  // 2026-06-10 meeting. Bumped from the pre-token 14/16px Tailwind
+  // text-sm/md:text-base pair so a fresh install lands at 18px both
+  // breakpoints; /admin/theme can dial down or up (12–28).
+  subhero_subtitle_size: '18px',
 };
 
 export function parseThemeTokens(raw: unknown): ThemeTokens {
@@ -116,6 +129,7 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     font_price: partial.font_price ?? '',
     header_menu_font_size: partial.header_menu_font_size || DEFAULT_THEME_TOKENS.header_menu_font_size,
     header_logo_height: partial.header_logo_height || DEFAULT_THEME_TOKENS.header_logo_height,
+    subhero_subtitle_size: partial.subhero_subtitle_size || DEFAULT_THEME_TOKENS.subhero_subtitle_size,
   };
 }
 
@@ -134,6 +148,7 @@ export function tokensToCss(t: ThemeTokens): string {
     `--radius-button: ${t.radius_button};`,
     `--header-menu-font-size: ${t.header_menu_font_size};`,
     `--header-logo-height: ${t.header_logo_height};`,
+    `--subhero-subtitle-size: ${t.subhero_subtitle_size};`,
   ];
   if (t.font_body) lines.push(`--font-body: ${t.font_body};`);
   if (t.font_display) lines.push(`--font-display: ${t.font_display};`);

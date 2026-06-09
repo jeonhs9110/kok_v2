@@ -89,6 +89,18 @@ input[type="button"]:not(.kokkok-keep-font) {
 }
 
 /* ──────────────────────────────────────────────────────────
+   SubHero banner subtitle font size — adjustable from
+   /admin/theme via the --subhero-subtitle-size token (see
+   src/lib/theme/tokens.ts). Per-banner offsets in
+   /admin/sub-hero still stack on top via --subtitle-fs. The
+   18px fallback matches the post-2026-06-10 default after
+   bosses said the pre-token 14/16px pair felt too small.
+   ────────────────────────────────────────────────────────── */
+.kokkok-subhero-subtitle {
+  font-size: var(--subhero-subtitle-size, 18px);
+}
+
+/* ──────────────────────────────────────────────────────────
    Carousel image focal point (migration 29).
 
    HeroSlider sets two CSS variables on each <Image>:
