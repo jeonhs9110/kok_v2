@@ -113,7 +113,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
     }
     return (
       <div
-        className="w-full h-[700px] sm:h-[900px] lg:h-[1000px] bg-gradient-to-br from-neutral-100 to-neutral-200 animate-pulse motion-reduce:animate-none"
+        className="kokkok-hero-region w-full bg-gradient-to-br from-neutral-100 to-neutral-200 animate-pulse motion-reduce:animate-none"
         role="img"
         aria-label="Hero loading"
         aria-busy="true"
@@ -123,7 +123,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
 
   return (
     <div
-      className="relative w-full h-[700px] sm:h-[900px] lg:h-[1000px] overflow-hidden group"
+      className="kokkok-hero-region relative w-full overflow-hidden group"
       role="region"
       aria-roledescription="carousel"
       aria-label="Featured products"

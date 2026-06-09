@@ -139,7 +139,10 @@ export default function Header({
           ) : (
             <Link href="/login" className="hover:text-black transition-colors">{util.login}</Link>
           )}
-          <Link href={`/${lang}/orders`} className="hover:text-black transition-colors">{util.order}</Link>
+          {/* Deep-link to MyPage's Orders tab — there's no standalone
+              /[lang]/orders route, so before the 2026-06-10 audit this
+              link 404'd on every page load via Next.js prefetch. */}
+          <Link href={`/${lang}/mypage?tab=orders`} className="hover:text-black transition-colors">{util.order}</Link>
           <Link href={`/${lang}/recent`} className="hover:text-black transition-colors">{util.recent}</Link>
         </div>
       </div>
