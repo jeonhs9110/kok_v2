@@ -99,11 +99,16 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
         </div>
       )}
 
+      {/* HeroSlider's own root carries data-builder-section="carousel".
+          The remaining sections get wrapped here so the /admin/homepage
+          builder can scroll + highlight them via postMessage. */}
       <HeroSlider lang={lang} slides={carouselSlides} />
 
-      <PromoBannersSection banners={promoBanners} />
+      <div data-builder-section="promo-banners">
+        <PromoBannersSection banners={promoBanners} />
+      </div>
 
-      <section className="relative">
+      <section className="relative" data-builder-section="products">
         <div className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-16 md:pt-24 flex flex-col items-center text-center">
           <h2 className="kokkok-product-section-title font-extrabold text-brand-ink">{BEST_SELLER_LABEL[lang]}</h2>
           <Link
@@ -118,19 +123,25 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
 
       <SectionErrorBoundary label="ShortsFeed">
         <Suspense fallback={<ShortsFeedSkeleton />}>
-          <ShortsFeedSection lang={lang} />
+          <div data-builder-section="shorts">
+            <ShortsFeedSection lang={lang} />
+          </div>
         </Suspense>
       </SectionErrorBoundary>
 
       <SectionErrorBoundary label="SubHero">
         <Suspense fallback={<SubHeroSkeleton />}>
-          <SubHeroSection />
+          <div data-builder-section="sub-hero">
+            <SubHeroSection />
+          </div>
         </Suspense>
       </SectionErrorBoundary>
 
       <SectionErrorBoundary label="InstagramFeed">
         <Suspense fallback={<InstagramFeedSkeleton />}>
-          <InstagramFeedSection />
+          <div data-builder-section="instagram">
+            <InstagramFeedSection />
+          </div>
         </Suspense>
       </SectionErrorBoundary>
     </>

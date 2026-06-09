@@ -72,6 +72,17 @@ export default async function LangLayout({
             __html: `(function(){if(window.parent===window)return;window.addEventListener('message',function(e){if(!e.data||e.data.type!=='kokkok-theme-tokens')return;var old=document.getElementById('kokkok-theme-tokens');if(!old||!old.parentNode)return;var fresh=document.createElement('style');fresh.id='kokkok-theme-tokens';fresh.textContent=e.data.css;old.parentNode.replaceChild(fresh,old);});})();`,
           }}
         />
+        <script
+          dangerouslySetInnerHTML={{
+            // /admin/homepage builder → scroll + highlight a section
+            // when the admin clicks its card. Adds a temporary outline
+            // class so the storefront pulses blue where the click
+            // landed, then smooth-scrolls so Songyi can see where the
+            // edits land without leaving the hub. iframe-only guard
+            // matches the theme-tokens listener above.
+            __html: `(function(){if(window.parent===window)return;window.addEventListener('message',function(e){if(!e.data||e.data.type!=='kokkok-builder-highlight')return;var key=e.data.sectionKey;if(!key)return;var el=document.querySelector('[data-builder-section="'+key+'"]');if(!el)return;try{el.scrollIntoView({behavior:'smooth',block:'start'});}catch(_){el.scrollIntoView();}el.classList.remove('kokkok-builder-highlight');void el.offsetWidth;el.classList.add('kokkok-builder-highlight');setTimeout(function(){el.classList.remove('kokkok-builder-highlight');},2400);});})();`,
+          }}
+        />
         <div className="flex flex-col min-h-screen">
           <Header
             canPurchase={isKorea}

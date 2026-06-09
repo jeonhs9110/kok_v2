@@ -127,6 +127,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       role="region"
       aria-roledescription="carousel"
       aria-label="Featured products"
+      data-builder-section="carousel"
     >
       <div className="overflow-hidden h-full" ref={emblaRef}>
         <div className="flex h-full">

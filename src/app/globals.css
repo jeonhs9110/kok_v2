@@ -105,6 +105,38 @@ input[type="button"]:not(.kokkok-keep-font) {
 }
 
 /* ──────────────────────────────────────────────────────────
+   /admin/homepage builder highlight — applied by the
+   postMessage listener in [lang]/layout.tsx when an admin
+   clicks a section card in the hub. Pulses blue + scales
+   subtly so Songyi can see exactly where the section lives
+   on the storefront before she clicks 편집.
+
+   `outline` instead of `border` so the highlight doesn't
+   shift layout. `outline-offset: -3px` keeps the ring just
+   inside the section bounds (cleaner look on full-bleed
+   bands like the carousel). The animation is fire-and-
+   forget — the script class-flips to retrigger it.
+   ────────────────────────────────────────────────────────── */
+.kokkok-builder-highlight {
+  outline: 3px solid #3b82f6;
+  outline-offset: -3px;
+  border-radius: 4px;
+  animation: kokkok-builder-pulse 2.4s ease-out;
+  scroll-margin-top: 80px;
+}
+@keyframes kokkok-builder-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.55); }
+  35%  { box-shadow: 0 0 0 14px rgba(59, 130, 246, 0.18); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+/* Respect reduced-motion — keep the outline, skip the pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .kokkok-builder-highlight {
+    animation: none;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────
    SubHero banner subtitle font size — adjustable from
    /admin/theme via the --subhero-subtitle-size token (see
    src/lib/theme/tokens.ts). Per-banner offsets in
