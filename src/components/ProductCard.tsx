@@ -156,13 +156,13 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
 
         <div className="flex items-center space-x-1.5 mt-2">
           {discountRate > 0 && (
-            <span className="text-[15px] font-extrabold text-brand-accent">{discountRate}%</span>
+            <span className="kokkok-price text-[15px] font-extrabold text-brand-accent">{discountRate}%</span>
           )}
-          <span className="text-[15px] font-extrabold text-brand-ink">{priceText}</span>
+          <span className="kokkok-price text-[15px] font-extrabold text-brand-ink">{priceText}</span>
         </div>
 
         {originalPrice > price && (
-          <span className="text-[13px] text-neutral-500 line-through block mt-0.5">{originalPriceText}</span>
+          <span className="kokkok-price text-[13px] text-neutral-500 line-through block mt-0.5">{originalPriceText}</span>
         )}
 
         {!canPurchase && (

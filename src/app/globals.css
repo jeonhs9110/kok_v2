@@ -45,6 +45,33 @@
      otherwise render the menu at 13.5px while /kr and /en showed
      15px — a visible regression at the route boundary. */
   font-size: var(--header-menu-font-size, 15px);
+  /* font_header token from /admin/theme. Falls through to the body
+     font when unset, matching pre-token behavior. */
+  font-family: var(--font-header, inherit);
+}
+.kokkok-header-logo-text {
+  /* Text-fallback logo (KOKKOK GARDEN) when no logo image is uploaded.
+     Same font_header token so the text logo + menu stay consistent. */
+  font-family: var(--font-header, inherit);
+}
+
+/* font_price token — drives ProductCard's price spans (and any other
+   .kokkok-price element). Tabular numerics often want a different
+   font than the body copy. */
+.kokkok-price {
+  font-family: var(--font-price, inherit);
+  font-variant-numeric: tabular-nums;
+}
+
+/* font_button token — applied to every <button> / [role=button] /
+   <input type="submit"|"button"> unless it explicitly opts out with
+   .kokkok-keep-font. Pairs with the radius_button rule below that
+   uses the same pin-everything-unless-opt-out pattern. */
+button:not(.kokkok-keep-font),
+[role="button"]:not(.kokkok-keep-font),
+input[type="submit"]:not(.kokkok-keep-font),
+input[type="button"]:not(.kokkok-keep-font) {
+  font-family: var(--font-button, inherit);
 }
 
 /* ──────────────────────────────────────────────────────────

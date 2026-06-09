@@ -32,6 +32,26 @@ export interface ThemeTokens {
   /** Font-family string for display / headings. Empty falls through. */
   font_display: string;
   /**
+   * Font-family for the top-nav menu + the text-fallback logo. Empty
+   * falls through to the body font, matching pre-token behavior.
+   * Added at the 2026-06-10 boss meeting so the header can carry a
+   * different tone (e.g. serif) from the body copy.
+   */
+  font_header: string;
+  /**
+   * Font-family for CTA buttons site-wide. Targets the same selectors
+   * the existing radius_button rule pins (every <button> / [role=button]
+   * that doesn't opt out via .kokkok-keep-font). Empty falls through
+   * to the body font.
+   */
+  font_button: string;
+  /**
+   * Font-family for product prices and other tabular numerics. Drives
+   * the .kokkok-price class wired on ProductCard's price spans.
+   * Empty falls through to the body font.
+   */
+  font_price: string;
+  /**
    * Header navigation menu font size. CSS length value (e.g. "13.5px",
    * "15px"). Drives both the desktop top-nav links and the mobile drawer
    * via the --header-menu-font-size variable. Added 2026-06 after 한송이
@@ -57,6 +77,9 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   radius_button: '0px',
   font_body: '',
   font_display: '',
+  font_header: '',
+  font_button: '',
+  font_price: '',
   // Bumped 2026-06-08 from 13.5px to 15px after 송이 forwarded customer
   // feedback that the homepage menu read too small. Admins can still pin
   // any preset (13.5 / 15 / 17 / 19) from /admin/theme; this only moves
@@ -88,6 +111,9 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     radius_button: partial.radius_button ?? DEFAULT_THEME_TOKENS.radius_button,
     font_body: partial.font_body ?? '',
     font_display: partial.font_display ?? '',
+    font_header: partial.font_header ?? '',
+    font_button: partial.font_button ?? '',
+    font_price: partial.font_price ?? '',
     header_menu_font_size: partial.header_menu_font_size || DEFAULT_THEME_TOKENS.header_menu_font_size,
     header_logo_height: partial.header_logo_height || DEFAULT_THEME_TOKENS.header_logo_height,
   };
@@ -111,5 +137,8 @@ export function tokensToCss(t: ThemeTokens): string {
   ];
   if (t.font_body) lines.push(`--font-body: ${t.font_body};`);
   if (t.font_display) lines.push(`--font-display: ${t.font_display};`);
+  if (t.font_header) lines.push(`--font-header: ${t.font_header};`);
+  if (t.font_button) lines.push(`--font-button: ${t.font_button};`);
+  if (t.font_price) lines.push(`--font-price: ${t.font_price};`);
   return `:root { ${lines.join(' ')} }`;
 }

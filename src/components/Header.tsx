@@ -178,7 +178,7 @@ export default function Header({
                   className="kokkok-header-logo"
                 />
               ) : (
-                <span className="text-[22px] font-black tracking-[0.12em] text-brand-ink uppercase">
+                <span className="kokkok-header-logo-text text-[22px] font-black tracking-[0.12em] text-brand-ink uppercase">
                   KOKKOK<br className="hidden" /> GARDEN
                 </span>
               )}

@@ -204,11 +204,18 @@ export default function ThemePage() {
               <Section title="타이포그래피 (선택)">
                 <FontRow label="본문 폰트" value={tokens.font_body}
                   onChange={v => setTokens(t => ({ ...t, font_body: v }))} />
-                <FontRow label="제목 폰트" value={tokens.font_display}
+                <FontRow label="제목 폰트 (H1~H6)" value={tokens.font_display}
                   onChange={v => setTokens(t => ({ ...t, font_display: v }))} />
+                <FontRow label="헤더 / 메뉴 폰트" value={tokens.font_header}
+                  onChange={v => setTokens(t => ({ ...t, font_header: v }))} />
+                <FontRow label="버튼 폰트 (CTA)" value={tokens.font_button}
+                  onChange={v => setTokens(t => ({ ...t, font_button: v }))} />
+                <FontRow label="가격 폰트 (숫자)" value={tokens.font_price}
+                  onChange={v => setTokens(t => ({ ...t, font_price: v }))} />
                 <p className="text-[10px] text-gray-400">
                   드롭다운에서 사이트가 미리 로드한 8개 폰트 중 하나를 고르거나, &quot;기타 (직접 입력)&quot;를
                   선택해 시스템에 설치된 폰트명 또는 Google Fonts 폰트 패밀리 문자열을 직접 입력할 수 있습니다.
+                  비워두면 본문 폰트(또는 브랜드 기본값)를 따릅니다.
                 </p>
               </Section>
             </>
@@ -327,23 +334,6 @@ function ColorRow({
           />
         </div>
       </div>
-    </div>
-  );
-}
-
-function TextRow({
-  label, value, placeholder, onChange,
-}: { label: string; value: string; placeholder?: string; onChange: (v: string) => void }) {
-  return (
-    <div>
-      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
-      <input
-        type="text"
-        value={value}
-        placeholder={placeholder}
-        onChange={e => onChange(e.target.value)}
-        className="w-full mt-1 border border-gray-200 rounded px-2 py-1.5 text-xs font-mono outline-none focus:border-black"
-      />
     </div>
   );
 }
