@@ -12,8 +12,11 @@ import SubHeroSection, { SubHeroSkeleton } from '@/components/sections/SubHeroSe
 import InstagramFeedSection, { InstagramFeedSkeleton } from '@/components/sections/InstagramFeedSection';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
+import HomepageBanner from '@/components/HomepageBanner';
+
 import { getCachedProducts, getCachedSlides, getCachedPromoBanners } from '@/lib/cache/homepage';
-import { getSectionOrder } from '@/lib/api/sectionOrder';
+import { getSectionOrder, isBannerKey } from '@/lib/api/sectionOrder';
+import { getHomepageBanners } from '@/lib/api/homepageBanners';
 import { isValidLang, type Lang } from '@/lib/i18n/types';
 import type { Product } from '@/lib/api/products';
 
@@ -83,12 +86,14 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     || 'KR';
   const isKorea = country === 'KR';
 
-  const [allProducts, carouselSlides, promoBanners, sectionOrder] = await Promise.all([
+  const [allProducts, carouselSlides, promoBanners, sectionOrder, homepageBanners] = await Promise.all([
     getCachedProducts(),
     getCachedSlides(),
     getCachedPromoBanners(),
     getSectionOrder(),
+    getHomepageBanners(),
   ]);
+  const bannersById = new Map(homepageBanners.map(b => [b.id, b]));
 
   const activeProducts = allProducts.filter(p => p.is_active);
   const bestSellerProducts = pickBestSellers(activeProducts);
@@ -155,7 +160,19 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
           🌏 {GLOBAL_BANNER[lang]}
         </div>
       )}
-      {sectionOrder.map(key => <div key={key}>{sectionsMap[key]}</div>)}
+      {sectionOrder.map(key => {
+        if (isBannerKey(key)) {
+          const id = key.slice('banner:'.length);
+          const banner = bannersById.get(id);
+          if (!banner) return null;
+          return (
+            <div key={key} data-builder-section={key}>
+              <HomepageBanner banner={banner} lang={lang} />
+            </div>
+          );
+        }
+        return <div key={key}>{sectionsMap[key]}</div>;
+      })}
     </>
   );
 }

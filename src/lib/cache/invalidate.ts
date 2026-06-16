@@ -15,7 +15,8 @@ export type HomepageTag =
   | 'sub_hero'
   | 'instagram'
   | 'shorts'
-  | 'top_stripe';
+  | 'top_stripe'
+  | 'homepage_banners';
 
 export async function revalidateHomepageData(tag: HomepageTag): Promise<void> {
   updateTag(tag);
