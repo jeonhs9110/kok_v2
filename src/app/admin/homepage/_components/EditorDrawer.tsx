@@ -5,28 +5,25 @@ import Link from 'next/link';
 import { X, ExternalLink } from 'lucide-react';
 
 /**
- * EditorDrawer — right-side overlay that hosts a section's editor
+ * EditorDrawer — inline left-side panel that hosts a section's editor
  * inside the /admin/homepage builder. The iframe points at the same
  * /admin/<section> route the pencil chevron used to navigate to,
  * but adds ?embedded=true so the admin layout strips its global
- * sidebar + header and the editor fills the drawer pane.
+ * sidebar + header and the editor fills the panel.
  *
- * Songyi's Cafe24 reference shows the editor sliding in over the
- * preview rather than swapping the whole page. This matches that
- * pattern so she never loses her place in the builder while she's
- * editing.
+ * 2026-06-10 refactor: was a right-side fixed overlay; now sits in
+ * the page's flex layout between the (collapsed) icon rail on its
+ * left and the central preview on its right. The operator's mental
+ * model — "section list ↓ icon collapse ← editor slides in ← preview
+ * stays right of the editor" — only works if the editor is in the
+ * flow, not floating on top.
  *
  * Close paths:
  *   - X button
- *   - Backdrop click
  *   - Escape key
  *   - postMessage('kokkok-builder-editor-close') from the embedded page
- *
- * On every close (regardless of path) the parent bumps a key on the
- * preview iframe so the storefront re-fetches and reflects any saves.
  */
 interface Props {
-  open: boolean;
   sectionKey: string;
   sectionName: string;
   href: string;
@@ -34,23 +31,21 @@ interface Props {
 }
 
 export default function EditorDrawer({
-  open, sectionKey, sectionName, href, onClose,
+  sectionKey, sectionName, href, onClose,
 }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // ESC closes the drawer.
+  // ESC closes the panel.
   useEffect(() => {
-    if (!open) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [onClose]);
 
   // Listen for save/close signals from the embedded editor.
   useEffect(() => {
-    if (!open) return;
     function onMessage(e: MessageEvent) {
       if (e.origin !== window.location.origin) return;
       if (!e.data || typeof e.data !== 'object') return;
@@ -58,9 +53,7 @@ export default function EditorDrawer({
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [open, onClose]);
-
-  if (!open) return null;
+  }, [onClose]);
 
   // ?embedded=true tells admin/layout.tsx to render bare children.
   // ?from=homepage keeps the back-to-hub breadcrumb visible inside
@@ -69,52 +62,43 @@ export default function EditorDrawer({
   const url = `${href}?embedded=true&from=homepage&section=${sectionKey}`;
 
   return (
-    <>
-      {/* Drawer panel — slides in from the right at ~720px wide on
-          desktop, full width on tablet/mobile.
-          NO BACKDROP — the previous black/40 backdrop dimmed AND
-          blocked the central storefront preview, making the very
-          thing Songyi wanted to watch unusable while editing. The
-          preview stays fully visible and interactive; the drawer
-          sits beside it and is dismissed via the X button, ESC,
-          or the editor posting kokkok-builder-editor-close. */}
-      <aside
-        className="fixed right-0 top-0 bottom-0 w-full sm:w-[680px] lg:w-[760px] bg-white z-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200"
-        role="dialog"
-        aria-label={`${sectionName} 편집`}
-      >
-        {/* Header */}
-        <div className="h-12 bg-[#2a2d3e] text-white flex items-center px-3 gap-3 flex-shrink-0">
-          <span className="text-sm font-semibold flex-1 truncate">
-            {sectionName} 편집
-          </span>
-          <Link
-            href={`${href}?from=homepage`}
-            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
-            title="별도 페이지에서 열기"
-          >
-            <ExternalLink className="w-3 h-3" />
-            전체 화면
-          </Link>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded hover:bg-white/10 transition-colors"
-            aria-label="닫기"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <aside
+      className="w-full sm:w-[400px] lg:w-[440px] bg-white border-r border-[#e5e7eb] flex flex-col flex-shrink-0 animate-in slide-in-from-left duration-200"
+      role="dialog"
+      aria-label={`${sectionName} 편집`}
+    >
+      {/* Header — dark slate to match the top toolbar so the editor
+          visually belongs to the builder shell. */}
+      <div className="h-12 bg-[#2a2d3e] text-white flex items-center px-3 gap-2 flex-shrink-0">
+        <span className="text-sm font-semibold flex-1 truncate">
+          {sectionName} 편집
+        </span>
+        <Link
+          href={`${href}?from=homepage`}
+          className="inline-flex items-center gap-1 px-2 py-1 text-[11px] text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
+          title="별도 페이지에서 열기"
+        >
+          <ExternalLink className="w-3 h-3" />
+          전체 화면
+        </Link>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1.5 rounded hover:bg-white/10 transition-colors"
+          aria-label="닫기"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
 
-        {/* Embedded editor iframe */}
-        <iframe
-          ref={iframeRef}
-          src={url}
-          title={`${sectionName} 편집`}
-          className="flex-1 w-full bg-white"
-          style={{ border: 'none' }}
-        />
-      </aside>
-    </>
+      {/* Embedded editor iframe — fills the rest of the panel. */}
+      <iframe
+        ref={iframeRef}
+        src={url}
+        title={`${sectionName} 편집`}
+        className="flex-1 w-full bg-white"
+        style={{ border: 'none' }}
+      />
+    </aside>
   );
 }
