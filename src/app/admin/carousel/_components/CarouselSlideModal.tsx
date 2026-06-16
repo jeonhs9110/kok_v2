@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { Upload, X } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
@@ -53,6 +53,18 @@ export default function CarouselSlideModal({
     'idle',
   );
   const [activeLang, setActiveLang] = useState<string>('kr');
+  // When this modal is rendered inside /admin/homepage's slide-in editor
+  // panel (?embedded=true on the host page), the operator wants ONE
+  // preview — the central 1440px storefront iframe — not a redundant
+  // CarouselSlidePreview inside the panel. Hide our own previews and
+  // let the form fill the available width. The central preview reflects
+  // the saved state after the operator clicks 저장; an in-flight live
+  // preview pipeline is a follow-up.
+  const [isEmbedded, setIsEmbedded] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsEmbedded(new URLSearchParams(window.location.search).get('embedded') === 'true');
+  }, []);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -200,12 +212,18 @@ export default function CarouselSlideModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      {/* Two-pane modal — wider on lg+ so the storefront-accurate preview
-          can sit beside the form. Below lg the preview drops above the
-          form (handled by the grid below) so the modal still fits on
-          tablet without horizontal scrolling. Boss 2026-06-10 ask. */}
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className={isEmbedded
+      ? 'fixed inset-0 z-50 flex items-stretch justify-stretch bg-white'
+      : 'fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200'
+    }>
+      {/* In embedded mode the modal fills the drawer pane — no backdrop,
+          no rounded card, no max-width clamp (the parent drawer width is
+          the natural clamp). Outside embedded mode it stays the classic
+          centered modal card with backdrop. */}
+      <div className={isEmbedded
+        ? 'bg-white overflow-hidden flex flex-col w-full h-full'
+        : 'bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh]'
+      }>
         <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <h3 className="font-bold text-lg">
             {editingId ? '슬라이드 수정' : '새 슬라이드 추가'}
@@ -220,11 +238,18 @@ export default function CarouselSlideModal({
 
         <form onSubmit={handleSubmit} className="overflow-y-auto">
           {/* Two-column layout: form on the left, sticky live preview on
-              the right (lg+). Below lg the preview drops above the form
-              automatically thanks to grid-cols-1. */}
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 p-6">
+              the right (lg+). In embedded mode (rendered inside the
+              homepage builder drawer) we collapse to a single column —
+              the central 1440px storefront iframe is the live preview
+              the operator wants to watch instead. */}
+          <div className={isEmbedded
+            ? 'p-6 space-y-5'
+            : 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-6 p-6'
+          }>
             <div className="space-y-5 min-w-0">
-          <CarouselSlidePreview form={formData} lang={activeLang} previewImageUrl={previewUrl} />
+          {!isEmbedded && (
+            <CarouselSlidePreview form={formData} lang={activeLang} previewImageUrl={previewUrl} />
+          )}
 
           <div className="space-y-2">
             <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
@@ -813,18 +838,18 @@ export default function CarouselSlideModal({
           </div>
             </div>
             {/* Sticky live preview pane — stays in view as the admin
-                scrolls the form. Mirrors the activeLang tab so the
-                language being edited is the language being previewed.
-                On mobile/tablet (below lg) this just stacks above the
-                form via the parent grid's grid-cols-1 fallback. */}
-            <aside className="lg:sticky lg:top-0 lg:self-start">
-              <CarouselSlidePreview
-                form={formData}
-                lang={activeLang}
-                previewImageUrl={previewUrl}
-                previewMobileImageUrl={mobilePreviewUrl}
-              />
-            </aside>
+                scrolls the form. Hidden in embedded mode (the homepage
+                builder's central iframe is the single source of truth). */}
+            {!isEmbedded && (
+              <aside className="lg:sticky lg:top-0 lg:self-start">
+                <CarouselSlidePreview
+                  form={formData}
+                  lang={activeLang}
+                  previewImageUrl={previewUrl}
+                  previewMobileImageUrl={mobilePreviewUrl}
+                />
+              </aside>
+            )}
           </div>
         </form>
       </div>
