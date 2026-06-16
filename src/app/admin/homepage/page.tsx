@@ -18,8 +18,10 @@ import {
   ExternalLink,
   Plus,
   Code2,
+  Megaphone,
 } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { isBannerKey } from '@/lib/api/sectionOrder';
 import SectionCard, { type SectionDef } from './_components/SectionCard';
 import TopToolbar from './_components/TopToolbar';
 import EditorDrawer from './_components/EditorDrawer';
@@ -90,6 +92,13 @@ export default function HomepageBuilderPage() {
   ]);
   const [dragKey, setDragKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  // Inline banners — N rows, each addressable by `banner:<uuid>` in
+  // sectionOrder. The hub spawns a new row via the + button next to the
+  // homepage-sections group title; each card lets the operator drag it
+  // anywhere in the flow and click 편집 to open the banner editor.
+  const [banners, setBanners] = useState<Array<{
+    id: string; text: Record<string, string>; bg_color: string; text_color: string; is_active: boolean;
+  }>>([]);
   // Initial isLoading derives from supabase availability so we never sync
   // setState inside the effect below (react-hooks/set-state-in-effect).
   const [isLoading, setIsLoading] = useState(supabase !== null);
@@ -116,6 +125,20 @@ export default function HomepageBuilderPage() {
         } catch { /* keep default */ }
       }
     })().catch(err => console.error('[admin/homepage] section order load failed:', err));
+  }, []);
+
+  // Load the operator's inline banners. Same lifecycle as section order
+  // — load once on mount; mutations below (add / delete) update local
+  // state optimistically and re-fetch isn't necessary because the row
+  // shape is small and we control all writes from this page.
+  useEffect(() => {
+    if (!supabase) return;
+    (async () => {
+      const { data } = await supabase
+        .from('homepage_banners')
+        .select('id,text,bg_color,text_color,is_active');
+      if (data) setBanners(data as typeof banners);
+    })().catch(err => console.error('[admin/homepage] banners load failed:', err));
   }, []);
 
   useEffect(() => {
@@ -267,18 +290,52 @@ export default function HomepageBuilderPage() {
   ].map(group => {
     // Apply the operator's saved order to the '홈페이지 섹션' group.
     // Reviews + other non-reorderable keys stay at the end of their
-    // group in their original spot.
+    // group in their original spot. Inline banner cards (key
+    // 'banner:<uuid>') are injected wherever they appear in
+    // sectionOrder; any banner row not in the saved order is
+    // appended at the end so a freshly-added banner is never lost.
     if (group.title !== '홈페이지 섹션 (위에서 아래로)') return group;
-    const ordered: typeof group.sections = [];
-    const remaining = new Map(group.sections.map(s => [s.key, s]));
+    const coreById = new Map(group.sections.map(s => [s.key, s]));
+    const bannerById = new Map(banners.map(b => [b.id, b]));
+    const ordered: SectionDef[] = [];
+    const seenCore = new Set<string>();
+    const seenBanner = new Set<string>();
+    const bannerDef = (b: typeof banners[number]): SectionDef => {
+      const preview =
+        b.text?.kr || b.text?.en ||
+        Object.values(b.text || {}).find(t => t && t.trim()) ||
+        '(빈 띠배너)';
+      const trimmed = preview.length > 28 ? preview.slice(0, 28) + '…' : preview;
+      return {
+        key: `banner:${b.id}`,
+        name: `띠배너 · ${trimmed}`,
+        icon: Megaphone,
+        href: `/admin/banners/${b.id}`,
+        status: b.is_active ? '활성' : '숨김',
+        visible: b.is_active && Object.values(b.text || {}).some(t => t && t.trim()),
+        hint: '인라인 띠배너',
+      };
+    };
     for (const k of sectionOrder) {
-      const s = remaining.get(k);
-      if (s) { ordered.push(s); remaining.delete(k); }
+      if (isBannerKey(k)) {
+        const id = k.slice('banner:'.length);
+        const b = bannerById.get(id);
+        if (!b) continue;
+        seenBanner.add(id);
+        ordered.push(bannerDef(b));
+        continue;
+      }
+      const s = coreById.get(k);
+      if (s) { ordered.push(s); seenCore.add(k); }
     }
-    // Any sections not in the saved order (e.g. reviews) stay at the end.
-    for (const s of remaining.values()) ordered.push(s);
+    for (const s of group.sections) {
+      if (!seenCore.has(s.key)) ordered.push(s);
+    }
+    for (const b of banners) {
+      if (!seenBanner.has(b.id)) ordered.push(bannerDef(b));
+    }
     return { ...group, sections: ordered };
-  })), [counts, sectionOrder]);
+  })), [counts, sectionOrder, banners]);
 
   const handleReload = () => setIframeKey(k => k + 1);
 
@@ -336,7 +393,8 @@ export default function HomepageBuilderPage() {
   // The reorderable key set is the same one the storefront's section
   // map covers — global chrome rows (theme, logo, menus, top-stripe,
   // footer) stay fixed in their group.
-  const REORDERABLE = new Set(['carousel','promo-banners','products','shorts','sub-hero','instagram']);
+  const CORE_REORDERABLE = new Set(['carousel','promo-banners','products','shorts','sub-hero','instagram']);
+  const isReorderable = (k: string) => CORE_REORDERABLE.has(k) || isBannerKey(k);
 
   async function saveSectionOrder(next: string[]) {
     if (!supabase) return;
@@ -360,7 +418,7 @@ export default function HomepageBuilderPage() {
   }
   function handleDragOver(key: string, e: React.DragEvent) {
     if (!dragKey || dragKey === key) return;
-    if (!REORDERABLE.has(key)) return;
+    if (!isReorderable(key)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverKey(key);
@@ -368,8 +426,8 @@ export default function HomepageBuilderPage() {
   function handleDrop(targetKey: string, e: React.DragEvent) {
     e.preventDefault();
     if (!dragKey || dragKey === targetKey) return;
-    if (!REORDERABLE.has(targetKey) || !REORDERABLE.has(dragKey)) return;
-    const onlyReorderable = sectionOrder.filter(k => REORDERABLE.has(k));
+    if (!isReorderable(targetKey) || !isReorderable(dragKey)) return;
+    const onlyReorderable = sectionOrder.filter(k => isReorderable(k));
     const from = onlyReorderable.indexOf(dragKey);
     const to = onlyReorderable.indexOf(targetKey);
     if (from < 0 || to < 0) return;
@@ -385,6 +443,44 @@ export default function HomepageBuilderPage() {
   function handleDragEnd() {
     setDragKey(null);
     setDragOverKey(null);
+  }
+
+  // Spawn a new inline banner. Inserts an empty row in homepage_banners,
+  // prepends 'banner:<uuid>' to the homepage-section group of the
+  // sectionOrder (so it lands at the top of the homepage; operator can
+  // drag it where they want), then opens the edit drawer on it. If
+  // anything fails we surface a brief alert and leave state untouched.
+  async function handleAddBanner() {
+    if (!supabase) return;
+    try {
+      const { data, error } = await supabase
+        .from('homepage_banners')
+        .insert({
+          text: { kr: '' },
+          bg_color: '#1f2937',
+          text_color: '#ffffff',
+          is_active: true,
+        })
+        .select('id,text,bg_color,text_color,is_active')
+        .single();
+      if (error || !data) throw error || new Error('insert returned no row');
+      const newKey = `banner:${data.id}`;
+      setBanners(prev => [...prev, data as typeof banners[number]]);
+      // Insert the new key right before the first homepage section
+      // (carousel) so it lands at the top of the page body but below
+      // the global chrome. Operator can drag from there.
+      const next = [...sectionOrder];
+      const insertIdx = next.findIndex(k => k === 'carousel');
+      if (insertIdx >= 0) next.splice(insertIdx, 0, newKey);
+      else next.unshift(newKey);
+      setSectionOrder(next);
+      void saveSectionOrder(next);
+      setIframeKey(k => k + 1);
+      handleEdit(newKey);
+    } catch (err) {
+      console.error('[admin/homepage] add banner failed:', err);
+      alert('띠배너 추가에 실패했습니다.');
+    }
   }
 
   function handleDrawerClose() {
@@ -455,12 +551,25 @@ export default function HomepageBuilderPage() {
               ) : (
                 grouped.map(group => (
                   <div key={group.title}>
-                    <p className="px-1 pb-2 text-[10px] font-bold tracking-[0.15em] uppercase text-[#9ca3af]">
-                      {group.title}
-                    </p>
+                    <div className="flex items-center justify-between px-1 pb-2">
+                      <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#9ca3af]">
+                        {group.title}
+                      </p>
+                      {group.title === '홈페이지 섹션 (위에서 아래로)' && (
+                        <button
+                          type="button"
+                          onClick={handleAddBanner}
+                          className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold text-[#3b82f6] hover:bg-[#eff6ff] rounded transition-colors"
+                          title="섹션 사이에 띠배너 추가"
+                        >
+                          <Plus className="w-3 h-3" />
+                          띠배너
+                        </button>
+                      )}
+                    </div>
                     <div className="space-y-1.5">
                       {group.sections.map(section => {
-                        const reorderable = REORDERABLE.has(section.key);
+                        const reorderable = isReorderable(section.key);
                         return (
                           <SectionCard
                             key={section.key}

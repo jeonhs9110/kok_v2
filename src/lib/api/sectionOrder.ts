@@ -10,7 +10,7 @@ import { supabase } from '@/lib/api/products';
  * isn't in the saved order falls through at the END so a newly-added
  * section never disappears even if the operator's saved order is stale.
  */
-export type HomepageSectionKey =
+export type CoreSectionKey =
   | 'carousel'
   | 'promo-banners'
   | 'products'
@@ -18,7 +18,16 @@ export type HomepageSectionKey =
   | 'sub-hero'
   | 'instagram';
 
-export const DEFAULT_ORDER: HomepageSectionKey[] = [
+/**
+ * Banner keys are `banner:<uuid>` — operator-spawned inline strips that
+ * live anywhere in the homepage flow. See lib/api/homepageBanners and
+ * components/HomepageBanner.
+ */
+export type BannerSectionKey = `banner:${string}`;
+
+export type HomepageSectionKey = CoreSectionKey | BannerSectionKey;
+
+export const DEFAULT_ORDER: CoreSectionKey[] = [
   'carousel',
   'promo-banners',
   'products',
@@ -27,27 +36,38 @@ export const DEFAULT_ORDER: HomepageSectionKey[] = [
   'instagram',
 ];
 
-const VALID_KEYS = new Set<HomepageSectionKey>(DEFAULT_ORDER);
+const VALID_CORE = new Set<CoreSectionKey>(DEFAULT_ORDER);
+
+export function isBannerKey(key: string): key is BannerSectionKey {
+  return key.startsWith('banner:') && key.length > 7;
+}
 
 function parse(raw: unknown): HomepageSectionKey[] {
   let arr: unknown = raw;
   if (typeof raw === 'string') {
-    try { arr = JSON.parse(raw); } catch { return DEFAULT_ORDER; }
+    try { arr = JSON.parse(raw); } catch { return [...DEFAULT_ORDER]; }
   }
-  if (!Array.isArray(arr)) return DEFAULT_ORDER;
-  const seen = new Set<HomepageSectionKey>();
+  if (!Array.isArray(arr)) return [...DEFAULT_ORDER];
+  const seenCore = new Set<CoreSectionKey>();
+  const seenBanners = new Set<string>();
   const result: HomepageSectionKey[] = [];
   for (const k of arr) {
     if (typeof k !== 'string') continue;
-    if (!VALID_KEYS.has(k as HomepageSectionKey)) continue;
-    if (seen.has(k as HomepageSectionKey)) continue;
-    seen.add(k as HomepageSectionKey);
-    result.push(k as HomepageSectionKey);
+    if (isBannerKey(k)) {
+      if (seenBanners.has(k)) continue;
+      seenBanners.add(k);
+      result.push(k);
+      continue;
+    }
+    if (!VALID_CORE.has(k as CoreSectionKey)) continue;
+    if (seenCore.has(k as CoreSectionKey)) continue;
+    seenCore.add(k as CoreSectionKey);
+    result.push(k as CoreSectionKey);
   }
   // Backfill any default-order section missing from the saved row
   // so a newly-added section appears at the end instead of being lost.
   for (const k of DEFAULT_ORDER) {
-    if (!seen.has(k)) result.push(k);
+    if (!seenCore.has(k)) result.push(k);
   }
   return result;
 }
