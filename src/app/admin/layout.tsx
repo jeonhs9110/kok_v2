@@ -41,6 +41,7 @@ const NAV_SECTIONS: NavSection[] = [
       // pages below still work the same — the hub just deep-links into
       // them with ?from=homepage so the back arrow returns to the hub.
       { name: '홈페이지 빌더', href: '/admin/homepage', icon: HomeIcon },
+      { name: '상단 띠배너', href: '/admin/top-stripe', icon: PanelTop },
       { name: '테마 (색상 / 모양)', href: '/admin/theme', icon: Palette },
       { name: '에셋 라이브러리', href: '/admin/assets', icon: FolderOpen },
       { name: '로고 및 배경', href: '/admin/logo', icon: ImagePlus },
@@ -86,6 +87,7 @@ const NAV_SECTIONS: NavSection[] = [
 const PAGE_TITLE: Record<string, string> = {
   '/admin': '대시보드 개요',
   '/admin/homepage': '홈페이지 빌더',
+  '/admin/top-stripe': '상단 띠배너',
   '/admin/users': '사용자 관리',
   '/admin/categories': '카테고리 관리',
   '/admin/products': '상품 관리',

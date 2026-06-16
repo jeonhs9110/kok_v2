@@ -45,11 +45,16 @@ resource "aws_cloudwatch_metric_alarm" "alb_5xx" {
 
 # ---- Target group: any unhealthy host ----
 # We run a single EC2 today, so even ONE unhealthy host = full outage.
+# evaluation_periods bumped 2 -> 5 (2026-06-17): every zero-downtime
+# rebuild produced a 30-60s drain window where the old instance was
+# briefly counted as unhealthy, tripping the 2-minute threshold. With
+# 5 minutes the drain window passes silently — only a real outage
+# (5+ consecutive minutes of unhealthy) pages.
 resource "aws_cloudwatch_metric_alarm" "tg_unhealthy" {
   alarm_name          = "${var.project_name}-tg-unhealthy"
   alarm_description   = "ALB target group has an unhealthy host — site is down or degraded"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
+  evaluation_periods  = 5
   metric_name         = "UnHealthyHostCount"
   namespace           = "AWS/ApplicationELB"
   period              = 60
