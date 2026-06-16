@@ -13,6 +13,7 @@ import InstagramFeedSection, { InstagramFeedSkeleton } from '@/components/sectio
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
 import { getCachedProducts, getCachedSlides, getCachedPromoBanners } from '@/lib/cache/homepage';
+import { getSectionOrder } from '@/lib/api/sectionOrder';
 import { isValidLang, type Lang } from '@/lib/i18n/types';
 import type { Product } from '@/lib/api/products';
 
@@ -82,32 +83,29 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     || 'KR';
   const isKorea = country === 'KR';
 
-  const [allProducts, carouselSlides, promoBanners] = await Promise.all([
+  const [allProducts, carouselSlides, promoBanners, sectionOrder] = await Promise.all([
     getCachedProducts(),
     getCachedSlides(),
     getCachedPromoBanners(),
+    getSectionOrder(),
   ]);
 
   const activeProducts = allProducts.filter(p => p.is_active);
   const bestSellerProducts = pickBestSellers(activeProducts);
 
-  return (
-    <>
-      {!isKorea && (
-        <div className="bg-gradient-to-r from-brand-notice-from to-brand-notice-to text-white text-center py-2 px-4 text-[13px] font-medium">
-          🌏 {GLOBAL_BANNER[lang]}
-        </div>
-      )}
-
-      {/* HeroSlider's own root carries data-builder-section="carousel".
-          The remaining sections get wrapped here so the /admin/homepage
-          builder can scroll + highlight them via postMessage. */}
-      <HeroSlider lang={lang} slides={carouselSlides} />
-
+  // Sections are rendered in the operator-controlled order pulled from
+  // site_settings.homepage_section_order. Keys not in the saved row
+  // fall back to the DEFAULT_ORDER tail (see lib/api/sectionOrder.ts)
+  // so a newly-added section never disappears even if the operator
+  // saved their order before the section existed.
+  const sectionsMap: Record<string, React.ReactNode> = {
+    'carousel': <HeroSlider lang={lang} slides={carouselSlides} />,
+    'promo-banners': (
       <div data-builder-section="promo-banners">
         <PromoBannersSection banners={promoBanners} />
       </div>
-
+    ),
+    'products': (
       <section className="kokkok-home-products relative" data-builder-section="products">
         <div className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-16 md:pt-24 flex flex-col items-center text-center">
           <h2 className="kokkok-product-section-title font-extrabold text-brand-ink">{BEST_SELLER_LABEL[lang]}</h2>
@@ -120,7 +118,8 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
         </div>
         <ProductGrid products={bestSellerProducts} canPurchase={isKorea} />
       </section>
-
+    ),
+    'shorts': (
       <SectionErrorBoundary label="ShortsFeed">
         <Suspense fallback={<ShortsFeedSkeleton />}>
           <div data-builder-section="shorts">
@@ -128,7 +127,8 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
           </div>
         </Suspense>
       </SectionErrorBoundary>
-
+    ),
+    'sub-hero': (
       <SectionErrorBoundary label="SubHero">
         <Suspense fallback={<SubHeroSkeleton />}>
           <div data-builder-section="sub-hero">
@@ -136,7 +136,8 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
           </div>
         </Suspense>
       </SectionErrorBoundary>
-
+    ),
+    'instagram': (
       <SectionErrorBoundary label="InstagramFeed">
         <Suspense fallback={<InstagramFeedSkeleton />}>
           <div data-builder-section="instagram">
@@ -144,6 +145,17 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
           </div>
         </Suspense>
       </SectionErrorBoundary>
+    ),
+  };
+
+  return (
+    <>
+      {!isKorea && (
+        <div className="bg-gradient-to-r from-brand-notice-from to-brand-notice-to text-white text-center py-2 px-4 text-[13px] font-medium">
+          🌏 {GLOBAL_BANNER[lang]}
+        </div>
+      )}
+      {sectionOrder.map(key => <div key={key}>{sectionsMap[key]}</div>)}
     </>
   );
 }

@@ -31,23 +31,47 @@ interface Props {
   selected: boolean;
   onSelect: () => void;
   onEdit: () => void;
+  /** When true, the card is draggable to reorder the homepage section
+   *  list. Site-chrome rows (theme, logo, menus, footer, top-stripe)
+   *  pass false because the storefront's section order only covers the
+   *  homepage body, not the global chrome. */
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
+  onDragEnd?: () => void;
+  dragOver?: boolean;
 }
 
-export default function SectionCard({ section, selected, onSelect, onEdit }: Props) {
+export default function SectionCard({
+  section, selected, onSelect, onEdit,
+  draggable = false, onDragStart, onDragOver, onDrop, onDragEnd, dragOver = false,
+}: Props) {
   const Icon = section.icon;
   return (
     <div
       onClick={onSelect}
+      draggable={draggable}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      onDragEnd={onDragEnd}
       className={`group flex items-center gap-2 px-2.5 py-2 rounded-md border cursor-pointer transition-all relative ${
         selected
           ? 'border-[#3b82f6] bg-[#eff6ff] shadow-sm'
           : 'border-[#e5e7eb] bg-white hover:border-[#d1d5db] hover:bg-[#f9fafb]'
-      }`}
+      } ${dragOver ? 'ring-2 ring-[#3b82f6] ring-offset-1' : ''}`}
     >
-      {/* Drag handle — purely visual for the MVP; drag-reorder lands in
-          Phase 1.5 alongside a section_order column. The dots glyph
-          signals the affordance to Songyi even before the wiring. */}
-      <GripVertical className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-400 flex-shrink-0" />
+      {/* Drag handle — active when this card is reorderable. The grip
+          cursor on hover surfaces the affordance. Site-chrome rows
+          render the glyph dimmed (no draggable, no cursor change). */}
+      <GripVertical
+        className={`w-3.5 h-3.5 flex-shrink-0 ${
+          draggable
+            ? 'text-gray-400 group-hover:text-gray-600 cursor-grab active:cursor-grabbing'
+            : 'text-gray-200'
+        }`}
+      />
 
       {/* Icon tile — matches Cafe24's square icon container at ~32px */}
       <div className={`w-8 h-8 rounded flex items-center justify-center flex-shrink-0 ${
