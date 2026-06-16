@@ -81,6 +81,15 @@ export default function HomepageBuilderPage() {
   // when open. The matching SectionDef is looked up from `grouped` to
   // get the display name + href for the iframe url.
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  // Operator-controlled homepage section order. Initialized to the
+  // storefront's default order (lib/api/sectionOrder.DEFAULT_ORDER);
+  // overwritten by the saved DB row on mount. Drag-and-drop in the
+  // section list mutates this and saves back to site_settings.
+  const [sectionOrder, setSectionOrder] = useState<string[]>([
+    'carousel', 'promo-banners', 'products', 'shorts', 'sub-hero', 'instagram',
+  ]);
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
   // Initial isLoading derives from supabase availability so we never sync
   // setState inside the effect below (react-hooks/set-state-in-effect).
   const [isLoading, setIsLoading] = useState(supabase !== null);
@@ -89,6 +98,26 @@ export default function HomepageBuilderPage() {
   // Load every section's count concurrently. Errors per query degrade to
   // 0 instead of crashing the hub — Songyi should never see a blank page
   // because one of seven queries hiccuped.
+  // Load the saved section order on mount alongside section counts.
+  useEffect(() => {
+    if (!supabase) return;
+    (async () => {
+      const { data } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'homepage_section_order')
+        .maybeSingle();
+      if (data?.value) {
+        try {
+          const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+          if (Array.isArray(parsed) && parsed.every(k => typeof k === 'string')) {
+            setSectionOrder(parsed);
+          }
+        } catch { /* keep default */ }
+      }
+    })().catch(err => console.error('[admin/homepage] section order load failed:', err));
+  }, []);
+
   useEffect(() => {
     if (!supabase) return;
     (async () => {
@@ -235,7 +264,21 @@ export default function HomepageBuilderPage() {
         },
       ],
     },
-  ]), [counts]);
+  ].map(group => {
+    // Apply the operator's saved order to the '홈페이지 섹션' group.
+    // Reviews + other non-reorderable keys stay at the end of their
+    // group in their original spot.
+    if (group.title !== '홈페이지 섹션 (위에서 아래로)') return group;
+    const ordered: typeof group.sections = [];
+    const remaining = new Map(group.sections.map(s => [s.key, s]));
+    for (const k of sectionOrder) {
+      const s = remaining.get(k);
+      if (s) { ordered.push(s); remaining.delete(k); }
+    }
+    // Any sections not in the saved order (e.g. reviews) stay at the end.
+    for (const s of remaining.values()) ordered.push(s);
+    return { ...group, sections: ordered };
+  })), [counts, sectionOrder]);
 
   const handleReload = () => setIframeKey(k => k + 1);
 
@@ -280,6 +323,62 @@ export default function HomepageBuilderPage() {
   function handleEdit(key: string) {
     setSelectedKey(key);
     setEditingKey(key);
+  }
+
+  // Drag-and-drop handlers for the 홈페이지 섹션 group. Reordering is
+  // optimistic (local state updates immediately, then we persist).
+  // The reorderable key set is the same one the storefront's section
+  // map covers — global chrome rows (theme, logo, menus, top-stripe,
+  // footer) stay fixed in their group.
+  const REORDERABLE = new Set(['carousel','promo-banners','products','shorts','sub-hero','instagram']);
+
+  async function saveSectionOrder(next: string[]) {
+    if (!supabase) return;
+    try {
+      const { error } = await supabase
+        .from('site_settings')
+        .upsert(
+          { key: 'homepage_section_order', value: JSON.stringify(next), updated_at: new Date().toISOString() },
+          { onConflict: 'key' },
+        );
+      if (error) throw error;
+    } catch (err) {
+      console.error('[admin/homepage] section order save failed:', err);
+    }
+  }
+
+  function handleDragStart(key: string, e: React.DragEvent) {
+    setDragKey(key);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', key);
+  }
+  function handleDragOver(key: string, e: React.DragEvent) {
+    if (!dragKey || dragKey === key) return;
+    if (!REORDERABLE.has(key)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverKey(key);
+  }
+  function handleDrop(targetKey: string, e: React.DragEvent) {
+    e.preventDefault();
+    if (!dragKey || dragKey === targetKey) return;
+    if (!REORDERABLE.has(targetKey) || !REORDERABLE.has(dragKey)) return;
+    const onlyReorderable = sectionOrder.filter(k => REORDERABLE.has(k));
+    const from = onlyReorderable.indexOf(dragKey);
+    const to = onlyReorderable.indexOf(targetKey);
+    if (from < 0 || to < 0) return;
+    const next = [...onlyReorderable];
+    next.splice(from, 1);
+    next.splice(to, 0, dragKey);
+    setSectionOrder(next);
+    setDragOverKey(null);
+    void saveSectionOrder(next);
+    // Bump the preview iframe so the new order is reflected.
+    setIframeKey(k => k + 1);
+  }
+  function handleDragEnd() {
+    setDragKey(null);
+    setDragOverKey(null);
   }
 
   function handleDrawerClose() {
@@ -354,15 +453,24 @@ export default function HomepageBuilderPage() {
                       {group.title}
                     </p>
                     <div className="space-y-1.5">
-                      {group.sections.map(section => (
-                        <SectionCard
-                          key={section.key}
-                          section={section}
-                          selected={selectedKey === section.key}
-                          onSelect={() => handleSelect(section.key)}
-                          onEdit={() => handleEdit(section.key)}
-                        />
-                      ))}
+                      {group.sections.map(section => {
+                        const reorderable = REORDERABLE.has(section.key);
+                        return (
+                          <SectionCard
+                            key={section.key}
+                            section={section}
+                            selected={selectedKey === section.key}
+                            onSelect={() => handleSelect(section.key)}
+                            onEdit={() => handleEdit(section.key)}
+                            draggable={reorderable}
+                            onDragStart={reorderable ? e => handleDragStart(section.key, e) : undefined}
+                            onDragOver={reorderable ? e => handleDragOver(section.key, e) : undefined}
+                            onDrop={reorderable ? e => handleDrop(section.key, e) : undefined}
+                            onDragEnd={reorderable ? handleDragEnd : undefined}
+                            dragOver={dragOverKey === section.key}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 ))
