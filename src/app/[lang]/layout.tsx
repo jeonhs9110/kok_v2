@@ -11,6 +11,8 @@ import { CartProvider } from '@/lib/cart/CartContext';
 import { WishlistProvider } from '@/lib/wishlist/WishlistContext';
 import { getCachedNavMenus, getCachedCategoriesTree, getCachedLogoUrl } from '@/lib/cache/header';
 import { getThemeTokens } from '@/lib/theme/getThemeTokens';
+import { getTopStripe } from '@/lib/api/topStripe';
+import TopStripeBanner from '@/components/TopStripeBanner';
 import { tokensToCss } from '@/lib/theme/tokens';
 
 export async function generateMetadata() {
@@ -42,11 +44,12 @@ export default async function LangLayout({
   // useEffect inside Header would fetch these after mount and the visible
   // header would expand from "Product / SHOP Worldwide" to the full bar
   // a few hundred ms later — a layout shift the operator complained about.
-  const [initialNavMenus, initialMegaCategories, initialLogoUrl, themeTokens] = await Promise.all([
+  const [initialNavMenus, initialMegaCategories, initialLogoUrl, themeTokens, topStripe] = await Promise.all([
     getCachedNavMenus(),
     getCachedCategoriesTree(),
     getCachedLogoUrl(),
     getThemeTokens(),
+    getTopStripe(),
   ]);
 
   return (
@@ -84,6 +87,9 @@ export default async function LangLayout({
           }}
         />
         <div className="flex flex-col min-h-screen">
+          <div data-builder-section="top-stripe">
+            <TopStripeBanner data={topStripe} />
+          </div>
           <Header
             canPurchase={isKorea}
             initialNavMenus={initialNavMenus}

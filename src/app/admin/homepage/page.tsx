@@ -159,6 +159,11 @@ export default function HomepageBuilderPage() {
           href: '/admin/menus', status: '전역 적용', visible: true,
           hint: '상단 메뉴 항목, 메뉴 페이지 콘텐츠',
         },
+        {
+          key: 'top-stripe', name: '상단 띠배너', icon: PanelTop,
+          href: '/admin/top-stripe', status: '전역 적용', visible: true,
+          hint: '헤더 위 얇은 띠 (쿠폰/이벤트 안내)',
+        },
       ],
     },
     {
