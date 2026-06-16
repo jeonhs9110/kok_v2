@@ -66,6 +66,74 @@ export default function CarouselSlideModal({
     setIsEmbedded(new URLSearchParams(window.location.search).get('embedded') === 'true');
   }, []);
 
+  // Live preview pipeline — every formData change posts to the hub which
+  // forwards to the central 1440px storefront iframe. The storefront's
+  // HeroSlider listens and overlays the in-flight values on the matching
+  // slide. Image swaps are post-save only (blob URLs do not survive a
+  // postMessage hop). When the modal closes the unmount cleanup sends a
+  // null override so the storefront drops back to the persisted slide.
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+    if (!editingId) return; // New slides have no id to overlay yet.
+    const override = {
+      badge: formData.badge,
+      title: formData.title,
+      subtitle: formData.subtitle,
+      bg_color: formData.bg_color,
+      text_color: formData.text_color,
+      badge_bg_color: formData.badge_bg_color,
+      badge_text_color: formData.badge_text_color,
+      title_size_offset: formData.title_size_offset,
+      subtitle_size_offset: formData.subtitle_size_offset,
+      badge_size_offset: formData.badge_size_offset,
+      display_mode: formData.display_mode,
+      media_type: formData.media_type,
+      link_url: formData.link_url,
+      badge_font_family: formData.badge_font_family,
+      title_font_family: formData.title_font_family,
+      subtitle_font_family: formData.subtitle_font_family,
+      badge_bold: formData.badge_bold,
+      badge_italic: formData.badge_italic,
+      badge_underline: formData.badge_underline,
+      title_bold: formData.title_bold,
+      title_italic: formData.title_italic,
+      title_underline: formData.title_underline,
+      subtitle_bold: formData.subtitle_bold,
+      subtitle_italic: formData.subtitle_italic,
+      subtitle_underline: formData.subtitle_underline,
+      text_position: formData.text_position,
+      text_position_mobile: formData.text_position_mobile,
+      image_position: formData.image_position,
+      image_position_mobile: formData.image_position_mobile,
+      text_anchor: formData.text_anchor,
+      text_anchor_mobile: formData.text_anchor_mobile,
+      image_anchor: formData.image_anchor,
+      image_anchor_mobile: formData.image_anchor_mobile,
+    };
+    try {
+      window.parent.postMessage(
+        { type: 'kokkok-builder-slide-preview', slideId: editingId, override },
+        window.location.origin,
+      );
+    } catch {
+      // Ignore — preview is best-effort; save is the source of truth.
+    }
+  }, [formData, editingId]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window === 'undefined' || window.parent === window) return;
+      try {
+        window.parent.postMessage(
+          { type: 'kokkok-builder-slide-preview', slideId: null, override: null },
+          window.location.origin,
+        );
+      } catch {
+        // Ignore — modal is closing anyway.
+      }
+    };
+  }, []);
+
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;

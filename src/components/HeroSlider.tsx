@@ -28,7 +28,39 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
   );
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const slides = useMemo(() => (dbSlides || []).map(s => {
+  // Live preview overlay — when the admin opens a slide in the
+  // /admin/homepage builder drawer, every form change posts a message
+  // up to the hub which forwards it here. We overlay the in-flight
+  // values onto the matching slide so the central 1440px preview
+  // reflects edits before save. Image swaps are post-save only (blob
+  // URLs do not survive the postMessage hop). A null payload (modal
+  // close) drops the overlay so the persisted slide reappears.
+  const [previewOverride, setPreviewOverride] = useState<{
+    slideId: string;
+    override: Partial<CarouselSlide>;
+  } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.parent === window) return; // Only active in the builder iframe.
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      if (!e.data || typeof e.data !== 'object') return;
+      if (e.data.type !== 'kokkok-builder-slide-preview') return;
+      if (!e.data.slideId) {
+        setPreviewOverride(null);
+        return;
+      }
+      setPreviewOverride({ slideId: e.data.slideId, override: e.data.override || {} });
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+
+  const slides = useMemo(() => (dbSlides || []).map(raw => {
+    const s: CarouselSlide = previewOverride && previewOverride.slideId === raw.id
+      ? { ...raw, ...previewOverride.override }
+      : raw;
     const mediaType = s.media_type || (s.image_url?.match(/\.(mp4|webm|mov)$/i) ? 'video' : s.image_url?.match(/\.gif$/i) ? 'gif' : 'image');
     return {
       id: s.id,
@@ -79,7 +111,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
         resolveAnchor(s.image_anchor, s.image_position),
       ),
     };
-  }), [dbSlides, lang]);
+  }), [dbSlides, lang, previewOverride]);
 
   const scrollPrev = useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
