@@ -81,10 +81,6 @@ export default function HomepageBuilderPage() {
   // when open. The matching SectionDef is looked up from `grouped` to
   // get the display name + href for the iframe url.
   const [editingKey, setEditingKey] = useState<string | null>(null);
-  // When the editor drawer is open, the rail hides off-screen. Hovering
-  // the left edge brings it back. Reset on each new edit so opening the
-  // drawer always starts with the rail hidden.
-  const [railHover, setRailHover] = useState(false);
   // Initial isLoading derives from supabase availability so we never sync
   // setState inside the effect below (react-hooks/set-state-in-effect).
   const [isLoading, setIsLoading] = useState(supabase !== null);
@@ -279,12 +275,10 @@ export default function HomepageBuilderPage() {
   function handleEdit(key: string) {
     setSelectedKey(key);
     setEditingKey(key);
-    setRailHover(false);
   }
 
   function handleDrawerClose() {
     setEditingKey(null);
-    setRailHover(false);
     // Bump the preview iframe key so it remounts and pulls fresh data
     // — covers the "I saved inside the drawer, now show me the result"
     // flow without needing each editor to broadcast a save event.
@@ -323,84 +317,82 @@ export default function HomepageBuilderPage() {
         onReload={handleReload}
       />
 
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Left-edge hover strip — slides the rail back into view when
-            the drawer is open and the admin moves the cursor to the
-            very left of the viewport. 12px wide, transparent, sits
-            above the dimmed preview pane. Only mounts while the drawer
-            is open so it doesn't interfere with normal use. */}
-        {editingKey && (
-          <div
-            className="absolute top-0 left-0 bottom-0 w-3 z-[55]"
-            onMouseEnter={() => setRailHover(true)}
-            aria-hidden="true"
+      <div className="flex-1 flex overflow-hidden">
+        {/* ── LEFT RAIL: full section list (default) OR icon-only
+            collapse (when an editor is open). The collapse is the
+            operator's 2026-06-10 ask — keep the navigation visible as
+            icons so they can switch sections without closing the
+            editor, but reclaim the 260px width for the editor panel +
+            preview. Selection state + click-to-switch still work in
+            both modes. */}
+        {editingKey ? (
+          <CollapsedRail
+            grouped={grouped}
+            editingKey={editingKey}
+            onEdit={handleEdit}
+          />
+        ) : (
+          <aside className="w-[320px] bg-white border-r border-[#e5e7eb] flex flex-col overflow-hidden flex-shrink-0">
+            <div className="flex border-b border-[#e5e7eb] bg-[#f9fafb]">
+              <TabButton active>섹션</TabButton>
+              <TabButton href="/admin/theme?from=homepage">스타일</TabButton>
+              <TabButton disabled>확장</TabButton>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+              {isLoading ? (
+                <div className="text-center text-[13px] text-gray-400 py-12">불러오는 중...</div>
+              ) : (
+                grouped.map(group => (
+                  <div key={group.title}>
+                    <p className="px-1 pb-2 text-[10px] font-bold tracking-[0.15em] uppercase text-[#9ca3af]">
+                      {group.title}
+                    </p>
+                    <div className="space-y-1.5">
+                      {group.sections.map(section => (
+                        <SectionCard
+                          key={section.key}
+                          section={section}
+                          selected={selectedKey === section.key}
+                          onSelect={() => handleSelect(section.key)}
+                          onEdit={() => handleEdit(section.key)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="border-t border-[#e5e7eb] p-3 space-y-2 bg-[#fafbfc] flex-shrink-0">
+              <Link
+                href="/admin/pages?from=homepage"
+                className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-[12px] font-semibold text-[#3b82f6] border border-[#bfdbfe] bg-white rounded hover:bg-[#eff6ff] transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                섹션 추가 (페이지 빌더)
+              </Link>
+              <Link
+                href="/admin/theme?from=homepage"
+                className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 text-[11px] text-[#6b7280] hover:text-[#1f2937] transition-colors"
+              >
+                <Code2 className="w-3 h-3" />
+                테마/HTML 직접 편집
+              </Link>
+            </div>
+          </aside>
+        )}
+
+        {/* ── INLINE EDITOR PANEL: sits between the collapsed icon rail
+            and the central preview when an editor is open. */}
+        {editingSection && (
+          <EditorDrawer
+            sectionKey={editingSection.key}
+            sectionName={editingSection.name}
+            href={editingSection.href}
+            onClose={handleDrawerClose}
           />
         )}
-        {/* ── LEFT RAIL: section list ──────────────────────────────
-            When the editor drawer is open the rail slides off to the
-            left so the central preview reclaims its space — Songyi's
-            2026-06-10 ask. Hovering the left-edge strip above brings
-            the rail back; moving away closes it again. */}
-        <aside
-          onMouseLeave={() => editingKey && setRailHover(false)}
-          className={`w-[320px] bg-white border-r border-[#e5e7eb] flex flex-col overflow-hidden flex-shrink-0 transition-transform duration-200 ease-out ${
-            editingKey && !railHover ? '-translate-x-full' : 'translate-x-0'
-          } ${editingKey ? 'absolute top-0 left-0 bottom-0 z-[60] shadow-2xl' : ''}`}
-        >
-          {/* Tabs — only 섹션 is active for the MVP; 스타일 deep-links
-              to /admin/theme since that's exactly the styles surface.
-              확장 is a placeholder for the Phase 3 plugin shell. */}
-          <div className="flex border-b border-[#e5e7eb] bg-[#f9fafb]">
-            <TabButton active>섹션</TabButton>
-            <TabButton href="/admin/theme?from=homepage">스타일</TabButton>
-            <TabButton disabled>확장</TabButton>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
-            {isLoading ? (
-              <div className="text-center text-[13px] text-gray-400 py-12">불러오는 중...</div>
-            ) : (
-              grouped.map(group => (
-                <div key={group.title}>
-                  <p className="px-1 pb-2 text-[10px] font-bold tracking-[0.15em] uppercase text-[#9ca3af]">
-                    {group.title}
-                  </p>
-                  <div className="space-y-1.5">
-                    {group.sections.map(section => (
-                      <SectionCard
-                        key={section.key}
-                        section={section}
-                        selected={selectedKey === section.key}
-                        onSelect={() => handleSelect(section.key)}
-                        onEdit={() => handleEdit(section.key)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Footer of the rail — section-add affordance + HTML escape
-              hatch. Both are intentionally subtle (outlined / muted) so
-              they don't compete with the editable section cards above. */}
-          <div className="border-t border-[#e5e7eb] p-3 space-y-2 bg-[#fafbfc] flex-shrink-0">
-            <Link
-              href="/admin/pages?from=homepage"
-              className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-[12px] font-semibold text-[#3b82f6] border border-[#bfdbfe] bg-white rounded hover:bg-[#eff6ff] transition-colors"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              섹션 추가 (페이지 빌더)
-            </Link>
-            <Link
-              href="/admin/theme?from=homepage"
-              className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 text-[11px] text-[#6b7280] hover:text-[#1f2937] transition-colors"
-            >
-              <Code2 className="w-3 h-3" />
-              테마/HTML 직접 편집
-            </Link>
-          </div>
-        </aside>
 
         {/* ── RIGHT: live preview ────────────────────────────── */}
         <section className="flex-1 overflow-auto bg-[#f5f6f8] p-4 sm:p-6 flex justify-center items-start">
@@ -442,20 +434,62 @@ export default function HomepageBuilderPage() {
           </div>
         </section>
       </div>
-
-      {/* Slide-in editor drawer — opens when a section card's pencil
-          is clicked. Iframes the section's /admin/<route>?embedded=true
-          so Songyi stays in the builder context the whole time. */}
-      {editingSection && (
-        <EditorDrawer
-          open={editingKey !== null}
-          sectionKey={editingSection.key}
-          sectionName={editingSection.name}
-          href={editingSection.href}
-          onClose={handleDrawerClose}
-        />
-      )}
     </div>
+  );
+}
+
+/**
+ * CollapsedRail — icon-only navigation that replaces the full section
+ * list when an editor is open. Same selection state as the full rail
+ * (active section gets a blue tint + left-border accent); clicking a
+ * different icon swaps the editor to that section. Keeps the operator
+ * oriented while reclaiming 256px of horizontal space for the editor +
+ * preview combo.
+ */
+function CollapsedRail({
+  grouped, editingKey, onEdit,
+}: {
+  grouped: Array<{ title: string; sections: SectionDef[] }>;
+  editingKey: string;
+  onEdit: (key: string) => void;
+}) {
+  return (
+    <aside className="w-[64px] bg-white border-r border-[#e5e7eb] flex flex-col overflow-hidden flex-shrink-0">
+      <div className="flex-1 overflow-y-auto py-2 space-y-1">
+        {grouped.map((group, gi) => (
+          <div key={group.title}>
+            {/* Thin divider between groups so the operator still gets the
+                same visual grouping as the full rail. No labels — those
+                live as hover tooltips on each icon button below. */}
+            {gi > 0 && <div className="mx-3 my-1 border-t border-[#f3f4f6]" />}
+            {group.sections.map(section => {
+              const Icon = section.icon;
+              const active = editingKey === section.key;
+              return (
+                <button
+                  key={section.key}
+                  type="button"
+                  onClick={() => onEdit(section.key)}
+                  className={`w-full h-11 flex items-center justify-center transition-colors relative ${
+                    active
+                      ? 'bg-[#eff6ff] text-[#3b82f6]'
+                      : 'text-[#6b7280] hover:bg-[#f9fafb] hover:text-[#1f2937]'
+                  }`}
+                  title={section.name}
+                  aria-label={section.name}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  {active && (
+                    <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r bg-[#3b82f6]" />
+                  )}
+                  <Icon className="w-4 h-4" />
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </aside>
   );
 }
 
