@@ -292,7 +292,13 @@ export default function HomepageBuilderPage() {
       if (!e.data || typeof e.data !== 'object') return;
       // Whitelist the message types we relay. Everything else is
       // either ours-only (highlight, drawer close) or unrelated.
-      if (e.data.type !== 'kokkok-theme-tokens') return;
+      // kokkok-builder-slide-preview carries in-flight slide modal
+      // form changes through to the storefront's HeroSlider so the
+      // central 1440px preview reflects edits before save.
+      if (
+        e.data.type !== 'kokkok-theme-tokens' &&
+        e.data.type !== 'kokkok-builder-slide-preview'
+      ) return;
       const iframe = iframeRef.current;
       if (!iframe?.contentWindow) return;
       iframe.contentWindow.postMessage(e.data, window.location.origin);
