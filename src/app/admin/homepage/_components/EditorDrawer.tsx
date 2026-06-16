@@ -60,15 +60,6 @@ export default function EditorDrawer({
     return () => window.removeEventListener('message', onMessage);
   }, [open, onClose]);
 
-  // Lock body scroll while the drawer is open so the page behind
-  // doesn't scroll under the backdrop.
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prev; };
-  }, [open]);
-
   if (!open) return null;
 
   // ?embedded=true tells admin/layout.tsx to render bare children.
@@ -79,15 +70,14 @@ export default function EditorDrawer({
 
   return (
     <>
-      {/* Backdrop — dims the storefront preview behind the drawer. */}
-      <div
-        onClick={onClose}
-        className="fixed inset-0 bg-black/40 z-40 animate-in fade-in duration-150"
-        aria-hidden="true"
-      />
-
       {/* Drawer panel — slides in from the right at ~720px wide on
-          desktop, full width on tablet/mobile. */}
+          desktop, full width on tablet/mobile.
+          NO BACKDROP — the previous black/40 backdrop dimmed AND
+          blocked the central storefront preview, making the very
+          thing Songyi wanted to watch unusable while editing. The
+          preview stays fully visible and interactive; the drawer
+          sits beside it and is dismissed via the X button, ESC,
+          or the editor posting kokkok-builder-editor-close. */}
       <aside
         className="fixed right-0 top-0 bottom-0 w-full sm:w-[680px] lg:w-[760px] bg-white z-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-200"
         role="dialog"
