@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Search, ShoppingBag, User, Menu, X, Globe } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
 import LanguagePicker from '@/components/LanguagePicker';
@@ -59,6 +60,26 @@ export default function Header({
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Homepage gets the ANUA-style overlay treatment — header floats over
+  // the hero slide (transparent bg) and fades to white as you scroll
+  // past the hero. Every other route keeps the classic white bar so the
+  // change is contained to the storefront landing experience.
+  const pathname = usePathname() || '';
+  const isHomepage = /^\/(kr|en)\/?$/.test(pathname);
+  const [scrolledPastHero, setScrolledPastHero] = useState(false);
+  useEffect(() => {
+    if (!isHomepage) return;
+    function onScroll() {
+      // Fade threshold ≈ 80% of the viewport height — by the time the
+      // hero scrolls out, the header is fully opaque against the next
+      // section's background.
+      setScrolledPastHero(window.scrollY > window.innerHeight * 0.8);
+    }
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [isHomepage]);
+
   // Auth state — re-evaluates on mount AND on supabase auth events so the
   // header swaps Sign-in ↔ Logout immediately after login, without a reload.
   useEffect(() => {
@@ -89,6 +110,30 @@ export default function Header({
       slug: sub.slug,
     })),
   }));
+
+  // Publish the live header height as a CSS variable so the ANUA-style
+  // hero overlay on the homepage knows exactly how far to pull itself
+  // up. Re-measured on theme-token changes (logo height / menu font)
+  // because the header bar grows with WHICHEVER is tallest among the
+  // floors, so a static value would drift after admin edits.
+  const headerBarRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const bar = headerBarRef.current;
+    if (!bar) return;
+    function publish() {
+      const h = bar!.getBoundingClientRect().height;
+      if (h > 0) document.documentElement.style.setProperty('--kokkok-header-h', `${Math.round(h)}px`);
+    }
+    publish();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(publish) : null;
+    if (ro) ro.observe(bar);
+    window.addEventListener('resize', publish);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', publish);
+    };
+  }, []);
 
   // Mega-menu left offset. The dropdown panels (Product + dynamic menus)
   // span the full viewport width visually, but the inner column container
@@ -202,8 +247,20 @@ export default function Header({
       </div>
 
       {/* ── MAIN HEADER ─────────────────────────────────────────────── */}
+      {/* Homepage: starts transparent + no border so the hero shows
+          through; fades to white + border once the hero scrolls off
+          screen. Other pages: classic white bar unchanged. The fade is
+          opacity-driven so the menu fonts never reflow. */}
       <header
-        className="sticky top-0 z-40 bg-white border-b border-neutral-100 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
+        className={
+          isHomepage
+            ? `sticky top-0 z-40 transition-colors duration-300 ${
+                scrolledPastHero
+                  ? 'bg-white border-b border-neutral-100 shadow-[0_1px_0_rgba(0,0,0,0.04)]'
+                  : 'bg-transparent border-b border-transparent shadow-none backdrop-blur-[2px]'
+              }`
+            : 'sticky top-0 z-40 bg-white border-b border-neutral-100 shadow-[0_1px_0_rgba(0,0,0,0.04)]'
+        }
         data-builder-section="menus"
       >
         <div ref={headerInnerRef} className="max-w-[1600px] mx-auto px-4 sm:px-8">
@@ -216,6 +273,7 @@ export default function Header({
               menu to 32px without touching the logo and the bar
               expands cleanly. */}
           <div
+            ref={headerBarRef}
             className="kokkok-header-bar flex items-center gap-4 py-3"
             style={{
               minHeight: 'max(66px, calc(var(--header-logo-height, 40px) + 24px), calc(var(--header-menu-font-size, 15px) + 36px))',

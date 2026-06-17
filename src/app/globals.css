@@ -195,6 +195,43 @@ input[type="button"]:not(.kokkok-keep-font) {
   margin-left: auto;
   margin-right: auto;
 }
+
+/* ANUA-style overlay hero — the homepage pulls the hero up UNDER the
+   transparent sticky header so the carousel image fills the viewport
+   from top: 0. Other pages don't apply this class, so the classic
+   "header bar + hero below" layout is preserved everywhere else. A
+   subtle dark gradient at the very top keeps the dark menu text
+   readable when a slide happens to be light-toned. */
+.kokkok-hero-overlay {
+  margin-top: calc(-1 * var(--kokkok-header-h, 105px));
+  position: relative;
+}
+.kokkok-hero-overlay::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--kokkok-header-h, 105px);
+  /* Subtle safety net for dark slides — the header itself adds
+     backdrop-blur, so this is intentionally very light. */
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.10) 60%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  pointer-events: none;
+  z-index: 30;
+}
+@media (max-width: 1023px) {
+  .kokkok-hero-overlay {
+    margin-top: calc(-1 * var(--kokkok-header-h, 80px));
+  }
+  .kokkok-hero-overlay::before {
+    height: var(--kokkok-header-h, 80px);
+  }
+}
 @media (min-width: 640px) {
   .kokkok-hero-region {
     height: var(--hero-height-tablet, 900px);

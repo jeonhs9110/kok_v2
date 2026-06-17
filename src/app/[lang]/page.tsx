@@ -106,7 +106,11 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   // so a newly-added section never disappears even if the operator
   // saved their order before the section existed.
   const sectionsMap: Record<string, React.ReactNode> = {
-    'carousel': <HeroSlider lang={lang} slides={carouselSlides} />,
+    'carousel': (
+      <div className="kokkok-hero-overlay">
+        <HeroSlider lang={lang} slides={carouselSlides} />
+      </div>
+    ),
     'promo-banners': (
       <div data-builder-section="promo-banners">
         <PromoBannersSection banners={promoBanners} />
