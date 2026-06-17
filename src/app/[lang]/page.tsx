@@ -17,6 +17,7 @@ import HomepageBanner from '@/components/HomepageBanner';
 import { getCachedProducts, getCachedSlides, getCachedPromoBanners } from '@/lib/cache/homepage';
 import { getSectionOrder, isBannerKey } from '@/lib/api/sectionOrder';
 import { getHomepageBanners } from '@/lib/api/homepageBanners';
+import { getBestSellerDisplay } from '@/lib/api/bestSellerDisplay';
 import { isValidLang, type Lang } from '@/lib/i18n/types';
 import type { Product } from '@/lib/api/products';
 
@@ -86,12 +87,13 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     || 'KR';
   const isKorea = country === 'KR';
 
-  const [allProducts, carouselSlides, promoBanners, sectionOrder, homepageBanners] = await Promise.all([
+  const [allProducts, carouselSlides, promoBanners, sectionOrder, homepageBanners, bestSellerDisplay] = await Promise.all([
     getCachedProducts(),
     getCachedSlides(),
     getCachedPromoBanners(),
     getSectionOrder(),
     getHomepageBanners(),
+    getBestSellerDisplay(),
   ]);
   const bannersById = new Map(homepageBanners.map(b => [b.id, b]));
 
@@ -121,7 +123,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
             View All
           </Link>
         </div>
-        <ProductGrid products={bestSellerProducts} canPurchase={isKorea} />
+        <ProductGrid products={bestSellerProducts} canPurchase={isKorea} displayConfig={bestSellerDisplay} />
       </section>
     ),
     'shorts': (

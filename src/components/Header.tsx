@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Search, ShoppingBag, User, Menu, X, Globe } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
 import LanguagePicker from '@/components/LanguagePicker';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/api/products';
 import type { CategoryWithChildren } from '@/lib/api/categories';
 import type { MenuWithChildren } from '@/lib/api/menus';
@@ -90,13 +90,67 @@ export default function Header({
     })),
   }));
 
+  // Mega-menu left offset. The dropdown panels (Product + dynamic menus)
+  // span the full viewport width visually, but the inner column container
+  // is shifted right so the FIRST submenu item aligns with the LEFT EDGE
+  // of the triggering menu button's TEXT. Operator's 2026-06-17 ask:
+  // submenus should sit directly under "Product" (etc.), not at the
+  // far-left of the header. Re-measured on window resize so the offset
+  // stays correct after a logo/menu-font theme change.
+  const headerInnerRef = useRef<HTMLDivElement>(null);
+  const productWrapRef = useRef<HTMLDivElement>(null);
+  const menuWrapRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+  const [megaLeft, setMegaLeft] = useState(0);
+
+  // Each menu trigger's button uses px-4 (16px) horizontal padding. The
+  // submenu items have no leading padding, so adding that 16 lines the
+  // first submenu glyph up with the parent button's TEXT, not its box.
+  const BUTTON_PADDING_LEFT = 16;
+
+  const measureLeft = useCallback((triggerEl: HTMLElement | null) => {
+    const inner = headerInnerRef.current;
+    if (!triggerEl || !inner) return;
+    const t = triggerEl.getBoundingClientRect();
+    const i = inner.getBoundingClientRect();
+    setMegaLeft(Math.max(0, t.left - i.left + BUTTON_PADDING_LEFT));
+  }, []);
+
   const openMenu = (name: string) => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     setActiveMenu(name);
+    // Measure the triggering wrap so the mega panel can offset its
+    // columns to sit directly under the active button's text.
+    if (name === 'product') {
+      measureLeft(productWrapRef.current);
+    } else if (name.startsWith('menu-')) {
+      const slug = name.slice(5);
+      measureLeft(menuWrapRefs.current.get(slug) || null);
+    }
   };
   const closeMenu = () => {
     hoverTimer.current = setTimeout(() => setActiveMenu(null), 120);
   };
+
+  // Keep megaLeft accurate after a viewport resize OR a theme-token
+  // change (logo height / menu font size). Both reshuffle where the
+  // Product button lands within the header bar.
+  useEffect(() => {
+    if (!activeMenu) return;
+    function recompute() {
+      if (activeMenu === 'product') measureLeft(productWrapRef.current);
+      else if (activeMenu?.startsWith('menu-')) {
+        const slug = activeMenu.slice(5);
+        measureLeft(menuWrapRefs.current.get(slug) || null);
+      }
+    }
+    window.addEventListener('resize', recompute);
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(recompute) : null;
+    if (ro && headerInnerRef.current) ro.observe(headerInnerRef.current);
+    return () => {
+      window.removeEventListener('resize', recompute);
+      ro?.disconnect();
+    };
+  }, [activeMenu, measureLeft]);
   const keepMenu = () => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
   };
@@ -152,7 +206,7 @@ export default function Header({
         className="sticky top-0 z-40 bg-white border-b border-neutral-100 shadow-[0_1px_0_rgba(0,0,0,0.04)]"
         data-builder-section="menus"
       >
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-8">
+        <div ref={headerInnerRef} className="max-w-[1600px] mx-auto px-4 sm:px-8">
           {/* Header bar grows with WHICHEVER is tallest among:
                 - the 66px floor (pre-token default)
                 - the logo height + 24px breathing room
@@ -209,6 +263,7 @@ export default function Header({
 
               {/* Product — slim submenu bar (reference style) */}
               <div
+                ref={productWrapRef}
                 className="relative h-full flex items-center"
                 onMouseEnter={() => openMenu('product')}
                 onMouseLeave={closeMenu}
@@ -234,7 +289,13 @@ export default function Header({
                   );
                 }
                 return (
-                  <div key={menu.slug} className="relative h-full flex items-center" onMouseEnter={() => openMenu(`menu-${menu.slug}`)} onMouseLeave={closeMenu}>
+                  <div
+                    key={menu.slug}
+                    ref={el => { menuWrapRefs.current.set(menu.slug, el); }}
+                    className="relative h-full flex items-center"
+                    onMouseEnter={() => openMenu(`menu-${menu.slug}`)}
+                    onMouseLeave={closeMenu}
+                  >
                     <Link href={`/${lang}/menus/${menu.slug}`} className={`flex items-center gap-1 px-4 h-full kokkok-nav-menu-text font-semibold tracking-wide transition-colors ${activeMenu === `menu-${menu.slug}` ? 'text-black' : 'text-neutral-800 hover:text-black'}`}>
                       {menuLabel}
                     </Link>
@@ -290,7 +351,10 @@ export default function Header({
             onMouseEnter={keepMenu}
             onMouseLeave={closeMenu}
           >
-            <div className="max-w-[1600px] mx-auto px-8 py-6 flex gap-12">
+            <div
+              className="max-w-[1600px] mx-auto py-6 flex gap-12"
+              style={{ paddingLeft: megaLeft || 32, paddingRight: 32 }}
+            >
               {productMega.map(col => (
                 <div key={col.slug}>
                   <Link
@@ -330,7 +394,10 @@ export default function Header({
               onMouseEnter={keepMenu}
               onMouseLeave={closeMenu}
             >
-              <div className="max-w-[1600px] mx-auto px-8 py-6 flex gap-12">
+              <div
+                className="max-w-[1600px] mx-auto py-6 flex gap-12"
+                style={{ paddingLeft: megaLeft || 32, paddingRight: 32 }}
+              >
                 {menu.children.map(child => (
                   <Link
                     key={child.slug}
