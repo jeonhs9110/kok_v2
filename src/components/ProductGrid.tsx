@@ -26,20 +26,41 @@ interface ProductGridProps {
 
 const BASE_MAX_WIDTH_PX = 1240;
 
+/**
+ * Derive the desktop column count from the operator's scale slider.
+ * The previous implementation kept 4 cols at every scale and grew the
+ * container max-width past the viewport. The viewport always capped the
+ * grid in practice, so a 2.5× setting only nudged cards from ~290 → 340px
+ * (~17% bigger, not 2.5×). The fix: at higher scales, drop columns so the
+ * card percentage of viewport actually grows.
+ *
+ *   ≤1.2  → 4 columns (pre-PR look at scale 1.0)
+ *   1.2–1.8 → 3 columns
+ *   >1.8  → 2 columns (each card ~50% of viewport — what the operator asked for)
+ */
+function desktopColumnsForScale(scale: number): number {
+  if (scale > 1.8) return 2;
+  if (scale > 1.2) return 3;
+  return 4;
+}
+
 export default function ProductGrid({
   title,
   products,
   canPurchase = true,
   displayConfig = DEFAULT_BEST_SELLER_DISPLAY,
 }: ProductGridProps) {
-  // card_scale grows/shrinks the section's container max-width rather
-  // than each card's flex basis. This keeps the grid at 4-col desktop /
-  // 2-col mobile (no overflow + wrap at scale>1.0) while the cards
-  // themselves get proportionally bigger because they remain a fixed
-  // percentage of a wider container. Previous implementation widened
-  // the card flex basis directly — at scale=1.2 each card became 30%
-  // wide × 4 cards = 120% and wrapped to 2 rows.
+  // Container max-width still scales with card_scale so brands that
+  // want a wider band on ultra-wide monitors get one. Cards stay a %
+  // of that container; the desktop column count drops at high scales
+  // so the visible size actually matches operator expectations on a
+  // typical 1440px viewport.
   const containerMaxWidth = `${BASE_MAX_WIDTH_PX * displayConfig.card_scale}px`;
+  const cols = desktopColumnsForScale(displayConfig.card_scale);
+  const lgPct = 100 / cols;
+  const lgGapPerCard = (displayConfig.gap_x * (cols - 1)) / cols;
+  const lgWidth = `calc(${lgPct}% - ${lgGapPerCard}px)`;
+  const smWidth = `calc(50% - ${displayConfig.gap_x / 2}px)`;
   return (
     <section className="py-16 md:py-24">
       <div className="mx-auto px-4 sm:px-6" style={{ maxWidth: containerMaxWidth }}>
@@ -57,8 +78,8 @@ export default function ProductGrid({
             <div
               key={p.id}
               style={{
-                ['--cardW-sm' as string]: `calc(50% - ${displayConfig.gap_x / 2}px)`,
-                ['--cardW-lg' as string]: `calc(25% - ${(displayConfig.gap_x * 3) / 4}px)`,
+                ['--cardW-sm' as string]: smWidth,
+                ['--cardW-lg' as string]: lgWidth,
               }}
               className="kokkok-product-card-cell"
             >

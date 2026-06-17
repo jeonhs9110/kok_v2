@@ -1,5 +1,5 @@
-import { cache } from 'react';
-import { supabase } from '@/lib/api/products';
+import { unstable_cache } from 'next/cache';
+import { createClient } from '@supabase/supabase-js';
 import type { TopStripeBannerData } from '@/components/TopStripeBanner';
 
 const DEFAULT: TopStripeBannerData = {
@@ -28,21 +28,37 @@ function parse(raw: unknown): TopStripeBannerData {
 }
 
 /**
- * Server-side fetcher for the top-stripe banner config. Same pattern
- * as getThemeTokens — React cache() for per-render dedup, falls back
- * to a safe default (banner hidden) on any error.
+ * Server-side fetcher for the top-stripe banner config.
+ *
+ * Uses unstable_cache (not React cache()) so the matching
+ * revalidateHomepageData('top_stripe') call from /admin/top-stripe
+ * actually evicts this entry. React cache() only dedups within a
+ * single render and ignores updateTag — the previous implementation
+ * left the admin save as a visible no-op until the next 60s ISR.
  */
-export const getTopStripe = cache(async (): Promise<TopStripeBannerData> => {
-  if (!supabase) return DEFAULT;
-  try {
-    const { data, error } = await supabase
-      .from('site_settings')
-      .select('value')
-      .eq('key', 'top_stripe')
-      .maybeSingle();
-    if (error || !data) return DEFAULT;
-    return parse(data.value);
-  } catch {
-    return DEFAULT;
-  }
-});
+function client() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return url && key ? createClient(url, key) : null;
+}
+
+export const getTopStripe = unstable_cache(
+  async (): Promise<TopStripeBannerData> => {
+    const c = client();
+    if (!c) return DEFAULT;
+    try {
+      const { data, error } = await c
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'top_stripe')
+        .maybeSingle();
+      if (error || !data) return DEFAULT;
+      return parse(data.value);
+    } catch (err) {
+      console.error('[cache:top_stripe] failed:', err);
+      return DEFAULT;
+    }
+  },
+  ['homepage:top_stripe'],
+  { revalidate: 60, tags: ['homepage', 'top_stripe'] },
+);

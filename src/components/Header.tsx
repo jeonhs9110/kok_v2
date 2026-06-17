@@ -349,7 +349,10 @@ export default function Header({
                 return (
                   <div
                     key={menu.slug}
-                    ref={el => { menuWrapRefs.current.set(menu.slug, el); }}
+                    ref={el => {
+                      if (el) menuWrapRefs.current.set(menu.slug, el);
+                      else menuWrapRefs.current.delete(menu.slug);
+                    }}
                     className="relative h-full flex items-center"
                     onMouseEnter={() => openMenu(`menu-${menu.slug}`)}
                     onMouseLeave={closeMenu}

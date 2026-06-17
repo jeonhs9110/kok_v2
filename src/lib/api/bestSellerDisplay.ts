@@ -1,5 +1,5 @@
-import { cache } from 'react';
-import { supabase } from '@/lib/api/products';
+import { unstable_cache } from 'next/cache';
+import { createClient } from '@supabase/supabase-js';
 
 export interface BestSellerDisplay {
   card_scale: number;
@@ -31,17 +31,34 @@ function parse(raw: unknown): BestSellerDisplay {
   };
 }
 
-export const getBestSellerDisplay = cache(async (): Promise<BestSellerDisplay> => {
-  if (!supabase) return DEFAULT_BEST_SELLER_DISPLAY;
-  try {
-    const { data, error } = await supabase
-      .from('site_settings')
-      .select('value')
-      .eq('key', 'best_seller_display')
-      .maybeSingle();
-    if (error || !data) return DEFAULT_BEST_SELLER_DISPLAY;
-    return parse(data.value);
-  } catch {
-    return DEFAULT_BEST_SELLER_DISPLAY;
-  }
-});
+// unstable_cache (not React cache()) so revalidateHomepageData
+// ('best_seller_display') actually evicts this entry. Previously the
+// fetcher used React cache() which only dedups within a single render —
+// the matching updateTag call from /admin/best-seller-display was a
+// no-op and the storefront kept the old values until the next 60s ISR.
+function client() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return url && key ? createClient(url, key) : null;
+}
+
+export const getBestSellerDisplay = unstable_cache(
+  async (): Promise<BestSellerDisplay> => {
+    const c = client();
+    if (!c) return DEFAULT_BEST_SELLER_DISPLAY;
+    try {
+      const { data, error } = await c
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'best_seller_display')
+        .maybeSingle();
+      if (error || !data) return DEFAULT_BEST_SELLER_DISPLAY;
+      return parse(data.value);
+    } catch (err) {
+      console.error('[cache:best_seller_display] failed:', err);
+      return DEFAULT_BEST_SELLER_DISPLAY;
+    }
+  },
+  ['homepage:best_seller_display'],
+  { revalidate: 60, tags: ['homepage', 'best_seller_display'] },
+);

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -32,6 +33,11 @@ function parseRssItems(xml: string): string[] {
 }
 
 export async function POST() {
+  // Admin-only — this endpoint triggers an RSS pull + DB writes against
+  // every call. Previously unauthenticated, which let anyone burn the
+  // request budget against the RSS provider.
+  const denied = await requireAdmin();
+  if (denied) return denied;
   try {
     if (!supabase) {
       return NextResponse.json({ error: 'Database unavailable.' }, { status: 503 });
