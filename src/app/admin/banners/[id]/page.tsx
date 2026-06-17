@@ -71,23 +71,12 @@ export default function BannerEditPage() {
     })().catch(() => setLoading(false));
   }, [id]);
 
-  // Live preview pipeline — every formData change posts up. Hub relays
-  // to the storefront iframe; the storefront's [lang]/layout dispatches
-  // a window event the HomepageBanner row can listen for. (For MVP we
-  // bump the iframe key on save instead — postMessage relay is plumbed
-  // for parity but the visual update is post-save.)
-  useEffect(() => {
-    if (typeof window === 'undefined' || window.parent === window) return;
-    if (!id) return;
-    try {
-      window.parent.postMessage(
-        { type: 'kokkok-builder-banner-preview', bannerId: id, override: data },
-        window.location.origin,
-      );
-    } catch {
-      // Best-effort.
-    }
-  }, [data, id]);
+  // Note: banner edits don't drive a live preview in the central
+  // iframe today — save → hub bumps iframe key → DB refetch.
+  // The earlier `kokkok-builder-banner-preview` postMessage was wired
+  // here but never listened anywhere; removed to avoid silent dead
+  // traffic. If we add live preview later, mirror the slide-preview
+  // pipeline in CarouselSlideModal + admin/homepage + HomepageBanner.
 
   const updateText = useCallback((lang: Lang, value: string) => {
     setData(prev => ({ ...prev, text: { ...prev.text, [lang]: value } }));
