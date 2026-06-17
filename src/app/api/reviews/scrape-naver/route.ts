@@ -16,6 +16,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -112,6 +113,12 @@ function decodeHtmlEntities(input: string): string {
 }
 
 export async function POST(request: Request): Promise<NextResponse<ScrapeResult | { error: string }>> {
+  // Admin-only — this endpoint issues outbound HTTP to user-controlled
+  // (allowlisted) hosts. Previously unauthenticated, which let anyone
+  // probe the allowlist or drive traffic from the server origin.
+  const denied = await requireAdmin();
+  if (denied) return denied as NextResponse<{ error: string }>;
+
   let body: { url?: unknown };
   try {
     body = await request.json();
