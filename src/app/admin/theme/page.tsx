@@ -254,6 +254,56 @@ export default function ThemePage() {
                 </div>
 
                 <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">서브헤더 (드롭다운) 글씨 크기</label>
+                  <div className="grid grid-cols-4 gap-1.5 mt-1">
+                    {[
+                      { v: '11px',   l: '작게' },
+                      { v: '12.5px', l: '기본' },
+                      { v: '14px',   l: '크게' },
+                      { v: '17px',   l: '더 크게' },
+                    ].map(opt => (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        onClick={() => setTokens(t => ({ ...t, header_submenu_font_size: opt.v }))}
+                        className={`p-2 font-semibold border rounded ${
+                          tokens.header_submenu_font_size === opt.v
+                            ? 'bg-black text-white border-black'
+                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                        }`}
+                        style={{ fontSize: opt.v }}
+                      >
+                        {opt.l}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
+                      직접 입력
+                    </label>
+                    <input
+                      type="number"
+                      min={9}
+                      max={24}
+                      step={0.5}
+                      value={parseFloat(tokens.header_submenu_font_size) || 12.5}
+                      onChange={e => {
+                        const raw = parseFloat(e.target.value);
+                        if (!Number.isFinite(raw)) return;
+                        const clamped = Math.max(9, Math.min(24, raw));
+                        setTokens(t => ({ ...t, header_submenu_font_size: `${clamped}px` }));
+                      }}
+                      className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+                    />
+                    <span className="text-[10px] text-gray-500">px (9–24)</span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-gray-400">
+                    Product 드롭다운 안의 카테고리 + 하위 항목 (카멜리아 / 앰플세럼 / 크림 등) 글씨 크기.
+                    상단 메뉴와 별개로 조절됩니다.
+                  </p>
+                </div>
+
+                <div>
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">서브 히어로 배너 — 서브타이틀 글씨 크기</label>
                   <div className="grid grid-cols-5 gap-1.5 mt-1">
                     {/* Preset row goes up to 32px now. Anything bigger

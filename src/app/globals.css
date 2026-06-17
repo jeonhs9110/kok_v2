@@ -49,6 +49,17 @@
      font when unset, matching pre-token behavior. */
   font-family: var(--font-header, inherit);
 }
+/* Dropdown submenu items inside the Product mega-menu and any dynamic
+   menu's children (카멜리아 / 앰플세럼 / 크림 / 비타민나무열매 / 홈스파123
+   etc). 2026-06-17 operator ask — the parent "헤더 메뉴" slider already
+   worked for the top labels; this class wires the second row of items
+   to a separate --header-submenu-font-size token. The category column
+   header (e.g. "카멜리아" parent label) and the items beneath it both
+   use this class so they scale together. */
+.kokkok-header-submenu {
+  font-size: var(--header-submenu-font-size, 12.5px);
+  font-family: var(--font-header, inherit);
+}
 .kokkok-header-logo-text {
   /* Text-fallback logo (KOKKOK GARDEN) when no logo image is uploaded.
      Same font_header token so the text logo + menu stay consistent. */

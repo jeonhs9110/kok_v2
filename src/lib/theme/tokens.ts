@@ -59,6 +59,14 @@ export interface ThemeTokens {
    */
   header_menu_font_size: string;
   /**
+   * Header dropdown submenu items (카멜리아 / 앰플세럼 / 크림 under Product,
+   * and any dynamic menu's child links). Operator's 2026-06-17 ask: the
+   * "헤더 메뉴 글자 크기" slider works for the top labels but the second
+   * row of items underneath stayed hardcoded. This token feeds the
+   * --header-submenu-font-size CSS var consumed by .kokkok-header-submenu.
+   */
+  header_submenu_font_size: string;
+  /**
    * Header logo height. CSS length value (e.g. "40px"). Drives the
    * <img class="kokkok-header-logo"> in src/components/Header.tsx.
    * Added 2026-06-09 so /admin/logo can offer 작게/기본/크게/더 크게
@@ -143,6 +151,11 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   // any preset (13.5 / 15 / 17 / 19) from /admin/theme; this only moves
   // the out-of-box value for installs without a saved row.
   header_menu_font_size: '15px',
+  // 12.5px matches the pre-token Tailwind text-[12.5px] in Header.tsx
+  // for dropdown submenu items. Admin slider 9–24 covers the range
+  // operators have asked for. Bumping this also widens the dropdown
+  // mega-menu height because items wrap less aggressively.
+  header_submenu_font_size: '12.5px',
   // 56px default — bosses asked for a larger logo at 2026-06-10 meeting;
   // admins can still pin any preset (32/40/48/56) or any pixel value
   // 20–80 from /admin/logo. Saved rows keep their override.
@@ -202,6 +215,7 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     font_button: partial.font_button ?? '',
     font_price: partial.font_price ?? '',
     header_menu_font_size: partial.header_menu_font_size || DEFAULT_THEME_TOKENS.header_menu_font_size,
+    header_submenu_font_size: partial.header_submenu_font_size || DEFAULT_THEME_TOKENS.header_submenu_font_size,
     header_logo_height: partial.header_logo_height || DEFAULT_THEME_TOKENS.header_logo_height,
     subhero_subtitle_size: partial.subhero_subtitle_size || DEFAULT_THEME_TOKENS.subhero_subtitle_size,
     product_section_title_size: partial.product_section_title_size || DEFAULT_THEME_TOKENS.product_section_title_size,
@@ -230,6 +244,7 @@ export function tokensToCss(t: ThemeTokens): string {
     `--color-brand-notice-to: ${t.color_brand_notice_to};`,
     `--radius-button: ${t.radius_button};`,
     `--header-menu-font-size: ${t.header_menu_font_size};`,
+    `--header-submenu-font-size: ${t.header_submenu_font_size};`,
     `--header-logo-height: ${t.header_logo_height};`,
     `--subhero-subtitle-size: ${t.subhero_subtitle_size};`,
     `--product-section-title-size: ${t.product_section_title_size};`,

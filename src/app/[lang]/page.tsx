@@ -100,16 +100,25 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   const activeProducts = allProducts.filter(p => p.is_active);
   const bestSellerProducts = pickBestSellers(activeProducts);
 
+  // ANUA-style hero overlay (PR #147) pulls the carousel UP under the
+  // transparent header. That only makes sense when the carousel is the
+  // FIRST section — if the operator drags an inline banner above it,
+  // applying the negative margin makes the carousel overlap and hide
+  // the banner. Guard the overlay on carouselIndex === 0.
+  const isCarouselFirst = sectionOrder.indexOf('carousel') === 0;
+
   // Sections are rendered in the operator-controlled order pulled from
   // site_settings.homepage_section_order. Keys not in the saved row
   // fall back to the DEFAULT_ORDER tail (see lib/api/sectionOrder.ts)
   // so a newly-added section never disappears even if the operator
   // saved their order before the section existed.
   const sectionsMap: Record<string, React.ReactNode> = {
-    'carousel': (
+    'carousel': isCarouselFirst ? (
       <div className="kokkok-hero-overlay">
         <HeroSlider lang={lang} slides={carouselSlides} />
       </div>
+    ) : (
+      <HeroSlider lang={lang} slides={carouselSlides} />
     ),
     'promo-banners': (
       <div data-builder-section="promo-banners">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Save } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
@@ -12,7 +13,7 @@ import {
 const supabase = getSupabaseBrowser();
 
 const CARD_SCALE_MIN = 0.6;
-const CARD_SCALE_MAX = 1.4;
+const CARD_SCALE_MAX = 2.5;
 const GAP_X_MAX = 80;
 const GAP_Y_MAX = 160;
 
@@ -22,7 +23,7 @@ const GAP_Y_MAX = 160;
  * site_settings row (migration 39).
  *
  * Three controls:
- *   - 카드 크기 (card_scale): 0.6×–1.4× multiplier on the per-card width
+ *   - 카드 크기 (card_scale): 0.6×–2.5× multiplier on the section container width
  *   - 상품 가로 간격 (gap_x): 0–80 px horizontal spacing
  *   - 상품 세로 간격 (gap_y): 0–160 px vertical spacing
  *
@@ -106,6 +107,30 @@ export default function BestSellerDisplayAdminPage() {
           홈페이지 추천 상품 그리드의 카드 크기와 간격을 조절합니다.
         </p>
       </div>
+
+      {/* Quick-link to /admin/theme for the product font controls. The
+          card-scale + gap sliders live here, but the per-element font
+          sizes (제품명 / 가격 / 설명 / 섹션 제목) live on the theme page.
+          Operator's 2026-06-17 feedback: the font controls were "at a
+          different location" and felt disconnected. This panel surfaces
+          them in-context so the operator doesn't have to remember which
+          screen owns which slider. */}
+      <Link
+        href="/admin/theme?from=best-seller-display"
+        className="block rounded border border-[#e5e7eb] bg-[#fafbfc] hover:bg-[#f3f4f6] px-3 py-2.5 transition-colors"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[12px] font-semibold text-[#1f2937]">
+              제품명 · 가격 · 설명 · 섹션 제목 글씨 크기
+            </div>
+            <div className="text-[11px] text-[#6b7280] mt-0.5">
+              테마 페이지에서 조절 → 홈 메인 BEST SELLER 카드 안 텍스트 크기
+            </div>
+          </div>
+          <span className="text-[12px] text-[#3b82f6] flex-shrink-0">이동 →</span>
+        </div>
+      </Link>
 
       {/* Mini live preview — 4 placeholder cards laid out with current values */}
       <div className="rounded border border-[#e5e7eb] overflow-hidden">
