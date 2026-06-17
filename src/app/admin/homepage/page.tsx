@@ -243,6 +243,13 @@ export default function HomepageBuilderPage() {
           hint: '홈 메인에 노출되는 상품',
         },
         {
+          key: 'products-display', name: '추천 상품 — 크기/간격', icon: Package,
+          href: '/admin/best-seller-display',
+          status: '카드 크기 + 가로/세로 간격',
+          visible: true,
+          hint: '추천 상품 그리드 표시 설정',
+        },
+        {
           key: 'shorts', name: '쇼츠', icon: Video,
           href: '/admin/shorts',
           status: counts.shortsTotal > 0 ? `${counts.shortsTotal}개` : '데이터 없음',
