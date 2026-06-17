@@ -491,11 +491,24 @@ export default function HomepageBuilderPage() {
   }
 
   function handleDrawerClose() {
+    const wasEditingBanner = editingKey && isBannerKey(editingKey);
     setEditingKey(null);
     // Bump the preview iframe key so it remounts and pulls fresh data
     // — covers the "I saved inside the drawer, now show me the result"
     // flow without needing each editor to broadcast a save event.
     setIframeKey(k => k + 1);
+    // Banner edits change the section card's display text + visibility
+    // hint. Re-fetch on close so the rail shows the new state instead
+    // of the stale snapshot from mount. Other editors don't change
+    // their own card metadata, so we skip the round-trip for them.
+    if (wasEditingBanner && supabase) {
+      (async () => {
+        const { data } = await supabase!
+          .from('homepage_banners')
+          .select('id,text,bg_color,text_color,is_active');
+        if (data) setBanners(data as typeof banners);
+      })().catch(err => console.error('[admin/homepage] banner refresh failed:', err));
+    }
   }
 
   // Find the section currently being edited so we can hand the drawer

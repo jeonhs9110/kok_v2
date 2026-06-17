@@ -24,20 +24,25 @@ interface ProductGridProps {
   displayConfig?: BestSellerDisplay;
 }
 
+const BASE_MAX_WIDTH_PX = 1240;
+
 export default function ProductGrid({
   title,
   products,
   canPurchase = true,
   displayConfig = DEFAULT_BEST_SELLER_DISPLAY,
 }: ProductGridProps) {
-  // card_scale rescales both columns: at 1.0 the grid is 2-col mobile /
-  // 4-col desktop (pre-PR look). 1.2 widens cards by 20% (still 4-col on
-  // desktop but each card claims more of the row). 0.8 narrows them.
-  const lgWidth = `calc(${25 * displayConfig.card_scale}% - ${displayConfig.gap_x * (1 - 1 / 4)}px)`;
-  const smWidth = `calc(${50 * displayConfig.card_scale}% - ${displayConfig.gap_x / 2}px)`;
+  // card_scale grows/shrinks the section's container max-width rather
+  // than each card's flex basis. This keeps the grid at 4-col desktop /
+  // 2-col mobile (no overflow + wrap at scale>1.0) while the cards
+  // themselves get proportionally bigger because they remain a fixed
+  // percentage of a wider container. Previous implementation widened
+  // the card flex basis directly — at scale=1.2 each card became 30%
+  // wide × 4 cards = 120% and wrapped to 2 rows.
+  const containerMaxWidth = `${BASE_MAX_WIDTH_PX * displayConfig.card_scale}px`;
   return (
     <section className="py-16 md:py-24">
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+      <div className="mx-auto px-4 sm:px-6" style={{ maxWidth: containerMaxWidth }}>
         {title && (
           <h2 className="text-2xl font-extrabold text-center mb-12 text-brand-ink">{title}</h2>
         )}
@@ -52,8 +57,8 @@ export default function ProductGrid({
             <div
               key={p.id}
               style={{
-                ['--cardW-sm' as string]: smWidth,
-                ['--cardW-lg' as string]: lgWidth,
+                ['--cardW-sm' as string]: `calc(50% - ${displayConfig.gap_x / 2}px)`,
+                ['--cardW-lg' as string]: `calc(25% - ${(displayConfig.gap_x * 3) / 4}px)`,
               }}
               className="kokkok-product-card-cell"
             >

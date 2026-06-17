@@ -34,6 +34,22 @@ export default function HomepageBanner({ banner, lang }: Props) {
     </div>
   );
   if (banner.link_url) {
+    // External URLs use a plain anchor so Next.js doesn't try to
+    // prefetch the foreign origin or treat it as an internal route.
+    // Internal paths get the prefetched <Link>.
+    const isExternal = /^https?:\/\//i.test(banner.link_url);
+    if (isExternal) {
+      return (
+        <a
+          href={banner.link_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block hover:opacity-90 transition-opacity"
+        >
+          {inner}
+        </a>
+      );
+    }
     return (
       <Link href={banner.link_url} className="block hover:opacity-90 transition-opacity">
         {inner}
