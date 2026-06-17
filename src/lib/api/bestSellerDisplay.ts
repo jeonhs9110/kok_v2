@@ -25,7 +25,7 @@ function parse(raw: unknown): BestSellerDisplay {
   if (!obj || typeof obj !== 'object') return DEFAULT_BEST_SELLER_DISPLAY;
   const o = obj as Record<string, unknown>;
   return {
-    card_scale: clamp(typeof o.card_scale === 'number' ? o.card_scale : 1.0, 0.6, 1.4),
+    card_scale: clamp(typeof o.card_scale === 'number' ? o.card_scale : 1.0, 0.6, 2.5),
     gap_x: clamp(typeof o.gap_x === 'number' ? o.gap_x : 16, 0, 80),
     gap_y: clamp(typeof o.gap_y === 'number' ? o.gap_y : 48, 0, 160),
   };

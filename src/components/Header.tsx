@@ -417,7 +417,7 @@ export default function Header({
                 <div key={col.slug}>
                   <Link
                     href={`/${lang}/products?category=${col.slug}`}
-                    className="text-[13px] font-bold text-neutral-900 hover:text-brand-primary tracking-wide transition-colors"
+                    className="kokkok-header-submenu font-bold text-neutral-900 hover:text-brand-primary tracking-wide transition-colors"
                     onClick={() => setActiveMenu(null)}
                   >
                     {col.label}
@@ -428,7 +428,7 @@ export default function Header({
                         <li key={item.slug}>
                           <Link
                             href={`/${lang}/products?sub=${item.slug}`}
-                            className="text-[12.5px] text-neutral-500 hover:text-black transition-colors"
+                            className="kokkok-header-submenu text-neutral-500 hover:text-black transition-colors"
                             onClick={() => setActiveMenu(null)}
                           >
                             {item.name}
@@ -460,7 +460,7 @@ export default function Header({
                   <Link
                     key={child.slug}
                     href={`/${lang}/menus/${child.slug}`}
-                    className="text-[13px] font-bold text-neutral-900 hover:text-brand-primary tracking-wide transition-colors"
+                    className="kokkok-header-submenu font-bold text-neutral-900 hover:text-brand-primary tracking-wide transition-colors"
                     onClick={() => setActiveMenu(null)}
                   >
                     {child.title?.[lang] || child.title?.kr || child.title?.en || child.slug}
