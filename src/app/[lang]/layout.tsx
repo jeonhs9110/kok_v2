@@ -87,6 +87,18 @@ export default async function LangLayout({
           }}
         />
         <div className="flex flex-col min-h-screen">
+          {/* Non-Korea visitors see a system notice that products can
+              only be ordered inside South Korea. Rendered HERE (above
+              the sticky header) rather than inside [lang]/page.tsx so
+              the carousel's .kokkok-hero-overlay negative margin
+              (PR #147) can't pull the hero up over it. */}
+          {!isKorea && (
+            <div className="bg-gradient-to-r from-brand-notice-from to-brand-notice-to text-white text-center py-2 px-4 text-[13px] font-medium">
+              🌏 {lang === 'kr'
+                ? '글로벌 스토어입니다 — 주문은 한국 스토어를 이용해주세요'
+                : 'Global store — Products are available for purchase in South Korea only'}
+            </div>
+          )}
           <div data-builder-section="top-stripe">
             <TopStripeBanner data={topStripe} />
           </div>

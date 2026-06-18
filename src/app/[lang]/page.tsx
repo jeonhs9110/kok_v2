@@ -21,10 +21,13 @@ import { getBestSellerDisplay } from '@/lib/api/bestSellerDisplay';
 import { isValidLang, type Lang } from '@/lib/i18n/types';
 import type { Product } from '@/lib/api/products';
 
-const GLOBAL_BANNER: Record<Lang, string> = {
-  kr: '글로벌 스토어입니다 — 주문은 한국 스토어를 이용해주세요',
-  en: 'Global store — Products are available for purchase in South Korea only',
-};
+// Global "you can't buy from here" notice was previously rendered here
+// at the top of the page body, but the carousel's .kokkok-hero-overlay
+// class pulls the hero UP under the header — a banner rendered between
+// global-banner and carousel inside <main> got swept up along with the
+// hero and disappeared behind it. The notice now lives in
+// [lang]/layout.tsx, ABOVE the sticky header, so the hero's negative
+// margin can't reach it.
 
 const BEST_SELLER_LABEL: Record<Lang, string> = {
   kr: 'BEST SELLER',
@@ -170,11 +173,6 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
 
   return (
     <>
-      {!isKorea && (
-        <div className="bg-gradient-to-r from-brand-notice-from to-brand-notice-to text-white text-center py-2 px-4 text-[13px] font-medium">
-          🌏 {GLOBAL_BANNER[lang]}
-        </div>
-      )}
       {sectionOrder.map(key => {
         if (isBannerKey(key)) {
           const id = key.slice('banner:'.length);
