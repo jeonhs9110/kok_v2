@@ -95,7 +95,7 @@ export default function ShortsFeed({ shorts, bgConfig = null, header }: Props) {
             return (
               <div
                 key={index}
-                className={`flex-none w-[260px] h-[460px] rounded-[24px] overflow-hidden bg-black snap-center relative shadow-2xl transition-all duration-500 ease-in-out ${isPlaying ? 'scale-[1.02] ring-2 ring-white z-10' : 'opacity-80 hover:opacity-100 hover:scale-[1.01]'}`}
+                className={`flex-none w-[260px] h-[460px] rounded-[24px] overflow-hidden bg-black snap-center relative transition-all duration-500 ease-in-out ${isPlaying ? 'scale-[1.02] ring-2 ring-white z-10' : 'opacity-80 hover:opacity-100 hover:scale-[1.01]'}`}
               >
                 {!isPlaying && videoId && (
                   <div className="relative w-full h-full">
