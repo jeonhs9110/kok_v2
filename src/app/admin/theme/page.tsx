@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Palette, RefreshCw, Save, RotateCcw, Eye } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import {
@@ -361,108 +362,29 @@ export default function ThemePage() {
                 <HeroSizeCompact tokens={tokens} setTokens={setTokens} />
               </Section>
 
-              <Section title="홈 메인 추천 상품 (BEST SELLER) 글씨 — 홈에만 적용">
-                <SizePicker
-                  label="섹션 제목 (BEST SELLER)"
-                  value={tokens.product_section_title_size}
-                  fallback={24}
-                  presets={[
-                    { v: '20px', l: '작게' },
-                    { v: '24px', l: '기본' },
-                    { v: '28px', l: '크게' },
-                    { v: '32px', l: '더 크게' },
-                  ]}
-                  min={16}
-                  max={48}
-                  onChange={v => setTokens(t => ({ ...t, product_section_title_size: v }))}
-                />
-                <SizePicker
-                  label="제품명"
-                  value={tokens.product_name_size}
-                  fallback={15}
-                  presets={[
-                    { v: '12px', l: '아주 작게' },
-                    { v: '13px', l: '작게' },
-                    { v: '15px', l: '기본' },
-                    { v: '17px', l: '크게' },
-                  ]}
-                  min={11}
-                  max={22}
-                  onChange={v => setTokens(t => ({ ...t, product_name_size: v }))}
-                />
-                <SizePicker
-                  label="제품 설명 (요약)"
-                  value={tokens.home_product_summary_size}
-                  fallback={12}
-                  presets={[
-                    { v: '11px', l: '아주 작게' },
-                    { v: '12px', l: '기본' },
-                    { v: '13px', l: '크게' },
-                    { v: '15px', l: '더 크게' },
-                  ]}
-                  min={10}
-                  max={20}
-                  onChange={v => setTokens(t => ({ ...t, home_product_summary_size: v }))}
-                />
-                <SizePicker
-                  label="가격"
-                  value={tokens.product_price_size}
-                  fallback={17}
-                  presets={[
-                    { v: '13px', l: '작게' },
-                    { v: '15px', l: '보통' },
-                    { v: '17px', l: '기본' },
-                    { v: '20px', l: '크게' },
-                  ]}
-                  min={11}
-                  max={24}
-                  onChange={v => setTokens(t => ({ ...t, product_price_size: v }))}
-                />
-                {/* Image aspect ratio — picks the visual presence of the
-                    product photo. Taller ratios (3/4) make products look
-                    more imposing; wider (5/4) reads more like a thumbnail.
-                    Live preview reflects instantly via the postMessage
-                    iframe pipeline. */}
-                <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">제품 이미지 비율 (가로 : 세로)</label>
-                  <div className="grid grid-cols-5 gap-1 mt-1">
-                    {[
-                      { v: '5/4', l: '5:4 (가로형)' },
-                      { v: '1/1', l: '1:1 (정사각)' },
-                      { v: '5/6', l: '5:6 (기본)' },
-                      { v: '4/5', l: '4:5 (세로형)' },
-                      { v: '3/4', l: '3:4 (긴 세로)' },
-                    ].map(opt => (
-                      <button
-                        key={opt.v}
-                        type="button"
-                        onClick={() => setTokens(t => ({ ...t, home_product_image_ratio: opt.v }))}
-                        className={`px-1 py-1.5 text-[10px] font-semibold border rounded ${
-                          tokens.home_product_image_ratio === opt.v
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-                        }`}
-                      >
-                        {opt.l}
-                      </button>
-                    ))}
+              {/* BEST SELLER font + image-ratio controls moved to
+                  /admin/best-seller-display on 2026-06-17 so the
+                  operator manages every BEST SELLER surface (scale,
+                  gaps, fonts, image ratio) on one screen. Leaving a
+                  redirect breadcrumb so muscle memory routes to the
+                  new home. */}
+              <Section title="홈 메인 추천 상품 (BEST SELLER) — 이동됨">
+                <Link
+                  href="/admin/best-seller-display"
+                  className="block rounded border border-[#bfdbfe] bg-[#eff6ff] hover:bg-[#dbeafe] px-3 py-2.5 transition-colors no-underline"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-[12px] font-semibold text-[#1e3a8a]">
+                        섹션 제목 · 제품명 · 가격 · 설명 · 이미지 비율
+                      </div>
+                      <div className="text-[11px] text-[#3b82f6] mt-0.5">
+                        카드 크기 / 간격과 함께 한 곳에서 조절하도록 옮겼습니다.
+                      </div>
+                    </div>
+                    <span className="text-[12px] font-semibold text-[#1d4ed8] flex-shrink-0">이동 →</span>
                   </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">직접 입력</label>
-                    <input
-                      type="text"
-                      placeholder="예: 4/3, 16/9, 2/3"
-                      value={tokens.home_product_image_ratio}
-                      onChange={e => setTokens(t => ({ ...t, home_product_image_ratio: e.target.value }))}
-                      className="flex-1 px-2 py-1 text-xs font-mono border border-gray-200 rounded focus:outline-none focus:border-gray-400"
-                    />
-                  </div>
-                  <p className="mt-1 text-[10px] text-gray-400">큰 숫자/작은 숫자 = 가로:세로. 5/6 이 기본 (살짝 세로형). 1/1 = 정사각.</p>
-                </div>
-                <p className="text-[10px] text-gray-400">
-                  <strong>홈 메인 페이지의 추천 상품 행에만</strong> 적용됩니다.
-                  /products 목록 페이지나 카트는 기본 크기를 유지합니다 (브라우징 가독성).
-                </p>
+                </Link>
               </Section>
 
               <Section title="타이포그래피 (선택)">
@@ -572,11 +494,9 @@ export default function ThemePage() {
 
 /**
  * HeroSizeCompact — single-tab-then-picker layout for the main hero
- * height + max-width tokens. Replaces the previous three-stacked
- * SizePicker rows that dominated the /admin/theme sidebar; admin
- * picks a viewport tab (모바일 / 태블릿 / 데스크탑) and the controls
- * below only edit that viewport's height. Saves ~75% of vertical
- * space without losing any control.
+ * height + max-width tokens. Admin picks a viewport tab (모바일 /
+ * 태블릿 / 데스크탑) and the controls below only edit that viewport's
+ * height. Saves ~75% of vertical space without losing any control.
  *
  * Why a tab UI instead of one slider with breakpoints: the responsive
  * heights aren't interchangeable — Songyi wants different defaults at
@@ -745,60 +665,6 @@ function ColorRow({
  * controls, extracted so the new product-text tokens (section title,
  * name, price) don't each carry their own copy of the chrome.
  */
-function SizePicker({
-  label, value, fallback, presets, min, max, onChange,
-}: {
-  label: string;
-  value: string;
-  fallback: number;
-  presets: { v: string; l: string }[];
-  min: number;
-  max: number;
-  onChange: (v: string) => void;
-}) {
-  const parsed = parseInt(value, 10);
-  const safe = Number.isFinite(parsed) ? parsed : fallback;
-  return (
-    <div>
-      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
-      <div className="grid grid-cols-4 gap-1.5 mt-1">
-        {presets.map(opt => (
-          <button
-            key={opt.v}
-            type="button"
-            onClick={() => onChange(opt.v)}
-            className={`p-2 font-semibold border rounded ${
-              value === opt.v
-                ? 'bg-black text-white border-black'
-                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-            }`}
-            style={{ fontSize: opt.v }}
-          >
-            {opt.l}
-          </button>
-        ))}
-      </div>
-      <div className="mt-2 flex items-center gap-2">
-        <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">직접 입력</label>
-        <input
-          type="number"
-          min={min}
-          max={max}
-          step={1}
-          value={safe}
-          onChange={e => {
-            const raw = parseInt(e.target.value, 10);
-            if (!Number.isFinite(raw)) return;
-            onChange(`${Math.max(min, Math.min(max, raw))}px`);
-          }}
-          className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
-        />
-        <span className="text-[10px] text-gray-500">px ({min}–{max})</span>
-      </div>
-    </div>
-  );
-}
-
 /**
  * Font picker for the theme tokens. Stores the CSS font-family string
  * (same shape `font_body` / `font_display` always had) so existing

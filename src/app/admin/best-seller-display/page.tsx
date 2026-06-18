@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { Save } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
@@ -9,6 +8,11 @@ import {
   DEFAULT_BEST_SELLER_DISPLAY,
   type BestSellerDisplay,
 } from '@/lib/api/bestSellerDisplay';
+import {
+  DEFAULT_THEME_TOKENS,
+  parseThemeTokens,
+  type ThemeTokens,
+} from '@/lib/theme/tokens';
 
 const supabase = getSupabaseBrowser();
 
@@ -17,23 +21,50 @@ const CARD_SCALE_MAX = 2.5;
 const GAP_X_MAX = 80;
 const GAP_Y_MAX = 160;
 
+// Subset of theme_tokens this page now owns. The /admin/theme page lost
+// these in the 2026-06-17 reshuffle — operator wanted every BEST SELLER
+// surface (card width, gaps, AND the per-element font sizes / image
+// ratio) co-located so they aren't toggling between two routes.
+type ProductFontTokens = Pick<
+  ThemeTokens,
+  | 'product_section_title_size'
+  | 'product_name_size'
+  | 'home_product_summary_size'
+  | 'product_price_size'
+  | 'home_product_image_ratio'
+>;
+
+const PRODUCT_FONT_DEFAULTS: ProductFontTokens = {
+  product_section_title_size: DEFAULT_THEME_TOKENS.product_section_title_size,
+  product_name_size: DEFAULT_THEME_TOKENS.product_name_size,
+  home_product_summary_size: DEFAULT_THEME_TOKENS.home_product_summary_size,
+  product_price_size: DEFAULT_THEME_TOKENS.product_price_size,
+  home_product_image_ratio: DEFAULT_THEME_TOKENS.home_product_image_ratio,
+};
+
 /**
- * /admin/best-seller-display — operator-editable scale + gap controls
- * for the homepage BEST SELLER product grid. Stored as a singleton
- * site_settings row (migration 39).
+ * /admin/best-seller-display — single source of truth for the homepage
+ * BEST SELLER card.
  *
- * Three controls:
- *   - 카드 크기 (card_scale): 0.6×–2.5× multiplier on the section container width
- *   - 상품 가로 간격 (gap_x): 0–80 px horizontal spacing
- *   - 상품 세로 간격 (gap_y): 0–160 px vertical spacing
+ * Owns two singleton site_settings rows:
+ *   - 'best_seller_display' → { card_scale, gap_x, gap_y } (this page's
+ *     original scope, migration 39).
+ *   - subset of 'theme_tokens' → product font sizes + image aspect ratio
+ *     (moved here from /admin/theme on 2026-06-17 per operator ask).
+ *     The merge pattern preserves every other theme field so this page
+ *     can't accidentally clobber colors, header tokens, etc.
  *
- * A mini live preview chip at the top mirrors how the storefront will
- * lay out four cards at the current values; saving revalidates the
- * homepage cache so the change appears immediately on /kr.
+ * Save persists both rows in parallel; a single dirty flag covers both
+ * surfaces so the operator sees one "저장" button.
  */
 export default function BestSellerDisplayAdminPage() {
   const [data, setData] = useState<BestSellerDisplay>(DEFAULT_BEST_SELLER_DISPLAY);
   const [saved, setSaved] = useState<BestSellerDisplay>(DEFAULT_BEST_SELLER_DISPLAY);
+  const [fonts, setFonts] = useState<ProductFontTokens>(PRODUCT_FONT_DEFAULTS);
+  const [savedFonts, setSavedFonts] = useState<ProductFontTokens>(PRODUCT_FONT_DEFAULTS);
+  // Full theme_tokens loaded once on mount so the merge-save below
+  // never drops a sibling field the operator set on /admin/theme.
+  const [fullTokens, setFullTokens] = useState<ThemeTokens>(DEFAULT_THEME_TOKENS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -41,25 +72,34 @@ export default function BestSellerDisplayAdminPage() {
   useEffect(() => {
     if (!supabase) { setLoading(false); return; }
     (async () => {
-      const { data: row } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', 'best_seller_display')
-        .maybeSingle();
-      if (row?.value) {
+      const [bsdRes, themeRes] = await Promise.all([
+        supabase.from('site_settings').select('value').eq('key', 'best_seller_display').maybeSingle(),
+        supabase.from('site_settings').select('value').eq('key', 'theme_tokens').maybeSingle(),
+      ]);
+      if (bsdRes.data?.value) {
         try {
-          const parsed = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+          const parsed = typeof bsdRes.data.value === 'string' ? JSON.parse(bsdRes.data.value) : bsdRes.data.value;
           if (parsed && typeof parsed === 'object') {
             const next: BestSellerDisplay = {
               card_scale: typeof parsed.card_scale === 'number' ? parsed.card_scale : DEFAULT_BEST_SELLER_DISPLAY.card_scale,
               gap_x: typeof parsed.gap_x === 'number' ? parsed.gap_x : DEFAULT_BEST_SELLER_DISPLAY.gap_x,
               gap_y: typeof parsed.gap_y === 'number' ? parsed.gap_y : DEFAULT_BEST_SELLER_DISPLAY.gap_y,
             };
-            setData(next);
-            setSaved(next);
+            setData(next); setSaved(next);
           }
         } catch { /* keep defaults */ }
       }
+      const themeRaw = themeRes.data?.value;
+      const tokens = parseThemeTokens(typeof themeRaw === 'string' ? safeJson(themeRaw) : themeRaw);
+      setFullTokens(tokens);
+      const f: ProductFontTokens = {
+        product_section_title_size: tokens.product_section_title_size,
+        product_name_size: tokens.product_name_size,
+        home_product_summary_size: tokens.home_product_summary_size,
+        product_price_size: tokens.product_price_size,
+        home_product_image_ratio: tokens.home_product_image_ratio,
+      };
+      setFonts(f); setSavedFonts(f);
       setLoading(false);
     })().catch(() => setLoading(false));
   }, []);
@@ -68,15 +108,27 @@ export default function BestSellerDisplayAdminPage() {
     if (!supabase) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert(
+      // Merge fonts back into the full theme_tokens so other fields
+      // (colors, header sizes, hero heights, etc.) stay intact.
+      const mergedTokens: ThemeTokens = { ...fullTokens, ...fonts };
+      const [bsdErr, themeErr] = await Promise.all([
+        supabase.from('site_settings').upsert(
           { key: 'best_seller_display', value: JSON.stringify(data), updated_at: new Date().toISOString() },
           { onConflict: 'key' },
-        );
-      if (error) throw error;
+        ).then(r => r.error),
+        supabase.from('site_settings').upsert(
+          { key: 'theme_tokens', value: JSON.stringify(mergedTokens), updated_at: new Date().toISOString() },
+          { onConflict: 'key' },
+        ).then(r => r.error),
+      ]);
+      if (bsdErr) throw bsdErr;
+      if (themeErr) throw themeErr;
       revalidateHomepageData('best_seller_display');
+      // theme tokens consumers (Header, ProductCard, etc.) read fresh
+      // CSS on the next render thanks to the layout's inline <style>.
       setSaved(data);
+      setSavedFonts(fonts);
+      setFullTokens(mergedTokens);
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
     } catch (err) {
@@ -94,7 +146,9 @@ export default function BestSellerDisplayAdminPage() {
     });
   }
 
-  const dirty = JSON.stringify(data) !== JSON.stringify(saved);
+  const dirty =
+    JSON.stringify(data) !== JSON.stringify(saved) ||
+    JSON.stringify(fonts) !== JSON.stringify(savedFonts);
   const previewWidthLg = `calc(${25 * data.card_scale}% - ${data.gap_x * (1 - 1 / 4)}px)`;
 
   if (loading) return <div className="p-6 text-sm text-gray-500">불러오는 중...</div>;
@@ -104,33 +158,9 @@ export default function BestSellerDisplayAdminPage() {
       <div>
         <h1 className="text-lg font-bold text-[#1f2937]">추천 상품 (BEST SELLER) — 표시 설정</h1>
         <p className="text-[12px] text-[#6b7280] mt-1">
-          홈페이지 추천 상품 그리드의 카드 크기와 간격을 조절합니다.
+          홈페이지 추천 상품 그리드의 카드 크기, 간격, 글씨 크기를 한 곳에서 조절합니다.
         </p>
       </div>
-
-      {/* Quick-link to /admin/theme for the product font controls. The
-          card-scale + gap sliders live here, but the per-element font
-          sizes (제품명 / 가격 / 설명 / 섹션 제목) live on the theme page.
-          Operator's 2026-06-17 feedback: the font controls were "at a
-          different location" and felt disconnected. This panel surfaces
-          them in-context so the operator doesn't have to remember which
-          screen owns which slider. */}
-      <Link
-        href="/admin/theme?from=best-seller-display"
-        className="block rounded border border-[#e5e7eb] bg-[#fafbfc] hover:bg-[#f3f4f6] px-3 py-2.5 transition-colors"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-[12px] font-semibold text-[#1f2937]">
-              제품명 · 가격 · 설명 · 섹션 제목 글씨 크기
-            </div>
-            <div className="text-[11px] text-[#6b7280] mt-0.5">
-              테마 페이지에서 조절 → 홈 메인 BEST SELLER 카드 안 텍스트 크기
-            </div>
-          </div>
-          <span className="text-[12px] text-[#3b82f6] flex-shrink-0">이동 →</span>
-        </div>
-      </Link>
 
       {/* Mini live preview — 4 placeholder cards laid out with current values */}
       <div className="rounded border border-[#e5e7eb] overflow-hidden">
@@ -145,8 +175,8 @@ export default function BestSellerDisplayAdminPage() {
             {[0, 1, 2, 3].map(i => (
               <div
                 key={i}
-                style={{ width: previewWidthLg }}
-                className="aspect-[5/6] bg-[#f3f4f6] rounded flex items-center justify-center text-[#9ca3af] text-[11px]"
+                style={{ width: previewWidthLg, aspectRatio: fonts.home_product_image_ratio || '5/6' }}
+                className="bg-[#f3f4f6] rounded flex items-center justify-center text-[#9ca3af] text-[11px]"
               >
                 상품 {i + 1}
               </div>
@@ -200,6 +230,112 @@ export default function BestSellerDisplayAdminPage() {
         ticks={[0, 48, 160]}
       />
 
+      {/* ── Font sizes (moved from /admin/theme on 2026-06-17) ── */}
+      <div className="pt-4 border-t border-[#e5e7eb]">
+        <h2 className="text-[13px] font-bold text-[#1f2937] mb-3">글씨 크기 — 홈 BEST SELLER 카드에만 적용</h2>
+        <div className="space-y-5">
+          <SizePicker
+            label="섹션 제목 (BEST SELLER)"
+            value={fonts.product_section_title_size}
+            fallback={24}
+            presets={[
+              { v: '20px', l: '작게' },
+              { v: '24px', l: '기본' },
+              { v: '28px', l: '크게' },
+              { v: '32px', l: '더 크게' },
+            ]}
+            min={16}
+            max={48}
+            onChange={v => setFonts(f => ({ ...f, product_section_title_size: v }))}
+          />
+          <SizePicker
+            label="제품명"
+            value={fonts.product_name_size}
+            fallback={15}
+            presets={[
+              { v: '12px', l: '아주 작게' },
+              { v: '13px', l: '작게' },
+              { v: '15px', l: '기본' },
+              { v: '17px', l: '크게' },
+            ]}
+            min={11}
+            max={22}
+            onChange={v => setFonts(f => ({ ...f, product_name_size: v }))}
+          />
+          <SizePicker
+            label="제품 설명 (요약)"
+            value={fonts.home_product_summary_size}
+            fallback={12}
+            presets={[
+              { v: '11px', l: '아주 작게' },
+              { v: '12px', l: '기본' },
+              { v: '13px', l: '크게' },
+              { v: '15px', l: '더 크게' },
+            ]}
+            min={10}
+            max={20}
+            onChange={v => setFonts(f => ({ ...f, home_product_summary_size: v }))}
+          />
+          <SizePicker
+            label="가격"
+            value={fonts.product_price_size}
+            fallback={17}
+            presets={[
+              { v: '13px', l: '작게' },
+              { v: '15px', l: '보통' },
+              { v: '17px', l: '기본' },
+              { v: '20px', l: '크게' },
+            ]}
+            min={11}
+            max={24}
+            onChange={v => setFonts(f => ({ ...f, product_price_size: v }))}
+          />
+          {/* Image aspect ratio — picks the visual presence of the
+              product photo. Taller ratios (3/4) make products look
+              more imposing; wider (5/4) reads more like a thumbnail. */}
+          <div>
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">제품 이미지 비율 (가로 : 세로)</label>
+            <div className="grid grid-cols-5 gap-1 mt-1">
+              {[
+                { v: '5/4', l: '5:4 (가로형)' },
+                { v: '1/1', l: '1:1 (정사각)' },
+                { v: '5/6', l: '5:6 (기본)' },
+                { v: '4/5', l: '4:5 (세로형)' },
+                { v: '3/4', l: '3:4 (긴 세로)' },
+              ].map(opt => (
+                <button
+                  key={opt.v}
+                  type="button"
+                  onClick={() => setFonts(f => ({ ...f, home_product_image_ratio: opt.v }))}
+                  className={`px-1 py-1.5 text-[10px] font-semibold border rounded ${
+                    fonts.home_product_image_ratio === opt.v
+                      ? 'bg-black text-white border-black'
+                      : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  {opt.l}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">직접 입력</label>
+              <input
+                type="text"
+                placeholder="예: 4/3, 16/9, 2/3"
+                value={fonts.home_product_image_ratio}
+                onChange={e => setFonts(f => ({ ...f, home_product_image_ratio: e.target.value }))}
+                className="flex-1 px-2 py-1 text-xs font-mono border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+              />
+            </div>
+            <p className="mt-1 text-[10px] text-gray-400">큰 숫자/작은 숫자 = 가로:세로. 5/6 이 기본 (살짝 세로형). 1/1 = 정사각.</p>
+          </div>
+        </div>
+        <p className="text-[10px] text-gray-400 mt-4">
+          <strong>홈 메인 페이지의 BEST SELLER 행에만</strong> 적용됩니다.
+          /products 목록 페이지나 카트는 기본 크기를 유지합니다 (브라우징 가독성).
+        </p>
+      </div>
+
       <div className="flex items-center gap-3 pt-2">
         <button
           type="button"
@@ -213,7 +349,7 @@ export default function BestSellerDisplayAdminPage() {
         {savedFlash && <span className="text-[12px] text-[#059669]">저장됨 ✓</span>}
         <button
           type="button"
-          onClick={() => setData(DEFAULT_BEST_SELLER_DISPLAY)}
+          onClick={() => { setData(DEFAULT_BEST_SELLER_DISPLAY); setFonts(PRODUCT_FONT_DEFAULTS); }}
           className="ml-auto text-[12px] text-[#6b7280] hover:text-[#1f2937] underline underline-offset-2"
         >
           기본값으로 리셋
@@ -221,6 +357,10 @@ export default function BestSellerDisplayAdminPage() {
       </div>
     </div>
   );
+}
+
+function safeJson(s: string): unknown {
+  try { return JSON.parse(s); } catch { return null; }
 }
 
 interface ControlProps {
@@ -268,6 +408,65 @@ function Control({ label, hint, valueLabel, onMinus, onPlus, sliderProps, ticks 
         {ticks.map(t => (
           <span key={t}>{Number.isInteger(t) ? t : t.toFixed(2)}</span>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Local copy of the SizePicker pattern from /admin/theme — preset row +
+ * numeric input, same UX shape so the operator's muscle memory carries
+ * over after the move.
+ */
+function SizePicker({
+  label, value, fallback, presets, min, max, onChange,
+}: {
+  label: string;
+  value: string;
+  fallback: number;
+  presets: { v: string; l: string }[];
+  min: number;
+  max: number;
+  onChange: (v: string) => void;
+}) {
+  const parsed = parseInt(value, 10);
+  const safe = Number.isFinite(parsed) ? parsed : fallback;
+  return (
+    <div>
+      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
+      <div className="grid grid-cols-4 gap-1.5 mt-1">
+        {presets.map(opt => (
+          <button
+            key={opt.v}
+            type="button"
+            onClick={() => onChange(opt.v)}
+            className={`p-2 font-semibold border rounded ${
+              value === opt.v
+                ? 'bg-black text-white border-black'
+                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+            }`}
+            style={{ fontSize: opt.v }}
+          >
+            {opt.l}
+          </button>
+        ))}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">직접 입력</label>
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={1}
+          value={safe}
+          onChange={e => {
+            const raw = parseInt(e.target.value, 10);
+            if (!Number.isFinite(raw)) return;
+            onChange(`${Math.max(min, Math.min(max, raw))}px`);
+          }}
+          className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
+        />
+        <span className="text-[10px] text-gray-500">px ({min}–{max})</span>
       </div>
     </div>
   );
