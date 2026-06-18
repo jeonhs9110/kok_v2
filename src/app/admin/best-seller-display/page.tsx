@@ -11,6 +11,7 @@ import {
 import {
   DEFAULT_THEME_TOKENS,
   parseThemeTokens,
+  tokensToCss,
   type ThemeTokens,
 } from '@/lib/theme/tokens';
 
@@ -138,6 +139,30 @@ export default function BestSellerDisplayAdminPage() {
       setSaving(false);
     }
   }
+
+  // Live preview broadcast. Mirrors the pipeline in /admin/theme: any
+  // font/ratio change re-emits the merged theme tokens as CSS, posts
+  // to the local <iframe> (standalone view) AND the parent hub
+  // (embedded view inside /admin/homepage). The storefront's
+  // [lang]/layout listens for kokkok-theme-tokens messages and
+  // replaces its <style id="kokkok-theme-tokens"> node — visible
+  // change in the 1440px preview without a save round-trip.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handle = requestAnimationFrame(() => {
+      const merged: ThemeTokens = { ...fullTokens, ...fonts };
+      const css = tokensToCss(merged);
+      if (window.parent !== window) {
+        try {
+          window.parent.postMessage(
+            { type: 'kokkok-theme-tokens', css },
+            window.location.origin,
+          );
+        } catch { /* best-effort */ }
+      }
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [fonts, fullTokens]);
 
   function nudge(field: keyof BestSellerDisplay, step: number, min: number, max: number) {
     setData(prev => {
