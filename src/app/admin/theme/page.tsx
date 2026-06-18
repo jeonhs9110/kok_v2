@@ -102,14 +102,42 @@ export default function ThemePage() {
     if (!supabase) return;
     setIsSaving(true);
     try {
+      // Merge-on-save: refetch the current DB row before writing back.
+      // /admin/best-seller-display now owns a subset of theme_tokens
+      // (product fonts + image ratio) — if both pages are open in
+      // parallel tabs, a naive full-state upsert here would clobber
+      // any change the operator just saved over there. Refetching +
+      // spreading current state preserves whatever's in DB for fields
+      // this page doesn't expose.
+      const { data: latest } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'theme_tokens')
+        .maybeSingle();
+      const latestTokens = parseThemeTokens(latest?.value);
+      // Fields this page DOES own — overwrite from local state. Other
+      // fields fall through from the freshly-loaded DB row.
+      const merged: ThemeTokens = {
+        ...latestTokens,
+        ...tokens,
+        // BEST SELLER subset is owned by /admin/best-seller-display
+        // now; pin it to the DB value so this save can't undo
+        // changes the operator just made there.
+        product_section_title_size: latestTokens.product_section_title_size,
+        product_name_size: latestTokens.product_name_size,
+        home_product_summary_size: latestTokens.home_product_summary_size,
+        product_price_size: latestTokens.product_price_size,
+        home_product_image_ratio: latestTokens.home_product_image_ratio,
+      };
       const { error } = await supabase
         .from('site_settings')
         .upsert(
-          { key: 'theme_tokens', value: JSON.stringify(tokens), updated_at: new Date().toISOString() },
+          { key: 'theme_tokens', value: JSON.stringify(merged), updated_at: new Date().toISOString() },
           { onConflict: 'key' },
         );
       if (error) throw error;
-      setSavedTokens(tokens);
+      setSavedTokens(merged);
+      setTokens(merged);
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2500);
     } catch (err) {

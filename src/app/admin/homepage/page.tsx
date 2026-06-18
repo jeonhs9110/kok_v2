@@ -243,13 +243,6 @@ export default function HomepageBuilderPage() {
           hint: '홈 메인에 노출되는 상품',
         },
         {
-          key: 'products-display', name: '추천 상품 — 크기/간격', icon: Package,
-          href: '/admin/best-seller-display',
-          status: '카드 크기 + 가로/세로 간격',
-          visible: true,
-          hint: '추천 상품 그리드 표시 설정',
-        },
-        {
           key: 'shorts', name: '쇼츠', icon: Video,
           href: '/admin/shorts',
           status: counts.shortsTotal > 0 ? `${counts.shortsTotal}개` : '데이터 없음',
@@ -272,13 +265,29 @@ export default function HomepageBuilderPage() {
           visible: !!counts.instagramHandle,
           hint: '@핸들 + 포스트 그리드',
         },
+      ],
+    },
+    {
+      title: '표시 설정 / 기타',
+      // Non-reorderable config pages that aren't actually homepage
+      // sections — separated from the drag-list group so the operator
+      // doesn't try to drag them (they have no sectionOrder slot).
+      sections: [
+        {
+          key: 'products-display', name: '추천 상품 — 크기/간격', icon: Package,
+          href: '/admin/best-seller-display',
+          status: '카드 크기 + 간격 + 글씨 + 이미지 비율',
+          visible: true,
+          hint: '추천 상품 그리드 표시 설정',
+        },
         {
           key: 'reviews', name: '리뷰 쇼케이스', icon: Star,
           href: '/admin/reviews',
           status: countsLabel(counts.reviewsActive, counts.reviewsTotal),
-          // Reviews currently render on /menus/review (not on the home
-          // main page after PR #126). Keeping the card so Songyi can
-          // find it from the same hub.
+          // Reviews render on /menus/review (not on the home main page
+          // after PR #126), so they don't belong in the drag-reorder
+          // homepage list. Kept in the hub so the operator can find
+          // the editor from one place.
           visible: counts.reviewsActive > 0,
           hint: '/menus/review 페이지 노출',
         },
