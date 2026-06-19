@@ -233,3 +233,45 @@ export const getCachedShorts = unstable_cache(
   ['homepage:shorts'],
   { revalidate: REVALIDATE, tags: [...TAGS, 'shorts'] }
 );
+
+// Reviews — homepage section added 2026-06-19 (Phase C of the Cafe24
+// admin cleanup). The /menus/review page still calls getActiveReviewCards
+// directly; this wrapper exists so the homepage SSR path gets cached +
+// tag-evicted alongside the other section fetchers.
+export interface RawReviewCard {
+  id: string;
+  image_url: string;
+  title: string;
+  link_url: string | null;
+  sort_order: number;
+}
+
+export const getCachedReviews = unstable_cache(
+  async (): Promise<RawReviewCard[]> => {
+    const c = client();
+    if (!c) return [];
+    try {
+      const { data, error } = await withTimeout(
+        c.from('review_cards')
+          .select('id, image_url, title, link_url, sort_order')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true })
+          .limit(8),
+        QUERY_BUDGET_MS
+      );
+      if (error) throw error;
+      return (data ?? []).map(r => ({
+        id: r.id,
+        image_url: r.image_url ?? '',
+        title: r.title ?? '',
+        link_url: r.link_url ?? null,
+        sort_order: r.sort_order ?? 0,
+      }));
+    } catch (err) {
+      console.error('[cache:reviews] failed:', err);
+      return [];
+    }
+  },
+  ['homepage:reviews'],
+  { revalidate: REVALIDATE, tags: [...TAGS, 'reviews'] }
+);

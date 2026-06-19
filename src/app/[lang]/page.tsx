@@ -10,6 +10,7 @@ import PromoBannersSection from '@/components/PromoBannersSection';
 import ShortsFeedSection, { ShortsFeedSkeleton } from '@/components/sections/ShortsFeedSection';
 import SubHeroSection, { SubHeroSkeleton } from '@/components/sections/SubHeroSection';
 import InstagramFeedSection, { InstagramFeedSkeleton } from '@/components/sections/InstagramFeedSection';
+import ReviewsSection, { ReviewsSkeleton } from '@/components/sections/ReviewsSection';
 import SectionErrorBoundary from '@/components/SectionErrorBoundary';
 
 import HomepageBanner from '@/components/HomepageBanner';
@@ -166,6 +167,13 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
           <div data-builder-section="instagram">
             <InstagramFeedSection />
           </div>
+        </Suspense>
+      </SectionErrorBoundary>
+    ),
+    'reviews': (
+      <SectionErrorBoundary label="Reviews">
+        <Suspense fallback={<ReviewsSkeleton />}>
+          <ReviewsSection lang={lang} />
         </Suspense>
       </SectionErrorBoundary>
     ),
