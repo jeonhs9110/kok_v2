@@ -266,18 +266,15 @@ export default function HomepageBuilderPage() {
           hint: '@핸들 + 포스트 그리드',
         },
         {
-          // Boss directive 2026-06-19: integrate the review showcase
-          // into the homepage builder. The reviews currently render on
-          // /menus/review (not the home main), so the card sits at the
-          // bottom of the homepage section list rather than in a
-          // separate group. Drag-reorder still skips it (it has no
-          // sectionOrder slot yet) — when reviews-on-homepage ships in
-          // a follow-up, the card automatically joins the drag-list.
+          // Phase C 2026-06-19 — reviews now render as an actual home
+          // section (component: ReviewsSection). The card became
+          // drag-reorderable; CORE_REORDERABLE includes 'reviews' and
+          // the storefront sectionsMap has the matching renderer.
           key: 'reviews', name: '리뷰 쇼케이스', icon: Star,
           href: '/admin/reviews',
           status: countsLabel(counts.reviewsActive, counts.reviewsTotal),
           visible: counts.reviewsActive > 0,
-          hint: '현재 /menus/review에 노출',
+          hint: '홈 메인 + /menus/review',
         },
       ],
     },
@@ -412,7 +409,7 @@ export default function HomepageBuilderPage() {
   // The reorderable key set is the same one the storefront's section
   // map covers — global chrome rows (theme, logo, menus, top-stripe,
   // footer) stay fixed in their group.
-  const CORE_REORDERABLE = new Set(['carousel','promo-banners','products','shorts','sub-hero','instagram']);
+  const CORE_REORDERABLE = new Set(['carousel','promo-banners','products','shorts','sub-hero','instagram','reviews']);
   const isReorderable = (k: string) => CORE_REORDERABLE.has(k) || isBannerKey(k);
 
   async function saveSectionOrder(next: string[]) {

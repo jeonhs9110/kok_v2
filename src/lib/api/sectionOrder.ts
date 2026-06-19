@@ -16,7 +16,8 @@ export type CoreSectionKey =
   | 'products'
   | 'shorts'
   | 'sub-hero'
-  | 'instagram';
+  | 'instagram'
+  | 'reviews';
 
 /**
  * Banner keys are `banner:<uuid>` — operator-spawned inline strips that
@@ -34,6 +35,7 @@ export const DEFAULT_ORDER: CoreSectionKey[] = [
   'shorts',
   'sub-hero',
   'instagram',
+  'reviews',
 ];
 
 const VALID_CORE = new Set<CoreSectionKey>(DEFAULT_ORDER);
