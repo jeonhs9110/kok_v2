@@ -10,7 +10,6 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 // products writes — see migration 19.
 const supabase = getSupabaseBrowser();
 import type { Category } from '@/lib/api/categories';
-import { getAllTags, type IngredientTag } from '@/lib/api/ingredient-tags';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import ProductList from './_components/ProductList';
 import ProductDetailModal from './_components/ProductDetailModal';
@@ -76,7 +75,6 @@ function ProductsAdminPageInner() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [allTags, setAllTags] = useState<IngredientTag[]>([]);
   /**
    * Modal target. `null` = closed. Wrapping the product (or null for create
    * mode) inside an object means we can re-open the modal for the *same*
@@ -143,9 +141,6 @@ function ProductsAdminPageInner() {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
-    getAllTags().then(setAllTags).catch(err =>
-      console.error('[admin/products] 성분 태그 로드 실패:', err)
-    );
   }, [fetchProducts, fetchCategories]);
 
   const handleToggle = async (id: string, currentStatus: boolean) => {
@@ -221,7 +216,6 @@ function ProductsAdminPageInner() {
       <ProductDetailModal
         editing={editing}
         categories={categories}
-        allTags={allTags}
         onClose={() => setEditing(null)}
         onSaved={() => {
           setEditing(null);

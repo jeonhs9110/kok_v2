@@ -265,6 +265,20 @@ export default function HomepageBuilderPage() {
           visible: !!counts.instagramHandle,
           hint: '@핸들 + 포스트 그리드',
         },
+        {
+          // Boss directive 2026-06-19: integrate the review showcase
+          // into the homepage builder. The reviews currently render on
+          // /menus/review (not the home main), so the card sits at the
+          // bottom of the homepage section list rather than in a
+          // separate group. Drag-reorder still skips it (it has no
+          // sectionOrder slot yet) — when reviews-on-homepage ships in
+          // a follow-up, the card automatically joins the drag-list.
+          key: 'reviews', name: '리뷰 쇼케이스', icon: Star,
+          href: '/admin/reviews',
+          status: countsLabel(counts.reviewsActive, counts.reviewsTotal),
+          visible: counts.reviewsActive > 0,
+          hint: '현재 /menus/review에 노출',
+        },
       ],
     },
     {
@@ -279,17 +293,6 @@ export default function HomepageBuilderPage() {
           status: '카드 크기 + 간격 + 글씨 + 이미지 비율',
           visible: true,
           hint: '추천 상품 그리드 표시 설정',
-        },
-        {
-          key: 'reviews', name: '리뷰 쇼케이스', icon: Star,
-          href: '/admin/reviews',
-          status: countsLabel(counts.reviewsActive, counts.reviewsTotal),
-          // Reviews render on /menus/review (not on the home main page
-          // after PR #126), so they don't belong in the drag-reorder
-          // homepage list. Kept in the hub so the operator can find
-          // the editor from one place.
-          visible: counts.reviewsActive > 0,
-          hint: '/menus/review 페이지 노출',
         },
       ],
     },
