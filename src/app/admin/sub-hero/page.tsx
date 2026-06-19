@@ -185,12 +185,12 @@ export default function SubHeroAdminPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-1">서브 히어로 배너 관리</h2>
         <p className="text-sm text-gray-500">홈페이지 영상 리뷰 아래에 표시되는 전체 너비 배너입니다.</p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
+      <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-5">
 
         {/* ── Live preview ─────────────────────────────────────────
             Mirrors src/components/SubHeroBanner.tsx so admins see

@@ -163,7 +163,7 @@ export default function ThemePage() {
   return (
     <div className={isEmbedded ? 'block' : 'grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6'}>
       {/* Editor pane */}
-      <aside className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col max-h-[calc(100vh-180px)]">
+      <aside className="bg-white rounded border border-[#e5e7eb] overflow-hidden flex flex-col max-h-[calc(100vh-180px)]">
         <div className="p-5 border-b border-gray-100 bg-gray-50/50">
           <div className="flex items-center gap-2 mb-1">
             <Palette className="w-5 h-5 text-gray-500" />
@@ -475,7 +475,7 @@ export default function ThemePage() {
       {/* Preview pane — hidden in embedded mode; the parent hub's
           central iframe shows the live preview instead. */}
       {!isEmbedded && (
-      <section className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+      <section className="bg-white rounded border border-[#e5e7eb] overflow-hidden flex flex-col">
         <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
           <div className="flex items-center gap-2">
             <Eye className="w-4 h-4 text-gray-500" />

@@ -222,7 +222,7 @@ export default function AssetLibraryPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-6">
         <div className="flex items-center justify-between gap-4 mb-2">
           <div>
             <h2 className="text-lg font-bold text-gray-800">에셋 라이브러리</h2>
@@ -279,7 +279,7 @@ export default function AssetLibraryPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
         {/* Grid */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 min-h-[400px]">
+        <div className="bg-white rounded border border-[#e5e7eb] p-4 min-h-[400px]">
           {isLoading && filtered.length === 0 ? (
             <div className="py-20 text-center text-sm text-gray-400 font-bold tracking-widest">불러오는 중...</div>
           ) : filtered.length === 0 ? (
@@ -337,7 +337,7 @@ export default function AssetLibraryPage() {
         </div>
 
         {/* Detail panel */}
-        <aside className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 lg:sticky lg:top-6 h-fit">
+        <aside className="bg-white rounded border border-[#e5e7eb] p-5 lg:sticky lg:top-6 h-fit">
           {selected ? (
             <AssetDetail
               asset={selected}
