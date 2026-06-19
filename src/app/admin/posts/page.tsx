@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, FileText, BookOpen, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 3 RLS lockdown on `posts` requires admin
 // JWT for cross-author updates/deletes — see migration 19.
@@ -62,8 +63,29 @@ export default function AllPostsAdminPage() {
     });
   }, [posts, filterMenuId, search]);
 
+  const stats = useMemo(() => {
+    const boardMenus = menus.filter(m => m.page_type === 'board').length;
+    // Most-populated board — operator's go-to "what board is busy" stat.
+    const perBoard: Record<string, number> = {};
+    for (const p of posts) perBoard[p.menu_id] = (perBoard[p.menu_id] || 0) + 1;
+    const topBoardCount = Math.max(0, ...Object.values(perBoard));
+    return {
+      total: posts.length,
+      boards: boardMenus,
+      topBoardCount,
+      avg: boardMenus ? Math.round(posts.length / boardMenus) : 0,
+    };
+  }, [posts, menus]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <StatStrip>
+        <StatCard accent="#3b82f6" label="전체 게시글" value={stats.total} icon={FileText} subLabel="모든 게시판 합계" />
+        <StatCard accent="#22c55e" label="활성 게시판" value={stats.boards} icon={BookOpen} subLabel="page_type = board" />
+        <StatCard accent="#8b5cf6" label="가장 많은 게시판" value={stats.topBoardCount} icon={MessageSquare} subLabel="최대 게시글 수" />
+        <StatCard accent="#f59e0b" label="평균 게시글" value={stats.avg} icon={FileText} subLabel="게시판당" />
+      </StatStrip>
+
       <div>
         <h2 className="text-lg font-bold text-gray-800">전체 게시글 관리</h2>
         <p className="text-sm text-gray-500">모든 게시판의 게시글을 한 곳에서 확인하고 관리합니다.</p>

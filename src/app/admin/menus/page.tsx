@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, ChevronRight, X, FileText, MessageSquare, ExternalLink } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronRight, X, FileText, MessageSquare, ExternalLink, MenuSquare, Layers } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
 import RichEditor from '@/components/admin/RichEditor';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
@@ -134,8 +135,23 @@ export default function MenusAdminPage() {
     fetchAll();
   };
 
+  const subCount = menus.filter(m => m.parent_id).length;
+  const stats = {
+    total: menus.length,
+    parents: parents.length,
+    subs: subCount,
+    boards: menus.filter(m => m.page_type === 'board').length,
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <StatStrip>
+        <StatCard accent="#3b82f6" label="전체 메뉴" value={stats.total} icon={MenuSquare} subLabel="대분류 + 하위 합계" />
+        <StatCard accent="#22c55e" label="대분류" value={stats.parents} icon={MenuSquare} subLabel="헤더 직속" />
+        <StatCard accent="#8b5cf6" label="하위 메뉴" value={stats.subs} icon={Layers} subLabel="드롭다운 항목" />
+        <StatCard accent="#f59e0b" label="게시판형" value={stats.boards} icon={MessageSquare} subLabel="board 페이지 타입" />
+      </StatStrip>
+
       <div className="flex justify-between items-center">
         <p className="text-sm text-gray-500">헤더 내비게이션 메뉴를 관리합니다. 각 메뉴는 단순 페이지 또는 게시판 형태를 가질 수 있습니다.</p>
         <button onClick={() => openAdd()} className="flex items-center gap-2 px-4 py-2.5 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
@@ -143,7 +159,7 @@ export default function MenusAdminPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center text-gray-400 text-sm font-bold tracking-widest">불러오는 중...</div>
         ) : parents.length === 0 ? (
