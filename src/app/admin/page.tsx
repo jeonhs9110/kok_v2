@@ -1,324 +1,417 @@
 'use client';
 
-import { Package, Video, RefreshCw, Globe, Eye, Heart, ArrowUpDown, ChevronUp, ChevronDown, AlertTriangle } from 'lucide-react';
+import {
+  RefreshCw, Eye, Heart, Users, Package, Globe, TrendingUp,
+  ArrowUpRight, ArrowDownRight, Activity, ShoppingBag,
+} from 'lucide-react';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
 const supabase = getSupabaseBrowser();
 
-interface DashboardStats {
-  totalProducts: number;
-  activeProducts: number;
-  // Inactive OR missing image_url — clicking the card drops the admin
-  // into /admin/products with the same filter pre-applied.
-  attentionProducts: number;
-  totalShorts: number;
-  totalVisits: number;
+/**
+ * /admin — Cafe24 analytics-style dashboard.
+ *
+ * We don't have order/sales data (KCP integration is Phase 2 deploy),
+ * so the boss's "Cafe24 analytics처럼 구현 가능한 것들만" directive
+ * resolves to: keep the Cafe24 visual idiom (left-striped stat cards,
+ * 최근 7일 date range, trend % vs previous 7-day window, funnel-shape
+ * widgets) and feed it with the data we actually persist — pageviews,
+ * users, products, wishlist, reviews.
+ *
+ * Top row: 4 stat cards (visits / members / active products / wishlist).
+ * Mid: daily visit trend (last 7 days) + visit funnel (visit → product
+ * detail → wishlist add) — our analogue of Cafe24's purchase funnel.
+ * Bottom: country breakdown + wishlist TOP, product click ranking.
+ */
+
+interface DashboardData {
   isLive: boolean;
+  // current 7-day window
+  visits7d: number;
+  newMembers7d: number;
+  wishlistAdds7d: number;
+  // previous 7-day window — drives trend %
+  visitsPrev7d: number;
+  newMembersPrev7d: number;
+  wishlistAddsPrev7d: number;
+  // current totals
+  activeProducts: number;
+  totalProducts: number;
+  totalMembers: number;
+  totalWishlist: number;
+  totalVisits: number;
+  productDetailViews: number;
+  // breakdowns
+  dailyVisits: { date: string; count: number }[]; // last 7 days, oldest first
+  countries: { country: string; count: number }[];
+  productClicks: { id: string; name: string; clicks: number }[];
+  wishRanks: { id: string; name: string; wishCount: number }[];
 }
 
-interface CountryStat {
-  country: string;
-  count: number;
-}
+const EMPTY: DashboardData = {
+  isLive: false,
+  visits7d: 0, newMembers7d: 0, wishlistAdds7d: 0,
+  visitsPrev7d: 0, newMembersPrev7d: 0, wishlistAddsPrev7d: 0,
+  activeProducts: 0, totalProducts: 0, totalMembers: 0, totalWishlist: 0,
+  totalVisits: 0, productDetailViews: 0,
+  dailyVisits: [], countries: [], productClicks: [], wishRanks: [],
+};
 
-interface ProductClick {
-  id: string;
-  name: string;
-  clicks: number;
-}
-
-interface WishRank {
-  id: string;
-  name: string;
-  wishCount: number;
-}
-
-type SortDir = 'asc' | 'desc';
+const COUNTRY_NAMES: Record<string, string> = {
+  KR: '한국', US: '미국', JP: '일본', CN: '중국', GB: '영국', DE: '독일',
+  FR: '프랑스', SG: '싱가포르', AU: '호주', CA: '캐나다', TH: '태국',
+  VN: '베트남', TW: '대만', HK: '홍콩', UNKNOWN: '알 수 없음',
+};
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalProducts: 0, activeProducts: 0, attentionProducts: 0, totalShorts: 0, totalVisits: 0, isLive: false,
-  });
-  const [countries, setCountries] = useState<CountryStat[]>([]);
-  const [productClicks, setProductClicks] = useState<ProductClick[]>([]);
-  const [wishRanks, setWishRanks] = useState<WishRank[]>([]);
-  const [clickSort, setClickSort] = useState<SortDir>('desc');
+  const [data, setData] = useState<DashboardData>(EMPTY);
   const [isLoading, setIsLoading] = useState(true);
 
-  async function fetchStats() {
+  async function fetchAll() {
     setIsLoading(true);
     try {
       if (!supabase) throw new Error('No client');
 
-      const [productsRes, activeRes, shortsRes, visitsRes] = await Promise.all([
-        supabase.from('products').select('id', { count: 'exact', head: true }),
-        supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('shorts').select('id', { count: 'exact', head: true }),
-        supabase.from('analytics').select('id', { count: 'exact', head: true }),
-      ]);
+      const now = Date.now();
+      const dayMs = 24 * 60 * 60 * 1000;
+      const start7d = new Date(now - 7 * dayMs).toISOString();
+      const start14d = new Date(now - 14 * dayMs).toISOString();
 
-      // Throw on EITHER error (was `&&`, which meant a single-side failure
-      // silently continued with zero counts — debug audit 2026-06-10).
-      if (productsRes.error || activeRes.error) throw new Error('DB error');
-
-      // Fetch all analytics + products + wishlist in parallel. Pull
-      // is_active + images alongside id/name so the "관심 필요" count can
-      // be derived from the same fetch (no extra round-trip).
-      const [analyticsRes, allProductsRes, wishlistRes] = await Promise.all([
-        supabase.from('analytics').select('country, path'),
-        // `images` is a JSONB array on the products table; the storefront
-        // and admin both read `images[0]` as the main image (see
-        // src/lib/api/products.ts → imageUrl mapping). There is no
-        // `image_url` column — selecting one PostgREST-errors the whole
-        // Promise.all and silently zeros every dashboard card.
+      const [
+        analyticsAll,
+        analytics7d,
+        analyticsPrev7d,
+        productsAll,
+        productsActive,
+        usersAll,
+        users7d,
+        usersPrev7d,
+        wishAll,
+      ] = await Promise.all([
+        supabase.from('analytics').select('country, path, created_at'),
+        supabase.from('analytics').select('id', { count: 'exact', head: true }).gte('created_at', start7d),
+        supabase.from('analytics').select('id', { count: 'exact', head: true }).gte('created_at', start14d).lt('created_at', start7d),
         supabase.from('products').select('id, name, is_active, images'),
-        supabase.from('wishlist').select('product_id'),
+        supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('users').select('id', { count: 'exact', head: true }),
+        supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', start7d),
+        supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', start14d).lt('created_at', start7d),
+        supabase.from('wishlist').select('product_id, created_at'),
       ]);
 
-      // "Needs attention" = inactive OR missing main image. These are the
-      // two states that visibly break a product card on the storefront.
-      const attentionProducts = (allProductsRes.data ?? []).filter(
-        (p: { is_active?: boolean; images?: unknown }) =>
-          !p.is_active || !Array.isArray(p.images) || p.images.length === 0,
-      ).length;
-
-      // Country breakdown
+      // Daily visit bucketing — last 7 days, ascending so the chart
+      // reads left→right as time forward.
+      const dailyBuckets: Record<string, number> = {};
+      const labels: string[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now - i * dayMs);
+        const key = d.toISOString().slice(0, 10);
+        dailyBuckets[key] = 0;
+        labels.push(key);
+      }
       const countryMap: Record<string, number> = {};
       const productClickMap: Record<string, number> = {};
-      if (analyticsRes.data) {
-        for (const row of analyticsRes.data) {
-          countryMap[row.country || 'UNKNOWN'] = (countryMap[row.country || 'UNKNOWN'] || 0) + 1;
-          // Count product detail page views: /kr/xx/products/ID or /gl/xx/products/ID
-          const match = row.path?.match(/\/products\/([^/]+)$/);
-          if (match) {
-            productClickMap[match[1]] = (productClickMap[match[1]] || 0) + 1;
-          }
+      let productDetailViews = 0;
+      for (const row of analyticsAll.data ?? []) {
+        countryMap[row.country || 'UNKNOWN'] = (countryMap[row.country || 'UNKNOWN'] || 0) + 1;
+        const date = row.created_at?.slice(0, 10);
+        if (date && date in dailyBuckets) dailyBuckets[date]++;
+        const match = row.path?.match(/\/products\/([^/]+)$/);
+        if (match) {
+          productClickMap[match[1]] = (productClickMap[match[1]] || 0) + 1;
+          productDetailViews++;
         }
       }
+      const dailyVisits = labels.map(d => ({ date: d, count: dailyBuckets[d] }));
 
-      setCountries(
-        Object.entries(countryMap)
-          .map(([country, count]) => ({ country, count }))
-          .sort((a, b) => b.count - a.count)
-      );
-
-      // Product clicks with names
-      const productNameMap: Record<string, string> = {};
-      if (allProductsRes.data) {
-        for (const p of allProductsRes.data) productNameMap[p.id] = p.name;
+      // Wishlist windowed counts
+      let wishlistAdds7d = 0;
+      let wishlistAddsPrev7d = 0;
+      for (const w of wishAll.data ?? []) {
+        if (!w.created_at) continue;
+        const t = new Date(w.created_at).getTime();
+        if (t >= now - 7 * dayMs) wishlistAdds7d++;
+        else if (t >= now - 14 * dayMs) wishlistAddsPrev7d++;
       }
 
-      const clicks: ProductClick[] = Object.entries(productClickMap)
-        .filter(([id]) => productNameMap[id])
-        .map(([id, clicks]) => ({ id, name: productNameMap[id], clicks }));
-      // Also add products with 0 clicks
-      if (allProductsRes.data) {
-        for (const p of allProductsRes.data) {
-          if (!productClickMap[p.id]) clicks.push({ id: p.id, name: p.name, clicks: 0 });
-        }
-      }
-      setProductClicks(clicks);
+      const nameMap: Record<string, string> = {};
+      for (const p of productsAll.data ?? []) nameMap[p.id] = p.name;
 
-      // Wishlist ranking
+      const productClicks = Object.entries(productClickMap)
+        .filter(([id]) => nameMap[id])
+        .map(([id, clicks]) => ({ id, name: nameMap[id], clicks }))
+        .sort((a, b) => b.clicks - a.clicks);
+
       const wishMap: Record<string, number> = {};
-      if (wishlistRes.data) {
-        for (const w of wishlistRes.data) {
-          wishMap[w.product_id] = (wishMap[w.product_id] || 0) + 1;
-        }
-      }
-      setWishRanks(
-        Object.entries(wishMap)
-          .filter(([id]) => productNameMap[id])
-          .map(([id, wishCount]) => ({ id, name: productNameMap[id], wishCount }))
-          .sort((a, b) => b.wishCount - a.wishCount)
-      );
+      for (const w of wishAll.data ?? []) wishMap[w.product_id] = (wishMap[w.product_id] || 0) + 1;
+      const wishRanks = Object.entries(wishMap)
+        .filter(([id]) => nameMap[id])
+        .map(([id, wishCount]) => ({ id, name: nameMap[id], wishCount }))
+        .sort((a, b) => b.wishCount - a.wishCount);
 
-      setStats({
-        totalProducts: productsRes.count ?? 0,
-        activeProducts: activeRes.count ?? 0,
-        attentionProducts,
-        totalShorts: shortsRes.count ?? 0,
-        totalVisits: visitsRes.count ?? 0,
+      setData({
         isLive: true,
+        visits7d: analytics7d.count ?? 0,
+        newMembers7d: users7d.count ?? 0,
+        wishlistAdds7d,
+        visitsPrev7d: analyticsPrev7d.count ?? 0,
+        newMembersPrev7d: usersPrev7d.count ?? 0,
+        wishlistAddsPrev7d,
+        activeProducts: productsActive.count ?? 0,
+        totalProducts: productsAll.data?.length ?? 0,
+        totalMembers: usersAll.count ?? 0,
+        totalWishlist: wishAll.data?.length ?? 0,
+        totalVisits: analyticsAll.data?.length ?? 0,
+        productDetailViews,
+        dailyVisits,
+        countries: Object.entries(countryMap).map(([country, count]) => ({ country, count })).sort((a, b) => b.count - a.count),
+        productClicks,
+        wishRanks,
       });
     } catch {
-      setStats({ totalProducts: 0, activeProducts: 0, attentionProducts: 0, totalShorts: 0, totalVisits: 0, isLive: false });
+      setData(EMPTY);
     } finally {
       setIsLoading(false);
     }
   }
 
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => { fetchAll(); }, []);
 
-  const COUNTRY_NAMES: Record<string, string> = {
-    KR: '한국', US: '미국', JP: '일본', CN: '중국', GB: '영국', DE: '독일',
-    FR: '프랑스', SG: '싱가포르', AU: '호주', CA: '캐나다', TH: '태국',
-    VN: '베트남', TW: '대만', HK: '홍콩', UNKNOWN: '알 수 없음',
-  };
+  // % change vs prev window. Returns null when prev is 0 (can't divide).
+  function trend(curr: number, prev: number): number | null {
+    if (prev === 0) return curr > 0 ? 100 : null;
+    return Math.round(((curr - prev) / prev) * 100);
+  }
 
-  const sortedClicks = [...productClicks].sort((a, b) =>
-    clickSort === 'desc' ? b.clicks - a.clicks : a.clicks - b.clicks
-  );
+  const visitTrend = useMemo(() => trend(data.visits7d, data.visitsPrev7d), [data]);
+  const memberTrend = useMemo(() => trend(data.newMembers7d, data.newMembersPrev7d), [data]);
+  const wishTrend = useMemo(() => trend(data.wishlistAdds7d, data.wishlistAddsPrev7d), [data]);
 
-  const cards = [
-    { title: '전체 상품', value: stats.totalProducts, icon: Package, color: 'bg-blue-500', href: '/admin/products' },
-    { title: '게시중 상품', value: stats.activeProducts, icon: Package, color: 'bg-green-500', href: '/admin/products?filter=active' },
-    // "관심 필요" replaces the old dead "총 방문수" card link (which pointed
-    // at "#"). The actual visit count is still shown in the analytics
-    // section below; this slot now drives the admin toward the products
-    // that are visibly broken on the storefront.
-    { title: '관심 필요 상품', value: stats.attentionProducts, icon: AlertTriangle, color: 'bg-amber-500', href: '/admin/products?filter=attention' },
-    { title: '등록 숏츠', value: stats.totalShorts, icon: Video, color: 'bg-purple-500', href: '/admin/shorts' },
-  ];
+  // Visit funnel — our analogue of Cafe24's purchase funnel. Since we
+  // don't capture cart/order events, this collapses to three stages.
+  const funnel = useMemo(() => {
+    const visit = data.totalVisits;
+    const detail = data.productDetailViews;
+    const wish = data.totalWishlist;
+    const max = Math.max(visit, detail, wish, 1);
+    return [
+      { label: '방문', value: visit, pct: 100 },
+      { label: '상품 상세 조회', value: detail, pct: visit ? Math.round((detail / visit) * 100) : 0, ratio: Math.round((detail / max) * 100) },
+      { label: '위시리스트 추가', value: wish, pct: visit ? Math.round((wish / visit) * 100) : 0, ratio: Math.round((wish / max) * 100) },
+    ];
+  }, [data]);
+
+  const maxDaily = Math.max(...data.dailyVisits.map(d => d.count), 1);
+  const todayStr = new Date().toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+  const start7dStr = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+  const dateRangeLabel = `${start7dStr} – ${todayStr} (최근 7일)`;
 
   return (
-    <div>
-      {/* Connection status */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${stats.isLive ? 'bg-green-500' : 'bg-amber-400'}`} />
-          <span className="text-xs font-semibold text-gray-500">
-            {stats.isLive ? 'Supabase 연결됨' : '목업 모드 (DB 미연결)'}
-          </span>
+    <div className="space-y-5">
+      {/* Header strip — Cafe24-style live indicator + date range chip + refresh */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <span className={`w-1.5 h-1.5 rounded-full ${data.isLive ? 'bg-[#22c55e]' : 'bg-[#f59e0b]'}`} />
+            <span className="text-[11px] font-semibold text-[#6b7280]">
+              {data.isLive ? 'Supabase 연결됨' : 'DB 미연결'}
+            </span>
+          </div>
+          <span className="text-[11px] text-[#9ca3af]">·</span>
+          <span className="text-[11px] text-[#6b7280] font-medium">{dateRangeLabel}</span>
         </div>
-        <button onClick={fetchStats} disabled={isLoading}
-          className="text-xs text-gray-400 hover:text-gray-700 flex items-center gap-1 transition-colors">
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} /> 새로고침
+        <button onClick={fetchAll} disabled={isLoading}
+          className="text-[11px] text-[#6b7280] hover:text-[#1f2937] flex items-center gap-1 transition-colors">
+          <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} /> 새로고침
         </button>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Link key={card.title} href={card.href} className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow group flex items-center">
-              <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white ${card.color} shadow-sm group-hover:scale-105 transition-transform`}>
-                <Icon className="w-6 h-6" />
-              </div>
-              <div className="ml-4">
-                <p className="text-xs font-medium text-gray-500">{card.title}</p>
-                <p className="text-xl font-bold text-gray-900">{isLoading ? '...' : card.value}</p>
-              </div>
-            </Link>
-          );
-        })}
+      {/* Stat cards row — Cafe24's signature: colored left bar + small
+          label + big number + trend chip. Replaces our old icon-tile
+          cards. */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          accent="#3b82f6"
+          label="총 방문수"
+          value={data.visits7d}
+          isLoading={isLoading}
+          trend={visitTrend}
+          subLabel={`누적 ${data.totalVisits.toLocaleString()}`}
+          icon={Activity}
+        />
+        <StatCard
+          accent="#22c55e"
+          label="신규 회원"
+          value={data.newMembers7d}
+          isLoading={isLoading}
+          trend={memberTrend}
+          subLabel={`누적 ${data.totalMembers.toLocaleString()}명`}
+          icon={Users}
+        />
+        <StatCard
+          accent="#f59e0b"
+          label="게시중 상품"
+          value={data.activeProducts}
+          isLoading={isLoading}
+          subLabel={`전체 ${data.totalProducts}개 중`}
+          icon={Package}
+        />
+        <StatCard
+          accent="#ef4444"
+          label="위시리스트 추가"
+          value={data.wishlistAdds7d}
+          isLoading={isLoading}
+          trend={wishTrend}
+          subLabel={`누적 ${data.totalWishlist.toLocaleString()}건`}
+          icon={Heart}
+        />
       </div>
 
-      {/* Analytics section - row 1 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Country breakdown */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Globe className="w-5 h-5 text-gray-400" />
-            <h3 className="font-bold text-gray-800">국가별 방문</h3>
-          </div>
-          {countries.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">아직 방문 데이터가 없습니다</p>
+      {/* Daily visit trend graph + Visit funnel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <Panel title="일별 방문 트렌드" subtitle={dateRangeLabel} icon={TrendingUp} className="lg:col-span-2">
+          {data.dailyVisits.every(d => d.count === 0) ? (
+            <EmptyState label="아직 방문 데이터가 없습니다" />
           ) : (
-            <div className="space-y-3">
-              {countries.slice(0, 10).map(({ country, count }) => {
-                const maxCount = countries[0]?.count || 1;
-                const pct = Math.round((count / maxCount) * 100);
+            <div className="flex items-end gap-2 sm:gap-3 h-44 pt-2">
+              {data.dailyVisits.map(d => {
+                const h = Math.max(4, Math.round((d.count / maxDaily) * 100));
+                const dayLabel = new Date(d.date).toLocaleDateString('ko-KR', { weekday: 'short' });
+                const dateNum = new Date(d.date).getDate();
                 return (
-                  <div key={country}>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-medium text-gray-700">
-                        {COUNTRY_NAMES[country] || country}
-                      </span>
-                      <span className="text-xs font-bold text-gray-500">{count}회</span>
+                  <div key={d.date} className="flex-1 flex flex-col items-center gap-1.5 group">
+                    <span className="text-[10px] font-semibold text-[#3b82f6] opacity-0 group-hover:opacity-100 transition-opacity">
+                      {d.count}
+                    </span>
+                    <div className="w-full flex-1 flex items-end">
+                      <div
+                        className="w-full bg-gradient-to-t from-[#3b82f6] to-[#60a5fa] rounded-t transition-all group-hover:from-[#1d4ed8]"
+                        style={{ height: `${h}%` }}
+                      />
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2">
-                      <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    <div className="flex flex-col items-center">
+                      <span className="text-[10px] font-semibold text-[#1f2937]">{dateNum}</span>
+                      <span className="text-[9px] text-[#9ca3af]">{dayLabel}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+        </Panel>
 
-        {/* Wishlist ranking */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <Heart className="w-5 h-5 text-gray-400" />
-            <h3 className="font-bold text-gray-800">위시리스트 인기 상품</h3>
+        <Panel title="방문 퍼널" subtitle="방문 → 조회 → 찜" icon={ShoppingBag}>
+          <div className="space-y-3 pt-1">
+            {funnel.map((stage, i) => (
+              <div key={stage.label}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-semibold text-[#374151]">{stage.label}</span>
+                  <span className="text-[11px] text-[#6b7280]">
+                    <span className="font-bold text-[#1f2937]">{stage.value.toLocaleString()}</span>
+                    {i > 0 && <span className="ml-1 text-[#9ca3af]">({stage.pct}%)</span>}
+                  </span>
+                </div>
+                <div className="w-full bg-[#f3f4f6] rounded h-2">
+                  <div
+                    className="h-2 rounded transition-all"
+                    style={{
+                      width: `${i === 0 ? 100 : stage.ratio ?? 0}%`,
+                      backgroundColor: ['#3b82f6', '#8b5cf6', '#ef4444'][i],
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+            <p className="text-[10px] text-[#9ca3af] pt-2 border-t border-[#f3f4f6]">
+              주문/결제 단계는 KCP 결제 연동 후 추가됩니다.
+            </p>
           </div>
-          {wishRanks.length === 0 ? (
-            <p className="text-sm text-gray-400 py-8 text-center">아직 위시리스트 데이터가 없습니다</p>
+        </Panel>
+      </div>
+
+      {/* Country + Wishlist row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <Panel title="국가별 방문" subtitle="전체 누적" icon={Globe}>
+          {data.countries.length === 0 ? (
+            <EmptyState label="아직 방문 데이터가 없습니다" />
           ) : (
-            <div className="space-y-2">
-              {wishRanks.slice(0, 10).map((item, i) => (
-                <div key={item.id} className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    i === 0 ? 'bg-yellow-100 text-yellow-700' : i === 1 ? 'bg-gray-200 text-gray-600' : i === 2 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'
-                  }`}>{i + 1}</span>
-                  <span className="text-sm text-gray-800 font-medium truncate flex-1">{item.name}</span>
-                  <span className="text-xs font-bold text-red-400 flex items-center gap-1">
+            <div className="space-y-2.5">
+              {data.countries.slice(0, 8).map(({ country, count }) => {
+                const max = data.countries[0]?.count || 1;
+                const pct = Math.round((count / max) * 100);
+                return (
+                  <div key={country}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-[12px] font-medium text-[#374151]">
+                        {COUNTRY_NAMES[country] || country}
+                      </span>
+                      <span className="text-[11px] font-bold text-[#6b7280]">{count.toLocaleString()}회</span>
+                    </div>
+                    <div className="w-full bg-[#f3f4f6] rounded h-1.5">
+                      <div className="bg-[#3b82f6] h-1.5 rounded transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Panel>
+
+        <Panel title="위시리스트 TOP" subtitle="누적 찜 횟수 기준" icon={Heart}>
+          {data.wishRanks.length === 0 ? (
+            <EmptyState label="아직 위시리스트 데이터가 없습니다" />
+          ) : (
+            <div className="space-y-1">
+              {data.wishRanks.slice(0, 6).map((item, i) => (
+                <div key={item.id} className="flex items-center gap-3 py-2 border-b border-[#f3f4f6] last:border-0">
+                  <RankBadge rank={i + 1} />
+                  <span className="text-[12px] text-[#1f2937] font-medium truncate flex-1">{item.name}</span>
+                  <span className="text-[11px] font-bold text-[#ef4444] flex items-center gap-1">
                     <Heart className="w-3 h-3 fill-current" /> {item.wishCount}
                   </span>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </Panel>
       </div>
 
-      {/* Product clicks - full width */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <Eye className="w-5 h-5 text-gray-400" />
-            <h3 className="font-bold text-gray-800">제품별 클릭수</h3>
-          </div>
-          <button
-            onClick={() => setClickSort(prev => prev === 'desc' ? 'asc' : 'desc')}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <ArrowUpDown className="w-3.5 h-3.5" />
-            {clickSort === 'desc' ? '높은순' : '낮은순'}
-          </button>
-        </div>
-        {sortedClicks.length === 0 ? (
-          <p className="text-sm text-gray-400 py-8 text-center">상품 데이터가 없습니다</p>
+      {/* Product click ranking */}
+      <Panel title="상품 클릭수 TOP" subtitle="상품 상세 페이지 조회수 누적" icon={Eye}>
+        {data.productClicks.length === 0 ? (
+          <EmptyState label="상품 조회 데이터가 없습니다" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-gray-100 text-xs text-gray-500 font-semibold uppercase tracking-wider">
-                  <th className="py-3 pl-2 w-10">#</th>
-                  <th className="py-3">상품명</th>
-                  <th className="py-3 text-right pr-2">
-                    <button onClick={() => setClickSort(prev => prev === 'desc' ? 'asc' : 'desc')}
-                      className="inline-flex items-center gap-1 hover:text-gray-800 transition-colors">
-                      클릭수
-                      {clickSort === 'desc' ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
-                    </button>
-                  </th>
-                  <th className="py-3 pr-4 w-48">비율</th>
+                <tr className="border-b border-[#f3f4f6] text-[10px] text-[#9ca3af] font-bold uppercase tracking-wider">
+                  <th className="py-2 pl-1 w-10">#</th>
+                  <th className="py-2">상품명</th>
+                  <th className="py-2 text-right pr-1">클릭수</th>
+                  <th className="py-2 pr-2 w-40 sm:w-64">비율</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
-                {sortedClicks.map((item, i) => {
-                  const maxClicks = Math.max(...productClicks.map(p => p.clicks), 1);
-                  const pct = Math.round((item.clicks / maxClicks) * 100);
+              <tbody className="divide-y divide-[#f3f4f6]">
+                {data.productClicks.slice(0, 10).map((item, i) => {
+                  const max = data.productClicks[0]?.clicks || 1;
+                  const pct = Math.round((item.clicks / max) * 100);
                   return (
-                    <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="py-3 pl-2 text-xs text-gray-400 font-bold">{i + 1}</td>
-                      <td className="py-3">
-                        <Link href={`/admin/products`} className="text-sm font-medium text-gray-800 hover:text-black transition-colors">
+                    <tr key={item.id} className="hover:bg-[#fafbfc] transition-colors">
+                      <td className="py-2 pl-1"><RankBadge rank={i + 1} small /></td>
+                      <td className="py-2">
+                        <Link href="/admin/products" className="text-[12px] font-medium text-[#1f2937] hover:text-black transition-colors">
                           {item.name}
                         </Link>
                       </td>
-                      <td className="py-3 text-right pr-2">
-                        <span className="text-sm font-bold text-gray-900">{item.clicks}</span>
-                        <span className="text-xs text-gray-400 ml-1">회</span>
+                      <td className="py-2 text-right pr-1">
+                        <span className="text-[12px] font-bold text-[#1f2937]">{item.clicks}</span>
+                        <span className="text-[10px] text-[#9ca3af] ml-0.5">회</span>
                       </td>
-                      <td className="py-3 pr-4">
-                        <div className="w-full bg-gray-100 rounded-full h-2">
-                          <div className="bg-orange-400 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                      <td className="py-2 pr-2">
+                        <div className="w-full bg-[#f3f4f6] rounded h-1.5">
+                          <div className="bg-[#f59e0b] h-1.5 rounded" style={{ width: `${pct}%` }} />
                         </div>
                       </td>
                     </tr>
@@ -328,7 +421,95 @@ export default function AdminDashboard() {
             </table>
           </div>
         )}
+      </Panel>
+    </div>
+  );
+}
+
+/* ─── Reusable Cafe24-style primitives ─────────────────────────── */
+
+interface StatCardProps {
+  accent: string;
+  label: string;
+  value: number;
+  subLabel?: string;
+  trend?: number | null;
+  icon: React.ComponentType<{ className?: string }>;
+  isLoading: boolean;
+}
+
+function StatCard({ accent, label, value, subLabel, trend, icon: Icon, isLoading }: StatCardProps) {
+  const trendUp = trend != null && trend > 0;
+  const trendDown = trend != null && trend < 0;
+  return (
+    <div className="relative bg-white rounded border border-[#e5e7eb] p-4 overflow-hidden">
+      <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: accent }} />
+      <div className="flex items-start justify-between ml-1">
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">{label}</p>
+          <p className="text-2xl font-bold text-[#1f2937] mt-1.5">
+            {isLoading ? '…' : value.toLocaleString()}
+          </p>
+          {subLabel && (
+            <p className="text-[10px] text-[#9ca3af] mt-1 truncate">{subLabel}</p>
+          )}
+          {trend != null && (
+            <div className={`inline-flex items-center gap-0.5 mt-2 text-[10px] font-bold ${
+              trendUp ? 'text-[#22c55e]' : trendDown ? 'text-[#ef4444]' : 'text-[#6b7280]'
+            }`}>
+              {trendUp && <ArrowUpRight className="w-3 h-3" />}
+              {trendDown && <ArrowDownRight className="w-3 h-3" />}
+              {Math.abs(trend)}% <span className="text-[9px] text-[#9ca3af] font-normal ml-0.5">전주 대비</span>
+            </div>
+          )}
+        </div>
+        <Icon className="w-4 h-4 text-[#9ca3af] flex-shrink-0" />
       </div>
     </div>
+  );
+}
+
+interface PanelProps {
+  title: string;
+  subtitle?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  className?: string;
+}
+
+function Panel({ title, subtitle, icon: Icon, children, className = '' }: PanelProps) {
+  return (
+    <div className={`bg-white rounded border border-[#e5e7eb] p-4 ${className}`}>
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#f3f4f6]">
+        <div className="flex items-center gap-2">
+          <Icon className="w-3.5 h-3.5 text-[#6b7280]" />
+          <h3 className="text-[12px] font-bold text-[#1f2937]">{title}</h3>
+        </div>
+        {subtitle && (
+          <span className="text-[10px] text-[#9ca3af] font-medium">{subtitle}</span>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="py-8 text-center text-[12px] text-[#9ca3af]">{label}</div>
+  );
+}
+
+function RankBadge({ rank, small = false }: { rank: number; small?: boolean }) {
+  const tone =
+    rank === 1 ? 'bg-[#fef3c7] text-[#92400e]' :
+    rank === 2 ? 'bg-[#e5e7eb] text-[#4b5563]' :
+    rank === 3 ? 'bg-[#ffedd5] text-[#9a3412]' :
+    'bg-[#f3f4f6] text-[#6b7280]';
+  const size = small ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]';
+  return (
+    <span className={`inline-flex items-center justify-center rounded-full font-bold ${tone} ${size}`}>
+      {rank}
+    </span>
   );
 }
