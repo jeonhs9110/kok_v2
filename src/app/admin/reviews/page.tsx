@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Save, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowUp, ArrowDown, Loader2, Star, Eye, EyeOff, Image as ImageIcon } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 2 RLS lockdown requires admin's JWT for
 // review_cards writes — see migration 18.
@@ -199,11 +200,25 @@ export default function ReviewsAdminPage() {
 
   if (loading) return <div className="text-gray-500">로딩 중...</div>;
 
+  const stats = {
+    total: rows.length,
+    active: rows.filter(r => r.is_active).length,
+    inactive: rows.filter(r => !r.is_active).length,
+    missingImage: rows.filter(r => r.is_active && !r.image_url).length,
+  };
+
   return (
-    <div className="space-y-4 max-w-4xl">
+    <div className="space-y-5 max-w-4xl">
+      <StatStrip>
+        <StatCard accent="#3b82f6" label="전체 리뷰" value={stats.total} icon={Star} subLabel="등록된 카드" />
+        <StatCard accent="#22c55e" label="게시중" value={stats.active} icon={Eye} subLabel={`전체 ${stats.total}개 중`} />
+        <StatCard accent="#9ca3af" label="숨김" value={stats.inactive} icon={EyeOff} subLabel="비공개 카드" />
+        <StatCard accent="#f59e0b" label="이미지 없음" value={stats.missingImage} icon={ImageIcon} subLabel="썸네일 누락" />
+      </StatStrip>
+
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
         <p className="font-semibold mb-1">💡 리뷰 쇼케이스</p>
-        <p>리뷰 카드는 <strong>/menus/review</strong> 페이지에 노출됩니다. 카드가 <strong>1개면</strong> 본문이 바로 인라인으로 표시되고, <strong>여러 개면</strong> 썸네일 그리드로 표시됩니다. 네이버 블로그 URL을 입력하고 &ldquo;네이버 자동 채우기&rdquo;를 누르면 제목 · 썸네일 · 본문이 자동으로 가져와집니다.</p>
+        <p>리뷰 카드는 <strong>/menus/review + 홈 메인</strong>에 노출됩니다. 카드가 <strong>1개면</strong> 본문이 바로 인라인으로 표시되고, <strong>여러 개면</strong> 썸네일 그리드로 표시됩니다. 네이버 블로그 URL을 입력하고 &ldquo;네이버 자동 채우기&rdquo;를 누르면 제목 · 썸네일 · 본문이 자동으로 가져와집니다.</p>
       </div>
 
       {/* Thumbnail strip — quick visual index of every saved card so the

@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, ChevronRight, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, ChevronRight, X, Tag, Layers, FolderTree } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 3 RLS lockdown on `categories` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -109,8 +110,22 @@ export default function CategoriesAdminPage() {
     fetchAll();
   };
 
+  const subCount = categories.filter(c => c.parent_id).length;
+  const stats = {
+    parents: parents.length,
+    subs: subCount,
+    total: categories.length,
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <StatStrip>
+        <StatCard accent="#3b82f6" label="전체 카테고리" value={stats.total} icon={Tag} subLabel="대분류 + 하위 합계" />
+        <StatCard accent="#22c55e" label="대분류" value={stats.parents} icon={FolderTree} subLabel="최상위 카테고리" />
+        <StatCard accent="#8b5cf6" label="하위 카테고리" value={stats.subs} icon={Layers} subLabel="서브 카테고리" />
+        <StatCard accent="#f59e0b" label="평균 하위 수" value={stats.parents ? Math.round((stats.subs / stats.parents) * 10) / 10 : 0} icon={Layers} subLabel="대분류당" />
+      </StatStrip>
+
       <div className="flex justify-between items-center">
         <p className="text-sm text-gray-500">카테고리와 서브카테고리를 관리합니다.</p>
         <button onClick={() => openAdd()} className="flex items-center gap-2 px-4 py-2.5 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
@@ -118,7 +133,7 @@ export default function CategoriesAdminPage() {
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center text-gray-400 text-sm font-bold tracking-widest">불러오는 중...</div>
         ) : parents.length === 0 ? (
