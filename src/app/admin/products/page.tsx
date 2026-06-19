@@ -2,7 +2,8 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Package, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
+import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
 import type { Product } from '@/lib/api/products';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
@@ -174,8 +175,24 @@ function ProductsAdminPageInner() {
     return products.filter(p => !p.is_active || !p.imageUrl);
   }, [products, filter]);
 
+  // Stat summary — feeds the Cafe24-style StatStrip at the top.
+  const stats = useMemo(() => ({
+    total: products.length,
+    active: products.filter(p => p.is_active).length,
+    bestSeller: products.filter(p => p.is_best_seller).length,
+    attention: products.filter(p => !p.is_active || !p.imageUrl).length,
+  }), [products]);
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden relative">
+    <div className="space-y-5">
+      <StatStrip>
+        <StatCard accent="#3b82f6" label="전체 상품" value={stats.total} icon={Package} isLoading={isLoading} subLabel="등록된 상품 수" />
+        <StatCard accent="#22c55e" label="게시중" value={stats.active} icon={CheckCircle2} isLoading={isLoading} subLabel={`전체 ${stats.total}개 중`} />
+        <StatCard accent="#f59e0b" label="BEST SELLER" value={stats.bestSeller} icon={Sparkles} isLoading={isLoading} subLabel="홈 메인 노출" />
+        <StatCard accent="#ef4444" label="관심 필요" value={stats.attention} icon={AlertTriangle} isLoading={isLoading} subLabel="숨김 또는 이미지 없음" />
+      </StatStrip>
+
+    <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden relative">
       <div className="p-6 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3 bg-gray-50/50">
         <div>
           <h2 className="text-lg font-bold text-gray-800">상품 재고</h2>
@@ -211,6 +228,8 @@ function ProductsAdminPageInner() {
           onDelete={handleDelete}
           onToggle={handleToggle}
         />
+      </div>
+
       </div>
 
       <ProductDetailModal

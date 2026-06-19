@@ -2,11 +2,12 @@
 
 import {
   RefreshCw, Eye, Heart, Users, Package, Globe, TrendingUp,
-  ArrowUpRight, ArrowDownRight, Activity, ShoppingBag,
+  Activity, ShoppingBag,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { StatCard, Panel, EmptyState, RankBadge } from '@/components/admin/CafeWidgets';
 
 const supabase = getSupabaseBrowser();
 
@@ -426,90 +427,6 @@ export default function AdminDashboard() {
   );
 }
 
-/* ─── Reusable Cafe24-style primitives ─────────────────────────── */
-
-interface StatCardProps {
-  accent: string;
-  label: string;
-  value: number;
-  subLabel?: string;
-  trend?: number | null;
-  icon: React.ComponentType<{ className?: string }>;
-  isLoading: boolean;
-}
-
-function StatCard({ accent, label, value, subLabel, trend, icon: Icon, isLoading }: StatCardProps) {
-  const trendUp = trend != null && trend > 0;
-  const trendDown = trend != null && trend < 0;
-  return (
-    <div className="relative bg-white rounded border border-[#e5e7eb] p-4 overflow-hidden">
-      <div className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: accent }} />
-      <div className="flex items-start justify-between ml-1">
-        <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">{label}</p>
-          <p className="text-2xl font-bold text-[#1f2937] mt-1.5">
-            {isLoading ? '…' : value.toLocaleString()}
-          </p>
-          {subLabel && (
-            <p className="text-[10px] text-[#9ca3af] mt-1 truncate">{subLabel}</p>
-          )}
-          {trend != null && (
-            <div className={`inline-flex items-center gap-0.5 mt-2 text-[10px] font-bold ${
-              trendUp ? 'text-[#22c55e]' : trendDown ? 'text-[#ef4444]' : 'text-[#6b7280]'
-            }`}>
-              {trendUp && <ArrowUpRight className="w-3 h-3" />}
-              {trendDown && <ArrowDownRight className="w-3 h-3" />}
-              {Math.abs(trend)}% <span className="text-[9px] text-[#9ca3af] font-normal ml-0.5">전주 대비</span>
-            </div>
-          )}
-        </div>
-        <Icon className="w-4 h-4 text-[#9ca3af] flex-shrink-0" />
-      </div>
-    </div>
-  );
-}
-
-interface PanelProps {
-  title: string;
-  subtitle?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-  className?: string;
-}
-
-function Panel({ title, subtitle, icon: Icon, children, className = '' }: PanelProps) {
-  return (
-    <div className={`bg-white rounded border border-[#e5e7eb] p-4 ${className}`}>
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#f3f4f6]">
-        <div className="flex items-center gap-2">
-          <Icon className="w-3.5 h-3.5 text-[#6b7280]" />
-          <h3 className="text-[12px] font-bold text-[#1f2937]">{title}</h3>
-        </div>
-        {subtitle && (
-          <span className="text-[10px] text-[#9ca3af] font-medium">{subtitle}</span>
-        )}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function EmptyState({ label }: { label: string }) {
-  return (
-    <div className="py-8 text-center text-[12px] text-[#9ca3af]">{label}</div>
-  );
-}
-
-function RankBadge({ rank, small = false }: { rank: number; small?: boolean }) {
-  const tone =
-    rank === 1 ? 'bg-[#fef3c7] text-[#92400e]' :
-    rank === 2 ? 'bg-[#e5e7eb] text-[#4b5563]' :
-    rank === 3 ? 'bg-[#ffedd5] text-[#9a3412]' :
-    'bg-[#f3f4f6] text-[#6b7280]';
-  const size = small ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]';
-  return (
-    <span className={`inline-flex items-center justify-center rounded-full font-bold ${tone} ${size}`}>
-      {rank}
-    </span>
-  );
-}
+/* Primitives moved to src/components/admin/CafeWidgets.tsx so other
+   admin pages share the same visual language without duplicating
+   the markup. */

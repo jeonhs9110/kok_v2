@@ -1,8 +1,9 @@
 'use client';
 
-import { Search, Trash2, Shield, ShieldOff } from 'lucide-react';
-import { useState, useEffect, useCallback } from 'react';
+import { Search, Trash2, Shield, ShieldOff, Users as UsersIcon, ShieldCheck } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 4 RLS lockdown on `users` is admin-only for
 // reading other users, updating roles, and deleting accounts — see
@@ -70,8 +71,30 @@ export default function UsersAdminPage() {
     ? users.filter(u => u.email.toLowerCase().includes(search.toLowerCase()))
     : users;
 
+  const stats = useMemo(() => {
+    const now = Date.now();
+    const day7Ms = 7 * 24 * 60 * 60 * 1000;
+    const recent7 = users.filter(u => {
+      const t = (u as { created_at?: string }).created_at;
+      return t && new Date(t).getTime() >= now - day7Ms;
+    }).length;
+    return {
+      total: users.length,
+      admins: users.filter(u => u.role === 'admin').length,
+      recent: recent7,
+    };
+  }, [users]);
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="space-y-5">
+      <StatStrip>
+        <StatCard accent="#3b82f6" label="총 회원" value={stats.total} icon={UsersIcon} isLoading={isLoading} subLabel={isLive ? 'Supabase 연결됨' : 'DB 미연결'} />
+        <StatCard accent="#22c55e" label="최근 7일 신규" value={stats.recent} icon={UsersIcon} isLoading={isLoading} subLabel="가입 추세" />
+        <StatCard accent="#8b5cf6" label="관리자" value={stats.admins} icon={ShieldCheck} isLoading={isLoading} subLabel={`전체 ${stats.total}명 중`} />
+        <StatCard accent="#f59e0b" label="일반 사용자" value={stats.total - stats.admins} icon={UsersIcon} isLoading={isLoading} subLabel="role = user" />
+      </StatStrip>
+
+    <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
       <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
         <div>
           <h2 className="text-lg font-bold text-gray-800">사용자 계정</h2>
@@ -158,6 +181,7 @@ export default function UsersAdminPage() {
           </table>
         )}
       </div>
+    </div>
     </div>
   );
 }
