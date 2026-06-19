@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+import { useEffect, useRef } from 'react';
 
 interface ActiveBg {
   file_url: string;
   file_type: 'image' | 'video';
   scroll_driven?: boolean;
+}
+
+interface Props {
+  /** SSR'd by app/layout.tsx via getActiveSiteBackground. NULL when no
+   *  active row exists — component renders the solid white fallback. */
+  initialBg: ActiveBg | null;
 }
 
 /**
@@ -23,25 +24,15 @@ interface ActiveBg {
  *   - scroll_driven: video.currentTime is bound to page scroll position,
  *     Apple-style. Disables autoplay/loop, preloads the file, and uses
  *     requestAnimationFrame to scrub frames as the user scrolls.
+ *
+ * Performance audit 2026-06-19 — previously fetched site_backgrounds
+ * client-side on mount (~1.3s blocking Supabase call seen in WebPageTest).
+ * Now SSR'd by app/layout via getActiveSiteBackground (unstable_cache
+ * 60s + tag eviction); this component just consumes the prop.
  */
-export default function SiteBackground() {
-  const [bg, setBg] = useState<ActiveBg | null>(null);
+export default function SiteBackground({ initialBg }: Props) {
+  const bg = initialBg;
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  // Fetch active background row once on mount.
-  useEffect(() => {
-    if (!supabase) return;
-    (async () => {
-      try {
-        const { data } = await supabase
-          .from('site_backgrounds')
-          .select('file_url, file_type, scroll_driven')
-          .eq('is_active', true)
-          .maybeSingle();
-        if (data) setBg(data as ActiveBg);
-      } catch { /* silent — falls back to no background */ }
-    })();
-  }, []);
 
   // Scroll-driven playback: map scrollY to video.currentTime via rAF.
   // Only runs for videos with scroll_driven=true; auto-loop videos are

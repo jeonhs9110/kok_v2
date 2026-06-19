@@ -4,19 +4,39 @@ import './globals.css';
 import StorefrontLayoutWrapper from '@/components/StorefrontLayoutWrapper';
 import SiteBackground from '@/components/SiteBackground';
 import TailwindSafelist from '@/components/TailwindSafelist';
+import { getActiveSiteBackground } from '@/lib/api/siteBackground';
 
+// Only 400 (Regular) and 700 (Bold) are preloaded. Those are the two
+// weights the homepage paints on the critical path (body copy + menu
+// labels + product names). The other five weights still LOAD when CSS
+// references them — they just don't bloat the `<link rel=preload>` set
+// in the document head, so first-byte ships 5 × 1.25MB lighter. With
+// font-display: swap, the browser shows the loaded fallback until the
+// requested weight arrives.
 const freesentation = localFont({
   src: [
+    { path: '../../public/fonts/Freesentation-4Regular.ttf', weight: '400', style: 'normal' },
+    { path: '../../public/fonts/Freesentation-7Bold.ttf',    weight: '700', style: 'normal' },
+  ],
+  variable: '--font-freesentation',
+  display: 'swap',
+});
+
+// Extra weights — declared so CSS that references font-weight: 300/500/
+// 600/800/900 still resolves correctly, but with preload: false so the
+// browser only fetches the file when the page actually uses that weight.
+// Shares the same CSS variable as the primary declaration above.
+const freesentationExtras = localFont({
+  src: [
     { path: '../../public/fonts/Freesentation-3Light.ttf',     weight: '300', style: 'normal' },
-    { path: '../../public/fonts/Freesentation-4Regular.ttf',   weight: '400', style: 'normal' },
     { path: '../../public/fonts/Freesentation-5Medium.ttf',    weight: '500', style: 'normal' },
     { path: '../../public/fonts/Freesentation-6SemiBold.ttf',  weight: '600', style: 'normal' },
-    { path: '../../public/fonts/Freesentation-7Bold.ttf',      weight: '700', style: 'normal' },
     { path: '../../public/fonts/Freesentation-8ExtraBold.ttf', weight: '800', style: 'normal' },
     { path: '../../public/fonts/Freesentation-9Black.ttf',     weight: '900', style: 'normal' },
   ],
   variable: '--font-freesentation',
   display: 'swap',
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -32,13 +52,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // SSR the active background row once per render. Cached for 60s via
+  // unstable_cache; tag-evicted when the admin saves a new background.
+  // Replaces the 1.3s client-side fetch SiteBackground used to do.
+  const initialBg = await getActiveSiteBackground();
   return (
-    <html lang="ko" className={freesentation.variable}>
+    <html lang="ko" className={`${freesentation.variable} ${freesentationExtras.variable}`}>
       <head>
         {/* Adobe Fonts — Tablet Gothic (영문 브랜드 서체) */}
         <link rel="stylesheet" href="https://use.typekit.net/czr4kvy.css" />
@@ -71,7 +95,7 @@ export default function RootLayout({
           customers who haven't picked an admin font still see
           Freesentation as before. */}
       <body className="text-neutral-950 antialiased min-h-screen">
-        <SiteBackground />
+        <SiteBackground initialBg={initialBg} />
         <TailwindSafelist />
         <StorefrontLayoutWrapper>
           {children}

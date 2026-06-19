@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import SectionBackground, { type SectionBackgroundConfig } from '@/components/SectionBackground';
 
 export interface InstagramPost {
@@ -137,12 +138,12 @@ export default function InstagramSection({ data }: Props) {
                     className={`${hasAnyEmbed ? 'aspect-[4/5]' : 'aspect-square'} block overflow-hidden group relative bg-neutral-100`}
                   >
                     {post?.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={post.image_url}
                         alt={`@${handle} Instagram post`}
                         width={600}
                         height={600}
+                        sizes="(min-width: 1024px) 300px, 33vw"
                         loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
                       />

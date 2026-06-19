@@ -1,5 +1,5 @@
-import { cache } from 'react';
-import { supabase } from '@/lib/api/products';
+import { unstable_cache } from 'next/cache';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * Section keys recognized on the homepage. Adding a new section: 1) add
@@ -72,17 +72,28 @@ function parse(raw: unknown): HomepageSectionKey[] {
   return result;
 }
 
-export const getSectionOrder = cache(async (): Promise<HomepageSectionKey[]> => {
-  if (!supabase) return DEFAULT_ORDER;
-  try {
-    const { data, error } = await supabase
-      .from('site_settings')
-      .select('value')
-      .eq('key', 'homepage_section_order')
-      .maybeSingle();
-    if (error || !data) return DEFAULT_ORDER;
-    return parse(data.value);
-  } catch {
-    return DEFAULT_ORDER;
-  }
-});
+function client() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return url && key ? createClient(url, key) : null;
+}
+
+export const getSectionOrder = unstable_cache(
+  async (): Promise<HomepageSectionKey[]> => {
+    const c = client();
+    if (!c) return DEFAULT_ORDER;
+    try {
+      const { data, error } = await c
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'homepage_section_order')
+        .maybeSingle();
+      if (error || !data) return DEFAULT_ORDER;
+      return parse(data.value);
+    } catch {
+      return DEFAULT_ORDER;
+    }
+  },
+  ['homepage_section_order'],
+  { revalidate: 60, tags: ['homepage_section_order', 'homepage'] },
+);
