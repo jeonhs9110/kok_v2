@@ -19,6 +19,21 @@ const nextConfig: NextConfig = {
   // Required for Docker deploy on EC2 — bundles app + node_modules into
   // .next/standalone so the container doesn't need npm install at runtime.
   output: 'standalone',
+  // Compress HTML / static text at the Node.js runtime. ALB passes the
+  // Accept-Encoding header through; with compress: true Next will gzip
+  // the response. Cuts SSR HTML payload by ~70% — first-byte stays the
+  // same but DOM ready arrives sooner on slow connections.
+  compress: true,
+  // Tree-shake heavy barrel packages. lucide-react alone exports 1000+
+  // icons; without this every `import {X} from 'lucide-react'` ships the
+  // full barrel into the client bundle. Embla's autoplay plugin same idea.
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react',
+      'embla-carousel-react',
+      'embla-carousel-autoplay',
+    ],
+  },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
@@ -37,6 +52,10 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
+    // Serve AVIF first (best compression — ~50% smaller than PNG at
+    // identical visual quality), fall back to WebP, then the original.
+    // Per-image source resolution is preserved; this is format-only.
+    formats: ['image/avif', 'image/webp'],
     // Next 16 requires `qualities` to whitelist every quality value used
     // via the `quality` prop on <Image>. Hero / sub-hero slides ship at
     // 95 (admin uploads product photography that needs to read sharp);

@@ -1,5 +1,5 @@
-import { cache } from 'react';
-import { supabase } from '@/lib/api/products';
+import { unstable_cache } from 'next/cache';
+import { createClient } from '@supabase/supabase-js';
 import { DEFAULT_THEME_TOKENS, parseThemeTokens, type ThemeTokens } from './tokens';
 
 /**
@@ -7,22 +7,33 @@ import { DEFAULT_THEME_TOKENS, parseThemeTokens, type ThemeTokens } from './toke
  * baked-in defaults if the row doesn't exist or the JSON is malformed,
  * so the storefront never breaks because of a bad admin input.
  *
- * Wrapped in React `cache()` so the [lang]/layout fetch is deduped within
- * one render. Not paired with the longer-lived process memo from
- * lib/cache/header.ts intentionally — theme edits should appear on the
- * very next request, not after a 60s TTL.
+ * Wrapped in unstable_cache (60s + tag eviction) — previously used React
+ * cache() which only dedups within ONE render and hit Supabase on every
+ * fresh request. Admin saves at /admin/theme and /admin/best-seller-display
+ * should call revalidateTag('theme_tokens') to drop the cached value.
  */
-export const getThemeTokens = cache(async (): Promise<ThemeTokens> => {
-  if (!supabase) return DEFAULT_THEME_TOKENS;
-  try {
-    const { data, error } = await supabase
-      .from('site_settings')
-      .select('value')
-      .eq('key', 'theme_tokens')
-      .maybeSingle();
-    if (error || !data) return DEFAULT_THEME_TOKENS;
-    return parseThemeTokens(data.value);
-  } catch {
-    return DEFAULT_THEME_TOKENS;
-  }
-});
+function client() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  return url && key ? createClient(url, key) : null;
+}
+
+export const getThemeTokens = unstable_cache(
+  async (): Promise<ThemeTokens> => {
+    const c = client();
+    if (!c) return DEFAULT_THEME_TOKENS;
+    try {
+      const { data, error } = await c
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'theme_tokens')
+        .maybeSingle();
+      if (error || !data) return DEFAULT_THEME_TOKENS;
+      return parseThemeTokens(data.value);
+    } catch {
+      return DEFAULT_THEME_TOKENS;
+    }
+  },
+  ['theme_tokens'],
+  { revalidate: 60, tags: ['theme_tokens', 'homepage'] },
+);

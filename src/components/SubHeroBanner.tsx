@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { fontFamilyForKey, anchorTextStyle, anchorToObjectPosition, resolveAnchor, type PositionKey } from '@/lib/typography/options';
 
 export interface SubHeroBannerData {
@@ -49,12 +50,16 @@ export default function SubHeroBanner({ banner }: Props) {
   const inner = (
     <div className="relative w-full h-[360px] md:h-[560px] overflow-hidden group">
       {banner.image_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        // next/image transcodes the operator's PNG (~1.7MB) to AVIF/WebP
+        // at the SAME source resolution. The 1.7MB → ~300-500KB without
+        // touching pixels. fill + sizes lets Next emit the right
+        // responsive widths for mobile vs desktop.
+        <Image
           src={banner.image_url}
           alt={banner.title || ''}
-          width={1600}
-          height={560}
+          fill
+          sizes="100vw"
+          quality={90}
           loading="lazy"
           /* Image focal point — same approach as HeroSlider:
              CSS vars set inline on the element are consumed by the
