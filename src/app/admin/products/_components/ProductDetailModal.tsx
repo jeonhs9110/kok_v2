@@ -11,9 +11,6 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 // products writes — see migration 19.
 const supabase = getSupabaseBrowser();
 import type { Category } from '@/lib/api/categories';
-import {
-  getProductTags, setProductTags, TAG_CATEGORIES, type IngredientTag,
-} from '@/lib/api/ingredient-tags';
 import { isValidYouTubeUrl, toYouTubeThumbnailUrl, isYouTubeShortsUrl } from '@/lib/youtube';
 import ProductDetailComponents from '@/components/ProductDetailComponents';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
@@ -86,7 +83,6 @@ interface Props {
    *  "create" (editing.id === null) or "edit" (editing.id is a real id) mode. */
   editing: { product: Product | null } | null;
   categories: Category[];
-  allTags: IngredientTag[];
   onClose: () => void;
   /** Called after a successful save. Parent should refetch + close. */
   onSaved: () => void;
@@ -95,7 +91,6 @@ interface Props {
 export default function ProductDetailModal({
   editing,
   categories,
-  allTags,
   onClose,
   onSaved,
 }: Props) {
@@ -103,7 +98,6 @@ export default function ProductDetailModal({
   const editingId = editingProduct?.id ?? null;
 
   const [formData, setFormData] = useState<FormState>(EMPTY_FORM);
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploadProgress, setUploadProgress] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,27 +114,19 @@ export default function ProductDetailModal({
     if (!editingProduct) {
       // Create mode — empty form.
       setFormData(EMPTY_FORM);
-      setSelectedTagIds([]);
       setPreviewUrl('');
       setUploadProgress('idle');
       setYoutubeInput('');
       setYoutubeError('');
       return;
     }
-    // Edit mode — hydrate from the product + load its tags.
+    // Edit mode — hydrate from the product.
     let cancelled = false;
     (async () => {
-      let tagIds: string[] = [];
-      try {
-        tagIds = await getProductTags(editingProduct.id);
-      } catch (err) {
-        console.warn('[ProductDetailModal] tag load failed:', err);
-      }
       const components = editingProduct.detailComponents?.length
         ? editingProduct.detailComponents
         : extractLegacyImagesAsComponents(editingProduct.detailBody || '');
       if (cancelled) return;
-      setSelectedTagIds(tagIds);
       setFormData({
         name: editingProduct.name,
         summary: editingProduct.summary,
@@ -294,26 +280,14 @@ export default function ProductDetailModal({
 
       if (!supabase) throw new Error('Supabase 클라이언트 없음');
 
-      let persistedId = editingId;
       if (editingId) {
         const { error } = await supabase.from('products').update(dbPayload).eq('id', editingId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('products')
-          .insert([{ ...dbPayload, is_active: true }])
-          .select('id')
-          .single();
+          .insert([{ ...dbPayload, is_active: true }]);
         if (error) throw error;
-        persistedId = (data as { id: string } | null)?.id ?? null;
-      }
-
-      if (persistedId) {
-        try {
-          await setProductTags(persistedId, selectedTagIds);
-        } catch (tagErr) {
-          console.warn('[ProductDetailModal] tag save failed (product was saved):', tagErr);
-        }
       }
 
       revalidateHomepageData('products');
@@ -719,51 +693,10 @@ export default function ProductDetailModal({
             </label>
           </div>
 
-          {/* Ingredient tag picker */}
-          <div className="pt-4 border-t border-gray-100 space-y-3">
-            <div>
-              <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">성분 태그</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                상품 상세 페이지에 표시됩니다. 관리 → &ldquo;성분 태그&rdquo;에서 태그를 먼저 추가하세요.
-              </p>
-            </div>
-            {allTags.length === 0 ? (
-              <p className="text-xs text-gray-400 italic">등록된 태그가 없습니다.</p>
-            ) : (
-              <div className="space-y-3">
-                {TAG_CATEGORIES.map(cat => {
-                  const catTags = allTags.filter(t => t.category === cat.value && t.is_active);
-                  if (catTags.length === 0) return null;
-                  return (
-                    <div key={cat.value} className="bg-gray-50/50 rounded p-3">
-                      <p className="text-[10px] font-bold tracking-wider text-gray-600 mb-2">{cat.label_kr}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {catTags.map(t => {
-                          const checked = selectedTagIds.includes(t.id);
-                          return (
-                            <button
-                              type="button"
-                              key={t.id}
-                              onClick={() =>
-                                setSelectedTagIds(prev => checked ? prev.filter(id => id !== t.id) : [...prev, t.id])
-                              }
-                              className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition ${
-                                checked
-                                  ? 'bg-brand-ink text-white border-[#111]'
-                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                              }`}
-                            >
-                              {t.name.kr || t.name.en || '—'}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+          {/* Ingredient tag picker removed 2026-06-19 per boss directive
+              — 주요 성분 태그 기능 폐기. Existing tags on storefront keep
+              rendering from the DB until a follow-up cleanup. Modal stops
+              exposing the picker so operator can't tag new products. */}
 
           {/* Purchase button visibility toggles */}
           <div className="pt-4 border-t border-gray-100 space-y-3">
