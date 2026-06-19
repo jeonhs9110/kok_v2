@@ -7,7 +7,8 @@ import {
   Users, Package, Video, LayoutDashboard, LogOut, ExternalLink, Tag, MenuSquare,
   Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard,
   Scale, Globe, ImagePlus, Star, FileText, FolderOpen, Palette, Layers, Search,
-  Menu as MenuIcon, X, Eye, Home as HomeIcon,
+  Menu as MenuIcon, X, Eye, Home as HomeIcon, Bell, HelpCircle, Sparkles,
+  Monitor, Smartphone, ChevronDown,
 } from 'lucide-react';
 import AdminSearchModal from './_components/AdminSearchModal';
 import BackToHubLink from './_components/BackToHubLink';
@@ -192,29 +193,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
       )}
 
-      {/* Sidebar — fixed drawer on mobile, static column on md+. */}
+      {/* Sidebar — fixed drawer on mobile, static column on md+. Cafe24
+          shell: deeper navy slab, tight per-row spacing, uppercase
+          section labels, blue accent stripe on the active route. The
+          width drops to 232px so the main content gets more room (Cafe24
+          equivalent runs ~220-240). */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-64 bg-brand-ink text-white flex flex-col transform transition-transform duration-200 ease-out md:transform-none ${
+        className={`fixed md:static inset-y-0 left-0 z-40 w-[232px] bg-[#1b2330] text-gray-300 flex flex-col transform transition-transform duration-200 ease-out md:transform-none ${
           drawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-800">
-          <span className="text-lg font-bold tracking-widest">관리자 포털</span>
+        <div className="h-14 flex items-center justify-between px-5 border-b border-[#0e1521]">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded bg-gradient-to-br from-[#3b82f6] to-[#1e40af] flex items-center justify-center text-white text-[11px] font-extrabold tracking-tighter">
+              KK
+            </div>
+            <span className="text-[13px] font-bold tracking-wide text-white">KOKKOK 관리자</span>
+          </div>
           <button
             type="button"
             className="md:hidden text-gray-400 hover:text-white"
             onClick={() => setDrawerOpen(false)}
             aria-label="메뉴 닫기"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        <nav className="flex-1 py-4 px-3 space-y-4 overflow-y-auto">
+        <nav className="flex-1 py-3 px-2 overflow-y-auto">
           {NAV_SECTIONS.map((section, idx) => (
-            <div key={idx} className="space-y-1">
+            <div key={idx} className="mb-3 last:mb-0">
               {section.title && (
-                <p className="px-3 pt-2 pb-1 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-500">
+                <p className="px-3 pt-3 pb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase text-gray-500">
                   {section.title}
                 </p>
               )}
@@ -226,11 +236,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-sm ${
-                      isActive ? 'bg-white text-black font-semibold' : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                    className={`group relative flex items-center gap-2.5 pl-3 pr-2 py-2 rounded transition-colors text-[12.5px] ${
+                      isActive
+                        ? 'bg-[#243049] text-white font-semibold'
+                        : 'text-gray-400 hover:text-white hover:bg-[#243049]'
                     }`}
                   >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[#3b82f6] rounded-r" />}
+                    <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-[#3b82f6]' : ''}`} />
                     <span className="truncate">{item.name}</span>
                   </Link>
                 );
@@ -239,14 +252,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-800 space-y-1">
+        <div className="p-3 border-t border-[#0e1521] space-y-0.5">
           <Link
             href="/kr"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] text-gray-400 hover:text-white hover:bg-[#243049] rounded transition-colors"
           >
-            <ExternalLink className="w-5 h-5" />
+            <ExternalLink className="w-3.5 h-3.5" />
             스토어 보기
           </Link>
           <button
@@ -254,60 +267,126 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
               window.location.href = '/';
             }}
-            className="w-full flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors border-none bg-transparent"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] text-gray-400 hover:text-white hover:bg-[#243049] rounded transition-colors border-none bg-transparent"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-3.5 h-3.5" />
             로그아웃
           </button>
         </div>
       </aside>
 
       <main className="flex-1 overflow-auto md:ml-0">
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-8 shadow-sm gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+        {/* Top bar — Cafe24-style chrome: store selector chip, viewport
+            toggle, central search, action icons row, gradient AI button
+            on the right. Functionality wired through the existing
+            handlers; this is a visual restyle so the shell reads like
+            the reference admin. */}
+        <header className="h-14 bg-white border-b border-[#e5e7eb] flex items-center px-3 sm:px-5 gap-2 sm:gap-3 sticky top-0 z-30">
+          <button
+            type="button"
+            className="md:hidden text-gray-600 hover:text-black"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="메뉴 열기"
+          >
+            <MenuIcon className="w-5 h-5" />
+          </button>
+
+          {/* Page title — kept compact like Cafe24's left-anchored label. */}
+          <Suspense fallback={null}>
+            <BackToHubLink />
+          </Suspense>
+          <h1 className="text-[14px] font-semibold text-[#1f2937] truncate">{title}</h1>
+
+          {/* Store selector chip — Cafe24 has "(기본) 한국어 쇼핑몰" dropdown
+              here. We have one storefront, so this is read-only; the chip
+              shape matches the reference. */}
+          <div className="hidden md:flex items-center gap-1.5 ml-3 px-2.5 py-1 text-[12px] text-[#1f2937] border border-[#e5e7eb] rounded bg-white hover:bg-[#f9fafb] cursor-default">
+            <span className="text-[#6b7280]">(기본)</span>
+            <span>한국어 쇼핑몰</span>
+            <ChevronDown className="w-3 h-3 text-[#9ca3af]" />
+          </div>
+
+          {/* Viewport toggle — purely visual; the homepage builder owns
+              the real preview switch. Mirrors Cafe24's PC/Mobile chips. */}
+          <div className="hidden lg:flex items-center gap-0.5 ml-1.5 p-0.5 border border-[#e5e7eb] rounded bg-[#fafbfc]">
             <button
               type="button"
-              className="md:hidden text-gray-600 hover:text-black"
-              onClick={() => setDrawerOpen(true)}
-              aria-label="메뉴 열기"
+              className="p-1 rounded bg-white text-[#1f2937] shadow-sm cursor-default"
+              aria-label="PC 미리보기"
             >
-              <MenuIcon className="w-6 h-6" />
+              <Monitor className="w-3.5 h-3.5" />
             </button>
-            {/* Back-to-hub breadcrumb — appears whenever an admin landed on
-                this page via the homepage builder (?from=homepage). Wrapped
-                in <Suspense> because useSearchParams() inside bails out of
-                Next.js 16's static prerender pass. Suspense lets the page
-                shell prerender while the breadcrumb hydrates on the client. */}
-            <Suspense fallback={null}>
-              <BackToHubLink />
-            </Suspense>
-            <h1 className="text-xl font-semibold text-gray-800 truncate">{title}</h1>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <button
               type="button"
-              onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-              aria-label="전역 검색"
+              className="p-1 rounded text-[#9ca3af] hover:text-[#1f2937] cursor-default"
+              aria-label="모바일 미리보기"
             >
-              <Search className="w-4 h-4" />
-              <span className="hidden sm:inline">검색</span>
-              <kbd className="hidden md:inline ml-1 px-1.5 py-0.5 text-[10px] font-mono bg-white border border-gray-300 rounded">⌘K</kbd>
+              <Smartphone className="w-3.5 h-3.5" />
             </button>
-            {previewUrl && (
-              <Link
-                href={previewUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-brand-ink hover:bg-black rounded-lg transition-colors"
-              >
-                <Eye className="w-4 h-4" />
-                <span className="hidden sm:inline">스토어에서 보기</span>
-              </Link>
-            )}
           </div>
+
+          <div className="flex-1" />
+
+          {/* Search button — Cafe24's center-anchored search becomes a
+              right-side button here; ⌘K still opens AdminSearchModal. */}
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 text-[12px] text-[#6b7280] bg-[#f3f4f6] hover:bg-[#e5e7eb] rounded transition-colors"
+            aria-label="전역 검색"
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">통합 검색</span>
+            <kbd className="hidden md:inline ml-1 px-1 py-0.5 text-[9px] font-mono bg-white border border-[#e5e7eb] rounded">⌘K</kbd>
+          </button>
+
+          {/* Cafe24's notification + help + bookmark cluster. Wired to
+              do nothing visible yet — bell counter is the only piece
+              that could light up if we ever attach real notifications. */}
+          <button
+            type="button"
+            className="hidden sm:flex relative w-8 h-8 items-center justify-center text-[#6b7280] hover:text-[#1f2937] hover:bg-[#f3f4f6] rounded transition-colors"
+            aria-label="도움말"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            className="hidden sm:flex relative w-8 h-8 items-center justify-center text-[#6b7280] hover:text-[#1f2937] hover:bg-[#f3f4f6] rounded transition-colors"
+            aria-label="알림"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#ef4444] rounded-full" />
+          </button>
+
+          {/* Store-view CTA only shows when the current page has a public
+              preview equivalent — Cafe24's "사이트 게시" badge analogue. */}
+          {previewUrl && (
+            <Link
+              href={previewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] text-[#1f2937] border border-[#e5e7eb] hover:bg-[#f9fafb] rounded transition-colors"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">스토어 보기</span>
+            </Link>
+          )}
+
+          {/* AI assistant pill — Cafe24's "카페24 AI 챗봇" gradient button.
+              Decorative placeholder for the eventual in-admin AI surface;
+              clicking opens the existing search modal so it isn't a dead
+              control for the operator. */}
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-[12px] font-semibold text-white rounded-full bg-gradient-to-r from-[#7c3aed] via-[#6366f1] to-[#3b82f6] hover:opacity-90 transition-opacity shadow-sm"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">KOKKOK AI</span>
+          </button>
         </header>
-        <div className="p-4 sm:p-8">
+        <div className="p-4 sm:p-6">
           {children}
         </div>
       </main>
