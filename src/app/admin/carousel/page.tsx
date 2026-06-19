@@ -1,8 +1,9 @@
 'use client';
 
-import { Plus } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Plus, Image as ImageIcon, Eye, EyeOff, Video } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
 
 const supabase = getSupabaseBrowser();
 import type { CarouselSlide } from '@/lib/api/carousel';
@@ -165,9 +166,24 @@ export default function CarouselAdminPage() {
     : { ...emptyForm, badge: {}, title: {}, subtitle: {} };
   const initialPreview = editingSlide?.image_url || '';
 
+  const stats = useMemo(() => ({
+    total: slides.length,
+    active: slides.filter(s => s.is_active).length,
+    videos: slides.filter(s => s.media_type === 'video').length,
+    hidden: slides.filter(s => !s.is_active).length,
+  }), [slides]);
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+    <div className="space-y-5">
+      <StatStrip>
+        <StatCard accent="#3b82f6" label="전체 슬라이드" value={stats.total} icon={ImageIcon} subLabel="등록된 슬라이드" isLoading={isLoading} />
+        <StatCard accent="#22c55e" label="게시중" value={stats.active} icon={Eye} subLabel={`전체 ${stats.total}개 중`} isLoading={isLoading} />
+        <StatCard accent="#9ca3af" label="숨김" value={stats.hidden} icon={EyeOff} subLabel="비공개 슬라이드" isLoading={isLoading} />
+        <StatCard accent="#8b5cf6" label="비디오" value={stats.videos} icon={Video} subLabel="media_type = video" isLoading={isLoading} />
+      </StatStrip>
+
+    <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
+      <div className="p-6 border-b border-[#e5e7eb] flex justify-between items-center bg-[#fafbfc]">
         <div>
           <h2 className="text-lg font-bold text-gray-800">캐러셀 관리</h2>
           <p className="text-sm text-gray-500 mt-1">홈페이지 메인 배너 슬라이드를 관리하세요</p>
@@ -200,6 +216,7 @@ export default function CarouselAdminPage() {
           onSaved={handleSaved}
         />
       )}
+    </div>
     </div>
   );
 }
