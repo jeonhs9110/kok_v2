@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Upload, Trash2, Link as LinkIcon, ImageIcon } from 'lucide-react';
+import { Upload, Trash2, Link as LinkIcon, ImageIcon, GalleryHorizontal, Eye } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 2 RLS lockdown on `promo_banners` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -129,9 +130,19 @@ export default function PromoBannersAdminPage() {
     <div className="p-10 text-center text-gray-400 font-bold tracking-widest animate-pulse">불러오는 중...</div>
   );
 
+  const filledCount = banners.filter(b => b.image_url).length;
+  const activeCount = banners.filter(b => b.is_active && b.image_url).length;
+
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="space-y-5">
+      <StatStrip>
+        <StatCard accent="#3b82f6" label="전체 슬롯" value={banners.length} icon={GalleryHorizontal} subLabel="홈 메인 노출" />
+        <StatCard accent="#22c55e" label="이미지 업로드됨" value={filledCount} icon={ImageIcon} subLabel={`${banners.length}개 슬롯 중`} />
+        <StatCard accent="#8b5cf6" label="게시중" value={activeCount} icon={Eye} subLabel="활성 + 이미지 있음" />
+        <StatCard accent="#f59e0b" label="비어있음" value={banners.length - filledCount} icon={ImageIcon} subLabel="이미지 없는 슬롯" />
+      </StatStrip>
+
+      <div className="bg-white rounded border border-[#e5e7eb] p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-1">프로모 배너 관리</h2>
         <p className="text-sm text-gray-500">홈페이지 히어로 아래에 표시되는 1:1 비율 클릭 배너 2개를 관리합니다.</p>
       </div>

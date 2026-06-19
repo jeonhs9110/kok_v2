@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Video, Trash2, Plus, Link as LinkIcon, Save } from 'lucide-react';
+import { Video, Trash2, Plus, Link as LinkIcon, Save, Link2, Package } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
 import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 
 // Session-aware client. Phase 2 RLS lockdown on `shorts` requires admin JWT.
@@ -227,10 +228,20 @@ export default function ShortsAdminPage() {
     </div>
   );
 
+  const linkedCount = shorts.filter(s => s.productId).length;
+  const unlinkedCount = shorts.filter(s => !s.productId).length;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
+      <StatStrip>
+        <StatCard accent="#3b82f6" label="전체 쇼츠" value={shorts.length} icon={Video} subLabel="등록된 영상" />
+        <StatCard accent="#22c55e" label="상품 연결됨" value={linkedCount} icon={Link2} subLabel={`전체 ${shorts.length}개 중`} />
+        <StatCard accent="#f59e0b" label="상품 미연결" value={unlinkedCount} icon={Package} subLabel="구매 유도 비활성" />
+        <StatCard accent="#8b5cf6" label="활성 상품" value={products.length} icon={Package} subLabel="연결 가능한 상품" />
+      </StatStrip>
+
       {/* 섹션 제목 스타일 (migration 33) */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+      <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-bold text-gray-800">섹션 제목</h2>
           <p className="text-xs text-gray-400">기본은 &ldquo;BRAND SHORTS&rdquo; · 흰색 · 15px.</p>
