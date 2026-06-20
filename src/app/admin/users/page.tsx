@@ -125,37 +125,37 @@ export default function UsersAdminPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
-                <th className="p-4 pl-6">이메일</th>
-                <th className="p-4">권한</th>
-                <th className="p-4">인증</th>
-                <th className="p-4">가입일</th>
-                <th className="p-4 pr-6 text-right">작업</th>
+                <th className="p-3 pl-4">이메일</th>
+                <th className="p-3">권한</th>
+                <th className="p-3">인증</th>
+                <th className="p-3">가입일</th>
+                <th className="p-3 pr-4 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f3f4f6]">
               {filtered.map(user => (
                 <tr key={user.id} className="hover:bg-[#fafbfc] transition-colors">
-                  <td className="p-4 pl-6">
+                  <td className="p-3 pl-4">
                     <div className="font-medium text-gray-900 text-sm">{user.email}</div>
                     <div className="text-[10px] text-gray-400 mt-0.5 font-mono">...{user.id.slice(-8)}</div>
                   </td>
-                  <td className="p-4">
+                  <td className="p-3">
                     <span className={`inline-flex px-2 py-1 rounded text-xs font-bold ${
                       user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-700'
                     }`}>
                       {user.role === 'admin' ? '관리자' : '사용자'}
                     </span>
                   </td>
-                  <td className="p-4">
+                  <td className="p-3">
                     <span className={`inline-flex items-center gap-1.5 text-xs ${user.is_verified ? 'text-green-600' : 'text-gray-400'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${user.is_verified ? 'bg-green-500' : 'bg-gray-300'}`} />
                       {user.is_verified ? '인증됨' : '미인증'}
                     </span>
                   </td>
-                  <td className="p-4 text-sm text-gray-500">
+                  <td className="p-3 text-sm text-gray-500">
                     {new Date(user.created_at).toLocaleDateString('ko-KR')}
                   </td>
-                  <td className="p-4 pr-6 text-right flex gap-1.5 justify-end">
+                  <td className="p-3 pr-4 text-right flex gap-1.5 justify-end">
                     <button
                       onClick={() => toggleRole(user)}
                       title={user.role === 'admin' ? '사용자로 변경' : '관리자로 변경'}

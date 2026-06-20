@@ -124,24 +124,24 @@ export default function AllPostsAdminPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
-                <th className="p-4 pl-6">제목</th>
-                <th className="p-4">게시판</th>
-                <th className="p-4">작성자</th>
-                <th className="p-4">작성일</th>
-                <th className="p-4 pr-6 text-right">작업</th>
+                <th className="p-3 pl-4">제목</th>
+                <th className="p-3">게시판</th>
+                <th className="p-3">작성자</th>
+                <th className="p-3">작성일</th>
+                <th className="p-3 pr-4 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f3f4f6]">
               {filtered.map(post => (
                 <tr key={post.id} className="hover:bg-[#fafbfc] transition-colors">
-                  <td className="p-4 pl-6 text-sm font-semibold text-gray-900">
+                  <td className="p-3 pl-4 text-sm font-semibold text-gray-900">
                     <span className="line-clamp-1">{post.title}</span>
                     {post.is_admin_post && <span className="ml-2 px-1.5 py-0.5 text-[10px] font-bold bg-brand-ink text-white rounded">공지</span>}
                   </td>
-                  <td className="p-4 text-sm text-gray-600">{post.menu_title}</td>
-                  <td className="p-4 text-sm text-gray-500">{post.author_name}</td>
-                  <td className="p-4 text-sm text-gray-400">{new Date(post.created_at).toLocaleDateString('ko-KR')}</td>
-                  <td className="p-4 pr-6 text-right">
+                  <td className="p-3 text-sm text-gray-600">{post.menu_title}</td>
+                  <td className="p-3 text-sm text-gray-500">{post.author_name}</td>
+                  <td className="p-3 text-sm text-gray-400">{new Date(post.created_at).toLocaleDateString('ko-KR')}</td>
+                  <td className="p-3 pr-4 text-right">
                     <div className="flex gap-1 justify-end">
                       <Link
                         href={`/admin/menus/${post.menu_id}/posts`}

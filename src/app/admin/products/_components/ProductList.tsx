@@ -53,13 +53,13 @@ export default function ProductList({
     <table className="w-full text-left border-collapse">
       <thead>
         <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
-          <th className="p-4 pl-6 w-16">ID</th>
-          <th className="p-4">상품 개요</th>
-          <th className="p-4">가격</th>
-          <th className="p-4">성분</th>
-          <th className="p-4">구매 링크</th>
-          <th className="p-4">상태</th>
-          <th className="p-4 pr-6 text-right">작업</th>
+          <th className="p-3 pl-4 w-16">ID</th>
+          <th className="p-3">상품 개요</th>
+          <th className="p-3">가격</th>
+          <th className="p-3">성분</th>
+          <th className="p-3">구매 링크</th>
+          <th className="p-3">상태</th>
+          <th className="p-3 pr-4 text-right">작업</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-[#f3f4f6]">
@@ -68,10 +68,10 @@ export default function ProductList({
             key={item.id}
             className={`hover:bg-[#fafbfc] transition-colors ${!item.is_active ? 'opacity-50' : ''}`}
           >
-            <td className="p-4 pl-6 text-gray-400 text-xs truncate max-w-[80px]" title={item.id}>
+            <td className="p-3 pl-4 text-gray-400 text-xs truncate max-w-[80px]" title={item.id}>
               ...{item.id.slice(-6)}
             </td>
-            <td className="p-4">
+            <td className="p-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
                   {item.imageUrl ? (
@@ -96,9 +96,9 @@ export default function ProductList({
                 </div>
               </div>
             </td>
-            <td className="p-4 text-gray-600 text-sm font-bold">{item.price.toLocaleString()}원</td>
-            <td className="p-4 text-gray-600 font-mono text-[11px]">{item.ingredient}</td>
-            <td className="p-4">
+            <td className="p-3 text-gray-600 text-sm font-bold">{item.price.toLocaleString()}원</td>
+            <td className="p-3 text-gray-600 font-mono text-[11px]">{item.ingredient}</td>
+            <td className="p-3">
               {item.naver_store_url ? (
                 <a
                   href={item.naver_store_url}
@@ -112,7 +112,7 @@ export default function ProductList({
                 <span className="text-[10px] text-gray-300">미설정</span>
               )}
             </td>
-            <td className="p-4">
+            <td className="p-3">
               <button
                 onClick={() => onToggle(item.id, item.is_active)}
                 className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase transition-colors ${
@@ -124,7 +124,7 @@ export default function ProductList({
                 {item.is_active ? '게시중' : '숨김'}
               </button>
             </td>
-            <td className="p-4 pr-6 text-right flex gap-1.5 justify-end">
+            <td className="p-3 pr-4 text-right flex gap-1.5 justify-end">
               <button
                 onClick={() => onEdit(item)}
                 className="text-gray-400 hover:text-blue-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100"

@@ -216,12 +216,12 @@ export default function PagesAdminPage() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
-                <th className="p-4 pl-6">제목</th>
-                <th className="p-4">경로</th>
-                <th className="p-4">언어</th>
-                <th className="p-4">메뉴</th>
-                <th className="p-4">상태</th>
-                <th className="p-4 pr-6 text-right">작업</th>
+                <th className="p-3 pl-4">제목</th>
+                <th className="p-3">경로</th>
+                <th className="p-3">언어</th>
+                <th className="p-3">메뉴</th>
+                <th className="p-3">상태</th>
+                <th className="p-3 pr-4 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f3f4f6]">
@@ -229,16 +229,16 @@ export default function PagesAdminPage() {
                 const filledLangs = SUPPORTED_LANGS.filter(l => page.title?.[l] || page.content?.[l]);
                 return (
                   <tr key={page.id} className="hover:bg-[#fafbfc] transition-colors">
-                    <td className="p-4 pl-6 font-bold text-gray-900 text-sm">{getTitle(page)}</td>
-                    <td className="p-4 text-gray-500 text-xs font-mono">/pages/{page.slug}</td>
-                    <td className="p-4">
+                    <td className="p-3 pl-4 font-bold text-gray-900 text-sm">{getTitle(page)}</td>
+                    <td className="p-3 text-gray-500 text-xs font-mono">/pages/{page.slug}</td>
+                    <td className="p-3">
                       <div className="flex gap-1">
                         {filledLangs.map(l => (
                           <span key={l} className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded uppercase">{l}</span>
                         ))}
                       </div>
                     </td>
-                    <td className="p-4">
+                    <td className="p-3">
                       {page.show_in_nav ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded">
                           <MenuIcon className="w-3 h-3" /> {page.nav_order}
@@ -247,7 +247,7 @@ export default function PagesAdminPage() {
                         <span className="text-[10px] text-gray-300">-</span>
                       )}
                     </td>
-                    <td className="p-4">
+                    <td className="p-3">
                       <button onClick={() => togglePublish(page)}
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase transition-colors ${
                           page.is_published ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
@@ -255,7 +255,7 @@ export default function PagesAdminPage() {
                         {page.is_published ? <><Eye className="w-3 h-3" /> 게시</> : <><EyeOff className="w-3 h-3" /> 임시</>}
                       </button>
                     </td>
-                    <td className="p-4 pr-6 text-right flex gap-1.5 justify-end">
+                    <td className="p-3 pr-4 text-right flex gap-1.5 justify-end">
                       <button onClick={() => openEdit(page)} className="text-gray-400 hover:text-blue-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100">
                         <Pencil className="w-4 h-4" />
                       </button>

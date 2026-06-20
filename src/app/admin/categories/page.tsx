@@ -150,11 +150,11 @@ export default function CategoriesAdminPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
-                <th className="p-4 pl-6">순서</th>
-                <th className="p-4">카테고리명</th>
-                <th className="p-4">슬러그</th>
-                <th className="p-4">상태</th>
-                <th className="p-4 pr-6 text-right">작업</th>
+                <th className="p-3 pl-4">순서</th>
+                <th className="p-3">카테고리명</th>
+                <th className="p-3">슬러그</th>
+                <th className="p-3">상태</th>
+                <th className="p-3 pr-4 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f3f4f6]">
@@ -282,18 +282,18 @@ function CategoryRows({
     <>
       {/* Parent row */}
       <tr className="hover:bg-[#fafbfc] transition-colors">
-        <td className="p-4 pl-6 text-sm text-gray-500 w-16">{parent.sort_order}</td>
-        <td className="p-4">
+        <td className="p-3 pl-4 text-sm text-gray-500 w-16">{parent.sort_order}</td>
+        <td className="p-3">
           <span className="font-bold text-gray-900 text-sm">{parent.name.kr || parent.slug}</span>
           {parent.name.en && <span className="ml-2 text-xs text-gray-400">{parent.name.en}</span>}
         </td>
-        <td className="p-4 text-sm text-gray-500 font-mono">{parent.slug}</td>
-        <td className="p-4">
+        <td className="p-3 text-sm text-gray-500 font-mono">{parent.slug}</td>
+        <td className="p-3">
           <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${parent.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
             {parent.is_active ? '활성' : '비활성'}
           </span>
         </td>
-        <td className="p-4 pr-6 text-right">
+        <td className="p-3 pr-4 text-right">
           <div className="flex gap-1 justify-end">
             <button onClick={onAddChild} title="서브카테고리 추가" className="text-gray-400 hover:text-blue-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
               <Plus className="w-4 h-4" />
@@ -310,21 +310,21 @@ function CategoryRows({
       {/* Child rows */}
       {subItems.map(child => (
         <tr key={child.id} className="hover:bg-[#fafbfc] transition-colors bg-gray-50/30">
-          <td className="p-4 pl-6 text-sm text-gray-400 w-16">{child.sort_order}</td>
-          <td className="p-4 pl-10">
+          <td className="p-3 pl-4 text-sm text-gray-400 w-16">{child.sort_order}</td>
+          <td className="p-3 pl-10">
             <span className="flex items-center gap-1.5 text-sm text-gray-700">
               <ChevronRight className="w-3 h-3 text-gray-300" />
               {child.name.kr || child.slug}
               {child.name.en && <span className="ml-1 text-xs text-gray-400">{child.name.en}</span>}
             </span>
           </td>
-          <td className="p-4 text-sm text-gray-400 font-mono">{child.slug}</td>
-          <td className="p-4">
+          <td className="p-3 text-sm text-gray-400 font-mono">{child.slug}</td>
+          <td className="p-3">
             <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${child.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
               {child.is_active ? '활성' : '비활성'}
             </span>
           </td>
-          <td className="p-4 pr-6 text-right">
+          <td className="p-3 pr-4 text-right">
             <div className="flex gap-1 justify-end">
               <button onClick={() => onEdit(child)} title="수정" className="text-gray-400 hover:text-amber-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
                 <Pencil className="w-4 h-4" />
