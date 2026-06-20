@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
-import { Upload, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 
@@ -22,6 +22,7 @@ import SlideTextEditor from './SlideTextEditor';
 import SlideColorPicker from './SlideColorPicker';
 import SlideFontSizeOffsets from './SlideFontSizeOffsets';
 import SlideTypographyAndPosition from './SlideTypographyAndPosition';
+import SlideImageUpload from './SlideImageUpload';
 
 interface Props {
   editingId: string | null;
@@ -39,8 +40,6 @@ export default function CarouselSlideModal({
   onSaved,
 }: Props) {
   const toast = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const mobileFileInputRef = useRef<HTMLInputElement>(null);
   const initialFormRef = useMemo(
     () => initialForm ?? { ...emptyForm, badge: {}, title: {}, subtitle: {} },
     // Snapshot once at mount; later edits compare against this. Re-snapshotting
@@ -327,183 +326,76 @@ export default function CarouselSlideModal({
             onChange={mode => setFormData(prev => ({ ...prev, display_mode: mode }))}
           />
 
-          <div className="space-y-2">
-            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-              슬라이드 이미지 — PC (가로형, 필수)
-            </label>
-            {/* 권장 해상도 안내. 메인 배너 (HeroSlider) 가 lg:h-[1000px]
-                까지 늘어나기 때문에, 세로 픽셀이 모자란 소스 (예: 2400×800)
-                는 데스크탑에서 25% 이상 업스케일되며 흐릿하게 보입니다.
-                2400×1200(2:1) 이상이 가장 안전합니다. */}
-            <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
-              <strong className="font-bold">권장 해상도</strong> · 2400 × 1200 px (2:1) 이상 · 가로폭은 1920 px 이상이면 OK · 세로폭이 1000 px 미만이면 큰 화면에서 흐릿하게 보일 수 있습니다.
-            </p>
-            <div
-              className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer group ${
-                previewUrl ? 'border-gray-200' : 'border-gray-200 hover:border-gray-400'
-              }`}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {previewUrl ? (
-                <div className="relative">
-                  {formData.media_type === 'video' ? (
-                    <video
-                      src={previewUrl}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      className="w-full h-44 object-contain rounded-xl bg-gray-50"
-                    />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={previewUrl}
-                      alt="미리보기"
-                      className="w-full h-44 object-contain rounded-xl bg-gray-50"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setPreviewUrl('');
-                      setFormData(prev => ({ ...prev, imageFile: null, imageUrl: '' }));
-                      setUploadProgress('idle');
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                  {uploadProgress === 'uploading' && (
-                    <div className="absolute inset-0 bg-white/70 rounded-xl flex items-center justify-center">
-                      <div className="text-sm text-gray-700 font-semibold animate-pulse">
-                        업로드 중...
-                      </div>
-                    </div>
-                  )}
-                  {uploadProgress === 'done' && (
-                    <div className="absolute bottom-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-1 rounded-md">
-                      업로드 완료
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="h-36 flex flex-col items-center justify-center text-gray-400 group-hover:text-gray-600 transition-colors">
-                  <Upload className="w-8 h-8 mb-2" />
-                  <p className="text-sm font-semibold">클릭하여 이미지 업로드</p>
-                  <p className="text-xs mt-1">JPG, PNG, WEBP, GIF, MP4 — 최대 20MB</p>
-                  <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
-                    권장: <strong className="font-semibold">데스크탑 2400×1500px (16:10) 이상</strong>, 가급적 원본 화질로 업로드해주세요.<br />
-                    출시 시 자동으로 화면 크기에 맞춰 최적화되며 품질은 95%로 유지됩니다.
-                  </p>
-                </div>
-              )}
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-            {!formData.imageFile && (
-              <>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="h-px flex-1 bg-gray-100" />
-                  <span className="text-[10px] text-gray-400 font-semibold">
-                    또는 URL 직접 입력
-                  </span>
-                  <div className="h-px flex-1 bg-gray-100" />
-                </div>
-                <input
-                  type="url"
-                  value={formData.imageUrl}
-                  onChange={e => {
-                    setFormData(prev => ({ ...prev, imageUrl: e.target.value }));
-                    setPreviewUrl(e.target.value);
-                  }}
-                  placeholder="https://example.com/image.jpg"
-                  className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-                />
-              </>
-            )}
-          </div>
+          <SlideImageUpload
+            label="슬라이드 이미지 — PC (가로형, 필수)"
+            tip={
+              /* 권장 해상도 안내. 메인 배너 (HeroSlider) 가 lg:h-[1000px]
+                 까지 늘어나기 때문에, 세로 픽셀이 모자란 소스 (예: 2400×800)
+                 는 데스크탑에서 25% 이상 업스케일되며 흐릿하게 보입니다.
+                 2400×1200(2:1) 이상이 가장 안전합니다. */
+              <p className="text-[10px] text-[#92400e] bg-[#fef3c7] border border-[#fde68a] rounded px-2 py-1.5">
+                <strong className="font-bold">권장 해상도</strong> · 2400 × 1200 px (2:1) 이상 · 가로폭은 1920 px 이상이면 OK · 세로폭이 1000 px 미만이면 큰 화면에서 흐릿하게 보일 수 있습니다.
+              </p>
+            }
+            previewUrl={previewUrl}
+            urlValue={formData.imageUrl}
+            isVideo={formData.media_type === 'video'}
+            hasFile={!!formData.imageFile}
+            uploadProgress={uploadProgress}
+            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
+            emptyTitle="클릭하여 이미지 업로드"
+            emptySubtitle="JPG, PNG, WEBP, GIF, MP4 — 최대 20MB"
+            emptyHint={
+              <p className="text-[11px] text-[#9ca3af] mt-2 leading-relaxed text-center">
+                권장: <strong className="font-semibold">데스크탑 2400×1500px (16:10) 이상</strong>, 가급적 원본 화질로 업로드해주세요.<br />
+                출시 시 자동으로 화면 크기에 맞춰 최적화되며 품질은 95%로 유지됩니다.
+              </p>
+            }
+            emptyHeight="h-36"
+            iconSize="w-8 h-8"
+            urlPlaceholder="https://example.com/image.jpg"
+            onFileSelect={handleFileSelect}
+            onUrlChange={url => {
+              setFormData(prev => ({ ...prev, imageUrl: url }));
+              setPreviewUrl(url);
+            }}
+            onClear={() => {
+              setPreviewUrl('');
+              setFormData(prev => ({ ...prev, imageFile: null, imageUrl: '' }));
+              setUploadProgress('idle');
+            }}
+          />
 
           {/* Migration 35 — optional mobile-specific composition. If the
               admin leaves this empty, HeroSlider falls back to the
               desktop image at every breakpoint, matching pre-2026-06-10
               behavior on rows from before this PR. */}
-          <div className="space-y-2">
-            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-              슬라이드 이미지 — 모바일 (세로형, 선택)
-            </label>
-            <p className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1.5">
-              모바일 전용 이미지를 업로드하면 작은 화면에서 자동으로 이 이미지가 표시됩니다. <strong>비워두면 PC 이미지를 그대로 사용</strong>합니다. 권장: 1200 × 1500 px (4:5) 또는 1080 × 1920 px (9:16).
-            </p>
-            <div
-              className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer group ${
-                mobilePreviewUrl ? 'border-gray-200' : 'border-gray-200 hover:border-gray-400'
-              }`}
-              onClick={() => mobileFileInputRef.current?.click()}
-            >
-              {mobilePreviewUrl ? (
-                <div className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={mobilePreviewUrl}
-                    alt="모바일 미리보기"
-                    className="w-full h-44 object-contain rounded-xl bg-gray-50"
-                  />
-                  <button
-                    type="button"
-                    onClick={e => {
-                      e.stopPropagation();
-                      setMobilePreviewUrl('');
-                      setFormData(prev => ({ ...prev, mobileImageFile: null, mobileImageUrl: '' }));
-                      if (mobileFileInputRef.current) mobileFileInputRef.current.value = '';
-                    }}
-                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 hover:bg-black transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="h-28 flex flex-col items-center justify-center text-gray-400 group-hover:text-gray-600 transition-colors">
-                  <Upload className="w-6 h-6 mb-1.5" />
-                  <p className="text-xs font-semibold">클릭하여 모바일 이미지 업로드</p>
-                  <p className="text-[10px] mt-0.5">선택 사항 — 비워두면 PC 이미지 사용</p>
-                </div>
-              )}
-            </div>
-            <input
-              ref={mobileFileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="hidden"
-              onChange={handleMobileFileSelect}
-            />
-            {!formData.mobileImageFile && (
-              <>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="h-px flex-1 bg-gray-100" />
-                  <span className="text-[10px] text-gray-400 font-semibold">또는 URL 직접 입력</span>
-                  <div className="h-px flex-1 bg-gray-100" />
-                </div>
-                <input
-                  type="url"
-                  value={formData.mobileImageUrl}
-                  onChange={e => {
-                    setFormData(prev => ({ ...prev, mobileImageUrl: e.target.value }));
-                    setMobilePreviewUrl(e.target.value);
-                  }}
-                  placeholder="https://example.com/mobile.jpg"
-                  className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-                />
-              </>
-            )}
-          </div>
+          <SlideImageUpload
+            label="슬라이드 이미지 — 모바일 (세로형, 선택)"
+            tip={
+              <p className="text-[10px] text-[#1e40af] bg-[#eff6ff] border border-[#bfdbfe] rounded px-2 py-1.5">
+                모바일 전용 이미지를 업로드하면 작은 화면에서 자동으로 이 이미지가 표시됩니다. <strong>비워두면 PC 이미지를 그대로 사용</strong>합니다. 권장: 1200 × 1500 px (4:5) 또는 1080 × 1920 px (9:16).
+              </p>
+            }
+            previewUrl={mobilePreviewUrl}
+            urlValue={formData.mobileImageUrl}
+            hasFile={!!formData.mobileImageFile}
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            emptyTitle="클릭하여 모바일 이미지 업로드"
+            emptySubtitle="선택 사항 — 비워두면 PC 이미지 사용"
+            emptyHeight="h-28"
+            iconSize="w-6 h-6"
+            urlPlaceholder="https://example.com/mobile.jpg"
+            onFileSelect={handleMobileFileSelect}
+            onUrlChange={url => {
+              setFormData(prev => ({ ...prev, mobileImageUrl: url }));
+              setMobilePreviewUrl(url);
+            }}
+            onClear={() => {
+              setMobilePreviewUrl('');
+              setFormData(prev => ({ ...prev, mobileImageFile: null, mobileImageUrl: '' }));
+            }}
+          />
 
           <SlideTextEditor
             formData={formData}
