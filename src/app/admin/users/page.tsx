@@ -4,6 +4,7 @@ import { Search, Trash2, Shield, ShieldOff, Users as UsersIcon, ShieldCheck } fr
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 
 // Session-aware client. Phase 4 RLS lockdown on `users` is admin-only for
 // reading other users, updating roles, and deleting accounts — see
@@ -19,6 +20,7 @@ interface UserRow {
 }
 
 export default function UsersAdminPage() {
+  const confirm = useConfirm();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -57,7 +59,8 @@ export default function UsersAdminPage() {
   };
 
   const deleteUser = async (id: string) => {
-    if (!confirm('이 사용자를 삭제하시겠습니까?')) return;
+    const ok = await confirm({ message: '이 사용자를 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     try {
       if (!supabase) return;
       await supabase.from('users').delete().eq('id', id);

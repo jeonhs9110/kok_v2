@@ -14,6 +14,7 @@ import AdminSearchModal from './_components/AdminSearchModal';
 import BackToHubLink from './_components/BackToHubLink';
 import EmbeddedShell from './_components/EmbeddedShell';
 import { ToastProvider } from '@/components/admin/Toast';
+import { ConfirmProvider } from '@/components/admin/ConfirmModal';
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> };
 type NavSection = { title: string | null; items: NavItem[] };
@@ -405,11 +406,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // avoids a sidebar flash on iframe load in the drawer.
   return (
     <ToastProvider>
-      <Suspense fallback={normalChrome}>
-        <EmbeddedShell fallback={normalChrome}>
-          {children}
-        </EmbeddedShell>
-      </Suspense>
+      <ConfirmProvider>
+        <Suspense fallback={normalChrome}>
+          <EmbeddedShell fallback={normalChrome}>
+            {children}
+          </EmbeddedShell>
+        </Suspense>
+      </ConfirmProvider>
     </ToastProvider>
   );
 }

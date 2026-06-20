@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 import RichEditor from '@/components/admin/RichEditor';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
@@ -33,6 +34,7 @@ const emptyForm: FormData = {
 
 export default function MenusAdminPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [menus, setMenus] = useState<Menu[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -130,7 +132,8 @@ export default function MenusAdminPage() {
       return;
     }
     const msg = hasChildren ? '이 메뉴와 모든 서브메뉴가 삭제됩니다. 계속하시겠습니까?' : '이 메뉴를 삭제하시겠습니까?';
-    if (!confirm(msg)) return;
+    const ok = await confirm({ message: msg, tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     if (!supabase) return;
     await supabase.from('menus').delete().eq('id', id);
     await revalidateHeaderData();

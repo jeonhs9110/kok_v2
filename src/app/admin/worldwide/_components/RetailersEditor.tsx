@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Save, Plus, Trash2, GripVertical } from 'lucide-react';
 import SortableList from '@/components/admin/SortableList';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
 const supabase = getSupabaseBrowser();
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function RetailersEditor({ initialRetailers }: Props) {
+  const confirm = useConfirm();
   const [retailers, setRetailers] = useState<RetailerRow[]>(initialRetailers);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [savedKey, setSavedKey] = useState<string | null>(null);
@@ -148,7 +150,8 @@ export default function RetailersEditor({ initialRetailers }: Props) {
 
   async function deleteRetailer(index: number) {
     const r = retailers[index];
-    if (!confirm(`${r.country_en} 을(를) 삭제하시겠습니까?`)) return;
+    const ok = await confirm({ message: `${r.country_en} 을(를) 삭제하시겠습니까?`, tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     if (r.id && supabase) {
       const { error } = await supabase.from('worldwide_retailers').delete().eq('id', r.id);
       if (error) {

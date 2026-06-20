@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 
 // Session-aware client. Phase 3 RLS lockdown on `posts` requires admin
 // JWT for cross-author updates/deletes — see migration 19.
@@ -15,6 +16,7 @@ import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
 export default function PostsAdminPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const { menuId } = useParams<{ menuId: string }>();
   const [menu, setMenu] = useState<Menu | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -69,7 +71,8 @@ export default function PostsAdminPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('이 게시글을 삭제하시겠습니까?')) return;
+    const ok = await confirm({ message: '이 게시글을 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     if (!supabase) return;
     await supabase.from('posts').delete().eq('id', id);
     await revalidateHeaderData();

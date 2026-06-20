@@ -7,6 +7,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { SUPPORTED_LANGS, LANG_LABELS, type Lang } from '@/lib/i18n/types';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 
 const supabase = getSupabaseBrowser();
 
@@ -42,6 +43,7 @@ export default function BannerEditPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
+  const confirm = useConfirm();
   const id = params?.id;
 
   const [data, setData] = useState<BannerRow>(DEFAULT);
@@ -114,7 +116,8 @@ export default function BannerEditPage() {
 
   async function handleDelete() {
     if (!supabase || !id) return;
-    if (!confirm('이 띠배너를 삭제할까요? 되돌릴 수 없습니다.')) return;
+    const ok = await confirm({ message: '이 띠배너를 삭제할까요? 되돌릴 수 없습니다.', tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     try {
       const { error } = await supabase
         .from('homepage_banners')

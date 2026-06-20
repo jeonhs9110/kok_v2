@@ -12,6 +12,7 @@ import {
 } from '@/lib/theme/tokens';
 import { FONT_OPTIONS } from '@/lib/typography/options';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 
 // Session-aware client. site_settings writes require admin JWT (Phase 2 RLS).
 const supabase = getSupabaseBrowser();
@@ -30,6 +31,7 @@ const supabase = getSupabaseBrowser();
  * at /kr (the live preview iframe here) update via postMessage on save.
  */
 export default function ThemePage() {
+  const confirm = useConfirm();
   const [tokens, setTokens] = useState<ThemeTokens>(DEFAULT_THEME_TOKENS);
   const [savedTokens, setSavedTokens] = useState<ThemeTokens>(DEFAULT_THEME_TOKENS);
   const [isLoading, setIsLoading] = useState(true);
@@ -148,8 +150,12 @@ export default function ThemePage() {
     }
   };
 
-  const handleReset = () => {
-    if (!confirm('기본값으로 되돌리시겠습니까? 저장 전까지는 변경 사항이 반영되지 않습니다.')) return;
+  const handleReset = async () => {
+    const ok = await confirm({
+      message: '기본값으로 되돌리시겠습니까? 저장 전까지는 변경 사항이 반영되지 않습니다.',
+      confirmText: '초기화',
+    });
+    if (!ok) return;
     setTokens(DEFAULT_THEME_TOKENS);
   };
 

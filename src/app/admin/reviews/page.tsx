@@ -5,6 +5,7 @@ import { Plus, Trash2, Save, ArrowUp, ArrowDown, Loader2, Star, Eye, EyeOff, Ima
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 
 // Session-aware client. Phase 2 RLS lockdown requires admin's JWT for
 // review_cards writes — see migration 18.
@@ -41,6 +42,7 @@ async function uploadImage(file: File): Promise<string> {
 
 export default function ReviewsAdminPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -161,7 +163,8 @@ export default function ReviewsAdminPage() {
 
   async function remove(i: number) {
     const r = rows[i];
-    if (!confirm('이 리뷰 카드를 삭제하시겠습니까?')) return;
+    const ok = await confirm({ message: '이 리뷰 카드를 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     if (r.id && supabase) {
       await supabase.from('review_cards').delete().eq('id', r.id);
       revalidateHomepageData('reviews');

@@ -13,6 +13,7 @@ import {
   type PageBlock,
 } from '@/lib/pages/blocks';
 import SortableList from '@/components/admin/SortableList';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 
 interface BlockWithId {
   id: string;
@@ -49,6 +50,7 @@ const BLOCK_ICONS: Record<BlockType, React.ComponentType<{ className?: string }>
  * pointer-event plumbing.
  */
 export default function PageBlocksEditor({ blocks, onChange }: Props) {
+  const confirm = useConfirm();
   const [openId, setOpenId] = useState<string | null>(
     blocks.length === 0 ? null : makeBlockId(blocks[0], 0),
   );
@@ -62,8 +64,9 @@ export default function PageBlocksEditor({ blocks, onChange }: Props) {
     onChange(blocks.map((b, idx) => (idx === i ? next : b)));
   };
 
-  const removeAt = (i: number) => {
-    if (!confirm('이 블록을 삭제하시겠습니까?')) return;
+  const removeAt = async (i: number) => {
+    const ok = await confirm({ message: '이 블록을 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     onChange(blocks.filter((_, idx) => idx !== i));
     setOpenId(null);
   };

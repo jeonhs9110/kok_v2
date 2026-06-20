@@ -4,6 +4,7 @@ import { Plus, Trash2, Pencil, X, Eye, EyeOff, Menu as MenuIcon, LayoutTemplate,
 import { useState, useEffect, useCallback } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 import { PageHeader } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 4 RLS lockdown on `pages` requires admin JWT.
@@ -34,6 +35,7 @@ interface Page {
 /* ── Main Page ─────────────────────────────────────────────────────── */
 export default function PagesAdminPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -166,7 +168,8 @@ export default function PagesAdminPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('이 페이지를 삭제하시겠습니까?')) return;
+    const ok = await confirm({ message: '이 페이지를 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     try {
       if (!supabase) throw new Error('No client');
       await supabase.from('pages').delete().eq('id', id);

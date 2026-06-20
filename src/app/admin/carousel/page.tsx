@@ -4,6 +4,7 @@ import { Plus, Image as ImageIcon, Eye, EyeOff, Video } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 
 const supabase = getSupabaseBrowser();
 import type { CarouselSlide } from '@/lib/api/carousel';
@@ -73,6 +74,7 @@ function formFromSlide(s: CarouselSlide): SlideFormData {
 }
 
 export default function CarouselAdminPage() {
+  const confirm = useConfirm();
   const [slides, setSlides] = useState<CarouselSlide[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -124,7 +126,8 @@ export default function CarouselAdminPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('이 슬라이드를 삭제하시겠습니까?')) return;
+    const ok = await confirm({ message: '이 슬라이드를 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     setSlides(prev => prev.filter(s => s.id !== id));
     if (supabase) {
       await supabase.from('carousel_slides').delete().eq('id', id);

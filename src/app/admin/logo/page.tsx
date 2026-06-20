@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Upload, Trash2, Check, Star, Eye, RefreshCw, Save } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 import { getSiteSetting, setSiteSetting } from '@/lib/api/site-settings';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
 import {
@@ -42,6 +43,7 @@ const LOGO_HEIGHT_PRESETS: { v: string; l: string }[] = [
 
 export default function LogoAdminPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   // ── Logo state ───────────────────────────────────────────────
   const [logoUrl, setLogoUrl] = useState('');
   const [logoPreview, setLogoPreview] = useState('');
@@ -196,7 +198,8 @@ export default function LogoAdminPage() {
   };
 
   const removeLogo = async () => {
-    if (!confirm('로고를 삭제하고 기본 텍스트(KOKKOK GARDEN)로 돌아가시겠습니까?')) return;
+    const confirmed = await confirm({ message: '로고를 삭제하고 기본 텍스트(KOKKOK GARDEN)로 돌아가시겠습니까?', tone: 'danger', confirmText: '삭제' });
+    if (!confirmed) return;
     setLogoSaving(true);
     const ok = await setSiteSetting(supabase, 'logo_url', '');
     if (ok) {
@@ -296,7 +299,8 @@ export default function LogoAdminPage() {
 
   const deleteBackground = async (bg: Background) => {
     if (!supabase) return;
-    if (!confirm(`"${bg.file_name || '이 배경'}"을(를) 삭제하시겠습니까?`)) return;
+    const ok = await confirm({ message: `"${bg.file_name || '이 배경'}"을(를) 삭제하시겠습니까?`, tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     setBgBusyId(bg.id);
     try {
       const marker = `/${BUCKET}/`;
