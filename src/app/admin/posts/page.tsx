@@ -134,13 +134,13 @@ export default function AllPostsAdminPage() {
             <tbody className="divide-y divide-[#f3f4f6]">
               {filtered.map(post => (
                 <tr key={post.id} className="hover:bg-[#fafbfc] transition-colors">
-                  <td className="p-3 pl-4 text-sm font-semibold text-gray-900">
+                  <td className="p-3 pl-4 text-[12px] font-semibold text-gray-900">
                     <span className="line-clamp-1">{post.title}</span>
                     {post.is_admin_post && <span className="ml-2 px-1.5 py-0.5 text-[10px] font-bold bg-brand-ink text-white rounded">공지</span>}
                   </td>
-                  <td className="p-3 text-sm text-gray-600">{post.menu_title}</td>
-                  <td className="p-3 text-sm text-gray-500">{post.author_name}</td>
-                  <td className="p-3 text-sm text-gray-400">{new Date(post.created_at).toLocaleDateString('ko-KR')}</td>
+                  <td className="p-3 text-[12px] text-gray-600">{post.menu_title}</td>
+                  <td className="p-3 text-[12px] text-gray-500">{post.author_name}</td>
+                  <td className="p-3 text-[12px] text-gray-400">{new Date(post.created_at).toLocaleDateString('ko-KR')}</td>
                   <td className="p-3 pr-4 text-right">
                     <div className="flex gap-1 justify-end">
                       <Link

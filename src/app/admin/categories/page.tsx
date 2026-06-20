@@ -282,12 +282,12 @@ function CategoryRows({
     <>
       {/* Parent row */}
       <tr className="hover:bg-[#fafbfc] transition-colors">
-        <td className="p-3 pl-4 text-sm text-gray-500 w-16">{parent.sort_order}</td>
+        <td className="p-3 pl-4 text-[12px] text-gray-500 w-16">{parent.sort_order}</td>
         <td className="p-3">
           <span className="font-bold text-gray-900 text-sm">{parent.name.kr || parent.slug}</span>
           {parent.name.en && <span className="ml-2 text-xs text-gray-400">{parent.name.en}</span>}
         </td>
-        <td className="p-3 text-sm text-gray-500 font-mono">{parent.slug}</td>
+        <td className="p-3 text-[12px] text-gray-500 font-mono">{parent.slug}</td>
         <td className="p-3">
           <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${parent.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
             {parent.is_active ? '활성' : '비활성'}
@@ -310,7 +310,7 @@ function CategoryRows({
       {/* Child rows */}
       {subItems.map(child => (
         <tr key={child.id} className="hover:bg-[#fafbfc] transition-colors bg-gray-50/30">
-          <td className="p-3 pl-4 text-sm text-gray-400 w-16">{child.sort_order}</td>
+          <td className="p-3 pl-4 text-[12px] text-gray-400 w-16">{child.sort_order}</td>
           <td className="p-3 pl-10">
             <span className="flex items-center gap-1.5 text-sm text-gray-700">
               <ChevronRight className="w-3 h-3 text-gray-300" />
@@ -318,7 +318,7 @@ function CategoryRows({
               {child.name.en && <span className="ml-1 text-xs text-gray-400">{child.name.en}</span>}
             </span>
           </td>
-          <td className="p-3 text-sm text-gray-400 font-mono">{child.slug}</td>
+          <td className="p-3 text-[12px] text-gray-400 font-mono">{child.slug}</td>
           <td className="p-3">
             <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${child.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
               {child.is_active ? '활성' : '비활성'}

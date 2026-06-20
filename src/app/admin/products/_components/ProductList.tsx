@@ -96,7 +96,7 @@ export default function ProductList({
                 </div>
               </div>
             </td>
-            <td className="p-3 text-gray-600 text-sm font-bold">{item.price.toLocaleString()}원</td>
+            <td className="p-3 text-gray-600 text-[12px] font-bold">{item.price.toLocaleString()}원</td>
             <td className="p-3 text-gray-600 font-mono text-[11px]">{item.ingredient}</td>
             <td className="p-3">
               {item.naver_store_url ? (

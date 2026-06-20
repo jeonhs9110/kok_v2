@@ -114,9 +114,9 @@ export default function PostsAdminPage() {
             <tbody className="divide-y divide-[#f3f4f6]">
               {posts.map(post => (
                 <tr key={post.id} className="hover:bg-[#fafbfc] transition-colors">
-                  <td className="p-3 pl-4 text-sm font-semibold text-gray-900">{post.title}</td>
-                  <td className="p-3 text-sm text-gray-500">{post.author_name}</td>
-                  <td className="p-3 text-sm text-gray-400">{new Date(post.created_at).toLocaleDateString('ko-KR')}</td>
+                  <td className="p-3 pl-4 text-[12px] font-semibold text-gray-900">{post.title}</td>
+                  <td className="p-3 text-[12px] text-gray-500">{post.author_name}</td>
+                  <td className="p-3 text-[12px] text-gray-400">{new Date(post.created_at).toLocaleDateString('ko-KR')}</td>
                   <td className="p-3 pr-4 text-right">
                     <div className="flex gap-1 justify-end">
                       <button onClick={() => openEdit(post)} className="text-gray-400 hover:text-amber-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
