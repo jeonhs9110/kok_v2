@@ -252,7 +252,7 @@ export default function ChatbotAdminPage() {
               </thead>
               <tbody>
                 {leads.map(lead => (
-                  <tr key={lead.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr key={lead.id} className="border-b border-[#f3f4f6] hover:bg-[#fafbfc]">
                     <td className="py-2.5 px-3 text-gray-800">{lead.name || '—'}</td>
                     <td className="py-2.5 px-3 text-blue-600">{lead.email}</td>
                     <td className="py-2.5 px-3 text-gray-600">{lead.skin_type || '—'}</td>

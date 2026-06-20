@@ -402,7 +402,7 @@ export default function ShortsAdminPage() {
 
       {/* 현재 게시 중인 숏츠 */}
       <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+        <div className="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#fafbfc]">
           <h2 className="text-[14px] font-bold text-[#1f2937]">현재 스토어에 게시 중</h2>
           <span className="text-sm font-medium text-gray-500">{shorts.length}개 항목</span>
         </div>

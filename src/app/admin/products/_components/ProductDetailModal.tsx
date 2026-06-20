@@ -308,8 +308,8 @@ export default function ProductDetailModal({
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh]">
-        <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-          <h3 className="font-bold text-lg">{editingId ? '상품 수정' : '새 상품 추가'}</h3>
+        <div className="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#fafbfc]">
+          <h3 className="text-[14px] font-bold text-[#1f2937]">{editingId ? '상품 수정' : '새 상품 추가'}</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-black transition-colors p-1 rounded hover:bg-gray-100"

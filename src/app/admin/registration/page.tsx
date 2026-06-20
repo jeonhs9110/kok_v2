@@ -444,7 +444,7 @@ export default function RegistrationAdminPage() {
                   </thead>
                   <tbody>
                     {customers.map(c => (
-                      <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <tr key={c.id} className="border-b border-[#f3f4f6] hover:bg-[#fafbfc]">
                         <td className="py-2 px-2 text-gray-800">{c.name || '—'}</td>
                         <td className="py-2 px-2 text-blue-600 text-xs">{c.email || '—'}</td>
                         <td className="py-2 px-2 text-gray-600 text-xs">{c.phone || '—'}</td>
