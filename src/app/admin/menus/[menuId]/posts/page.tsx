@@ -140,7 +140,7 @@ export default function PostsAdminPage() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-4 border-b border-[#e5e7eb] bg-[#fafbfc]">
               <h3 className="text-[14px] font-bold text-[#1f2937]">{editingId ? '게시글 수정' : '게시글 추가'}</h3>
-              <button onClick={resetForm} className="text-gray-400 hover:text-black"><X className="w-5 h-5" /></button>
+              <button onClick={resetForm} className="text-[#9ca3af] hover:text-[#1f2937] p-1 rounded hover:bg-[#f3f4f6] transition-colors"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-6 space-y-5">
               <div>
