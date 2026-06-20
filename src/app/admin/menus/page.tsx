@@ -176,12 +176,12 @@ export default function MenusAdminPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
-                <th className="p-4 pl-6">순서</th>
-                <th className="p-4">메뉴명</th>
-                <th className="p-4">슬러그</th>
-                <th className="p-4">타입</th>
-                <th className="p-4">상태</th>
-                <th className="p-4 pr-6 text-right">작업</th>
+                <th className="p-3 pl-4">순서</th>
+                <th className="p-3">메뉴명</th>
+                <th className="p-3">슬러그</th>
+                <th className="p-3">타입</th>
+                <th className="p-3">상태</th>
+                <th className="p-3 pr-4 text-right">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f3f4f6]">
@@ -333,18 +333,18 @@ function MenuRows({ parent, subItems, onEdit, onDelete, onAddChild }: {
   return (
     <>
       <tr className="hover:bg-[#fafbfc] transition-colors">
-        <td className="p-4 pl-6 text-sm text-gray-500 w-16">{parent.sort_order}</td>
-        <td className="p-4">
+        <td className="p-3 pl-4 text-sm text-gray-500 w-16">{parent.sort_order}</td>
+        <td className="p-3">
           <span className="font-bold text-gray-900 text-sm">{parent.title.kr || parent.slug}</span>
           {parent.title.en && <span className="ml-2 text-xs text-gray-400">{parent.title.en}</span>}
         </td>
-        <td className="p-4 text-sm text-gray-500 font-mono">{parent.slug}</td>
-        <td className="p-4">
+        <td className="p-3 text-sm text-gray-500 font-mono">{parent.slug}</td>
+        <td className="p-3">
           <span className="inline-flex items-center gap-1.5 text-xs text-gray-600">
             {typeIcon(parent)} {typeLabel(parent)}
           </span>
         </td>
-        <td className="p-4">
+        <td className="p-3">
           <div className="flex gap-1.5">
             <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${parent.is_published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
               {parent.is_published ? '게시' : '비공개'}
@@ -352,7 +352,7 @@ function MenuRows({ parent, subItems, onEdit, onDelete, onAddChild }: {
             {parent.show_in_nav && <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600">네비</span>}
           </div>
         </td>
-        <td className="p-4 pr-6 text-right">
+        <td className="p-3 pr-4 text-right">
           <div className="flex gap-1 justify-end">
             {parent.page_type === 'board' && (
               <Link href={`/admin/menus/${parent.id}/posts`} title="게시글 관리" className="text-gray-400 hover:text-blue-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
@@ -375,28 +375,28 @@ function MenuRows({ parent, subItems, onEdit, onDelete, onAddChild }: {
       </tr>
       {subItems.map(child => (
         <tr key={child.id} className="hover:bg-[#fafbfc] transition-colors bg-gray-50/30">
-          <td className="p-4 pl-6 text-sm text-gray-400 w-16">{child.sort_order}</td>
-          <td className="p-4 pl-10">
+          <td className="p-3 pl-4 text-sm text-gray-400 w-16">{child.sort_order}</td>
+          <td className="p-3 pl-10">
             <span className="flex items-center gap-1.5 text-sm text-gray-700">
               <ChevronRight className="w-3 h-3 text-gray-300" />
               {child.title.kr || child.slug}
               {child.title.en && <span className="ml-1 text-xs text-gray-400">{child.title.en}</span>}
             </span>
           </td>
-          <td className="p-4 text-sm text-gray-400 font-mono">{child.slug}</td>
-          <td className="p-4">
+          <td className="p-3 text-sm text-gray-400 font-mono">{child.slug}</td>
+          <td className="p-3">
             <span className="inline-flex items-center gap-1.5 text-xs text-gray-600">
               {typeIcon(child)} {typeLabel(child)}
             </span>
           </td>
-          <td className="p-4">
+          <td className="p-3">
             <div className="flex gap-1.5">
               <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${child.is_published ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                 {child.is_published ? '게시' : '비공개'}
               </span>
             </div>
           </td>
-          <td className="p-4 pr-6 text-right">
+          <td className="p-3 pr-4 text-right">
             <div className="flex gap-1 justify-end">
               {child.page_type === 'board' && (
                 <Link href={`/admin/menus/${child.id}/posts`} title="게시글 관리" className="text-gray-400 hover:text-blue-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
