@@ -56,7 +56,7 @@ export default function LabelsEditor({ initialLabels }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className="bg-white rounded border border-[#e5e7eb] p-4">
         <p className="text-[11px] font-bold text-gray-500 uppercase mb-2">편집 언어</p>
         <div className="flex flex-wrap gap-1">
           {SUPPORTED_LANGS.map(l => (
@@ -77,7 +77,7 @@ export default function LabelsEditor({ initialLabels }: Props) {
         const isOpen = openLabel === row.label_key;
         const title = LABEL_SECTION_TITLE[row.label_key] ?? row.label_key;
         return (
-          <div key={row.label_key} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div key={row.label_key} className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
             <button
               onClick={() => setOpenLabel(isOpen ? '' : row.label_key)}
               className="w-full flex items-center justify-between p-4 hover:bg-gray-50/50 transition-colors"

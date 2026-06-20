@@ -116,7 +116,7 @@ export default function PaymentsAdminPage() {
 
   return (
     <div className="space-y-4 max-w-4xl">
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-6">
         <h2 className="text-lg font-bold text-gray-800 mb-2">결제 시스템 설정</h2>
         <p className="text-sm text-gray-500 mb-4">각 결제 서비스의 API 키를 입력하고 토글로 활성화하세요. 테스트 키로 먼저 연동한 뒤 실서비스 키로 교체하세요.</p>
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
@@ -125,7 +125,7 @@ export default function PaymentsAdminPage() {
       </div>
 
       {providers.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400">
+        <div className="bg-white rounded border border-[#e5e7eb] p-8 text-center text-gray-400">
           <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p className="text-sm font-semibold">결제 제공자가 설정되지 않았습니다</p>
           <p className="text-xs mt-1">아래 SQL을 Supabase에서 실행하세요.</p>

@@ -223,7 +223,7 @@ export default function RetailersEditor({ initialRetailers }: Props) {
           const index = retailers.findIndex(x => retailerDndId(x, retailers.indexOf(x)) === r._dndId);
           return (
         <div
-          className="bg-white rounded-xl border border-gray-200 p-4 space-y-3"
+          className="bg-white rounded border border-[#e5e7eb] p-4 space-y-3"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

@@ -106,7 +106,7 @@ export default function LegalAdminPage() {
     <div className="space-y-4 max-w-4xl">
       {/* Legal Pages */}
       {pages.map(p => (
-        <div key={p.slug} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div key={p.slug} className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
           <SectionBtn id={p.slug} title={p.slug === 'terms' ? '이용약관 (Terms of Service)' : '개인정보처리방침 (Privacy Policy)'} icon={FileText} openSection={openSection} setOpenSection={setOpenSection} />
           {openSection === p.slug && (
             <div className="p-5 pt-0 space-y-4">
@@ -140,7 +140,7 @@ export default function LegalAdminPage() {
       ))}
 
       {/* Business Info */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         <SectionBtn id="biz" title="사업자 정보 (Business Info)" icon={Building2} openSection={openSection} setOpenSection={setOpenSection} />
         {openSection === 'biz' && (
           <div className="p-5 pt-0 space-y-4">

@@ -154,7 +154,7 @@ export default function PromoBannersAdminPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {banners.map((banner, idx) => (
-          <div key={banner.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div key={banner.id} className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
             <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
               <span className="text-sm font-bold text-gray-700">배너 {idx + 1}</span>
               {banner.image_url && (

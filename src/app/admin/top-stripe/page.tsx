@@ -94,7 +94,7 @@ export default function TopStripeAdminPage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+      <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">
         <div>
           <h2 className="text-lg font-bold text-gray-800 mb-1">상단 띠배너</h2>
           <p className="text-xs text-gray-500">사이트 최상단(헤더 위)에 노출되는 얇은 띠. 첫 쇼핑 쿠폰·이벤트 안내·시즌 메시지 등 짧은 문구에 적합합니다.</p>

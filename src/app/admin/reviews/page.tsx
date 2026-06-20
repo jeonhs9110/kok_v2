@@ -243,7 +243,7 @@ export default function ReviewsAdminPage() {
           operator can click to jump to a row without scrolling. Active
           card gets a brand-ink border + ring. */}
       {rows.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-white rounded border border-[#e5e7eb] p-4">
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">전체 리뷰 카드 ({rows.length})</p>
             <button
@@ -308,8 +308,8 @@ export default function ReviewsAdminPage() {
         <div
           key={r.id ?? `new-${i}`}
           ref={el => { cardRefs.current[i] = el; }}
-          className={`bg-white rounded-xl border p-5 space-y-4 transition-shadow ${
-            focusedIdx === i ? 'border-brand-ink shadow-md' : 'border-gray-200'
+          className={`bg-white rounded border p-5 space-y-4 transition-shadow ${
+            focusedIdx === i ? 'border-[#3b82f6] shadow-md' : 'border-[#e5e7eb]'
           }`}
         >
           <div className="flex items-center justify-between">
