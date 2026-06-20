@@ -358,7 +358,7 @@ export default function LogoAdminPage() {
               <button
                 disabled={!logoPending || logoSaving}
                 onClick={uploadLogo}
-                className="inline-flex items-center gap-2 bg-brand-ink text-white px-6 py-2.5 text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 bg-[#3b82f6] text-white px-6 py-2.5 text-sm font-bold tracking-wider hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed rounded"
               >
                 <Upload className="w-4 h-4" />
                 {logoSaving ? '업로드 중...' : '로고 업로드 및 저장'}
@@ -451,7 +451,7 @@ export default function LogoAdminPage() {
               type="button"
               onClick={handleTokensSave}
               disabled={!tokensDirty || tokensSaving}
-              className="inline-flex items-center gap-2 bg-brand-ink text-white px-5 py-2 text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 bg-[#3b82f6] text-white px-5 py-2 text-sm font-bold tracking-wider hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed rounded"
             >
               <Save className="w-4 h-4" />
               {tokensSaving ? '저장 중...' : tokensDirty ? '로고 크기 저장' : '저장됨'}
@@ -494,7 +494,7 @@ export default function LogoAdminPage() {
             <button
               disabled={!bgPending || bgUploading}
               onClick={uploadBackground}
-              className="inline-flex items-center gap-2 bg-brand-ink text-white px-6 py-2.5 text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-2 bg-[#3b82f6] text-white px-6 py-2.5 text-sm font-bold tracking-wider hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed rounded"
             >
               <Upload className="w-4 h-4" />
               {bgUploading ? '업로드 중...' : '배경 업로드'}
@@ -573,7 +573,7 @@ export default function LogoAdminPage() {
                             <button
                               disabled={busy}
                               onClick={() => activateBackground(bg.id)}
-                              className="flex-1 text-xs font-semibold px-2 py-1.5 bg-brand-ink text-white hover:bg-black transition-colors disabled:opacity-40"
+                              className="flex-1 text-xs font-semibold px-2 py-1.5 bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors disabled:opacity-40 rounded"
                             >
                               활성화
                             </button>

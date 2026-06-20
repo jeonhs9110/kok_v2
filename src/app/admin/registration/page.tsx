@@ -271,7 +271,7 @@ export default function RegistrationAdminPage() {
                     <option value="select">선택</option>
                     <option value="textarea">장문</option>
                   </select>
-                  <button onClick={addField} disabled={!newField.key || !newField.label_kr} className="bg-brand-ink text-white px-3 rounded-lg text-xs font-semibold disabled:opacity-30 hover:bg-black transition">
+                  <button onClick={addField} disabled={!newField.key || !newField.label_kr} className="bg-[#3b82f6] text-white px-3 rounded-lg text-xs font-semibold disabled:opacity-30 hover:bg-[#2563eb] transition">
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
@@ -297,7 +297,7 @@ export default function RegistrationAdminPage() {
               </label>
             </div>
 
-            <button onClick={saveFields} disabled={saving === 'fields'} className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${saved === 'fields' ? 'bg-green-500 text-white' : 'bg-brand-ink text-white hover:bg-black'} disabled:opacity-50`}>
+            <button onClick={saveFields} disabled={saving === 'fields'} className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${saved === 'fields' ? 'bg-green-500 text-white' : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'} disabled:opacity-50`}>
               <Save className="w-4 h-4" />
               {saving === 'fields' ? '저장 중...' : saved === 'fields' ? '✓ 저장 완료' : '항목 설정 저장'}
             </button>
@@ -409,7 +409,7 @@ export default function RegistrationAdminPage() {
               </div>
             </div>
 
-            <button onClick={saveVerification} disabled={saving === 'verification'} className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${saved === 'verification' ? 'bg-green-500 text-white' : 'bg-brand-ink text-white hover:bg-black'} disabled:opacity-50`}>
+            <button onClick={saveVerification} disabled={saving === 'verification'} className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all flex items-center gap-2 ${saved === 'verification' ? 'bg-green-500 text-white' : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'} disabled:opacity-50`}>
               <Save className="w-4 h-4" />
               {saving === 'verification' ? '저장 중...' : saved === 'verification' ? '✓ 저장 완료' : '본인인증 설정 저장'}
             </button>

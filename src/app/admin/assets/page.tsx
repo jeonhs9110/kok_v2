@@ -417,7 +417,7 @@ function AssetDetail({
       <div className="space-y-2 pt-2 border-t border-gray-100">
         <button
           onClick={() => onCopy(asset)}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-ink text-white text-xs font-bold tracking-wider rounded-lg hover:bg-black transition"
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#3b82f6] text-white text-xs font-bold tracking-wider rounded-lg hover:bg-[#2563eb] transition"
         >
           {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
           {isCopied ? '복사됨' : 'URL 복사'}

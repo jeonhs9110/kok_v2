@@ -427,7 +427,7 @@ export default function PagesAdminPage() {
                   취소
                 </button>
                 <button type="submit" disabled={isSubmitting}
-                  className="bg-brand-ink text-white px-8 py-2.5 rounded text-sm font-bold tracking-widest hover:bg-black transition-colors disabled:opacity-50 flex items-center gap-2">
+                  className="bg-[#3b82f6] text-white px-8 py-2.5 rounded text-sm font-bold tracking-widest hover:bg-[#2563eb] transition-colors disabled:opacity-50 flex items-center gap-2">
                   {isSubmitting ? (
                     <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 저장 중...</>
                   ) : editingId ? '수정 저장' : '페이지 저장'}
