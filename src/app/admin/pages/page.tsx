@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
-import { PageHeader } from '@/components/admin/CafeWidgets';
+import { PageHeader, EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 4 RLS lockdown on `pages` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -209,12 +209,9 @@ export default function PagesAdminPage() {
     <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
       <div className="overflow-x-auto min-h-[300px]">
         {isLoading ? (
-          <div className="p-8 text-center text-sm text-gray-400 font-bold tracking-widest">불러오는 중...</div>
+          <LoadingState />
         ) : pages.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <p className="text-sm font-semibold">등록된 페이지가 없습니다</p>
-            <p className="text-xs mt-1">새 페이지 버튼을 눌러 이벤트, 브랜드 스토리 등의 페이지를 만드세요</p>
-          </div>
+          <EmptyState label="등록된 페이지가 없습니다 · 새 페이지 버튼을 눌러 추가하세요" />
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>

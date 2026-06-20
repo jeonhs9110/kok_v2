@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Pencil, Trash2, FileText, BookOpen, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader, EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 
 // Session-aware client. Phase 3 RLS lockdown on `posts` requires admin
@@ -117,11 +117,9 @@ export default function AllPostsAdminPage() {
 
       <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center text-gray-400 text-sm font-bold tracking-widest">불러오는 중...</div>
+          <LoadingState />
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <p className="font-semibold">게시글이 없습니다</p>
-          </div>
+          <EmptyState label="게시글이 없습니다" />
         ) : (
           <table className="w-full text-left">
             <thead>
