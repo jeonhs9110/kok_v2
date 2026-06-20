@@ -519,3 +519,23 @@ textarea:disabled {
   box-shadow: 0 0 0 1px #3b82f6;
 }
 
+/* Cafe24 input resting border — defaults every admin input/textarea/
+   select to #d1d5db (gray-300), slightly more visible than Tailwind's
+   border-gray-200 (#e5e7eb) default that leaves inputs feeling like
+   they float. Same specificity trick as the focus rule above: (0,3,1)
+   wins over Tailwind's (0,1,0) border-gray-200 utility. Opt-out hook:
+   .kokkok-keep-border for any input that needs to keep its hand-rolled
+   color. */
+.kokkok-admin-shell input[type="text"]:not(.kokkok-keep-border),
+.kokkok-admin-shell input[type="email"]:not(.kokkok-keep-border),
+.kokkok-admin-shell input[type="number"]:not(.kokkok-keep-border),
+.kokkok-admin-shell input[type="url"]:not(.kokkok-keep-border),
+.kokkok-admin-shell input[type="search"]:not(.kokkok-keep-border),
+.kokkok-admin-shell input[type="tel"]:not(.kokkok-keep-border),
+.kokkok-admin-shell input[type="password"]:not(.kokkok-keep-border),
+.kokkok-admin-shell input:not([type]):not(.kokkok-keep-border),
+.kokkok-admin-shell textarea:not(.kokkok-keep-border),
+.kokkok-admin-shell select:not(.kokkok-keep-border) {
+  border-color: #d1d5db;
+}
+
