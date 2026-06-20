@@ -139,14 +139,14 @@ export default function CarouselList({
               <button
                 type="button"
                 onClick={() => onEdit(s)}
-                className="text-gray-400 hover:text-blue-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100"
+                className="text-gray-400 hover:text-blue-600 transition-colors p-1.5 rounded hover:bg-[#f3f4f6]"
               >
                 <Pencil className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 onClick={() => onDelete(s.id)}
-                className="text-gray-400 hover:text-red-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100"
+                className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded hover:bg-[#f3f4f6]"
               >
                 <Trash2 className="w-4 h-4" />
               </button>

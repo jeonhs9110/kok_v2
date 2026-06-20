@@ -159,13 +159,13 @@ export default function UsersAdminPage() {
                     <button
                       onClick={() => toggleRole(user)}
                       title={user.role === 'admin' ? '사용자로 변경' : '관리자로 변경'}
-                      className="text-gray-400 hover:text-purple-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100"
+                      className="text-gray-400 hover:text-purple-600 transition-colors p-1.5 rounded hover:bg-[#f3f4f6]"
                     >
                       {user.role === 'admin' ? <ShieldOff className="w-4 h-4" /> : <Shield className="w-4 h-4" />}
                     </button>
                     <button
                       onClick={() => deleteUser(user.id)}
-                      className="text-gray-400 hover:text-red-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100"
+                      className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded hover:bg-[#f3f4f6]"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
