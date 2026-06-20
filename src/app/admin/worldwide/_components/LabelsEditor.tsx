@@ -117,7 +117,7 @@ export default function LabelsEditor({ initialLabels }: Props) {
                   onClick={() => saveLabel(row)}
                   disabled={savingKey === row.label_key}
                   className={`px-5 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition ${
-                    savedKey === row.label_key ? 'bg-green-500 text-white' : 'bg-brand-ink text-white hover:bg-black'
+                    savedKey === row.label_key ? 'bg-green-500 text-white' : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
                   } disabled:opacity-50`}
                 >
                   <Save className="w-4 h-4" />

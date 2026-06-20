@@ -223,7 +223,7 @@ export default function ChatbotAdminPage() {
           className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
             saved
               ? 'bg-green-500 text-white'
-              : 'bg-brand-ink text-white hover:bg-black'
+              : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
           } disabled:opacity-50`}
         >
           {saving ? '저장 중...' : saved ? '✓ 저장 완료' : '설정 저장'}

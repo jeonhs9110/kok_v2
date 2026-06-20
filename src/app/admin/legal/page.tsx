@@ -129,7 +129,7 @@ export default function LegalAdminPage() {
                 <textarea value={editLang === 'kr' ? p.content_kr : p.content_en} onChange={e => updatePage(p.slug, editLang === 'kr' ? { content_kr: e.target.value } : { content_en: e.target.value })} rows={18} className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 font-mono leading-relaxed resize-y" />
               </div>
               <div className="flex items-center gap-3">
-                <button onClick={() => savePage(p)} disabled={saving === p.slug} className={`px-6 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 transition ${saved === p.slug ? 'bg-green-500 text-white' : 'bg-brand-ink text-white hover:bg-black'} disabled:opacity-50`}>
+                <button onClick={() => savePage(p)} disabled={saving === p.slug} className={`px-6 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 transition ${saved === p.slug ? 'bg-green-500 text-white' : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'} disabled:opacity-50`}>
                   <Save className="w-4 h-4" />{saving === p.slug ? '저장 중...' : saved === p.slug ? '✓ 저장 완료' : '저장'}
                 </button>
                 <a href={`/${p.slug}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-500 flex items-center gap-1 hover:underline">미리보기 <ExternalLink className="w-3 h-3" /></a>
@@ -198,7 +198,7 @@ export default function LegalAdminPage() {
                 </div>
               ))}
             </div>
-            <button onClick={saveBiz} disabled={saving === 'biz'} className={`px-6 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 transition ${saved === 'biz' ? 'bg-green-500 text-white' : 'bg-brand-ink text-white hover:bg-black'} disabled:opacity-50`}>
+            <button onClick={saveBiz} disabled={saving === 'biz'} className={`px-6 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2 transition ${saved === 'biz' ? 'bg-green-500 text-white' : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'} disabled:opacity-50`}>
               <Save className="w-4 h-4" />{saving === 'biz' ? '저장 중...' : saved === 'biz' ? '✓ 저장 완료' : '사업자 정보 저장'}
             </button>
           </div>

@@ -445,7 +445,7 @@ export default function ThemePage() {
               savedFlash
                 ? 'bg-green-600 text-white'
                 : isDirty
-                ? 'bg-brand-ink text-white hover:bg-black'
+                ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >

@@ -245,7 +245,7 @@ export default function ReviewsAdminPage() {
             <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">전체 리뷰 카드 ({rows.length})</p>
             <button
               onClick={addRow}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-ink text-white rounded text-xs font-semibold hover:bg-black transition"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#3b82f6] text-white rounded text-xs font-semibold hover:bg-[#2563eb] transition"
             >
               <Plus className="w-3.5 h-3.5" /> 새 리뷰 카드
             </button>
@@ -295,7 +295,7 @@ export default function ReviewsAdminPage() {
       {rows.length === 0 && (
         <button
           onClick={addRow}
-          className="flex items-center gap-2 px-4 py-2 bg-brand-ink text-white rounded-lg text-sm font-semibold hover:bg-black transition"
+          className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] text-white rounded-lg text-sm font-semibold hover:bg-[#2563eb] transition"
         >
           <Plus className="w-4 h-4" /> 리뷰 카드 추가
         </button>
@@ -414,7 +414,7 @@ export default function ReviewsAdminPage() {
               onClick={() => save(i)}
               disabled={saving === (r.id ?? `new-${i}`)}
               className={`px-5 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition ${
-                savedId && savedId === r.id ? 'bg-green-500 text-white' : 'bg-brand-ink text-white hover:bg-black'
+                savedId && savedId === r.id ? 'bg-green-500 text-white' : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
               } disabled:opacity-50`}
             >
               <Save className="w-4 h-4" />
