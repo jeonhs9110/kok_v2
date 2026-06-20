@@ -241,7 +241,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`group flex items-center gap-2.5 pl-3 pr-2 py-2 rounded transition-colors text-[12.5px] ${
+                    className={`group flex items-center gap-2.5 pl-3 pr-2 py-2 rounded transition-colors text-[12px] ${
                       isActive
                         ? 'bg-[#2b6cb0]/30 text-white font-semibold'
                         : 'text-gray-400 hover:text-white hover:bg-[#2a3140]'
@@ -261,7 +261,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             href="/kr"
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] text-gray-400 hover:text-white hover:bg-[#243049] rounded transition-colors"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] text-gray-400 hover:text-white hover:bg-[#2a3140] rounded transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             스토어 보기
@@ -271,7 +271,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
               window.location.href = '/';
             }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] text-gray-400 hover:text-white hover:bg-[#243049] rounded transition-colors border-none bg-transparent"
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] text-gray-400 hover:text-white hover:bg-[#2a3140] rounded transition-colors border-none bg-transparent"
           >
             <LogOut className="w-3.5 h-3.5" />
             로그아웃
