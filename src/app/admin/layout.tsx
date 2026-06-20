@@ -177,7 +177,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // deep-links to /admin (dashboard).
   if (pathname === '/admin/homepage') {
     return (
-      <div className="h-screen w-screen bg-[#f5f6f8] font-sans overflow-hidden">
+      <div className="kokkok-admin-shell h-screen w-screen bg-[#f5f6f8] font-sans overflow-hidden">
         {children}
         <AdminSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       </div>
@@ -188,7 +188,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     /* Body bg #f5f6f8 matches Cafe24's admin panel exactly — slightly
        cooler than gray-50 so the content cards lift off the surface
        the way Cafe24's do. */
-    <div className="flex h-screen bg-[#f5f6f8] font-sans">
+    <div className="kokkok-admin-shell flex h-screen bg-[#f5f6f8] font-sans">
       {/* Mobile backdrop — sits between content and drawer; tap to dismiss. */}
       {drawerOpen && (
         <div
