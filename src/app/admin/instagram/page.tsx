@@ -268,7 +268,7 @@ export default function InstagramAdminPage() {
       <div className="bg-white rounded border border-[#e5e7eb] p-6">
         <div className="flex items-center gap-2 mb-4">
           <IgIcon className="w-5 h-5 text-[#E1306C]" />
-          <h2 className="text-lg font-bold text-gray-800">인스타그램 설정</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937]">인스타그램 설정</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -319,7 +319,7 @@ export default function InstagramAdminPage() {
       {/* 섹션 제목 스타일 (migration 34) */}
       <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-bold text-gray-800">섹션 제목 (@핸들) 스타일</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 제목 (@핸들) 스타일</h2>
           <p className="text-xs text-gray-400">기본은 18px · 짙은 회색 · 배경 없음.</p>
         </div>
 
@@ -416,7 +416,7 @@ export default function InstagramAdminPage() {
       {/* 섹션 배경 설정 (migration 26) */}
       <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-bold text-gray-800">섹션 배경</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 배경</h2>
           <p className="text-xs text-gray-400">기본값은 페이지 배경(투명)입니다.</p>
         </div>
         <SectionBackgroundPanel
@@ -441,7 +441,7 @@ export default function InstagramAdminPage() {
       <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-sm border border-purple-200 p-6">
         <div className="flex items-center gap-2 mb-2">
           <RefreshCw className="w-5 h-5 text-purple-600" />
-          <h2 className="text-lg font-bold text-gray-800">RSS 자동 새로고침</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937]">RSS 자동 새로고침</h2>
           {rssFeedUrl && <span className="text-[10px] font-bold bg-green-500 text-white px-2 py-0.5 rounded-full">설정됨</span>}
         </div>
         <p className="text-sm text-gray-600 mb-4">
@@ -493,7 +493,7 @@ export default function InstagramAdminPage() {
 
       {/* Posts grid */}
       <div className="bg-white rounded border border-[#e5e7eb] p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">인스타그램 포스트 (최대 6개)</h2>
+        <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">인스타그램 포스트 (최대 6개)</h2>
         <p className="text-sm text-gray-500 mb-3">홈페이지에 표시될 포스트를 설정하세요. <strong>Instagram 포스트 URL을 붙여넣으면</strong> 실시간 공식 임베드가 표시됩니다 (이미지, 캡션, 좋아요 포함).</p>
 
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-xs text-blue-800 space-y-1">

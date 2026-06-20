@@ -188,7 +188,7 @@ export default function SubHeroAdminPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div className="bg-white rounded border border-[#e5e7eb] p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">서브 히어로 배너 관리</h2>
+        <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">서브 히어로 배너 관리</h2>
         <p className="text-sm text-gray-500">홈페이지 영상 리뷰 아래에 표시되는 전체 너비 배너입니다.</p>
       </div>
 

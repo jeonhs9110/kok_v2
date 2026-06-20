@@ -84,7 +84,7 @@ export default function PostsAdminPage() {
       <div className="flex items-center gap-3 mb-2">
         <Link href="/admin/menus" className="text-gray-400 hover:text-black transition-colors"><ArrowLeft className="w-5 h-5" /></Link>
         <div>
-          <h2 className="text-lg font-bold text-gray-800">{menu?.title?.kr || '게시판'} — 게시글 관리</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937]">{menu?.title?.kr || '게시판'} — 게시글 관리</h2>
           <p className="text-sm text-gray-500">이 게시판의 게시글을 관리합니다.</p>
         </div>
       </div>

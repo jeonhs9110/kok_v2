@@ -327,7 +327,7 @@ export default function LogoAdminPage() {
       <div className="space-y-6 min-w-0">
         {/* 사이트 로고 */}
         <div className="bg-white rounded border border-[#e5e7eb] p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-1">사이트 로고</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">사이트 로고</h2>
           <p className="text-sm text-gray-500 mb-6">
             상단 좌측에 노출되는 로고 이미지입니다. 업로드하지 않으면 기본 텍스트 &ldquo;KOKKOK GARDEN&rdquo;이 표시됩니다.
           </p>
@@ -393,7 +393,7 @@ export default function LogoAdminPage() {
             row in site_settings; the picker shows a Save bar at the
             bottom so the admin can preview-then-commit. */}
         <div className="bg-white rounded border border-[#e5e7eb] p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-1">로고 크기</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">로고 크기</h2>
           <p className="text-sm text-gray-500 mb-4">
             상단 헤더에 표시되는 로고의 높이를 조절합니다. 가로 폭은 비율을 유지한 채 자동으로 맞춰집니다. 오른쪽 미리보기가 실시간으로 반영됩니다.
           </p>
@@ -474,7 +474,7 @@ export default function LogoAdminPage() {
 
         {/* 배경 미디어 */}
         <div className="bg-white rounded border border-[#e5e7eb] p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-1">배경 미디어</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">배경 미디어</h2>
           <p className="text-sm text-gray-500 mb-6">
             사이트 배경으로 사용할 이미지 또는 영상을 관리합니다. 여러 개 업로드 후 하나를 <strong className="text-green-600">활성</strong>으로 지정하면 오른쪽 미리보기에서 바로 확인할 수 있습니다.
           </p>
