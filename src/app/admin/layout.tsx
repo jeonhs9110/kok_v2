@@ -288,7 +288,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="h-14 bg-white border-b border-[#e5e7eb] flex items-center px-3 sm:px-5 gap-2 sm:gap-3 sticky top-0 z-30">
           <button
             type="button"
-            className="md:hidden text-gray-600 hover:text-black"
+            className="md:hidden text-[#6b7280] hover:text-[#1f2937] hover:bg-[#f3f4f6] p-1 rounded transition-colors"
             onClick={() => setDrawerOpen(true)}
             aria-label="메뉴 열기"
           >
