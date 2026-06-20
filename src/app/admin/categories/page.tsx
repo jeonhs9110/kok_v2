@@ -187,7 +187,7 @@ export default function CategoriesAdminPage() {
             <div className="p-6 space-y-5">
               {/* Parent selector */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">분류</label>
+                <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">분류</label>
                 <select
                   value={form.parent_id}
                   onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))}
@@ -202,7 +202,7 @@ export default function CategoriesAdminPage() {
 
               {/* Slug */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">슬러그 (URL용, 영문)</label>
+                <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">슬러그 (URL용, 영문)</label>
                 <input
                   type="text"
                   value={form.slug}
@@ -214,7 +214,7 @@ export default function CategoriesAdminPage() {
 
               {/* Language names */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">카테고리명 (다국어)</label>
+                <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">카테고리명 (다국어)</label>
                 <div className="grid grid-cols-2 gap-3">
                   {SUPPORTED_LANGS.map(l => (
                     <div key={l}>
@@ -234,7 +234,7 @@ export default function CategoriesAdminPage() {
               {/* Sort order + active */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">정렬 순서</label>
+                  <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">정렬 순서</label>
                   <input
                     type="number"
                     value={form.sort_order}

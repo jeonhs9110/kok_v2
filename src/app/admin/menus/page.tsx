@@ -208,7 +208,7 @@ export default function MenusAdminPage() {
               {/* Parent */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">분류</label>
+                  <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">분류</label>
                   <select value={form.parent_id} onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5">
                     <option value="">최상위 메뉴</option>
                     {parents.filter(p => p.id !== editingId).map(p => (
@@ -217,7 +217,7 @@ export default function MenusAdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">슬러그 (URL)</label>
+                  <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">슬러그 (URL)</label>
                   <input type="text" value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))} placeholder="예: events, brand-story" className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5" />
                 </div>
               </div>
@@ -225,7 +225,7 @@ export default function MenusAdminPage() {
               {/* Page type + board role */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">페이지 타입</label>
+                  <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">페이지 타입</label>
                   <select value={form.page_type} onChange={e => setForm(f => ({ ...f, page_type: e.target.value as 'page' | 'board' }))} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5">
                     <option value="page">단순 페이지 (글)</option>
                     <option value="board">게시판 (게시글 목록)</option>
@@ -233,7 +233,7 @@ export default function MenusAdminPage() {
                 </div>
                 {form.page_type === 'board' && (
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">글쓰기 권한</label>
+                    <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">글쓰기 권한</label>
                     <select value={form.board_write_role} onChange={e => setForm(f => ({ ...f, board_write_role: e.target.value as 'admin' | 'user' }))} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5">
                       <option value="admin">관리자만</option>
                       <option value="user">소비자도 가능</option>
@@ -286,7 +286,7 @@ export default function MenusAdminPage() {
               {/* Options */}
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">정렬 순서</label>
+                  <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">정렬 순서</label>
                   <input type="number" value={form.sort_order} onChange={e => setForm(f => ({ ...f, sort_order: Number(e.target.value) }))} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5" />
                 </div>
                 <div className="flex items-end pb-1">

@@ -144,15 +144,15 @@ export default function PostsAdminPage() {
             </div>
             <div className="p-6 space-y-5">
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">제목 *</label>
+                <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">제목 *</label>
                 <input type="text" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">작성자</label>
+                <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">작성자</label>
                 <input type="text" value={form.author_name} onChange={e => setForm(f => ({ ...f, author_name: e.target.value }))} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">내용</label>
+                <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">내용</label>
                 <textarea rows={10} value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} placeholder="게시글 내용을 입력하세요..." className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 resize-none" />
               </div>
             </div>
