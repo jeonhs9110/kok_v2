@@ -118,7 +118,7 @@ export default function ChatbotAdminPage() {
         description="AI 채팅 위젯의 활성화 · 모델 · 노출 페이지를 관리합니다"
       />
       {/* On/Off Toggle + Model Selection */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-6">
         <h2 className="text-lg font-bold text-gray-800">챗봇 설정</h2>
 
         {/* Visibility Checkboxes */}
@@ -231,7 +231,7 @@ export default function ChatbotAdminPage() {
       </div>
 
       {/* Lead Data */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-gray-800">고객 리드 데이터</h2>
           <span className="text-sm text-gray-500">{leads.length}건</span>

@@ -115,7 +115,7 @@ export default function AllPostsAdminPage() {
         <span className="text-xs text-gray-400">총 {filtered.length.toLocaleString()}건</span>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center text-gray-400 text-sm font-bold tracking-widest">불러오는 중...</div>
         ) : filtered.length === 0 ? (

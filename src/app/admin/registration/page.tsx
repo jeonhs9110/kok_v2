@@ -214,7 +214,7 @@ export default function RegistrationAdminPage() {
     <div className="space-y-4 max-w-4xl">
 
       {/* ═══ Section 1: Registration Fields ═══ */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         <SectionHeader id="fields" title="회원가입 항목 관리" icon={UserPlus} openSection={openSection} setOpenSection={setOpenSection} />
         {openSection === 'fields' && (
           <div className="p-5 pt-0 space-y-4">
@@ -306,7 +306,7 @@ export default function RegistrationAdminPage() {
       </div>
 
       {/* ═══ Section 2: Social Login Providers ═══ */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         <SectionHeader id="social" title="소셜 로그인 설정" icon={Key} openSection={openSection} setOpenSection={setOpenSection} />
         {openSection === 'social' && (
           <div className="p-5 pt-0 space-y-4">
@@ -357,7 +357,7 @@ export default function RegistrationAdminPage() {
       </div>
 
       {/* ═══ Section 3: Identity Verification ═══ */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         <SectionHeader id="verification" title="본인인증 (Identity Verification)" icon={Shield} openSection={openSection} setOpenSection={setOpenSection} />
         {openSection === 'verification' && (
           <div className="p-5 pt-0 space-y-4">
@@ -418,7 +418,7 @@ export default function RegistrationAdminPage() {
       </div>
 
       {/* ═══ Section 4: Customer Data ═══ */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         <SectionHeader id="customers" title="수집된 고객 데이터" icon={UserPlus} openSection={openSection} setOpenSection={setOpenSection} />
         {openSection === 'customers' && (
           <div className="p-5 pt-0">

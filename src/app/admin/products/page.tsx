@@ -49,7 +49,7 @@ export default function ProductsAdminPage() {
   // owns all the actual page logic; this outer wrapper exists solely for the
   // Suspense boundary.
   return (
-    <Suspense fallback={<div className="bg-white rounded-xl shadow-sm border border-gray-100 min-h-[400px]" />}>
+    <Suspense fallback={<div className="bg-white rounded border border-[#e5e7eb] min-h-[400px]" />}>
       <ProductsAdminPageInner />
     </Suspense>
   );
