@@ -312,7 +312,7 @@ export default function ProductDetailModal({
           <h3 className="text-[14px] font-bold text-[#1f2937]">{editingId ? '상품 수정' : '새 상품 추가'}</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-black transition-colors p-1 rounded hover:bg-gray-100"
+            className="text-[#9ca3af] hover:text-[#1f2937] p-1 rounded hover:bg-[#f3f4f6] transition-colors"
             aria-label="닫기"
           >
             <X className="w-5 h-5" />

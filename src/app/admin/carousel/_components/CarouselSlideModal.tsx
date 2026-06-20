@@ -299,9 +299,9 @@ export default function CarouselSlideModal({
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-black transition-colors p-1 rounded hover:bg-gray-100"
+            className="text-[#9ca3af] hover:text-[#1f2937] p-1 rounded hover:bg-[#f3f4f6] transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 

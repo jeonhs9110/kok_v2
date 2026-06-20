@@ -277,8 +277,8 @@ export default function PagesAdminPage() {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh]">
             <div className="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#fafbfc]">
               <h3 className="text-[14px] font-bold text-[#1f2937]">{editingId ? '페이지 수정' : '새 페이지'}</h3>
-              <button onClick={resetModal} className="text-gray-400 hover:text-black transition-colors p-1 rounded hover:bg-gray-100">
-                <X className="w-5 h-5" />
+              <button onClick={resetModal} className="text-[#9ca3af] hover:text-[#1f2937] p-1 rounded hover:bg-[#f3f4f6] transition-colors">
+                <X className="w-4 h-4" />
               </button>
             </div>
 
