@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, ChevronRight, X, Tag, Layers, FolderTree } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader, EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 
@@ -143,12 +143,9 @@ export default function CategoriesAdminPage() {
 
       <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center text-gray-400 text-sm font-bold tracking-widest">불러오는 중...</div>
+          <LoadingState />
         ) : parents.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <p className="font-semibold">등록된 카테고리가 없습니다</p>
-            <p className="text-xs mt-1">위 버튼을 눌러 카테고리를 추가하세요</p>
-          </div>
+          <EmptyState label="등록된 카테고리가 없습니다 · 위 버튼을 눌러 추가하세요" />
         ) : (
           <table className="w-full text-left">
             <thead>

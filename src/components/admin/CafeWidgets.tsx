@@ -94,7 +94,20 @@ export function Panel({ title, subtitle, icon: Icon, children, className = '', a
 
 export function EmptyState({ label }: { label: string }) {
   return (
-    <div className="py-8 text-center text-[12px] text-[#9ca3af]">{label}</div>
+    <div className="py-12 text-center text-[12px] text-[#9ca3af]">{label}</div>
+  );
+}
+
+/**
+ * LoadingState — pairs with EmptyState for the standard "fetching…"
+ * placeholder used by admin list pages. Same vertical reservation so
+ * the layout doesn't jump when content arrives.
+ */
+export function LoadingState({ label = '불러오는 중...' }: { label?: string }) {
+  return (
+    <div className="py-12 text-center text-[12px] text-[#9ca3af] font-semibold tracking-wider">
+      {label}
+    </div>
   );
 }
 
