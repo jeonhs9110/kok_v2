@@ -25,7 +25,7 @@ function SectionHeader({
   return (
     <button
       onClick={() => setOpenSection(openSection === id ? '' : id)}
-      className="w-full flex items-center justify-between p-5 hover:bg-gray-50/50 transition-colors"
+      className="w-full flex items-center justify-between p-5 hover:bg-[#fafbfc] transition-colors"
     >
       <div className="flex items-center gap-3">
         <Icon className="w-5 h-5 text-gray-500" />

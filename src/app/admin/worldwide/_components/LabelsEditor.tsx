@@ -80,7 +80,7 @@ export default function LabelsEditor({ initialLabels }: Props) {
           <div key={row.label_key} className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
             <button
               onClick={() => setOpenLabel(isOpen ? '' : row.label_key)}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50/50 transition-colors"
+              className="w-full flex items-center justify-between p-4 hover:bg-[#fafbfc] transition-colors"
             >
               <div className="flex items-center gap-3">
                 <Globe className="w-4 h-4 text-gray-400" />

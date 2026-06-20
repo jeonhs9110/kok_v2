@@ -215,7 +215,7 @@ export default function PagesAdminPage() {
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-semibold">
+              <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
                 <th className="p-4 pl-6">제목</th>
                 <th className="p-4">경로</th>
                 <th className="p-4">언어</th>
@@ -224,11 +224,11 @@ export default function PagesAdminPage() {
                 <th className="p-4 pr-6 text-right">작업</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#f3f4f6]">
               {pages.map(page => {
                 const filledLangs = SUPPORTED_LANGS.filter(l => page.title?.[l] || page.content?.[l]);
                 return (
-                  <tr key={page.id} className="hover:bg-gray-50/50 transition-colors">
+                  <tr key={page.id} className="hover:bg-[#fafbfc] transition-colors">
                     <td className="p-4 pl-6 font-bold text-gray-900 text-sm">{getTitle(page)}</td>
                     <td className="p-4 text-gray-500 text-xs font-mono">/pages/{page.slug}</td>
                     <td className="p-4">

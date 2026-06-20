@@ -124,7 +124,7 @@ export default function UsersAdminPage() {
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-semibold">
+              <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
                 <th className="p-4 pl-6">이메일</th>
                 <th className="p-4">권한</th>
                 <th className="p-4">인증</th>
@@ -132,9 +132,9 @@ export default function UsersAdminPage() {
                 <th className="p-4 pr-6 text-right">작업</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#f3f4f6]">
               {filtered.map(user => (
-                <tr key={user.id} className="hover:bg-gray-50/50 transition-colors">
+                <tr key={user.id} className="hover:bg-[#fafbfc] transition-colors">
                   <td className="p-4 pl-6">
                     <div className="font-medium text-gray-900 text-sm">{user.email}</div>
                     <div className="text-[10px] text-gray-400 mt-0.5 font-mono">...{user.id.slice(-8)}</div>

@@ -52,7 +52,7 @@ export default function ProductList({
   return (
     <table className="w-full text-left border-collapse">
       <thead>
-        <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-semibold">
+        <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
           <th className="p-4 pl-6 w-16">ID</th>
           <th className="p-4">상품 개요</th>
           <th className="p-4">가격</th>
@@ -62,11 +62,11 @@ export default function ProductList({
           <th className="p-4 pr-6 text-right">작업</th>
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-100">
+      <tbody className="divide-y divide-[#f3f4f6]">
         {products.map(item => (
           <tr
             key={item.id}
-            className={`hover:bg-gray-50/50 transition-colors ${!item.is_active ? 'opacity-50' : ''}`}
+            className={`hover:bg-[#fafbfc] transition-colors ${!item.is_active ? 'opacity-50' : ''}`}
           >
             <td className="p-4 pl-6 text-gray-400 text-xs truncate max-w-[80px]" title={item.id}>
               ...{item.id.slice(-6)}

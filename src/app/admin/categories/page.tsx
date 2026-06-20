@@ -149,7 +149,7 @@ export default function CategoriesAdminPage() {
         ) : (
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wider text-gray-500 font-semibold">
+              <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
                 <th className="p-4 pl-6">순서</th>
                 <th className="p-4">카테고리명</th>
                 <th className="p-4">슬러그</th>
@@ -157,7 +157,7 @@ export default function CategoriesAdminPage() {
                 <th className="p-4 pr-6 text-right">작업</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-[#f3f4f6]">
               {parents.map(parent => {
                 const children = getChildren(parent.id);
                 return (
@@ -281,7 +281,7 @@ function CategoryRows({
   return (
     <>
       {/* Parent row */}
-      <tr className="hover:bg-gray-50/50 transition-colors">
+      <tr className="hover:bg-[#fafbfc] transition-colors">
         <td className="p-4 pl-6 text-sm text-gray-500 w-16">{parent.sort_order}</td>
         <td className="p-4">
           <span className="font-bold text-gray-900 text-sm">{parent.name.kr || parent.slug}</span>
@@ -309,7 +309,7 @@ function CategoryRows({
       </tr>
       {/* Child rows */}
       {subItems.map(child => (
-        <tr key={child.id} className="hover:bg-gray-50/50 transition-colors bg-gray-50/30">
+        <tr key={child.id} className="hover:bg-[#fafbfc] transition-colors bg-gray-50/30">
           <td className="p-4 pl-6 text-sm text-gray-400 w-16">{child.sort_order}</td>
           <td className="p-4 pl-10">
             <span className="flex items-center gap-1.5 text-sm text-gray-700">
