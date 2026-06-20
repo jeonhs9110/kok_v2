@@ -250,7 +250,7 @@ export default function ShortsAdminPage() {
       {/* 섹션 제목 스타일 (migration 33) */}
       <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-bold text-gray-800">섹션 제목</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 제목</h2>
           <p className="text-xs text-gray-400">기본은 &ldquo;BRAND SHORTS&rdquo; · 흰색 · 15px.</p>
         </div>
 
@@ -359,7 +359,7 @@ export default function ShortsAdminPage() {
       {/* 섹션 배경 설정 (migration 26) */}
       <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">
         <div className="flex items-baseline justify-between">
-          <h2 className="text-lg font-bold text-gray-800">섹션 배경</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 배경</h2>
           <p className="text-xs text-gray-400">기본값은 검정(neutral-900) 배경입니다.</p>
         </div>
         <SectionBackgroundPanel
@@ -382,7 +382,7 @@ export default function ShortsAdminPage() {
 
       {/* 새 숏츠 추가 */}
       <div className="bg-white rounded border border-[#e5e7eb] p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <h2 className="text-[14px] font-bold text-[#1f2937] mb-4 flex items-center gap-2">
           <Video className="w-5 h-5 text-purple-500" /> 새 브랜드 숏츠 추가
         </h2>
         <form onSubmit={handleAdd} className="flex gap-4">
@@ -403,7 +403,7 @@ export default function ShortsAdminPage() {
       {/* 현재 게시 중인 숏츠 */}
       <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-          <h2 className="text-lg font-bold text-gray-800">현재 스토어에 게시 중</h2>
+          <h2 className="text-[14px] font-bold text-[#1f2937]">현재 스토어에 게시 중</h2>
           <span className="text-sm font-medium text-gray-500">{shorts.length}개 항목</span>
         </div>
 
