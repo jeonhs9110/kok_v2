@@ -3,7 +3,7 @@
 import { Plus, Image as ImageIcon, Eye, EyeOff, Video } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 
 const supabase = getSupabaseBrowser();
 import type { CarouselSlide } from '@/lib/api/carousel';
@@ -182,19 +182,20 @@ export default function CarouselAdminPage() {
         <StatCard accent="#8b5cf6" label="비디오" value={stats.videos} icon={Video} subLabel="media_type = video" isLoading={isLoading} />
       </StatStrip>
 
+      <PageHeader
+        title="캐러셀 관리"
+        description="홈페이지 메인 배너 슬라이드를 관리하세요"
+        actions={
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-[#3b82f6] rounded hover:bg-[#2563eb] transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> 슬라이드 추가
+          </button>
+        }
+      />
+
     <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
-      <div className="p-6 border-b border-[#e5e7eb] flex justify-between items-center bg-[#fafbfc]">
-        <div>
-          <h2 className="text-lg font-bold text-gray-800">캐러셀 관리</h2>
-          <p className="text-sm text-gray-500 mt-1">홈페이지 메인 배너 슬라이드를 관리하세요</p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="bg-brand-ink text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-black transition-colors flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" /> 슬라이드 추가
-        </button>
-      </div>
 
       <div className="overflow-x-auto min-h-[300px]">
         <CarouselList

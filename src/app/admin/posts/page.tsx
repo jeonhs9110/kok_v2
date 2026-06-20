@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Pencil, Trash2, FileText, BookOpen, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 3 RLS lockdown on `posts` requires admin
 // JWT for cross-author updates/deletes — see migration 19.
@@ -86,10 +86,10 @@ export default function AllPostsAdminPage() {
         <StatCard accent="#f59e0b" label="평균 게시글" value={stats.avg} icon={FileText} subLabel="게시판당" />
       </StatStrip>
 
-      <div>
-        <h2 className="text-lg font-bold text-gray-800">전체 게시글 관리</h2>
-        <p className="text-sm text-gray-500">모든 게시판의 게시글을 한 곳에서 확인하고 관리합니다.</p>
-      </div>
+      <PageHeader
+        title="전체 게시글 관리"
+        description="모든 게시판의 게시글을 한 곳에서 확인하고 관리합니다"
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <select

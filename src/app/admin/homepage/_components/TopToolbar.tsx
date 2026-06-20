@@ -13,8 +13,8 @@ import type { ViewportMode } from './types';
  * device toggle, history controls, account/help/settings, exit.
  *
  * The hub is the only place this lives — other admin pages use the
- * default sidebar layout. Songyi gets the full Cafe24 vibe here without
- * fragmenting the rest of the admin's nav.
+ * default sidebar layout. The operator gets the full Cafe24 vibe here
+ * without fragmenting the rest of the admin's nav.
  */
 interface Props {
   viewport: ViewportMode;

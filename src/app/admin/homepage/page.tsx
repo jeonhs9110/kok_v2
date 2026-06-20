@@ -38,9 +38,9 @@ const supabase = getSupabaseBrowser();
  * Visual chrome modeled on Cafe24's builder: a dark slate top toolbar
  * with skin/page/device controls, a white section-list rail on the
  * left, and a live storefront iframe centered in a soft-gray preview
- * pane. The 2026-06-10 boss meeting + Songyi's feedback drove every
- * styling choice — match Cafe24 closely enough that her muscle memory
- * carries over without re-training.
+ * pane. The 2026-06-10 boss meeting + operator feedback drove every
+ * styling choice — match Cafe24 closely enough that the operator's
+ * muscle memory carries over without re-training.
  *
  * The admin/layout above wraps every other admin route with a sidebar,
  * but this route opts out (admin/layout.tsx detects the pathname) so
@@ -108,8 +108,8 @@ export default function HomepageBuilderPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Load every section's count concurrently. Errors per query degrade to
-  // 0 instead of crashing the hub — Songyi should never see a blank page
-  // because one of seven queries hiccuped.
+  // 0 instead of crashing the hub — operator should never see a blank
+  // page because one of seven queries hiccuped.
   // Load the saved section order on mount alongside section counts.
   useEffect(() => {
     if (!supabase) return;

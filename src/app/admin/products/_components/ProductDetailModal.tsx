@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { type Product, type DetailComponent } from '@/lib/api/products';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 3 RLS lockdown requires admin's JWT for
 // products writes — see migration 19.
@@ -94,6 +95,7 @@ export default function ProductDetailModal({
   onClose,
   onSaved,
 }: Props) {
+  const toast = useToast();
   const editingProduct = editing?.product ?? null;
   const editingId = editingProduct?.id ?? null;
 
@@ -204,7 +206,7 @@ export default function ProductDetailModal({
     const isVideo = file.type.startsWith('video/');
     const isImage = file.type.startsWith('image/');
     if (!isVideo && !isImage) {
-      alert('이미지 또는 영상 파일만 업로드 가능합니다.');
+      toast.show('이미지 또는 영상 파일만 업로드 가능합니다.', 'warning');
       return;
     }
     if (file.size > 30 * 1024 * 1024) {
@@ -224,7 +226,7 @@ export default function ProductDetailModal({
       addDetailComponent({ type: isVideo ? 'video' : 'image', url: urlData.publicUrl });
     } catch (err) {
       console.error('[ProductDetailModal] detail upload failed:', err);
-      alert('업로드에 실패했습니다. 다시 시도해주세요.');
+      toast.show('업로드에 실패했습니다. 다시 시도해주세요.', 'error');
     } finally {
       setDetailUploading(false);
     }
@@ -294,7 +296,7 @@ export default function ProductDetailModal({
       onSaved();
     } catch (err) {
       console.error('[ProductDetailModal] save failed:', err);
-      alert('상품 저장에 실패했습니다. 다시 시도해주세요.');
+      toast.show('상품 저장에 실패했습니다. 다시 시도해주세요.', 'error');
     } finally {
       setIsSubmitting(false);
     }

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Save, ArrowUp, ArrowDown, Loader2, Star, Eye, EyeOff, Image as ImageIcon } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 2 RLS lockdown requires admin's JWT for
@@ -218,16 +218,27 @@ export default function ReviewsAdminPage() {
         <StatCard accent="#f59e0b" label="이미지 없음" value={stats.missingImage} icon={ImageIcon} subLabel="썸네일 누락" />
       </StatStrip>
 
+      <PageHeader
+        title="리뷰 카드 관리"
+        description="홈 메인 · /menus/review에 표시되는 리뷰 카드를 관리합니다"
+        actions={
+          <button
+            onClick={addRow}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-[#3b82f6] rounded hover:bg-[#2563eb] transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> 새 리뷰 카드
+          </button>
+        }
+      />
+
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
         <p className="font-semibold mb-1">💡 리뷰 쇼케이스</p>
         <p>리뷰 카드는 <strong>/menus/review + 홈 메인</strong>에 노출됩니다. 카드가 <strong>1개면</strong> 본문이 바로 인라인으로 표시되고, <strong>여러 개면</strong> 썸네일 그리드로 표시됩니다. 네이버 블로그 URL을 입력하고 &ldquo;네이버 자동 채우기&rdquo;를 누르면 제목 · 썸네일 · 본문이 자동으로 가져와집니다.</p>
       </div>
 
-      {/* Thumbnail strip — quick visual index of every saved card so the
-          admin can click to jump to a specific row without scrolling.
-          Active card gets a brand-ink border + ring; hover shows the
-          card's sort order on top. 송이's request: see everything at a
-          glance, then pick which one to edit. */}
+      {/* Thumbnail strip — visual index of every saved card so the
+          operator can click to jump to a row without scrolling. Active
+          card gets a brand-ink border + ring. */}
       {rows.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <div className="flex items-center justify-between mb-3">

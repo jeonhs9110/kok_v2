@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // All Supabase-backed routes are pulled in parallel so the sitemap build
   // stays bounded — Next.js calls this on each crawl and the page-/menu-/
   // post-driven URLs need to be discoverable for Naver / Google indexing
-  // (송이 just configured Naver Search Advisor on 2026-06-05).
+  // (operator just configured Naver Search Advisor on 2026-06-05).
   const [productsRes, menusRes, pagesRes, postsRes] = await Promise.all([
     supabase.from('products').select('id, created_at').eq('is_active', true),
     supabase.from('menus').select('slug, sort_order').eq('is_published', true),

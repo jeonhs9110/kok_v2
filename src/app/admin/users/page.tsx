@@ -3,7 +3,7 @@
 import { Search, Trash2, Shield, ShieldOff, Users as UsersIcon, ShieldCheck } from 'lucide-react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 4 RLS lockdown on `users` is admin-only for
 // reading other users, updating roles, and deleting accounts — see
@@ -94,29 +94,24 @@ export default function UsersAdminPage() {
         <StatCard accent="#f59e0b" label="일반 사용자" value={stats.total - stats.admins} icon={UsersIcon} isLoading={isLoading} subLabel="role = user" />
       </StatStrip>
 
+      <PageHeader
+        title="사용자 계정"
+        description={isLive ? `Supabase 연결됨 · 총 ${users.length}명` : 'DB 미연결'}
+        actions={
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="이메일 검색..."
+              className="pl-9 pr-3 py-1.5 text-[12px] border border-[#d1d5db] rounded bg-white focus:outline-none focus:ring-1 focus:ring-[#3b82f6]"
+            />
+          </div>
+        }
+      />
+
     <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
-      <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-        <div>
-          <h2 className="text-lg font-bold text-gray-800">사용자 계정</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            {isLive ? (
-              <><span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full mr-1" />총 {users.length}명</>
-            ) : (
-              <><span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full mr-1" />DB 미연결</>
-            )}
-          </p>
-        </div>
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="이메일 검색..."
-            className="pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-black/5"
-          />
-        </div>
-      </div>
 
       <div className="overflow-x-auto min-h-[300px]">
         {isLoading ? (

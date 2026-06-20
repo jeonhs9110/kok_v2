@@ -250,7 +250,7 @@ export interface PositionAnchor {
 /** Cell-to-anchor map used when backfill is missing and we have a
  *  legacy 9-cell key. Each cell points at the CENTER of its grid
  *  third (≈ 16.67 / 50 / 83.33 %), matching the snap presets in
- *  ContinuousPositionPicker — both updated 2026-06-10 per 송이's
+ *  ContinuousPositionPicker — both updated 2026-06-10 per operator
  *  feedback that edge-pinning didn't match what the visual grid
  *  implied. Legacy banners saved with these keys will shift by ~17%
  *  on first render, then stay put once the new anchor is saved. */

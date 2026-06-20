@@ -59,7 +59,7 @@ function detectCountry(request: NextRequest): string {
  *   UPDATE public.users
  *      SET role = 'admin'
  *    WHERE id = (
- *      SELECT id FROM auth.users WHERE email = 'songyi@example.com'
+ *      SELECT id FROM auth.users WHERE email = 'operator@example.com'
  *    );
  */
 export async function proxy(request: NextRequest): Promise<NextResponse> {

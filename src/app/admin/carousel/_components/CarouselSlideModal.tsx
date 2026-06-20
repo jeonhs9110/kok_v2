@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { Upload, X } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 2 / 5 RLS need the admin JWT for the
 // carousel_slides upsert and the storage.objects upload in this modal.
@@ -35,6 +36,7 @@ export default function CarouselSlideModal({
   onClose,
   onSaved,
 }: Props) {
+  const toast = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mobileFileInputRef = useRef<HTMLInputElement>(null);
   const initialFormRef = useMemo(
@@ -138,7 +140,7 @@ export default function CarouselSlideModal({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) {
-      alert('파일 크기가 20MB를 초과합니다.');
+      toast.show('파일 크기가 20MB를 초과합니다.', 'warning');
       return;
     }
     const isVideo = file.type.startsWith('video/');
@@ -151,8 +153,8 @@ export default function CarouselSlideModal({
     // Soft warning if the source is shorter than the lg hero's 1000px —
     // Next.js will upscale on big screens and the result reads as blurry.
     // We don't block the upload (admin may have a one-off reason), just
-    // alert so the underlying issue isn't invisible until 송이 sees the
-    // banner on a 27" monitor.
+    // alert so the underlying issue isn't invisible until the operator
+    // sees the banner on a 27" monitor.
     if (!isVideo) {
       const img = new Image();
       // Track the object URL so we can revoke it after the image is decoded
@@ -162,10 +164,9 @@ export default function CarouselSlideModal({
       const cleanup = () => URL.revokeObjectURL(objectUrl);
       img.onload = () => {
         if (img.naturalHeight < 1000) {
-          alert(
-            `이 이미지의 세로 픽셀이 ${img.naturalHeight}px 입니다.\n` +
-            `데스크탑 메인 배너는 최대 1000px까지 늘어나기 때문에 큰 화면에서 흐릿하게 보일 수 있습니다.\n` +
-            `2400 × 1200 이상의 원본을 권장합니다.`,
+          toast.show(
+            `세로 픽셀 ${img.naturalHeight}px — 큰 화면에서 흐릿할 수 있습니다 (권장: 2400×1200 이상)`,
+            'warning',
           );
         }
         cleanup();
@@ -183,7 +184,7 @@ export default function CarouselSlideModal({
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_FILE_SIZE) {
-      alert('파일 크기가 20MB를 초과합니다.');
+      toast.show('파일 크기가 20MB를 초과합니다.', 'warning');
       return;
     }
     setMobilePreviewUrl(URL.createObjectURL(file));
@@ -273,7 +274,7 @@ export default function CarouselSlideModal({
       onSaved();
     } catch (err) {
       console.error('슬라이드 저장 실패:', err);
-      alert('저장에 실패했습니다.');
+      toast.show('저장에 실패했습니다.', 'error');
     } finally {
       setIsSubmitting(false);
     }

@@ -124,3 +124,37 @@ export function StatStrip({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+/**
+ * PageHeader — Cafe24's signature page-top block: title on the left
+ * with an optional description underneath, primary action cluster on
+ * the right. Standardizes the slight visual variations every admin
+ * page rolled by hand (different h2 sizes, different bg tints,
+ * inconsistent margins).
+ *
+ * Usage:
+ *   <PageHeader
+ *     title="상품 관리"
+ *     description="등록된 상품을 확인하고 게시 / 숨김을 전환합니다"
+ *     actions={<button …>새 상품</button>}
+ *   />
+ */
+export function PageHeader({
+  title, description, actions,
+}: {
+  title: string;
+  description?: string;
+  actions?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap justify-between items-start gap-3 mb-5">
+      <div className="min-w-0">
+        <h1 className="text-[18px] font-bold text-[#1f2937] leading-tight">{title}</h1>
+        {description && (
+          <p className="text-[12px] text-[#6b7280] mt-1">{description}</p>
+        )}
+      </div>
+      {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
+    </div>
+  );
+}
