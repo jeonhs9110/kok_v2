@@ -607,7 +607,7 @@ export default function LogoAdminPage() {
           instead, fed by the bubbled-up postMessage tokens above. */}
       {!isEmbedded && (
       <section className="bg-white rounded border border-[#e5e7eb] overflow-hidden flex flex-col xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-2rem)]">
-        <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <div className="p-3 border-b border-[#e5e7eb] flex items-center justify-between bg-[#fafbfc]">
           <div className="flex items-center gap-2">
             <Eye className="w-4 h-4 text-gray-500" />
             <span className="text-sm font-bold text-gray-700">실시간 미리보기</span>

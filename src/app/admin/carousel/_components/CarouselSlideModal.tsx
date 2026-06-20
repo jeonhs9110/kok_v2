@@ -293,8 +293,8 @@ export default function CarouselSlideModal({
         ? 'bg-white overflow-hidden flex flex-col w-full h-full'
         : 'bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh]'
       }>
-        <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-          <h3 className="font-bold text-lg">
+        <div className="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#fafbfc]">
+          <h3 className="text-[14px] font-bold text-[#1f2937]">
             {editingId ? '슬라이드 수정' : '새 슬라이드 추가'}
           </h3>
           <button

@@ -200,8 +200,8 @@ export default function MenusAdminPage() {
       {modalOpen && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setModalOpen(false); }}>
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-6 border-b border-gray-100">
-              <h3 className="text-lg font-bold">{editingId ? '메뉴 수정' : '메뉴 추가'}</h3>
+            <div className="flex items-center justify-between p-4 border-b border-[#e5e7eb] bg-[#fafbfc]">
+              <h3 className="text-[14px] font-bold text-[#1f2937]">{editingId ? '메뉴 수정' : '메뉴 추가'}</h3>
               <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-black"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 space-y-5">

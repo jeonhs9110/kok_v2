@@ -173,7 +173,7 @@ export default function ThemePage() {
     <div className={isEmbedded ? 'block' : 'grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-6'}>
       {/* Editor pane */}
       <aside className="bg-white rounded border border-[#e5e7eb] overflow-hidden flex flex-col max-h-[calc(100vh-180px)]">
-        <div className="p-5 border-b border-gray-100 bg-gray-50/50">
+        <div className="p-4 border-b border-[#e5e7eb] bg-[#fafbfc]">
           <div className="flex items-center gap-2 mb-1">
             <Palette className="w-5 h-5 text-gray-500" />
             <h2 className="font-bold text-gray-800">테마 편집</h2>
@@ -485,7 +485,7 @@ export default function ThemePage() {
           central iframe shows the live preview instead. */}
       {!isEmbedded && (
       <section className="bg-white rounded border border-[#e5e7eb] overflow-hidden flex flex-col">
-        <div className="p-3 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <div className="p-3 border-b border-[#e5e7eb] flex items-center justify-between bg-[#fafbfc]">
           <div className="flex items-center gap-2">
             <Eye className="w-4 h-4 text-gray-500" />
             <span className="text-sm font-bold text-gray-700">실시간 미리보기</span>
