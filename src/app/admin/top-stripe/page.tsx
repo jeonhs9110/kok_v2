@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { useToast } from '@/components/admin/Toast';
 
 const supabase = getSupabaseBrowser();
 
@@ -34,6 +35,7 @@ const DEFAULT: TopStripe = {
  * saving.
  */
 export default function TopStripeAdminPage() {
+  const toast = useToast();
   const [data, setData] = useState<TopStripe>(DEFAULT);
   const [saved, setSaved] = useState<TopStripe>(DEFAULT);
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ export default function TopStripeAdminPage() {
       setTimeout(() => setSavedFlash(false), 2500);
     } catch (err) {
       console.error('[admin/top-stripe] save failed:', err);
-      alert(err instanceof Error ? err.message : '저장 실패');
+      toast.show(err instanceof Error ? err.message : '저장 실패', 'error');
     } finally {
       setSaving(false);
     }
