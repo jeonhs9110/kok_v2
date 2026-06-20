@@ -3,7 +3,6 @@ import ProductCard from '@/components/ProductCard';
 import { getProducts } from '@/lib/api/products';
 import { getCategoriesTree } from '@/lib/api/categories';
 import { translateProductsBatch } from '@/lib/openai';
-import { getActiveTags, getTagsForProducts } from '@/lib/api/ingredient-tags';
 
 const labels: Record<string, {
   title: string; sub: string; all: string; count: string;
@@ -23,13 +22,9 @@ interface Props {
 export default async function ProductsPage({ lang, canPurchase, searchQuery, categorySlug, subSlug }: Props) {
   const lb = labels[lang] ?? labels['en'];
 
-  const [allProducts, categoriesTree, allTags] = await Promise.all([
+  const [allProducts, categoriesTree] = await Promise.all([
     getProducts(),
     getCategoriesTree(),
-    // Resolve once; used to label per-product tag IDs into locale-aware
-    // chips on each ProductCard. Cheap — single SELECT, cached upstream
-    // when the page is statically generated.
-    getActiveTags(),
   ]);
 
   // Build flat lookup for filtering
@@ -70,32 +65,15 @@ export default async function ProductsPage({ lang, canPurchase, searchQuery, cat
     );
   }
 
-  // Map product ID → list of tag IDs in one round-trip; then resolve
-  // each tag ID via the allTags lookup so ProductCard receives ready-
-  // to-render localised labels (no extra DB calls per card).
-  const tagsByProduct = await getTagsForProducts(activeProducts.map(p => p.id));
-  const tagById = new Map(allTags.map(t => [t.id, t]));
-
-  const formattedProducts = activeProducts.map(p => {
-    const productTags = (tagsByProduct[p.id] ?? [])
-      .map(id => tagById.get(id))
-      .filter((t): t is NonNullable<typeof t> => Boolean(t))
-      .map(t => ({
-        label: t.name[lang] || t.name.kr || t.name.en || '',
-        isAllergen: t.category === 'allergen',
-      }))
-      .filter(t => t.label);
-    return {
-      id: p.id,
-      name:    translations[p.id]?.name    ?? p.name,
-      summary: translations[p.id]?.summary ?? p.summary,
-      price: p.price,
-      originalPrice: p.originalPrice,
-      discountRate: calculateDiscount(p.price, p.originalPrice),
-      imageUrl: p.imageUrl,
-      tags: productTags,
-    };
-  });
+  const formattedProducts = activeProducts.map(p => ({
+    id: p.id,
+    name:    translations[p.id]?.name    ?? p.name,
+    summary: translations[p.id]?.summary ?? p.summary,
+    price: p.price,
+    originalPrice: p.originalPrice,
+    discountRate: calculateDiscount(p.price, p.originalPrice),
+    imageUrl: p.imageUrl,
+  }));
 
   // Page title: show category name if filtered
   const pageTitle = activeSub

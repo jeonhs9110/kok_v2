@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { isBannerKey } from '@/lib/api/sectionOrder';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import SectionCard, { type SectionDef } from './_components/SectionCard';
 import TopToolbar from './_components/TopToolbar';
 import EditorDrawer from './_components/EditorDrawer';
@@ -422,6 +423,10 @@ export default function HomepageBuilderPage() {
           { onConflict: 'key' },
         );
       if (error) throw error;
+      // Tag eviction so the storefront's unstable_cache wrapper drops
+      // the cached order immediately. Previously the section reorder
+      // sat stale for up to 60s — audit 2026-06-19 HIGH finding.
+      revalidateHomepageData('homepage_section_order');
     } catch (err) {
       console.error('[admin/homepage] section order save failed:', err);
     }
@@ -491,6 +496,10 @@ export default function HomepageBuilderPage() {
       else next.unshift(newKey);
       setSectionOrder(next);
       void saveSectionOrder(next);
+      // Tag eviction so the storefront's unstable_cache wrapper around
+      // homepage_banners drops the cached list and picks up the newly
+      // inserted row on the next render — audit 2026-06-19 HIGH finding.
+      revalidateHomepageData('homepage_banners');
       setIframeKey(k => k + 1);
       handleEdit(newKey);
     } catch (err) {

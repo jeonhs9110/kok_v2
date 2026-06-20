@@ -61,6 +61,12 @@ export default async function LangLayout({
             up on the next request — no cache invalidation needed.
             The postMessage listener below lets the /admin/theme
             editor iframe push live updates without a reload. */}
+        {/* Preconnect to Supabase storage — every hero / product /
+            promo image is served from the same origin, so dropping
+            DNS + TCP + TLS off the first image's critical path saves
+            ~200-300ms on cold connections. */}
+        <link rel="preconnect" href="https://auxfxdttbhhnmnutbemn.supabase.co" />
+        <link rel="dns-prefetch" href="https://auxfxdttbhhnmnutbemn.supabase.co" />
         <style id="kokkok-theme-tokens" dangerouslySetInnerHTML={{ __html: tokensToCss(themeTokens) }} />
         <script
           dangerouslySetInnerHTML={{

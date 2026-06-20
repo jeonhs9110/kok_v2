@@ -13,6 +13,7 @@ import {
 import AdminSearchModal from './_components/AdminSearchModal';
 import BackToHubLink from './_components/BackToHubLink';
 import EmbeddedShell from './_components/EmbeddedShell';
+import { ToastProvider } from '@/components/admin/Toast';
 
 type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> };
 type NavSection = { title: string | null; items: NavItem[] };
@@ -183,7 +184,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   const normalChrome = (
-    <div className="flex h-screen bg-gray-50 font-sans">
+    /* Body bg #f5f6f8 matches Cafe24's admin panel exactly — slightly
+       cooler than gray-50 so the content cards lift off the surface
+       the way Cafe24's do. */
+    <div className="flex h-screen bg-[#f5f6f8] font-sans">
       {/* Mobile backdrop — sits between content and drawer; tap to dismiss. */}
       {drawerOpen && (
         <div
@@ -236,14 +240,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`group relative flex items-center gap-2.5 pl-3 pr-2 py-2 rounded transition-colors text-[12.5px] ${
+                    className={`group flex items-center gap-2.5 pl-3 pr-2 py-2 rounded transition-colors text-[12.5px] ${
                       isActive
-                        ? 'bg-[#243049] text-white font-semibold'
-                        : 'text-gray-400 hover:text-white hover:bg-[#243049]'
+                        ? 'bg-[#2b6cb0]/30 text-white font-semibold'
+                        : 'text-gray-400 hover:text-white hover:bg-[#2a3140]'
                     }`}
                   >
-                    {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[#3b82f6] rounded-r" />}
-                    <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? 'text-[#3b82f6]' : ''}`} />
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                     <span className="truncate">{item.name}</span>
                   </Link>
                 );
@@ -401,10 +404,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // chrome so the SSR'd HTML matches the unembedded common case —
   // avoids a sidebar flash on iframe load in the drawer.
   return (
-    <Suspense fallback={normalChrome}>
-      <EmbeddedShell fallback={normalChrome}>
-        {children}
-      </EmbeddedShell>
-    </Suspense>
+    <ToastProvider>
+      <Suspense fallback={normalChrome}>
+        <EmbeddedShell fallback={normalChrome}>
+          {children}
+        </EmbeddedShell>
+      </Suspense>
+    </ToastProvider>
   );
 }
