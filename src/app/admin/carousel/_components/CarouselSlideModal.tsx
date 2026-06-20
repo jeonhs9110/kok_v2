@@ -9,7 +9,6 @@ import { useToast } from '@/components/admin/Toast';
 // Session-aware client. Phase 2 / 5 RLS need the admin JWT for the
 // carousel_slides upsert and the storage.objects upload in this modal.
 const supabase = getSupabaseBrowser();
-import { SUPPORTED_LANGS, LANG_LABELS } from '@/lib/i18n/types';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import {
   MAX_FILE_SIZE,
@@ -18,6 +17,8 @@ import {
   type SlideFormData,
 } from '../_lib';
 import CarouselSlidePreview from './CarouselSlidePreview';
+import SlideDisplayModePicker from './SlideDisplayModePicker';
+import SlideTextEditor from './SlideTextEditor';
 import { TypographyPanel } from '@/components/admin/TypographyPanel';
 import ContinuousPositionPicker from '@/components/admin/ContinuousPositionPicker';
 
@@ -320,50 +321,10 @@ export default function CarouselSlideModal({
             <CarouselSlidePreview form={formData} lang={activeLang} previewImageUrl={previewUrl} />
           )}
 
-          <div className="space-y-2">
-            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-              배너 표시 모드
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, display_mode: 'default' }))}
-                className={`p-3 rounded-lg border-2 text-left transition-all ${
-                  formData.display_mode === 'default'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-8 h-5 rounded border border-gray-300 bg-gray-100 flex">
-                    <div className="w-1/2 flex items-center justify-center text-[6px] text-gray-400">
-                      T
-                    </div>
-                    <div className="w-1/2 bg-gray-300 rounded-r" />
-                  </div>
-                  <span className="text-sm font-semibold text-gray-800">기본형</span>
-                </div>
-                <p className="text-[10px] text-gray-500">텍스트 + 이미지 분리 레이아웃</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormData(prev => ({ ...prev, display_mode: 'fullpage' }))}
-                className={`p-3 rounded-lg border-2 text-left transition-all ${
-                  formData.display_mode === 'fullpage'
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-8 h-5 rounded border border-gray-300 bg-gray-400 flex items-center justify-center text-[6px] text-white font-bold">
-                    FULL
-                  </div>
-                  <span className="text-sm font-semibold text-gray-800">풀페이지</span>
-                </div>
-                <p className="text-[10px] text-gray-500">이미지 전체 배너 (텍스트 오버레이)</p>
-              </button>
-            </div>
-          </div>
+          <SlideDisplayModePicker
+            value={formData.display_mode as 'default' | 'fullpage'}
+            onChange={mode => setFormData(prev => ({ ...prev, display_mode: mode }))}
+          />
 
           <div className="space-y-2">
             <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
@@ -543,88 +504,13 @@ export default function CarouselSlideModal({
             )}
           </div>
 
-          <div>
-            <div className="flex gap-1 mb-4">
-              {SUPPORTED_LANGS.map(l => (
-                <button
-                  key={l}
-                  type="button"
-                  onClick={() => setActiveLang(l)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
-                    activeLang === l
-                      ? 'bg-black text-white'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                  }`}
-                >
-                  {LANG_LABELS[l]}
-                  {(formData.badge[l] || formData.title[l]) && (
-                    <span className="ml-1 w-1.5 h-1.5 bg-green-400 rounded-full inline-block" />
-                  )}
-                </button>
-              ))}
-            </div>
-
-            <div className="space-y-1 mb-4">
-              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-                뱃지 ({LANG_LABELS[activeLang as keyof typeof LANG_LABELS]})
-              </label>
-              <input
-                type="text"
-                value={formData.badge[activeLang] || ''}
-                onChange={e => updateField('badge', activeLang, e.target.value)}
-                placeholder={activeLang === 'kr' ? '수분천재 크림' : 'Moisture Cream'}
-                className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-              />
-            </div>
-
-            <div className="space-y-1 mb-4">
-              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-                제목 ({LANG_LABELS[activeLang as keyof typeof LANG_LABELS]}){' '}
-                {activeLang === 'kr' && '*'}
-              </label>
-              <textarea
-                required={activeLang === 'kr'}
-                rows={3}
-                value={formData.title[activeLang] || ''}
-                onChange={e => updateField('title', activeLang, e.target.value)}
-                placeholder={activeLang === 'kr' ? '강력한\n고보습 케어' : 'Intense\nMoisture Care'}
-                className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none resize-none"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-                부제목 ({LANG_LABELS[activeLang as keyof typeof LANG_LABELS]})
-              </label>
-              <input
-                type="text"
-                value={formData.subtitle[activeLang] || ''}
-                onChange={e => updateField('subtitle', activeLang, e.target.value)}
-                placeholder={
-                  activeLang === 'kr'
-                    ? '사계절 + 속수분 + 윤광 + 모공쫀쫀'
-                    : 'All-season + Deep hydration + Glow'
-                }
-                className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-              클릭 링크 URL (선택)
-            </label>
-            <input
-              type="text"
-              value={formData.link_url}
-              onChange={e => setFormData(prev => ({ ...prev, link_url: e.target.value }))}
-              placeholder="예: /kr/products 또는 https://example.com"
-              className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-            />
-            <p className="text-[10px] text-gray-400">
-              입력하면 슬라이드 클릭 시 해당 링크로 이동합니다. 비워두면 클릭 비활성.
-            </p>
-          </div>
+          <SlideTextEditor
+            formData={formData}
+            activeLang={activeLang}
+            onChangeLang={setActiveLang}
+            onUpdateField={updateField}
+            onUpdateLink={url => setFormData(prev => ({ ...prev, link_url: url }))}
+          />
 
           <div className="space-y-3 pt-2 border-t border-gray-100">
             <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
