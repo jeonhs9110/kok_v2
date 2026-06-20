@@ -13,6 +13,7 @@ import {
 import { FONT_OPTIONS } from '@/lib/typography/options';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. site_settings writes require admin JWT (Phase 2 RLS).
 const supabase = getSupabaseBrowser();
@@ -32,6 +33,7 @@ const supabase = getSupabaseBrowser();
  */
 export default function ThemePage() {
   const confirm = useConfirm();
+  const toast = useToast();
   const [tokens, setTokens] = useState<ThemeTokens>(DEFAULT_THEME_TOKENS);
   const [savedTokens, setSavedTokens] = useState<ThemeTokens>(DEFAULT_THEME_TOKENS);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,7 +146,7 @@ export default function ThemePage() {
       setTimeout(() => setSavedFlash(false), 2500);
     } catch (err) {
       console.error('[admin/theme] save failed:', err);
-      alert(err instanceof Error ? err.message : '저장 실패');
+      toast.show(err instanceof Error ? err.message : '저장 실패', 'error');
     } finally {
       setIsSaving(false);
     }

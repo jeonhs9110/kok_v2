@@ -9,6 +9,7 @@ import { TypographyPanel } from '@/components/admin/TypographyPanel';
 import ContinuousPositionPicker from '@/components/admin/ContinuousPositionPicker';
 import { fontFamilyForKey, anchorTextStyle, resolveAnchor, type PositionAnchor, type PositionKey } from '@/lib/typography/options';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 2 RLS lockdown on `sub_hero_banners` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -63,6 +64,7 @@ const EMPTY: SubHero = {
 };
 
 export default function SubHeroAdminPage() {
+  const toast = useToast();
   const [banner, setBanner] = useState<SubHero>(EMPTY);
   // Snapshot of last persisted state so we can detect unsaved local edits
   // (drives the navigation-away prompt below).
@@ -121,7 +123,7 @@ export default function SubHeroAdminPage() {
       setBanner(prev => ({ ...prev, image_url: urlData.publicUrl }));
     } catch (e) {
       console.error(e);
-      alert('이미지 업로드에 실패했습니다.');
+      toast.show('이미지 업로드에 실패했습니다.', 'error');
     } finally {
       setIsUploading(false);
     }
@@ -170,10 +172,10 @@ export default function SubHeroAdminPage() {
       }
       setSavedBanner({ ...banner, id: savedId });
       revalidateHomepageData('sub_hero');
-      alert('서브 히어로 배너가 저장되었습니다.');
+      toast.show('서브 히어로 배너가 저장되었습니다.', 'success');
     } catch (e) {
       console.error(e);
-      alert('저장에 실패했습니다.');
+      toast.show('저장에 실패했습니다.', 'error');
     } finally {
       setIsSaving(false);
     }

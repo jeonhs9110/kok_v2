@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Save, Plus, Trash2, GripVertical } from 'lucide-react';
 import SortableList from '@/components/admin/SortableList';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { useToast } from '@/components/admin/Toast';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
 const supabase = getSupabaseBrowser();
@@ -20,6 +21,7 @@ interface Props {
 
 export default function RetailersEditor({ initialRetailers }: Props) {
   const confirm = useConfirm();
+  const toast = useToast();
   const [retailers, setRetailers] = useState<RetailerRow[]>(initialRetailers);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [savedKey, setSavedKey] = useState<string | null>(null);
@@ -36,12 +38,12 @@ export default function RetailersEditor({ initialRetailers }: Props) {
 
   async function saveRetailer(index: number) {
     if (!supabase) {
-      alert('Supabase가 설정되지 않았습니다.');
+      toast.show('Supabase가 설정되지 않았습니다.', 'error');
       return;
     }
     const r = retailers[index];
     if (!r.country_code || !r.country_native || !r.country_en) {
-      alert('국가 코드, 원어명, 영문명은 필수입니다.');
+      toast.show('국가 코드, 원어명, 영문명은 필수입니다.', 'warning');
       return;
     }
     setSavingKey(`retailer-${index}`);
@@ -65,7 +67,7 @@ export default function RetailersEditor({ initialRetailers }: Props) {
       : await supabase.from('worldwide_retailers').insert(payload).select().single();
     if (res.error) {
       setSavingKey(null);
-      alert(`저장 실패: ${res.error.message}`);
+      toast.show(`저장 실패: ${res.error.message}`, 'error');
       return;
     }
     if (res.data) updateRetailer(index, { id: (res.data as RetailerRow).id });
@@ -119,7 +121,7 @@ export default function RetailersEditor({ initialRetailers }: Props) {
       }
     } catch (err) {
       console.error(err);
-      alert('이미지 업로드 실패. Supabase Storage 설정을 확인하세요.');
+      toast.show('이미지 업로드 실패. Supabase Storage 설정을 확인하세요.', 'error');
     } finally {
       setSavingKey(null);
     }
@@ -155,7 +157,7 @@ export default function RetailersEditor({ initialRetailers }: Props) {
     if (r.id && supabase) {
       const { error } = await supabase.from('worldwide_retailers').delete().eq('id', r.id);
       if (error) {
-        alert(`삭제 실패: ${error.message}`);
+        toast.show(`삭제 실패: ${error.message}`, 'error');
         return;
       }
     }

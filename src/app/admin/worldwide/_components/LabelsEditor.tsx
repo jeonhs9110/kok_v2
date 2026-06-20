@@ -6,6 +6,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
 const supabase = getSupabaseBrowser();
 import { SUPPORTED_LANGS, type WorldwideLang } from '@/lib/worldwide/defaults';
+import { useToast } from '@/components/admin/Toast';
 import {
   LANG_LABEL,
   LABEL_SECTION_TITLE,
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function LabelsEditor({ initialLabels }: Props) {
+  const toast = useToast();
   const [labels, setLabels] = useState<LabelRow[]>(initialLabels);
   const [editLang, setEditLang] = useState<WorldwideLang>('kr');
   const [savingKey, setSavingKey] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export default function LabelsEditor({ initialLabels }: Props) {
 
   async function saveLabel(row: LabelRow) {
     if (!supabase) {
-      alert('Supabase가 설정되지 않았습니다. 환경변수를 확인하세요.');
+      toast.show('Supabase가 설정되지 않았습니다. 환경변수를 확인하세요.', 'error');
       return;
     }
     setSavingKey(row.label_key);
@@ -45,7 +47,7 @@ export default function LabelsEditor({ initialLabels }: Props) {
     });
     setSavingKey(null);
     if (error) {
-      alert(`저장 실패: ${error.message}`);
+      toast.show(`저장 실패: ${error.message}`, 'error');
       return;
     }
     setSavedKey(row.label_key);
