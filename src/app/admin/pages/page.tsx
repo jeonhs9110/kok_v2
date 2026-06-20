@@ -1,38 +1,33 @@
 'use client';
 
-import { Plus, Trash2, Pencil, X, Eye, EyeOff, Menu as MenuIcon, LayoutTemplate, Code2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { PageHeader, EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
+import { SUPPORTED_LANGS } from '@/lib/i18n/types';
+import type { PageBlock } from '@/lib/pages/blocks';
+import PagesListTable, { type Page } from './_components/PagesListTable';
+import PageEditorModal, { type PageEditorFormData } from './_components/PageEditorModal';
 
 // Session-aware client. Phase 4 RLS lockdown on `pages` requires admin JWT.
 const supabase = getSupabaseBrowser();
-import RichEditor from '@/components/admin/RichEditor';
-import PageBlocksEditor from './_components/PageBlocksEditor';
-import type { PageBlock } from '@/lib/pages/blocks';
-
-/* ── Constants ─────────────────────────────────────────────────────── */
-import { SUPPORTED_LANGS, LANG_LABELS, type Lang } from '@/lib/i18n/types';
 
 type LangMap = Record<string, string>;
 type BlocksMap = Record<string, PageBlock[]>;
 
-/* ── Types ─────────────────────────────────────────────────────────── */
-interface Page {
-  id: string;
-  slug: string;
-  title: LangMap;
-  content: LangMap;
-  blocks: BlocksMap | null;
-  is_published: boolean;
-  show_in_nav: boolean;
-  nav_order: number;
-  created_at: string;
-}
+const emptyLangMap = (): LangMap => ({ kr: '', en: '', cn: '', jp: '', vn: '', th: '' });
+const emptyBlocksMap = (): BlocksMap => ({ kr: [], en: [], cn: [], jp: [], vn: [], th: [] });
 
-/* ── Main Page ─────────────────────────────────────────────────────── */
+const autoSlug = (title: string) =>
+  title
+    .toLowerCase()
+    .replace(/[^a-z0-9가-힣\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 50);
+
 export default function PagesAdminPage() {
   const toast = useToast();
   const confirm = useConfirm();
@@ -42,12 +37,8 @@ export default function PagesAdminPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeLang, setActiveLang] = useState<string>('kr');
-
-  const emptyLangMap = (): LangMap => ({ kr: '', en: '', cn: '', jp: '', vn: '', th: '' });
-  const emptyBlocksMap = (): BlocksMap => ({ kr: [], en: [], cn: [], jp: [], vn: [], th: [] });
-
   const [editorMode, setEditorMode] = useState<'blocks' | 'rich'>('blocks');
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PageEditorFormData>({
     titles: emptyLangMap(),
     slug: '',
     contents: emptyLangMap(),
@@ -111,15 +102,6 @@ export default function PagesAdminPage() {
     setIsModalOpen(true);
   };
 
-  const autoSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9가-힣\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .slice(0, 50);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -127,8 +109,6 @@ export default function PagesAdminPage() {
     try {
       if (!supabase) throw new Error('No client');
 
-      // Remove empty lang entries — keeps the JSON small + makes the
-      // "has content for lang X" badges accurate.
       const cleanTitles: LangMap = {};
       const cleanContents: LangMap = {};
       const cleanBlocks: BlocksMap = {};
@@ -189,8 +169,6 @@ export default function PagesAdminPage() {
     }
   };
 
-  const getTitle = (page: Page) => page.title?.kr || page.title?.en || Object.values(page.title || {})[0] || '(제목 없음)';
-
   return (
     <div className="space-y-5">
       <PageHeader
@@ -206,238 +184,38 @@ export default function PagesAdminPage() {
         }
       />
 
-    <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
-      <div className="overflow-x-auto min-h-[300px]">
-        {isLoading ? (
-          <LoadingState />
-        ) : pages.length === 0 ? (
-          <EmptyState label="등록된 페이지가 없습니다 · 새 페이지 버튼을 눌러 추가하세요" />
-        ) : (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[11px] uppercase tracking-wider text-[#6b7280] font-semibold">
-                <th className="p-3 pl-4">제목</th>
-                <th className="p-3">경로</th>
-                <th className="p-3">언어</th>
-                <th className="p-3">메뉴</th>
-                <th className="p-3">상태</th>
-                <th className="p-3 pr-4 text-right">작업</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#f3f4f6]">
-              {pages.map(page => {
-                const filledLangs = SUPPORTED_LANGS.filter(l => page.title?.[l] || page.content?.[l]);
-                return (
-                  <tr key={page.id} className="hover:bg-[#fafbfc] transition-colors">
-                    <td className="p-3 pl-4 font-bold text-gray-900 text-[12px]">{getTitle(page)}</td>
-                    <td className="p-3 text-gray-500 text-xs font-mono">/pages/{page.slug}</td>
-                    <td className="p-3">
-                      <div className="flex gap-1">
-                        {filledLangs.map(l => (
-                          <span key={l} className="px-1.5 py-0.5 bg-gray-100 text-gray-500 text-[9px] font-bold rounded uppercase">{l}</span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="p-3">
-                      {page.show_in_nav ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded">
-                          <MenuIcon className="w-3 h-3" /> {page.nav_order}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-gray-300">-</span>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <button onClick={() => togglePublish(page)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase transition-colors ${
-                          page.is_published ? 'bg-green-50 text-green-700 hover:bg-green-100' : 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200'
-                        }`}>
-                        {page.is_published ? <><Eye className="w-3 h-3" /> 게시</> : <><EyeOff className="w-3 h-3" /> 임시</>}
-                      </button>
-                    </td>
-                    <td className="p-3 pr-4 text-right flex gap-1.5 justify-end">
-                      <button onClick={() => openEdit(page)} className="text-gray-400 hover:text-blue-600 transition-colors p-1.5 rounded hover:bg-[#f3f4f6]">
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleDelete(page.id)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded hover:bg-[#f3f4f6]">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
+        <div className="overflow-x-auto min-h-[300px]">
+          {isLoading ? (
+            <LoadingState />
+          ) : pages.length === 0 ? (
+            <EmptyState label="등록된 페이지가 없습니다 · 새 페이지 버튼을 눌러 추가하세요" />
+          ) : (
+            <PagesListTable
+              pages={pages}
+              onEdit={openEdit}
+              onDelete={handleDelete}
+              onTogglePublish={togglePublish}
+            />
+          )}
+        </div>
+
+        {isModalOpen && (
+          <PageEditorModal
+            editingId={editingId}
+            activeLang={activeLang}
+            editorMode={editorMode}
+            formData={formData}
+            isSubmitting={isSubmitting}
+            onClose={resetModal}
+            onActiveLangChange={setActiveLang}
+            onEditorModeChange={setEditorMode}
+            onFormChange={setFormData}
+            onSubmit={handleSubmit}
+            autoSlug={autoSlug}
+          />
         )}
       </div>
-
-      {/* ── Modal ───────────────────────────────────────────────────── */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh]">
-            <div className="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#fafbfc]">
-              <h3 className="text-[14px] font-bold text-[#1f2937]">{editingId ? '페이지 수정' : '새 페이지'}</h3>
-              <button onClick={resetModal} className="text-[#9ca3af] hover:text-[#1f2937] p-1 rounded hover:bg-[#f3f4f6] transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
-              {/* Slug */}
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">URL 경로 (slug) *</label>
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-gray-400">/pages/</span>
-                  <input
-                    required type="text" value={formData.slug}
-                    onChange={e => setFormData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
-                    className="flex-1 border border-gray-200 p-2.5 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none font-mono"
-                    placeholder="events"
-                  />
-                </div>
-              </div>
-
-              {/* Toggles */}
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={formData.is_published}
-                    onChange={e => setFormData(prev => ({ ...prev, is_published: e.target.checked }))}
-                    className="w-4 h-4 rounded accent-black" />
-                  <span className="text-sm font-medium text-gray-700">게시 (공개)</span>
-                </label>
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" checked={formData.show_in_nav}
-                    onChange={e => setFormData(prev => ({ ...prev, show_in_nav: e.target.checked }))}
-                    className="w-4 h-4 rounded accent-black" />
-                  <span className="text-sm font-medium text-gray-700">헤더 메뉴에 표시</span>
-                </label>
-                {formData.show_in_nav && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-700">순서:</span>
-                    <input type="number" min="0" value={formData.nav_order}
-                      onChange={e => setFormData(prev => ({ ...prev, nav_order: Number(e.target.value) }))}
-                      className="w-16 border border-gray-200 p-1.5 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none text-center" />
-                  </div>
-                )}
-              </div>
-
-              {/* ── Language Tabs ──────────────────────────────────────── */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <div className="flex border-b border-gray-200 bg-gray-50">
-                  {SUPPORTED_LANGS.map(l => {
-                    const hasContent = !!(formData.titles[l] || formData.contents[l]);
-                    return (
-                      <button key={l} type="button" onClick={() => setActiveLang(l)}
-                        className={`px-4 py-2.5 text-xs font-bold tracking-wide transition-colors relative ${
-                          activeLang === l
-                            ? 'bg-white text-black border-b-2 border-black -mb-px'
-                            : hasContent
-                              ? 'text-gray-600 hover:bg-gray-100'
-                              : 'text-gray-300 hover:bg-gray-100'
-                        }`}>
-                        {LANG_LABELS[l]}
-                        {hasContent && activeLang !== l && (
-                          <span className="ml-1 w-1.5 h-1.5 bg-green-500 rounded-full inline-block" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="p-4 space-y-4">
-                  {/* Title for active language */}
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-                      페이지 제목 ({LANG_LABELS[activeLang as Lang]}) {activeLang === 'kr' && '*'}
-                    </label>
-                    <input
-                      type="text"
-                      required={activeLang === 'kr'}
-                      value={formData.titles[activeLang] || ''}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setFormData(prev => ({
-                          ...prev,
-                          titles: { ...prev.titles, [activeLang]: val },
-                          slug: !editingId && activeLang === 'kr' ? autoSlug(val) : prev.slug,
-                        }));
-                      }}
-                      className="w-full border border-gray-200 p-2.5 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-                      placeholder={activeLang === 'kr' ? '예: 이벤트 & 공지사항' : `Title in ${LANG_LABELS[activeLang as Lang]}`}
-                    />
-                  </div>
-
-                  {/* Content editor — mode toggle */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-                        페이지 내용 ({LANG_LABELS[activeLang as Lang]})
-                      </label>
-                      <div className="inline-flex bg-gray-100 rounded p-0.5 text-[11px] font-bold">
-                        <button
-                          type="button"
-                          onClick={() => setEditorMode('blocks')}
-                          className={`px-2.5 py-1 rounded inline-flex items-center gap-1.5 transition ${
-                            editorMode === 'blocks' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-[#1f2937]'
-                          }`}
-                        >
-                          <LayoutTemplate className="w-3 h-3" /> 섹션 빌더
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditorMode('rich')}
-                          className={`px-2.5 py-1 rounded inline-flex items-center gap-1.5 transition ${
-                            editorMode === 'rich' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-[#1f2937]'
-                          }`}
-                        >
-                          <Code2 className="w-3 h-3" /> 클래식 (rich text)
-                        </button>
-                      </div>
-                    </div>
-
-                    {editorMode === 'blocks' ? (
-                      <PageBlocksEditor
-                        blocks={formData.blocks[activeLang] || []}
-                        onChange={(next) => setFormData(prev => ({
-                          ...prev,
-                          blocks: { ...prev.blocks, [activeLang]: next },
-                        }))}
-                      />
-                    ) : (
-                      <RichEditor
-                        content={formData.contents[activeLang] || ''}
-                        onChange={html => setFormData(prev => ({
-                          ...prev,
-                          contents: { ...prev.contents, [activeLang]: html },
-                        }))}
-                        uploadPath="pages"
-                      />
-                    )}
-                    <p className="text-[10px] text-gray-400">
-                      두 모드는 독립적으로 저장됩니다. 섹션 빌더에 블록이 있으면 클래식 본문보다 우선합니다.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="pt-4 border-t border-[#e5e7eb] flex justify-end gap-2">
-                <button type="button" onClick={resetModal}
-                  className="px-6 py-2.5 border border-[#d1d5db] text-[#374151] rounded text-sm font-semibold bg-white hover:bg-[#f9fafb] transition-colors">
-                  취소
-                </button>
-                <button type="submit" disabled={isSubmitting}
-                  className="bg-[#3b82f6] text-white px-8 py-2.5 rounded text-sm font-bold tracking-widest hover:bg-[#2563eb] transition-colors disabled:opacity-50 flex items-center gap-2">
-                  {isSubmitting ? (
-                    <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 저장 중...</>
-                  ) : editingId ? '수정 저장' : '페이지 저장'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
     </div>
   );
 }
