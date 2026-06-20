@@ -17,6 +17,7 @@ export type HomepageTag =
   | 'shorts'
   | 'top_stripe'
   | 'homepage_banners'
+  | 'homepage_section_order'
   | 'best_seller_display';
 
 export async function revalidateHomepageData(tag: HomepageTag): Promise<void> {

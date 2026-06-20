@@ -6,7 +6,6 @@ import ProductReviewSection from '@/components/ProductReviewSection';
 import RecentViewTracker from '@/components/RecentViewTracker';
 import { getProducts } from '@/lib/api/products';
 import { getAllCategories } from '@/lib/api/categories';
-import { getAllTags, getProductTags, TAG_CATEGORIES } from '@/lib/api/ingredient-tags';
 import { translateProduct } from '@/lib/openai';
 import ProductDetailComponents from '@/components/ProductDetailComponents';
 
@@ -27,11 +26,9 @@ interface Props {
 export default async function ProductDetailPage({ lang, canPurchase, id }: Props) {
   const lb = labels[lang] ?? labels['en'];
 
-  const [allProducts, allCategories, allTags, productTagIds] = await Promise.all([
+  const [allProducts, allCategories] = await Promise.all([
     getProducts(),
     getAllCategories(),
-    getAllTags(),
-    getProductTags(id),
   ]);
   const productData = allProducts.find(p => p.id === id);
 
@@ -63,12 +60,6 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
         description: productData.description,
         ingredient:  productData.ingredient,
       };
-
-  const productTags = allTags.filter(t => t.is_active && productTagIds.includes(t.id));
-  const tagsByCategory = TAG_CATEGORIES.map(cat => ({
-    cat,
-    tags: productTags.filter(t => t.category === cat.value),
-  })).filter(g => g.tags.length > 0);
 
   const categoryName = (() => {
     const c = allCategories.find(c => c.id === productData.category_id);
@@ -131,32 +122,6 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
           )}
           <h1 className="text-3xl lg:text-4xl font-extrabold tracking-tight text-brand-ink mb-4">{translated.name}</h1>
           <p className="text-neutral-500 text-sm font-medium mb-6 leading-relaxed">{translated.summary}</p>
-
-          {tagsByCategory.length > 0 && (
-            <div className="mb-8 space-y-3">
-              {tagsByCategory.map(({ cat, tags }) => (
-                <div key={cat.value} className="flex items-start flex-wrap gap-2">
-                  <span className="text-[10px] font-bold tracking-wider text-neutral-400 uppercase shrink-0 pt-1.5 min-w-[84px]">
-                    {lang === 'kr' ? cat.label_kr : cat.label_en}
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {tags.map(t => (
-                      <span
-                        key={t.id}
-                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-full border ${
-                          cat.value === 'allergen'
-                            ? 'border-amber-300 bg-amber-50 text-amber-800'
-                            : 'border-neutral-200 bg-neutral-50 text-neutral-700'
-                        }`}
-                      >
-                        {t.name[lang] || t.name.kr || t.name.en || '—'}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
 
           <div className="flex items-end gap-3 mb-10 pb-8 border-b border-neutral-100">
             {discountPct > 0 && (
