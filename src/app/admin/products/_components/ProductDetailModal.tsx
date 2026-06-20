@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import {
-  X, Upload, GripVertical, Trash2, Film, Image as ImgIcon, Eye,
-} from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import { type Product, type DetailComponent } from '@/lib/api/products';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
@@ -13,12 +11,11 @@ import { useConfirm } from '@/components/admin/ConfirmModal';
 // products writes — see migration 19.
 const supabase = getSupabaseBrowser();
 import type { Category } from '@/lib/api/categories';
-import { isValidYouTubeUrl, toYouTubeThumbnailUrl, isYouTubeShortsUrl } from '@/lib/youtube';
-import ProductDetailComponents from '@/components/ProductDetailComponents';
+import { isValidYouTubeUrl } from '@/lib/youtube';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
-import SortableList from '@/components/admin/SortableList';
 import ProductImageUpload from './ProductImageUpload';
 import ProductPriceEditor from './ProductPriceEditor';
+import ProductDetailComponentsEditor from './ProductDetailComponentsEditor';
 
 const BUCKET = 'product-images';
 
@@ -47,15 +44,6 @@ const EMPTY_FORM: FormState = {
   detailComponents: [], naverStoreUrl: '', categoryId: '', subcategoryId: '',
   isBestSeller: false, showCartButton: false, showBuyButton: false,
 };
-
-/** Inline YouTube glyph — kept local since it's only used by this editor. */
-function YtIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M23.5 6.2a3 3 0 00-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 00.5 6.2C0 8.1 0 12 0 12s0 3.9.5 5.8a3 3 0 002.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 002.1-2.1c.5-1.9.5-5.8.5-5.8s0-3.9-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z" />
-    </svg>
-  );
-}
 
 /**
  * Convert a legacy `detail_body` HTML blob into structured DetailComponent[]
@@ -110,7 +98,6 @@ export default function ProductDetailModal({
   const [youtubeInput, setYoutubeInput] = useState('');
   const [youtubeError, setYoutubeError] = useState('');
   const [detailUploading, setDetailUploading] = useState(false);
-  const detailFileInputRef = useRef<HTMLInputElement>(null);
 
   // Populate the form whenever the modal opens with a different target.
   // Closing → null editing → next open re-runs this with fresh data.
@@ -429,131 +416,17 @@ export default function ProductDetailModal({
           </div>
 
           {/* Detail components editor */}
-          <div className="space-y-3">
-            <div className="flex items-baseline justify-between">
-              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">상세페이지 컴포넌트</label>
-              <span className="text-[10px] text-gray-400">위 → 아래 순서, 컴포넌트 간 마진 없이 이어붙음</span>
-            </div>
-
-            {formData.detailComponents.length === 0 ? (
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center text-gray-400 text-xs">
-                아직 추가된 컴포넌트가 없습니다. 아래에서 이미지/영상/YouTube를 추가하세요.
-              </div>
-            ) : (
-              <SortableList
-                items={formData.detailComponents}
-                getId={(c) => c.id}
-                onReorder={(next) => setFormData(prev => ({ ...prev, detailComponents: next }))}
-                className="space-y-2"
-              >
-                {(c, { dragHandleProps }) => {
-                  const i = formData.detailComponents.findIndex(x => x.id === c.id);
-                  const TypeIcon = c.type === 'youtube' ? YtIcon : c.type === 'video' ? Film : ImgIcon;
-                  const typeBadge = c.type === 'youtube' ? 'YouTube' : c.type === 'video' ? '영상' : '이미지';
-                  const badgeColor =
-                    c.type === 'youtube' ? 'bg-red-50 text-red-700' :
-                    c.type === 'video' ? 'bg-purple-50 text-purple-700' :
-                    'bg-blue-50 text-blue-700';
-                  const thumbnail = c.type === 'youtube' ? toYouTubeThumbnailUrl(c.url) : c.type === 'image' ? c.url : '';
-                  return (
-                    <div className="border border-gray-200 rounded-lg p-3 flex gap-3 items-center bg-white">
-                      <button
-                        type="button"
-                        {...dragHandleProps}
-                        className={`${dragHandleProps.className ?? ''} text-gray-300 hover:text-gray-600 p-1`}
-                        aria-label="드래그하여 순서 변경"
-                      >
-                        <GripVertical className="w-4 h-4" />
-                      </button>
-                      <div className="text-[10px] font-bold text-gray-400 w-5 text-center select-none">{i + 1}</div>
-                      <div className="w-20 h-14 bg-gray-100 rounded flex-shrink-0 overflow-hidden flex items-center justify-center">
-                        {thumbnail ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={thumbnail} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <Film className="w-6 h-6 text-gray-400" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded ${badgeColor}`}>
-                            <TypeIcon className="w-3 h-3" />
-                            {typeBadge}
-                          </span>
-                          {c.type === 'youtube' && isYouTubeShortsUrl(c.url) && (
-                            <span className="px-1.5 py-0.5 bg-orange-50 text-orange-700 text-[9px] font-bold rounded">Shorts</span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-gray-500 truncate" title={c.url}>{c.url}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeDetailComponent(c.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  );
-                }}
-              </SortableList>
-            )}
-
-            {formData.detailComponents.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5 text-gray-400" />
-                  <p className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">사이트 미리보기</p>
-                  <span className="text-[10px] text-gray-400 ml-auto">실제 스토어 페이지와 동일한 모습 (스토어 폭은 더 넓음)</span>
-                </div>
-                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
-                  <ProductDetailComponents components={formData.detailComponents} />
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => detailFileInputRef.current?.click()}
-                disabled={detailUploading}
-                className="border border-dashed border-gray-300 rounded-lg p-3 text-xs font-semibold text-gray-700 hover:border-black hover:bg-gray-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                <Upload className="w-4 h-4" />
-                {detailUploading ? '업로드 중...' : '파일 업로드 (이미지/영상)'}
-              </button>
-              <input
-                ref={detailFileInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/gif,video/mp4"
-                className="hidden"
-                onChange={handleDetailFileSelect}
-              />
-              <div className="border border-dashed border-gray-300 rounded-lg p-2 flex items-center gap-1.5">
-                <YtIcon className="w-4 h-4 text-red-600 flex-shrink-0 ml-1" />
-                <input
-                  type="url"
-                  value={youtubeInput}
-                  onChange={e => { setYoutubeInput(e.target.value); setYoutubeError(''); }}
-                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddYoutube(); } }}
-                  placeholder="YouTube URL"
-                  className="flex-1 text-xs bg-transparent outline-none min-w-0"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddYoutube}
-                  className="px-2.5 py-1 bg-black text-white text-[11px] font-bold rounded hover:bg-gray-800"
-                >
-                  추가
-                </button>
-              </div>
-            </div>
-            {youtubeError && <p className="text-[10px] text-red-600">{youtubeError}</p>}
-            <p className="text-[10px] text-gray-400 leading-snug pt-1">
-              이미지(PNG/JPG/WEBP/GIF), 영상(MP4), YouTube 링크를 추가하면 상세페이지 하단에 위→아래로 마진 없이 이어붙어 표시됩니다.
-              영상 파일은 <strong className="text-gray-600">30MB 이하 권장</strong>. YouTube Shorts URL 사용 시 자동으로 세로 비율(9:16)로 표시됩니다.
-            </p>
-          </div>
+          <ProductDetailComponentsEditor
+            components={formData.detailComponents}
+            onReorder={next => setFormData(prev => ({ ...prev, detailComponents: next }))}
+            onRemove={removeDetailComponent}
+            onFileSelect={handleDetailFileSelect}
+            isUploading={detailUploading}
+            youtubeInput={youtubeInput}
+            youtubeError={youtubeError}
+            onYoutubeInputChange={v => { setYoutubeInput(v); setYoutubeError(''); }}
+            onAddYoutube={handleAddYoutube}
+          />
 
           {/* Naver Store URL */}
           <div className="space-y-1">
