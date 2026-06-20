@@ -884,7 +884,7 @@ export default function CarouselSlideModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-2.5 border border-gray-200 text-gray-600 rounded text-sm font-semibold hover:bg-gray-50 transition-colors"
+              className="px-6 py-2.5 border border-[#d1d5db] text-[#374151] rounded text-sm font-semibold bg-white hover:bg-[#f9fafb] transition-colors"
             >
               취소
             </button>
