@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import {
   Image as ImageIcon,
   GalleryHorizontal,
@@ -14,20 +13,18 @@ import {
   ImagePlus,
   MenuSquare,
   Scale,
-  Eye,
-  ExternalLink,
-  Plus,
-  Code2,
   Megaphone,
 } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { isBannerKey } from '@/lib/api/sectionOrder';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
-import { LoadingState } from '@/components/admin/CafeWidgets';
-import SectionCard, { type SectionDef } from './_components/SectionCard';
+import { type SectionDef } from './_components/SectionCard';
 import TopToolbar from './_components/TopToolbar';
 import EditorDrawer from './_components/EditorDrawer';
+import CollapsedRail from './_components/CollapsedRail';
+import PreviewPanel from './_components/PreviewPanel';
+import FullSectionRail from './_components/FullSectionRail';
 import type { ViewportMode } from './_components/types';
 
 // Session-aware client. Only read-side count queries below.
@@ -579,77 +576,20 @@ export default function HomepageBuilderPage() {
             onEdit={handleEdit}
           />
         ) : (
-          <aside className="w-[320px] bg-white border-r border-[#e5e7eb] flex flex-col overflow-hidden flex-shrink-0">
-            <div className="flex border-b border-[#e5e7eb] bg-[#f9fafb]">
-              <TabButton active>섹션</TabButton>
-              <TabButton href="/admin/theme?from=homepage">스타일</TabButton>
-              <TabButton disabled>확장</TabButton>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
-              {isLoading ? (
-                <LoadingState />
-              ) : (
-                grouped.map(group => (
-                  <div key={group.title}>
-                    <div className="flex items-center justify-between px-1 pb-2">
-                      <p className="text-[10px] font-bold tracking-[0.15em] uppercase text-[#9ca3af]">
-                        {group.title}
-                      </p>
-                      {group.title === '홈페이지 섹션 (위에서 아래로)' && (
-                        <button
-                          type="button"
-                          onClick={handleAddBanner}
-                          className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold text-[#3b82f6] hover:bg-[#eff6ff] rounded transition-colors"
-                          title="섹션 사이에 띠배너 추가"
-                        >
-                          <Plus className="w-3 h-3" />
-                          띠배너
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-1.5">
-                      {group.sections.map(section => {
-                        const reorderable = isReorderable(section.key);
-                        return (
-                          <SectionCard
-                            key={section.key}
-                            section={section}
-                            selected={selectedKey === section.key}
-                            onSelect={() => handleSelect(section.key)}
-                            onEdit={() => handleEdit(section.key)}
-                            draggable={reorderable}
-                            onDragStart={reorderable ? e => handleDragStart(section.key, e) : undefined}
-                            onDragOver={reorderable ? e => handleDragOver(section.key, e) : undefined}
-                            onDrop={reorderable ? e => handleDrop(section.key, e) : undefined}
-                            onDragEnd={reorderable ? handleDragEnd : undefined}
-                            dragOver={dragOverKey === section.key}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="border-t border-[#e5e7eb] p-3 space-y-2 bg-[#fafbfc] flex-shrink-0">
-              <Link
-                href="/admin/pages?from=homepage"
-                className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-[12px] font-semibold text-[#3b82f6] border border-[#bfdbfe] bg-white rounded hover:bg-[#eff6ff] transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                섹션 추가 (페이지 빌더)
-              </Link>
-              <Link
-                href="/admin/theme?from=homepage"
-                className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 text-[11px] text-[#6b7280] hover:text-[#1f2937] transition-colors"
-              >
-                <Code2 className="w-3 h-3" />
-                테마/HTML 직접 편집
-              </Link>
-            </div>
-          </aside>
+          <FullSectionRail
+            grouped={grouped}
+            isLoading={isLoading}
+            selectedKey={selectedKey}
+            dragOverKey={dragOverKey}
+            onSelect={handleSelect}
+            onEdit={handleEdit}
+            onAddBanner={handleAddBanner}
+            isReorderable={isReorderable}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
+          />
         )}
 
         {/* ── INLINE EDITOR PANEL: sits between the collapsed icon rail
@@ -664,123 +604,16 @@ export default function HomepageBuilderPage() {
         )}
 
         {/* ── RIGHT: live preview ────────────────────────────── */}
-        <section className="flex-1 overflow-auto bg-[#f5f6f8] p-4 sm:p-6 flex justify-center items-start">
-          <div
-            className="bg-white shadow-md overflow-hidden flex-shrink-0"
-            style={{
-              ...previewFrameStyle,
-              minHeight: '100%',
-              borderRadius: previewFrameStyle.borderRadius ?? '6px',
-            }}
-          >
-            <div className="flex items-center justify-between px-3 py-2 border-b border-[#e5e7eb] bg-[#fafbfc] text-[11px] text-[#6b7280]">
-              <span className="flex items-center gap-1.5">
-                <Eye className="w-3 h-3" /> 실시간 미리보기
-                <span className="text-[#9ca3af]">·</span>
-                <span className="font-mono">
-                  {viewport === 'fit' ? '전체 폭' :
-                   viewport === 'mobile' ? `${VIEWPORT_WIDTH.mobile}px (모바일)` :
-                   `${VIEWPORT_WIDTH.pc}px (PC)`}
-                </span>
-              </span>
-              <Link
-                href="/kr"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 hover:text-[#1f2937] transition-colors"
-              >
-                새 탭 <ExternalLink className="w-2.5 h-2.5" />
-              </Link>
-            </div>
-            <iframe
-              key={iframeKey}
-              ref={iframeRef}
-              src="/kr"
-              title="홈페이지 미리보기"
-              className="w-full bg-white"
-              style={{ height: 'calc(100vh - 9rem)', border: 'none', display: 'block' }}
-            />
-          </div>
-        </section>
+        <PreviewPanel
+          frameStyle={previewFrameStyle}
+          viewport={viewport}
+          viewportWidth={VIEWPORT_WIDTH}
+          iframeKey={iframeKey}
+          iframeRef={iframeRef}
+        />
       </div>
     </div>
   );
-}
-
-/**
- * CollapsedRail — icon-only navigation that replaces the full section
- * list when an editor is open. Same selection state as the full rail
- * (active section gets a blue tint + left-border accent); clicking a
- * different icon swaps the editor to that section. Keeps the operator
- * oriented while reclaiming 256px of horizontal space for the editor +
- * preview combo.
- */
-function CollapsedRail({
-  grouped, editingKey, onEdit,
-}: {
-  grouped: Array<{ title: string; sections: SectionDef[] }>;
-  editingKey: string;
-  onEdit: (key: string) => void;
-}) {
-  return (
-    <aside className="w-[64px] bg-white border-r border-[#e5e7eb] flex flex-col overflow-hidden flex-shrink-0">
-      <div className="flex-1 overflow-y-auto py-2 space-y-1">
-        {grouped.map((group, gi) => (
-          <div key={group.title}>
-            {/* Thin divider between groups so the operator still gets the
-                same visual grouping as the full rail. No labels — those
-                live as hover tooltips on each icon button below. */}
-            {gi > 0 && <div className="mx-3 my-1 border-t border-[#f3f4f6]" />}
-            {group.sections.map(section => {
-              const Icon = section.icon;
-              const active = editingKey === section.key;
-              return (
-                <button
-                  key={section.key}
-                  type="button"
-                  onClick={() => onEdit(section.key)}
-                  className={`w-full h-11 flex items-center justify-center transition-colors relative ${
-                    active
-                      ? 'bg-[#eff6ff] text-[#3b82f6]'
-                      : 'text-[#6b7280] hover:bg-[#f9fafb] hover:text-[#1f2937]'
-                  }`}
-                  title={section.name}
-                  aria-label={section.name}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  {active && (
-                    <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r bg-[#3b82f6]" />
-                  )}
-                  <Icon className="w-4 h-4" />
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </aside>
-  );
-}
-
-function TabButton({
-  children, active = false, disabled = false, href,
-}: {
-  children: React.ReactNode;
-  active?: boolean;
-  disabled?: boolean;
-  href?: string;
-}) {
-  const base = `flex-1 py-2.5 text-[12px] font-semibold transition-colors border-b-2 ${
-    active
-      ? 'border-[#3b82f6] text-[#3b82f6] bg-white'
-      : disabled
-      ? 'border-transparent text-[#d1d5db] cursor-not-allowed'
-      : 'border-transparent text-[#6b7280] hover:text-[#1f2937] hover:bg-white'
-  }`;
-  if (href && !disabled) {
-    return <Link href={href} className={base}>{children}</Link>;
-  }
-  return <button type="button" className={base} disabled={disabled}>{children}</button>;
 }
 
 function countsLabel(active: number, total: number, unit = '개'): string {
