@@ -21,8 +21,7 @@ import SlideDisplayModePicker from './SlideDisplayModePicker';
 import SlideTextEditor from './SlideTextEditor';
 import SlideColorPicker from './SlideColorPicker';
 import SlideFontSizeOffsets from './SlideFontSizeOffsets';
-import { TypographyPanel } from '@/components/admin/TypographyPanel';
-import ContinuousPositionPicker from '@/components/admin/ContinuousPositionPicker';
+import SlideTypographyAndPosition from './SlideTypographyAndPosition';
 
 interface Props {
   editingId: string | null;
@@ -525,140 +524,11 @@ export default function CarouselSlideModal({
             onChange={(key, value) => setFormData(prev => ({ ...prev, [key]: value }))}
           />
 
-          {/* ── Phase 3 typography controls ─────────────────────────
-              Same panel + position picker as the SubHero editor; admin
-              gets per-block font, B/I/U and a single 9-cell anchor for
-              where the text sits inside the slide. Colors stay in the
-              existing "색상 설정" group above. */}
-          <div className="space-y-4 pt-2 border-t border-gray-100">
-            <div>
-              <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">타이포그래피</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                폰트와 굵기 / 기울임 / 밑줄을 텍스트별로 지정하고, 텍스트 블록의 위치를 슬라이드 안에서 골라보세요.
-              </p>
-            </div>
-            <TypographyPanel
-              label="뱃지 스타일"
-              value={{
-                fontFamily: formData.badge_font_family,
-                bold: formData.badge_bold,
-                italic: formData.badge_italic,
-                underline: formData.badge_underline,
-                color: formData.badge_text_color,
-              }}
-              onChange={s => setFormData(prev => ({
-                ...prev,
-                badge_font_family: s.fontFamily,
-                badge_bold: s.bold,
-                badge_italic: s.italic,
-                badge_underline: s.underline,
-                badge_text_color: s.color ?? prev.badge_text_color,
-              }))}
-              defaultColor="#FFFFFF"
-            />
-            <TypographyPanel
-              label="제목 스타일"
-              value={{
-                fontFamily: formData.title_font_family,
-                bold: formData.title_bold,
-                italic: formData.title_italic,
-                underline: formData.title_underline,
-                color: formData.text_color,
-              }}
-              onChange={s => setFormData(prev => ({
-                ...prev,
-                title_font_family: s.fontFamily,
-                title_bold: s.bold,
-                title_italic: s.italic,
-                title_underline: s.underline,
-                text_color: s.color ?? prev.text_color,
-              }))}
-              defaultColor="#111111"
-            />
-            <TypographyPanel
-              label="부제목 스타일"
-              value={{
-                fontFamily: formData.subtitle_font_family,
-                bold: formData.subtitle_bold,
-                italic: formData.subtitle_italic,
-                underline: formData.subtitle_underline,
-                color: formData.text_color,
-              }}
-              onChange={s => setFormData(prev => ({
-                ...prev,
-                subtitle_font_family: s.fontFamily,
-                subtitle_bold: s.bold,
-                subtitle_italic: s.italic,
-                subtitle_underline: s.underline,
-                // text_color stays in the title panel since it controls
-                // both rows on this table — passing hideColor below means
-                // s.color is always the unchanged title color and this
-                // assignment is a no-op, kept for shape parity only.
-                text_color: s.color ?? prev.text_color,
-              }))}
-              defaultColor="#111111"
-              hideColor
-            />
-            {/* Text position — continuous picker (migration 30). Admin
-                clicks anywhere in the box to place text; PC and 모바일
-                anchors stored separately because the product image
-                often forces different layouts on each breakpoint. The
-                preview image inside the picker is the same uploaded
-                slide media so the admin aims relative to the actual
-                photo, not a blank rectangle. */}
-            <div>
-              <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase mb-1">텍스트 위치</p>
-              <p className="text-[10px] text-gray-400 mb-2">
-                미리보기에서 원하는 위치를 클릭하거나 흰 점을 드래그하세요. (PC와 모바일을 따로 설정)
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <ContinuousPositionPicker
-                  label="PC 텍스트 위치"
-                  value={formData.text_anchor}
-                  onChange={a => setFormData(prev => ({ ...prev, text_anchor: a }))}
-                  aspectRatio="aspect-[16/7]"
-                  backgroundImage={previewUrl || formData.imageUrl || undefined}
-                />
-                <ContinuousPositionPicker
-                  label="모바일 텍스트 위치"
-                  value={formData.text_anchor_mobile}
-                  onChange={a => setFormData(prev => ({ ...prev, text_anchor_mobile: a }))}
-                  aspectRatio="aspect-[9/14]"
-                  backgroundImage={previewUrl || formData.imageUrl || undefined}
-                />
-              </div>
-            </div>
-
-            {/* Image focal point — same picker, but the anchor drives
-                CSS object-position instead of text placement. Picking
-                a point near a product feature pins that feature in
-                view even when the wide-source image crops to portrait
-                on mobile. */}
-            <div>
-              <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase mb-1">이미지 중심점</p>
-              <p className="text-[10px] text-gray-400 mb-2">
-                이미지가 잘릴 때 어느 지점을 중심으로 보일지 정합니다. 원하는 부분을 클릭하세요.
-              </p>
-              <div className="grid grid-cols-2 gap-3">
-                <ContinuousPositionPicker
-                  label="PC 이미지 중심점"
-                  value={formData.image_anchor}
-                  onChange={a => setFormData(prev => ({ ...prev, image_anchor: a }))}
-                  aspectRatio="aspect-[16/7]"
-                  backgroundImage={previewUrl || formData.imageUrl || undefined}
-                  markerColor="#facc15"
-                />
-                <ContinuousPositionPicker
-                  label="모바일 이미지 중심점"
-                  value={formData.image_anchor_mobile}
-                  onChange={a => setFormData(prev => ({ ...prev, image_anchor_mobile: a }))}
-                  aspectRatio="aspect-[9/14]"
-                  backgroundImage={previewUrl || formData.imageUrl || undefined}
-                  markerColor="#facc15"
-                />
-              </div>
-            </div>
-          </div>
+          <SlideTypographyAndPosition
+            formData={formData}
+            previewUrl={previewUrl}
+            onChange={patch => setFormData(prev => ({ ...prev, ...patch }))}
+          />
 
           <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
             <div className="space-y-1">
