@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Upload, Trash2, Check, Star, Eye, RefreshCw, Save } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
@@ -13,6 +12,10 @@ import {
   tokensToCss,
   type ThemeTokens,
 } from '@/lib/theme/tokens';
+import SiteLogoCard from './_components/SiteLogoCard';
+import LogoSizeCard from './_components/LogoSizeCard';
+import BackgroundMediaCard, { type Background } from './_components/BackgroundMediaCard';
+import LogoPreviewPane from './_components/LogoPreviewPane';
 
 // Session-aware client. Phase 2 RLS lockdown requires admin's JWT for
 // site_backgrounds writes — see migration 18.
@@ -20,26 +23,8 @@ const supabase = getSupabaseBrowser();
 
 const BUCKET = 'site-assets';
 
-interface Background {
-  id: string;
-  file_url: string;
-  file_name: string;
-  file_type: 'image' | 'video';
-  mime_type: string;
-  is_active: boolean;
-  scroll_driven: boolean;
-  created_at: string;
-}
-
 const ACCEPT_BG = 'image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm';
 const MAX_BG_SIZE = 50 * 1024 * 1024; // 50MB
-
-const LOGO_HEIGHT_PRESETS: { v: string; l: string }[] = [
-  { v: '40px',  l: '작게' },
-  { v: '56px',  l: '기본' },
-  { v: '80px',  l: '크게' },
-  { v: '120px', l: '아주 크게' },
-];
 
 export default function LogoAdminPage() {
   const toast = useToast();
@@ -325,322 +310,50 @@ export default function LogoAdminPage() {
     <div className={isEmbedded ? 'block' : 'grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-6'}>
       {/* ── Controls pane (left) ────────────────────────────────────── */}
       <div className="space-y-6 min-w-0">
-        {/* 사이트 로고 */}
-        <div className="bg-white rounded border border-[#e5e7eb] p-5">
-          <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">사이트 로고</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            상단 좌측에 노출되는 로고 이미지입니다. 업로드하지 않으면 기본 텍스트 &ldquo;KOKKOK GARDEN&rdquo;이 표시됩니다.
-          </p>
+        <SiteLogoCard
+          logoPreview={logoPreview}
+          logoUrl={logoUrl}
+          hasPending={!!logoPending}
+          isSaving={logoSaving}
+          showSavedFlash={logoSavedFlash}
+          onPickFile={handleLogoPick}
+          onUpload={uploadLogo}
+          onDelete={removeLogo}
+        />
 
-          <div className="flex items-start gap-6 pb-6 border-b border-gray-100">
-            <div className="flex-shrink-0 w-48 h-24 bg-brand-ink rounded flex items-center justify-center overflow-hidden">
-              {logoPreview ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={logoPreview} alt="logo preview" className="max-w-full max-h-full object-contain" />
-              ) : (
-                <span className="text-white text-[18px] font-black tracking-[0.12em] uppercase">KOKKOK<br />GARDEN</span>
-              )}
-            </div>
-            <div className="flex-1 text-sm text-gray-600 space-y-1.5">
-              <p><strong className="text-gray-800">권장 규격</strong></p>
-              <p>• 가로형 이미지 (예: 600×160px, 투명 배경 PNG 또는 SVG 권장)</p>
-              <p>• 최대 2MB · PNG / SVG / WEBP / JPG</p>
-              <p>• 어두운 배경 위에 올라가므로 밝은 색상의 로고를 권장합니다.</p>
-            </div>
-          </div>
+        <LogoSizeCard
+          tokens={tokens}
+          setTokens={setTokens}
+          savedTokens={savedTokens}
+          isDirty={tokensDirty}
+          isSaving={tokensSaving}
+          onSave={handleTokensSave}
+        />
 
-          <div className="pt-6 space-y-4">
-            <input
-              ref={logoInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml"
-              onChange={handleLogoPick}
-              className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-            />
-
-            <div className="flex gap-3 flex-wrap">
-              <button
-                disabled={!logoPending || logoSaving}
-                onClick={uploadLogo}
-                className="inline-flex items-center gap-2 bg-[#3b82f6] text-white px-6 py-2.5 text-sm font-bold tracking-wider hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed rounded"
-              >
-                <Upload className="w-4 h-4" />
-                {logoSaving ? '업로드 중...' : '로고 업로드 및 저장'}
-              </button>
-
-              {logoUrl && (
-                <button
-                  disabled={logoSaving}
-                  onClick={removeLogo}
-                  className="inline-flex items-center gap-2 bg-white text-red-600 border border-red-200 px-6 py-2.5 text-sm font-bold tracking-wider hover:bg-red-50 transition-colors disabled:opacity-40"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  로고 삭제 (기본 텍스트로 복구)
-                </button>
-              )}
-
-              {logoSavedFlash && (
-                <span className="inline-flex items-center gap-1.5 text-sm text-green-600 font-semibold">
-                  <Check className="w-4 h-4" /> 저장되었습니다
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* 로고 크기 — same picker pattern as /admin/theme's button-radius
-            and menu-font controls. Token writes go to the theme_tokens
-            row in site_settings; the picker shows a Save bar at the
-            bottom so the admin can preview-then-commit. */}
-        <div className="bg-white rounded border border-[#e5e7eb] p-5">
-          <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">로고 크기</h2>
-          <p className="text-sm text-gray-500 mb-4">
-            상단 헤더에 표시되는 로고의 높이를 조절합니다. 가로 폭은 비율을 유지한 채 자동으로 맞춰집니다. 오른쪽 미리보기가 실시간으로 반영됩니다.
-          </p>
-
-          <div className="grid grid-cols-4 gap-1.5">
-            {LOGO_HEIGHT_PRESETS.map(opt => (
-              <button
-                key={opt.v}
-                type="button"
-                onClick={() => setTokens(t => ({ ...t, header_logo_height: opt.v }))}
-                className={`p-3 text-xs font-semibold border rounded ${
-                  tokens.header_logo_height === opt.v
-                    ? 'bg-black text-white border-black'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                <div className="flex flex-col items-center gap-1">
-                  <span>{opt.l}</span>
-                  <span className="text-[10px] opacity-70">{opt.v}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Numeric input for any height the presets don't cover (e.g.
-              44px between 기본 40 and 크게 48). Range-clamped to
-              20–80px — outside that the logo either disappears or
-              breaks the 66px header bar. */}
-          <div className="mt-3 flex items-center gap-2">
-            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-              직접 입력
-            </label>
-            <input
-              type="number"
-              min={20}
-              max={150}
-              step={1}
-              value={parseInt(tokens.header_logo_height, 10) || 56}
-              onChange={(e) => {
-                const raw = parseInt(e.target.value, 10);
-                if (!Number.isFinite(raw)) return;
-                // Range bumped from 20–80 to 20–150 at the 2026-06-10
-                // boss meeting. The header grows with the logo via
-                // .kokkok-header-bar's min-height = calc(logo + 24px)
-                // so the larger sizes don't crop.
-                const clamped = Math.max(20, Math.min(150, raw));
-                setTokens(t => ({ ...t, header_logo_height: `${clamped}px` }));
-              }}
-              className="w-20 px-2 py-1.5 text-sm border border-gray-200 rounded focus:outline-none focus:border-gray-400"
-            />
-            <span className="text-xs text-gray-500">px (20–150)</span>
-          </div>
-          <p className="mt-2 text-[10px] text-gray-500">
-            로고가 커지면 상단 헤더 바도 자동으로 함께 커집니다 — 잘리지 않습니다.
-          </p>
-
-          <div className="mt-4 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleTokensSave}
-              disabled={!tokensDirty || tokensSaving}
-              className="inline-flex items-center gap-2 bg-[#3b82f6] text-white px-5 py-2 text-sm font-bold tracking-wider hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed rounded"
-            >
-              <Save className="w-4 h-4" />
-              {tokensSaving ? '저장 중...' : tokensDirty ? '로고 크기 저장' : '저장됨'}
-            </button>
-            {tokensDirty && (
-              <button
-                type="button"
-                onClick={() => setTokens(savedTokens)}
-                className="text-xs text-gray-500 hover:text-[#1f2937] underline underline-offset-2"
-              >
-                되돌리기
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* 배경 미디어 */}
-        <div className="bg-white rounded border border-[#e5e7eb] p-5">
-          <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">배경 미디어</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            사이트 배경으로 사용할 이미지 또는 영상을 관리합니다. 여러 개 업로드 후 하나를 <strong className="text-green-600">활성</strong>으로 지정하면 오른쪽 미리보기에서 바로 확인할 수 있습니다.
-          </p>
-
-          {/* Upload form */}
-          <div className="space-y-3 pb-6 border-b border-gray-100">
-            <input
-              ref={bgInputRef}
-              type="file"
-              accept={ACCEPT_BG}
-              onChange={handleBgPick}
-              className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-            />
-            {bgPending && (
-              <p className="text-xs text-gray-500">
-                선택됨: <span className="font-mono">{bgPending.name}</span> · {(bgPending.size / 1024 / 1024).toFixed(2)}MB · {bgPending.type || '(타입 미상)'}
-              </p>
-            )}
-            <p className="text-[11px] text-gray-400">PNG / JPG / WEBP / GIF / MP4 / WEBM · 최대 50MB</p>
-
-            <button
-              disabled={!bgPending || bgUploading}
-              onClick={uploadBackground}
-              className="inline-flex items-center gap-2 bg-[#3b82f6] text-white px-6 py-2.5 text-sm font-bold tracking-wider hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed rounded"
-            >
-              <Upload className="w-4 h-4" />
-              {bgUploading ? '업로드 중...' : '배경 업로드'}
-            </button>
-          </div>
-
-          {/* Library */}
-          <div className="pt-6">
-            {backgrounds.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-12">아직 등록된 배경이 없습니다. 위에서 업로드해주세요.</p>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {backgrounds.map(bg => {
-                  const busy = bgBusyId === bg.id;
-                  return (
-                    <div
-                      key={bg.id}
-                      className={`border overflow-hidden transition-shadow ${bg.is_active ? 'border-green-400 ring-2 ring-green-200 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}
-                    >
-                      <div className="aspect-video bg-gray-100 relative overflow-hidden">
-                        {bg.file_type === 'video' ? (
-                          <video
-                            src={bg.file_url}
-                            className="w-full h-full object-cover"
-                            muted
-                            loop
-                            autoPlay
-                            playsInline
-                          />
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={bg.file_url} alt={bg.file_name} className="w-full h-full object-cover" />
-                        )}
-                        {bg.is_active && (
-                          <span className="absolute top-2 left-2 inline-flex items-center gap-1 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5">
-                            <Star className="w-3 h-3 fill-white" /> 활성
-                          </span>
-                        )}
-                        <span className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-semibold px-1.5 py-0.5 uppercase">
-                          {bg.file_type}
-                        </span>
-                      </div>
-
-                      <div className="p-3 space-y-2">
-                        <p className="text-xs text-gray-700 truncate font-medium" title={bg.file_name}>
-                          {bg.file_name || '(이름 없음)'}
-                        </p>
-                        <p className="text-[10px] text-gray-400">{new Date(bg.created_at).toLocaleString('ko-KR')}</p>
-
-                        {bg.file_type === 'video' && (
-                          <label className="flex items-start gap-1.5 cursor-pointer pt-1 hover:bg-gray-50 -mx-1 px-1 py-1">
-                            <input
-                              type="checkbox"
-                              checked={bg.scroll_driven}
-                              disabled={busy}
-                              onChange={() => toggleScrollDriven(bg)}
-                              className="mt-0.5 w-3.5 h-3.5 accent-[#00693A] cursor-pointer flex-shrink-0"
-                            />
-                            <span className="text-[10px] text-gray-600 leading-tight">
-                              <span className="font-semibold text-gray-700">스크롤 동기 재생</span>
-                              <span className="block text-gray-400">스크롤에 맞춰 영상 진행 (Apple 스타일)</span>
-                            </span>
-                          </label>
-                        )}
-
-                        <div className="flex gap-1.5 pt-1">
-                          {bg.is_active ? (
-                            <button
-                              disabled={busy}
-                              onClick={() => deactivateBackground(bg.id)}
-                              className="flex-1 text-xs font-semibold px-2 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
-                            >
-                              비활성화
-                            </button>
-                          ) : (
-                            <button
-                              disabled={busy}
-                              onClick={() => activateBackground(bg.id)}
-                              className="flex-1 text-xs font-semibold px-2 py-1.5 bg-[#3b82f6] text-white hover:bg-[#2563eb] transition-colors disabled:opacity-40 rounded"
-                            >
-                              활성화
-                            </button>
-                          )}
-                          <button
-                            disabled={busy}
-                            onClick={() => deleteBackground(bg)}
-                            className="px-2 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
-                            aria-label="삭제"
-                            title="삭제"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+        <BackgroundMediaCard
+          backgrounds={backgrounds as Background[]}
+          bgPending={bgPending}
+          bgUploading={bgUploading}
+          bgBusyId={bgBusyId}
+          accept={ACCEPT_BG}
+          onPickFile={handleBgPick}
+          onUpload={uploadBackground}
+          onActivate={activateBackground}
+          onDeactivate={deactivateBackground}
+          onToggleScrollDriven={toggleScrollDriven}
+          onDelete={deleteBackground}
+        />
       </div>
 
-      {/* ── Live preview pane (right) — hidden in embedded mode ─────
-          The parent hub shows the live preview in its central iframe
-          instead, fed by the bubbled-up postMessage tokens above. */}
+      {/* Live preview pane (right) — hidden in embedded mode. The hub
+          shows the live preview in its central iframe instead, fed by
+          the bubbled-up postMessage tokens above. */}
       {!isEmbedded && (
-      <section className="bg-white rounded border border-[#e5e7eb] overflow-hidden flex flex-col xl:sticky xl:top-4 xl:self-start xl:max-h-[calc(100vh-2rem)]">
-        <div className="p-3 border-b border-[#e5e7eb] flex items-center justify-between bg-[#fafbfc]">
-          <div className="flex items-center gap-2">
-            <Eye className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-bold text-gray-700">실시간 미리보기</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIframeKey(k => k + 1)}
-              className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-[#1f2937]"
-              title="미리보기 새로고침"
-            >
-              <RefreshCw className="w-3 h-3" /> 새로고침
-            </button>
-            <a
-              href="/kr"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-gray-500 hover:text-[#1f2937] underline"
-            >
-              새 탭
-            </a>
-          </div>
-        </div>
-        <div className="flex-1 min-h-[600px] bg-gray-100 relative">
-          <iframe
-            key={iframeKey}
-            ref={iframeRef}
-            src="/kr"
-            className="absolute inset-0 w-full h-full bg-white"
-            title="storefront preview"
-          />
-        </div>
-      </section>
+        <LogoPreviewPane
+          iframeKey={iframeKey}
+          iframeRef={iframeRef}
+          onReload={() => setIframeKey(k => k + 1)}
+        />
       )}
     </div>
   );
