@@ -355,18 +355,18 @@ function MenuRows({ parent, subItems, onEdit, onDelete, onAddChild }: {
         <td className="p-3 pr-4 text-right">
           <div className="flex gap-1 justify-end">
             {parent.page_type === 'board' && (
-              <Link href={`/admin/menus/${parent.id}/posts`} title="게시글 관리" className="text-gray-400 hover:text-blue-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
+              <Link href={`/admin/menus/${parent.id}/posts`} title="게시글 관리" className="text-gray-400 hover:text-blue-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
                 <ExternalLink className="w-4 h-4" />
               </Link>
             )}
-            <button onClick={onAddChild} title="서브메뉴 추가" className="text-gray-400 hover:text-blue-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
+            <button onClick={onAddChild} title="서브메뉴 추가" className="text-gray-400 hover:text-blue-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
               <Plus className="w-4 h-4" />
             </button>
-            <button onClick={() => onEdit(parent)} title="수정" className="text-gray-400 hover:text-amber-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
+            <button onClick={() => onEdit(parent)} title="수정" className="text-gray-400 hover:text-amber-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
               <Pencil className="w-4 h-4" />
             </button>
             {parent.slug !== 'support' && (
-              <button onClick={() => onDelete(parent.id, subItems.length > 0)} title="삭제" className="text-gray-400 hover:text-red-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
+              <button onClick={() => onDelete(parent.id, subItems.length > 0)} title="삭제" className="text-gray-400 hover:text-red-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
@@ -399,14 +399,14 @@ function MenuRows({ parent, subItems, onEdit, onDelete, onAddChild }: {
           <td className="p-3 pr-4 text-right">
             <div className="flex gap-1 justify-end">
               {child.page_type === 'board' && (
-                <Link href={`/admin/menus/${child.id}/posts`} title="게시글 관리" className="text-gray-400 hover:text-blue-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
+                <Link href={`/admin/menus/${child.id}/posts`} title="게시글 관리" className="text-gray-400 hover:text-blue-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
                   <ExternalLink className="w-4 h-4" />
                 </Link>
               )}
-              <button onClick={() => onEdit(child)} title="수정" className="text-gray-400 hover:text-amber-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
+              <button onClick={() => onEdit(child)} title="수정" className="text-gray-400 hover:text-amber-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
                 <Pencil className="w-4 h-4" />
               </button>
-              <button onClick={() => onDelete(child.id, false)} title="삭제" className="text-gray-400 hover:text-red-600 bg-white p-1.5 rounded-md shadow-sm border border-gray-100 transition-colors">
+              <button onClick={() => onDelete(child.id, false)} title="삭제" className="text-gray-400 hover:text-red-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>

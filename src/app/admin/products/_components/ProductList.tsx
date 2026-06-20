@@ -127,14 +127,14 @@ export default function ProductList({
             <td className="p-3 pr-4 text-right flex gap-1.5 justify-end">
               <button
                 onClick={() => onEdit(item)}
-                className="text-gray-400 hover:text-blue-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100"
+                className="text-gray-400 hover:text-blue-600 transition-colors p-1.5 rounded hover:bg-[#f3f4f6]"
                 aria-label={`${item.name} 수정`}
               >
                 <Pencil className="w-4 h-4 inline" />
               </button>
               <button
                 onClick={() => onDelete(item.id)}
-                className="text-gray-400 hover:text-red-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100"
+                className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded hover:bg-[#f3f4f6]"
                 aria-label={`${item.name} 삭제`}
               >
                 <Trash2 className="w-4 h-4 inline" />

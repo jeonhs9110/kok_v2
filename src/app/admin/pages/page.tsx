@@ -256,10 +256,10 @@ export default function PagesAdminPage() {
                       </button>
                     </td>
                     <td className="p-3 pr-4 text-right flex gap-1.5 justify-end">
-                      <button onClick={() => openEdit(page)} className="text-gray-400 hover:text-blue-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100">
+                      <button onClick={() => openEdit(page)} className="text-gray-400 hover:text-blue-600 transition-colors p-1.5 rounded hover:bg-[#f3f4f6]">
                         <Pencil className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(page.id)} className="text-gray-400 hover:text-red-600 transition-colors bg-white p-1.5 rounded-md shadow-sm border border-gray-100">
+                      <button onClick={() => handleDelete(page.id)} className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded hover:bg-[#f3f4f6]">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
