@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Upload, Trash2, Link as LinkIcon, ImageIcon, GalleryHorizontal, Eye } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 2 RLS lockdown on `promo_banners` requires admin JWT.
@@ -144,10 +144,10 @@ export default function PromoBannersAdminPage() {
         <StatCard accent="#f59e0b" label="비어있음" value={banners.length - filledCount} icon={ImageIcon} subLabel="이미지 없는 슬롯" />
       </StatStrip>
 
-      <div className="bg-white rounded border border-[#e5e7eb] p-6">
-        <h2 className="text-lg font-bold text-gray-800 mb-1">프로모 배너 관리</h2>
-        <p className="text-sm text-gray-500">홈페이지 히어로 아래에 표시되는 1:1 비율 클릭 배너 2개를 관리합니다.</p>
-      </div>
+      <PageHeader
+        title="프로모 배너 관리"
+        description="홈페이지 히어로 아래에 표시되는 1:1 비율 클릭 배너 2개를 관리합니다"
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {banners.map((banner, idx) => (

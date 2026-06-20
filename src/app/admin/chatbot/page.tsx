@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
+import { PageHeader } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 2 RLS lockdown on `chatbot_config` requires
 // admin JWT for writes, and admin reads of `chatbot_leads`.
@@ -111,7 +112,11 @@ export default function ChatbotAdminPage() {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="space-y-5 max-w-4xl">
+      <PageHeader
+        title="챗봇"
+        description="AI 채팅 위젯의 활성화 · 모델 · 노출 페이지를 관리합니다"
+      />
       {/* On/Off Toggle + Model Selection */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
         <h2 className="text-lg font-bold text-gray-800">챗봇 설정</h2>

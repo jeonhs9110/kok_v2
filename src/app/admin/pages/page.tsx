@@ -4,6 +4,7 @@ import { Plus, Trash2, Pencil, X, Eye, EyeOff, Menu as MenuIcon, LayoutTemplate,
 import { useState, useEffect, useCallback } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
+import { PageHeader } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 4 RLS lockdown on `pages` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -188,18 +189,21 @@ export default function PagesAdminPage() {
   const getTitle = (page: Page) => page.title?.kr || page.title?.en || Object.values(page.title || {})[0] || '(제목 없음)';
 
   return (
-    <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
-      <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-        <div>
-          <h2 className="text-lg font-bold text-gray-800">페이지 관리</h2>
-          <p className="text-sm text-gray-500 mt-1">메뉴에 표시할 페이지를 추가하고 관리하세요 (다국어 지원)</p>
-        </div>
-        <button onClick={() => setIsModalOpen(true)}
-          className="bg-brand-ink text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-black transition-colors flex items-center gap-2">
-          <Plus className="w-4 h-4" /> 새 페이지
-        </button>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        title="페이지 관리"
+        description="메뉴에 표시할 페이지를 추가하고 관리하세요 (다국어 지원)"
+        actions={
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-[#3b82f6] rounded hover:bg-[#2563eb] transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> 새 페이지
+          </button>
+        }
+      />
 
+    <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
       <div className="overflow-x-auto min-h-[300px]">
         {isLoading ? (
           <div className="p-8 text-center text-sm text-gray-400 font-bold tracking-widest">불러오는 중...</div>
@@ -433,6 +437,7 @@ export default function PagesAdminPage() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

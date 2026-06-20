@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
+import { PageHeader } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Reads go via public storage URLs but list() and
 // remove() require the storage RLS to authorize, which Phase 5 ties to
@@ -223,25 +224,23 @@ export default function AssetLibraryPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded border border-[#e5e7eb] p-6">
-        <div className="flex items-center justify-between gap-4 mb-2">
-          <div>
-            <h2 className="text-lg font-bold text-gray-800">에셋 라이브러리</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              사이트에 업로드된 모든 파일을 한 곳에서 검색, 미리보기, URL 복사, 삭제할 수 있습니다.
-            </p>
-          </div>
+    <div className="space-y-5">
+      <PageHeader
+        title="에셋 라이브러리"
+        description="사이트에 업로드된 모든 파일을 검색 · 미리보기 · URL 복사 · 삭제"
+        actions={
           <button
             onClick={reload}
             disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-[#374151] border border-[#d1d5db] rounded bg-white hover:bg-[#f9fafb] disabled:opacity-50 transition-colors"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
             새로고침
           </button>
-        </div>
+        }
+      />
 
+      <div className="bg-white rounded border border-[#e5e7eb] p-6">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 mt-4">
           <div className="relative flex-1 min-w-[240px]">

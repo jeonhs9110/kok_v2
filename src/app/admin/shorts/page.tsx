@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { Video, Trash2, Plus, Link as LinkIcon, Save, Link2, Package } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 
@@ -241,6 +241,11 @@ export default function ShortsAdminPage() {
         <StatCard accent="#f59e0b" label="상품 미연결" value={unlinkedCount} icon={Package} subLabel="구매 유도 비활성" />
         <StatCard accent="#8b5cf6" label="활성 상품" value={products.length} icon={Package} subLabel="연결 가능한 상품" />
       </StatStrip>
+
+      <PageHeader
+        title="BRAND SHORTS 관리"
+        description="홈 메인 가로 캐러셀로 노출되는 9:16 세로 영상을 관리합니다"
+      />
 
       {/* 섹션 제목 스타일 (migration 33) */}
       <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">

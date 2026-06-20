@@ -5,6 +5,7 @@ import { Save } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
+import { PageHeader } from '@/components/admin/CafeWidgets';
 import {
   DEFAULT_BEST_SELLER_DISPLAY,
   type BestSellerDisplay,
@@ -183,12 +184,10 @@ export default function BestSellerDisplayAdminPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-lg font-bold text-[#1f2937]">추천 상품 (BEST SELLER) — 표시 설정</h1>
-        <p className="text-[12px] text-[#6b7280] mt-1">
-          홈페이지 추천 상품 그리드의 카드 크기, 간격, 글씨 크기를 한 곳에서 조절합니다.
-        </p>
-      </div>
+      <PageHeader
+        title="추천 상품 (BEST SELLER) — 표시 설정"
+        description="홈페이지 추천 상품 그리드의 카드 크기, 간격, 글씨 크기를 한 곳에서 조절합니다"
+      />
 
       {/* Mini live preview — 4 placeholder cards laid out with current values */}
       <div className="rounded border border-[#e5e7eb] overflow-hidden">
