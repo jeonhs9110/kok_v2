@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Palette, RefreshCw, Save, RotateCcw, Eye } from 'lucide-react';
+import { Palette, RefreshCw, Save, RotateCcw } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import {
   DEFAULT_THEME_TOKENS,
@@ -16,6 +16,8 @@ import { useToast } from '@/components/admin/Toast';
 import { LoadingState } from '@/components/admin/CafeWidgets';
 import HeroSizeCompact from './_components/HeroSizeCompact';
 import { Section, ColorRow, FontRow } from './_components/ThemeFormPrimitives';
+import ShapeSection from './_components/ShapeSection';
+import ThemePreviewPane from './_components/ThemePreviewPane';
 
 // Session-aware client. site_settings writes require admin JWT (Phase 2 RLS).
 const supabase = getSupabaseBrowser();
@@ -204,197 +206,7 @@ export default function ThemePage() {
                   onChange={v => setTokens(t => ({ ...t, color_brand_notice_to: v }))} />
               </Section>
 
-              <Section title="모양">
-                <div>
-                  <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">버튼 모서리</label>
-                  <div className="grid grid-cols-4 gap-1.5 mt-1">
-                    {[
-                      { v: '0px', l: '직각' },
-                      { v: '6px', l: '약간' },
-                      { v: '12px', l: '둥글게' },
-                      { v: '9999px', l: '알약' },
-                    ].map(opt => (
-                      <button
-                        key={opt.v}
-                        type="button"
-                        onClick={() => setTokens(t => ({ ...t, radius_button: opt.v }))}
-                        className={`p-2 text-xs font-semibold border ${
-                          tokens.radius_button === opt.v
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                        }`}
-                        style={{ borderRadius: opt.v === '9999px' ? '9999px' : opt.v }}
-                      >
-                        {opt.l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">헤더 메뉴 글씨 크기</label>
-                  {/* Preset picker mirrors the button-radius UX; each option
-                      previews at its own font-size so the admin sees the
-                      relative difference at a glance. */}
-                  <div className="grid grid-cols-4 gap-1.5 mt-1">
-                    {/* Labels renamed 2026-06-08 after the default moved
-                        13.5px → 15px (tokens.ts). The picker now anchors
-                        '기본' on the new 15px default so the operator doesn't see
-                        '크게' selected by default on a fresh install. */}
-                    {[
-                      { v: '13.5px', l: '작게' },
-                      { v: '15px',   l: '기본' },
-                      { v: '17px',   l: '크게' },
-                      { v: '19px',   l: '더 크게' },
-                    ].map(opt => (
-                      <button
-                        key={opt.v}
-                        type="button"
-                        onClick={() => setTokens(t => ({ ...t, header_menu_font_size: opt.v }))}
-                        className={`p-2 font-semibold border rounded ${
-                          tokens.header_menu_font_size === opt.v
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-                        }`}
-                        style={{ fontSize: opt.v }}
-                      >
-                        {opt.l}
-                      </button>
-                    ))}
-                  </div>
-                  {/* Numeric input for any value the presets don't cover
-                      (e.g. 22 between 19 and the next preset). Range
-                      10–48 — the header bar's min-height calc in
-                      Header.tsx grows automatically above the floor
-                      so even 40px+ menus don't crop. */}
-                  <div className="mt-2 flex items-center gap-2">
-                    <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                      직접 입력
-                    </label>
-                    <input
-                      type="number"
-                      min={10}
-                      max={48}
-                      step={1}
-                      value={parseInt(tokens.header_menu_font_size, 10) || 15}
-                      onChange={e => {
-                        const raw = parseInt(e.target.value, 10);
-                        if (!Number.isFinite(raw)) return;
-                        const clamped = Math.max(10, Math.min(48, raw));
-                        setTokens(t => ({ ...t, header_menu_font_size: `${clamped}px` }));
-                      }}
-                      className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
-                    />
-                    <span className="text-[10px] text-gray-500">px (10–48)</span>
-                  </div>
-                  <p className="mt-1 text-[10px] text-gray-400">
-                    홈페이지 상단 메뉴 (상품·메뉴·Shop Worldwide) 글씨 크기. 모바일 메뉴도 함께 조절됩니다.
-                    글씨가 커지면 헤더 바도 자동으로 함께 커집니다.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">서브헤더 (드롭다운) 글씨 크기</label>
-                  <div className="grid grid-cols-4 gap-1.5 mt-1">
-                    {[
-                      { v: '11px',   l: '작게' },
-                      { v: '12.5px', l: '기본' },
-                      { v: '14px',   l: '크게' },
-                      { v: '17px',   l: '더 크게' },
-                    ].map(opt => (
-                      <button
-                        key={opt.v}
-                        type="button"
-                        onClick={() => setTokens(t => ({ ...t, header_submenu_font_size: opt.v }))}
-                        className={`p-2 font-semibold border rounded ${
-                          tokens.header_submenu_font_size === opt.v
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-                        }`}
-                        style={{ fontSize: opt.v }}
-                      >
-                        {opt.l}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                      직접 입력
-                    </label>
-                    <input
-                      type="number"
-                      min={9}
-                      max={24}
-                      step={0.5}
-                      value={parseFloat(tokens.header_submenu_font_size) || 12.5}
-                      onChange={e => {
-                        const raw = parseFloat(e.target.value);
-                        if (!Number.isFinite(raw)) return;
-                        const clamped = Math.max(9, Math.min(24, raw));
-                        setTokens(t => ({ ...t, header_submenu_font_size: `${clamped}px` }));
-                      }}
-                      className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
-                    />
-                    <span className="text-[10px] text-gray-500">px (9–24)</span>
-                  </div>
-                  <p className="mt-1 text-[10px] text-gray-400">
-                    Product 드롭다운 안의 카테고리 + 하위 항목 (카멜리아 / 앰플세럼 / 크림 등) 글씨 크기.
-                    상단 메뉴와 별개로 조절됩니다.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">서브 히어로 배너 — 서브타이틀 글씨 크기</label>
-                  <div className="grid grid-cols-5 gap-1.5 mt-1">
-                    {/* Preset row goes up to 32px now. Anything bigger
-                        goes through the numeric input below (range
-                        extended from 12-28 to 12-72 per the 2026-06-10
-                        boss-meeting follow-up — admin said 24 was
-                        capping their seasonal-banner copy too tightly). */}
-                    {[
-                      { v: '16px', l: '작게' },
-                      { v: '18px', l: '기본' },
-                      { v: '24px', l: '크게' },
-                      { v: '28px', l: '더 크게' },
-                      { v: '32px', l: '아주 크게' },
-                    ].map(opt => (
-                      <button
-                        key={opt.v}
-                        type="button"
-                        onClick={() => setTokens(t => ({ ...t, subhero_subtitle_size: opt.v }))}
-                        className={`p-2 font-semibold border rounded ${
-                          tokens.subhero_subtitle_size === opt.v
-                            ? 'bg-black text-white border-black'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-                        }`}
-                        style={{ fontSize: opt.v }}
-                      >
-                        {opt.l}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">
-                      직접 입력
-                    </label>
-                    <input
-                      type="number"
-                      min={12}
-                      max={72}
-                      step={1}
-                      value={parseInt(tokens.subhero_subtitle_size, 10) || 18}
-                      onChange={e => {
-                        const raw = parseInt(e.target.value, 10);
-                        if (!Number.isFinite(raw)) return;
-                        const clamped = Math.max(12, Math.min(72, raw));
-                        setTokens(t => ({ ...t, subhero_subtitle_size: `${clamped}px` }));
-                      }}
-                      className="w-20 px-2 py-1 text-xs border border-gray-200 rounded focus:outline-none focus:border-gray-400"
-                    />
-                    <span className="text-[10px] text-gray-500">px (12–72)</span>
-                  </div>
-                  <p className="mt-1 text-[10px] text-gray-400">메인 히어로 캐러셀 아래 서브 배너의 작은 부제목 글씨 크기. 개별 배너 옵션(/admin/sub-hero)에서 추가 조정 가능.</p>
-                </div>
-              </Section>
+              <ShapeSection tokens={tokens} setTokens={setTokens} />
 
               <Section title="메인 배너 (히어로) 크기">
                 <HeroSizeCompact tokens={tokens} setTokens={setTokens} />
@@ -446,17 +258,17 @@ export default function ThemePage() {
           )}
         </div>
 
-        <div className="border-t border-gray-100 p-4 flex flex-wrap items-center gap-2 bg-gray-50/50">
+        <div className="border-t border-[#f3f4f6] p-4 flex flex-wrap items-center gap-2 bg-[#fafbfc]">
           <button
             type="button"
             onClick={handleSave}
             disabled={!isDirty || isSaving}
             className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold tracking-wider rounded-lg transition ${
               savedFlash
-                ? 'bg-green-600 text-white'
+                ? 'bg-[#16a34a] text-white'
                 : isDirty
                 ? 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-[#f3f4f6] text-[#9ca3af] cursor-not-allowed'
             }`}
           >
             <Save className="w-4 h-4" />
@@ -466,7 +278,7 @@ export default function ThemePage() {
             type="button"
             onClick={handleRevert}
             disabled={!isDirty}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold tracking-wider border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold tracking-wider border border-[#d1d5db] text-[#6b7280] rounded-lg hover:bg-[#f9fafb] transition disabled:opacity-40 kokkok-keep-border"
             title="저장된 상태로 되돌리기"
           >
             <RefreshCw className="w-3.5 h-3.5" /> 되돌리기
@@ -474,7 +286,7 @@ export default function ThemePage() {
           <button
             type="button"
             onClick={handleReset}
-            className="inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold tracking-wider border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition"
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 text-xs font-bold tracking-wider border border-[#d1d5db] text-[#6b7280] rounded-lg hover:bg-[#f9fafb] transition kokkok-keep-border"
             title="기본값으로 리셋 (저장 안 함)"
           >
             <RotateCcw className="w-3.5 h-3.5" /> 기본값
@@ -485,46 +297,11 @@ export default function ThemePage() {
       {/* Preview pane — hidden in embedded mode; the parent hub's
           central iframe shows the live preview instead. */}
       {!isEmbedded && (
-      <section className="bg-white rounded border border-[#e5e7eb] overflow-hidden flex flex-col">
-        <div className="p-3 border-b border-[#e5e7eb] flex items-center justify-between bg-[#fafbfc]">
-          <div className="flex items-center gap-2">
-            <Eye className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-bold text-gray-700">실시간 미리보기</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="inline-flex bg-gray-100 rounded p-0.5 text-[11px] font-bold">
-              {(['kr', 'en'] as const).map(l => (
-                <button
-                  key={l}
-                  type="button"
-                  onClick={() => setPreviewLang(l)}
-                  className={`px-2.5 py-1 rounded transition ${
-                    previewLang === l ? 'bg-white shadow-sm text-black' : 'text-gray-500'
-                  }`}
-                >
-                  {l.toUpperCase()}
-                </button>
-              ))}
-            </div>
-            <a
-              href={`/${previewLang}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] text-gray-500 hover:text-[#1f2937] underline"
-            >
-              새 탭
-            </a>
-          </div>
-        </div>
-        <div className="flex-1 min-h-[600px] bg-gray-100 relative">
-          <iframe
-            ref={iframeRef}
-            src={`/${previewLang}`}
-            className="absolute inset-0 w-full h-full bg-white"
-            title="storefront preview"
-          />
-        </div>
-      </section>
+        <ThemePreviewPane
+          previewLang={previewLang}
+          onPreviewLangChange={setPreviewLang}
+          iframeRef={iframeRef}
+        />
       )}
     </div>
   );
