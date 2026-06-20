@@ -1,32 +1,39 @@
 'use client';
 
 import { useState } from 'react';
-import { Save, Plus, Trash2, GripVertical } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import SortableList from '@/components/admin/SortableList';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useToast } from '@/components/admin/Toast';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
 const supabase = getSupabaseBrowser();
-import { REGION_ORDER, type Region } from '@/lib/worldwide/defaults';
 import {
   EMPTY_RETAILER,
   uploadWorldwideAsset,
-  type RetailerRow,
+  type RetailerRow as RetailerRowData,
 } from '../_lib';
+import RetailerRow from './RetailerRow';
 
 interface Props {
-  initialRetailers: RetailerRow[];
+  initialRetailers: RetailerRowData[];
 }
 
+/**
+ * /admin/worldwide retailers tab — owns the list state + DB handlers and
+ * delegates each row's UI to RetailerRow. The split was pulled out at
+ * 2026-06-20 when the file hit 479 LOC; everything below ~200 LOC here is
+ * the row card, which now lives in RetailerRow.tsx (props in, callbacks
+ * out — same pattern as products/_components/ProductList).
+ */
 export default function RetailersEditor({ initialRetailers }: Props) {
   const confirm = useConfirm();
   const toast = useToast();
-  const [retailers, setRetailers] = useState<RetailerRow[]>(initialRetailers);
+  const [retailers, setRetailers] = useState<RetailerRowData[]>(initialRetailers);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [savedKey, setSavedKey] = useState<string | null>(null);
 
-  function updateRetailer(index: number, patch: Partial<RetailerRow>) {
+  function updateRetailer(index: number, patch: Partial<RetailerRowData>) {
     setRetailers(prev => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   }
 
@@ -70,7 +77,7 @@ export default function RetailersEditor({ initialRetailers }: Props) {
       toast.show(`저장 실패: ${res.error.message}`, 'error');
       return;
     }
-    if (res.data) updateRetailer(index, { id: (res.data as RetailerRow).id });
+    if (res.data) updateRetailer(index, { id: (res.data as RetailerRowData).id });
 
     // country_image_url + banner_color sync across rows of the same country_code
     if (code) {
@@ -104,10 +111,12 @@ export default function RetailersEditor({ initialRetailers }: Props) {
     file: File,
     field: 'store_logo_url' | 'country_image_url',
   ) {
-    const prefix = field === 'store_logo_url' ? 'vendor-logo' : 'country-image';
     setSavingKey(`upload-${index}-${field}`);
     try {
-      const url = await uploadWorldwideAsset(file, prefix);
+      const url = await uploadWorldwideAsset(
+        file,
+        field === 'store_logo_url' ? 'vendor-logo' : 'country-image',
+      );
       updateRetailer(index, { [field]: url });
       if (field === 'country_image_url') {
         const code = retailers[index].country_code.toLowerCase().trim();
@@ -130,7 +139,7 @@ export default function RetailersEditor({ initialRetailers }: Props) {
   function addVendorForCountry(sourceIndex: number) {
     const src = retailers[sourceIndex];
     const nextSort = (src.sort_order || 0) + 1;
-    const newRow: RetailerRow = {
+    const newRow: RetailerRowData = {
       ...EMPTY_RETAILER,
       country_code: src.country_code,
       country_native: src.country_native,
@@ -152,7 +161,11 @@ export default function RetailersEditor({ initialRetailers }: Props) {
 
   async function deleteRetailer(index: number) {
     const r = retailers[index];
-    const ok = await confirm({ message: `${r.country_en} 을(를) 삭제하시겠습니까?`, tone: 'danger', confirmText: '삭제' });
+    const ok = await confirm({
+      message: `${r.country_en} 을(를) 삭제하시겠습니까?`,
+      tone: 'danger',
+      confirmText: '삭제',
+    });
     if (!ok) return;
     if (r.id && supabase) {
       const { error } = await supabase.from('worldwide_retailers').delete().eq('id', r.id);
@@ -164,18 +177,16 @@ export default function RetailersEditor({ initialRetailers }: Props) {
     setRetailers(prev => prev.filter((_, i) => i !== index));
   }
 
-  // dnd id helper. Saved rows use the numeric DB id; unsaved rows fall
-  // back to country_code + array index, which is stable enough for the
-  // brief window between "click add" and "click save". Two brand-new
-  // rows with empty country_code collide, but they can't be saved without
-  // one anyway, so the collision never lands on a persisted row.
-  function retailerDndId(r: RetailerRow, index: number): string {
+  /** dnd id helper. Saved rows use the DB id; unsaved rows fall back to
+   *  country_code + array index, which is stable for the brief window
+   *  between "click add" and "click save". */
+  function retailerDndId(r: RetailerRowData, index: number): string {
     return r.id !== null ? `id-${r.id}` : `new-${r.country_code || 'empty'}-${index}`;
   }
 
-  async function handleReorder(next: RetailerRow[]) {
-    // Renumber by 10s — leaves room for manual sort_order edits in the
-    // detail form without immediately requiring another full renumber.
+  async function handleReorder(next: RetailerRowData[]) {
+    // Renumber by 10s so future manual sort_order edits don't immediately
+    // need another full renumber.
     const renumbered = next.map((r, i) => ({ ...r, sort_order: (i + 1) * 10 }));
     setRetailers(renumbered);
     if (!supabase) return;
@@ -194,7 +205,7 @@ export default function RetailersEditor({ initialRetailers }: Props) {
 
   return (
     <div className="space-y-3">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-1.5">
+      <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded p-4 text-sm text-[#1e40af] space-y-1.5">
         <p className="font-semibold">💡 한 국가에 여러 벤더를 등록할 수 있습니다</p>
         <p>
           같은 <code className="bg-white px-1 rounded">국가 코드</code>를 가진 여러 행을 만들면
@@ -208,269 +219,41 @@ export default function RetailersEditor({ initialRetailers }: Props) {
       </div>
       <button
         onClick={addRetailer}
-        className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] text-white rounded-lg text-sm font-semibold hover:bg-[#2563eb] transition"
+        className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] text-white rounded text-sm font-semibold hover:bg-[#2563eb] transition"
       >
         <Plus className="w-4 h-4" /> 새 국가 추가
       </button>
 
       <SortableList
         items={retailers.map((r, index) => ({ ...r, _dndId: retailerDndId(r, index) }))}
-        getId={(r) => r._dndId}
-        onReorder={(next) => handleReorder(next.map(({ _dndId, ...rest }) => { void _dndId; return rest; }))}
+        getId={r => r._dndId}
+        onReorder={next =>
+          handleReorder(
+            next.map(({ _dndId, ...rest }) => {
+              void _dndId;
+              return rest;
+            }),
+          )
+        }
         className="space-y-3"
       >
         {(r, { dragHandleProps }) => {
-          const index = retailers.findIndex(x => retailerDndId(x, retailers.indexOf(x)) === r._dndId);
+          const index = retailers.findIndex(
+            x => retailerDndId(x, retailers.indexOf(x)) === r._dndId,
+          );
           return (
-        <div
-          className="bg-white rounded border border-[#e5e7eb] p-4 space-y-3"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                {...dragHandleProps}
-                className={`${dragHandleProps.className ?? ''} text-gray-300 hover:text-gray-600 p-1`}
-                aria-label="드래그하여 순서 변경"
-              >
-                <GripVertical className="w-5 h-5" />
-              </button>
-              <div
-                className="w-8 h-8 rounded-full border border-gray-200"
-                style={{ backgroundColor: r.banner_color }}
-              />
-              <div>
-                <p className="text-sm font-bold">{r.country_en || '(새 국가)'}</p>
-                <p className="text-xs text-gray-500">{r.country_native}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => deleteRetailer(index)}
-                className="p-1.5 rounded hover:bg-red-50 text-red-500"
-                title="삭제"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase">국가 코드 (ISO)</label>
-              <input
-                type="text"
-                value={r.country_code}
-                onChange={e =>
-                  updateRetailer(index, { country_code: e.target.value.toLowerCase() })
-                }
-                placeholder="kr"
-                maxLength={2}
-                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 font-mono"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase">원어명</label>
-              <input
-                type="text"
-                value={r.country_native}
-                onChange={e => updateRetailer(index, { country_native: e.target.value })}
-                placeholder="한국"
-                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase">영문명</label>
-              <input
-                type="text"
-                value={r.country_en}
-                onChange={e => updateRetailer(index, { country_en: e.target.value })}
-                placeholder="South Korea"
-                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase">지역</label>
-              <select
-                value={r.region}
-                onChange={e => updateRetailer(index, { region: e.target.value as Region })}
-                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 bg-white"
-              >
-                {REGION_ORDER.map(reg => (
-                  <option key={reg} value={reg}>
-                    {reg}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase">스토어 이름</label>
-              <input
-                type="text"
-                value={r.store_name}
-                onChange={e => updateRetailer(index, { store_name: e.target.value })}
-                placeholder="Kokkok Garden Korea"
-                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase">
-                스토어 URL (# = 준비중)
-              </label>
-              <input
-                type="text"
-                value={r.store_url}
-                onChange={e => updateRetailer(index, { store_url: e.target.value })}
-                placeholder="https://..."
-                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 font-mono"
-              />
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase">
-                스토어 로고 (벤더 로고)
-              </label>
-              <div className="flex gap-2 mt-1 items-center">
-                {r.store_logo_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={r.store_logo_url}
-                    alt=""
-                    className="w-12 h-12 object-contain bg-white rounded border border-gray-200"
-                  />
-                )}
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                  onChange={e => {
-                    const f = e.target.files?.[0];
-                    if (f) handleFileUpload(index, f, 'store_logo_url');
-                  }}
-                  className="flex-1 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-                />
-                {r.store_logo_url && (
-                  <button
-                    type="button"
-                    onClick={() => updateRetailer(index, { store_logo_url: '' })}
-                    className="text-xs text-red-500 hover:underline px-2"
-                  >
-                    제거
-                  </button>
-                )}
-              </div>
-              {savingKey === `upload-${index}-store_logo_url` && (
-                <p className="text-[10px] text-blue-500 mt-1">업로드 중...</p>
-              )}
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="text-[10px] font-bold text-gray-500 uppercase">
-                국가 이미지 (같은 국가코드의 모든 벤더에 공통 적용)
-              </label>
-              <div className="flex gap-2 mt-1 items-center">
-                {r.country_image_url && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={r.country_image_url}
-                    alt=""
-                    className="w-20 h-12 object-cover rounded border border-gray-200"
-                  />
-                )}
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={e => {
-                    const f = e.target.files?.[0];
-                    if (f) handleFileUpload(index, f, 'country_image_url');
-                  }}
-                  className="flex-1 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-                />
-                {r.country_image_url && (
-                  <button
-                    type="button"
-                    onClick={() => updateRetailer(index, { country_image_url: '' })}
-                    className="text-xs text-red-500 hover:underline px-2"
-                  >
-                    제거
-                  </button>
-                )}
-              </div>
-              {savingKey === `upload-${index}-country_image_url` && (
-                <p className="text-[10px] text-blue-500 mt-1">업로드 중...</p>
-              )}
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase">배너 색상</label>
-              <div className="flex gap-2 mt-1">
-                <input
-                  type="color"
-                  value={r.banner_color || '#111111'}
-                  onChange={e => updateRetailer(index, { banner_color: e.target.value })}
-                  className="w-10 h-10 border border-gray-200 rounded cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={r.banner_color}
-                  onChange={e => updateRetailer(index, { banner_color: e.target.value })}
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 font-mono"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase">정렬 순서</label>
-              <input
-                type="number"
-                value={r.sort_order}
-                onChange={e =>
-                  updateRetailer(index, { sort_order: Number(e.target.value) || 0 })
-                }
-                className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-              />
-            </div>
-            <div className="flex items-end">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={r.is_active}
-                  onChange={e => updateRetailer(index, { is_active: e.target.checked })}
-                  className="w-4 h-4 rounded"
-                />
-                공개
-              </label>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 pt-2 border-t border-gray-100 flex-wrap">
-            <button
-              onClick={() => saveRetailer(index)}
-              disabled={savingKey === `retailer-${index}`}
-              className={`px-5 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition ${
-                savedKey === `retailer-${index}`
-                  ? 'bg-green-500 text-white'
-                  : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
-              } disabled:opacity-50`}
-            >
-              <Save className="w-4 h-4" />
-              {savingKey === `retailer-${index}`
-                ? '저장 중...'
-                : savedKey === `retailer-${index}`
-                ? '✓ 저장 완료'
-                : r.id
-                ? '저장'
-                : '추가'}
-            </button>
-            <button
-              type="button"
-              onClick={() => addVendorForCountry(index)}
-              disabled={!r.country_code}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 flex items-center gap-2 disabled:opacity-40"
-              title="같은 국가에 다른 벤더 추가 (예: 중국 → Taobao, Shopee, Tmall)"
-            >
-              <Plus className="w-4 h-4" /> 이 국가에 벤더 추가
-            </button>
-            <span className="text-xs text-gray-400">{r.id ? `ID: ${r.id}` : '저장되지 않음'}</span>
-          </div>
-        </div>
+            <RetailerRow
+              r={r}
+              index={index}
+              dragHandleProps={dragHandleProps}
+              savingKey={savingKey}
+              savedKey={savedKey}
+              onUpdate={patch => updateRetailer(index, patch)}
+              onSave={() => saveRetailer(index)}
+              onDelete={() => deleteRetailer(index)}
+              onAddVendor={() => addVendorForCountry(index)}
+              onUpload={(file, field) => handleFileUpload(index, file, field)}
+            />
           );
         }}
       </SortableList>
