@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { useToast } from '@/components/admin/Toast';
 import {
   DEFAULT_BEST_SELLER_DISPLAY,
   type BestSellerDisplay,
@@ -59,6 +60,7 @@ const PRODUCT_FONT_DEFAULTS: ProductFontTokens = {
  * surfaces so the operator sees one "저장" button.
  */
 export default function BestSellerDisplayAdminPage() {
+  const toast = useToast();
   const [data, setData] = useState<BestSellerDisplay>(DEFAULT_BEST_SELLER_DISPLAY);
   const [saved, setSaved] = useState<BestSellerDisplay>(DEFAULT_BEST_SELLER_DISPLAY);
   const [fonts, setFonts] = useState<ProductFontTokens>(PRODUCT_FONT_DEFAULTS);
@@ -132,9 +134,10 @@ export default function BestSellerDisplayAdminPage() {
       setFullTokens(mergedTokens);
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
+      toast.show('표시 설정이 저장되었습니다', 'success');
     } catch (err) {
       console.error('[admin/best-seller-display] save failed:', err);
-      alert('저장에 실패했습니다.');
+      toast.show('저장에 실패했습니다', 'error');
     } finally {
       setSaving(false);
     }

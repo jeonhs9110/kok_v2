@@ -6,6 +6,7 @@ import {
   Search, Trash2, Copy, Check, ImageIcon, FileText, Film, Folder, ExternalLink, RefreshCw,
 } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Reads go via public storage URLs but list() and
 // remove() require the storage RLS to authorize, which Phase 5 ties to
@@ -86,6 +87,7 @@ async function listBucketRecursive(bucket: BucketId, prefix = '', depth = 0): Pr
 }
 
 export default function AssetLibraryPage() {
+  const toast = useToast();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,7 +216,7 @@ export default function AssetLibraryPage() {
       if (selected?.bucket === a.bucket && selected?.key === a.key) setSelected(null);
     } catch (err) {
       console.error('[admin/assets] delete failed:', err);
-      alert(err instanceof Error ? err.message : '삭제 실패');
+      toast.show(err instanceof Error ? err.message : '삭제 실패', 'error');
     } finally {
       setDeletingKey(null);
     }

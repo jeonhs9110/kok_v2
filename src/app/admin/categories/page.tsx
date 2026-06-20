@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, ChevronRight, X, Tag, Layers, FolderTree } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 3 RLS lockdown on `categories` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -22,6 +23,7 @@ interface FormData {
 const emptyForm: FormData = { slug: '', parent_id: '', sort_order: 0, is_active: true, name: {} };
 
 export default function CategoriesAdminPage() {
+  const toast = useToast();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -95,7 +97,7 @@ export default function CategoriesAdminPage() {
       fetchAll();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '저장 실패';
-      alert(msg);
+      toast.show(msg, 'error');
     }
   };
 

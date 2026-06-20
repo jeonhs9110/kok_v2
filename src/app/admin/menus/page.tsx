@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, ChevronRight, X, FileText, MessageSquare, Externa
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { useToast } from '@/components/admin/Toast';
 import RichEditor from '@/components/admin/RichEditor';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
@@ -31,6 +32,7 @@ const emptyForm: FormData = {
 };
 
 export default function MenusAdminPage() {
+  const toast = useToast();
   const [menus, setMenus] = useState<Menu[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -115,7 +117,7 @@ export default function MenusAdminPage() {
       setModalOpen(false);
       fetchAll();
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : '저장 실패');
+      toast.show(err instanceof Error ? err.message : '저장 실패', 'error');
     }
   };
 
@@ -124,7 +126,7 @@ export default function MenusAdminPage() {
   const handleDelete = async (id: string, hasChildren: boolean) => {
     const target = menus.find(m => m.id === id);
     if (target && PROTECTED_SLUGS.includes(target.slug)) {
-      alert('이 메뉴는 시스템 메뉴이므로 삭제할 수 없습니다.');
+      toast.show('이 메뉴는 시스템 메뉴이므로 삭제할 수 없습니다.', 'warning');
       return;
     }
     const msg = hasChildren ? '이 메뉴와 모든 서브메뉴가 삭제됩니다. 계속하시겠습니까?' : '이 메뉴를 삭제하시겠습니까?';

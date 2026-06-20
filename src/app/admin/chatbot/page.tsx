@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 2 RLS lockdown on `chatbot_config` requires
 // admin JWT for writes, and admin reads of `chatbot_leads`.
@@ -31,6 +32,7 @@ const MODELS = [
 ];
 
 export default function ChatbotAdminPage() {
+  const toast = useToast();
   const [config, setConfig] = useState<ChatbotConfig>({
     is_enabled: true,
     show_global: true,
@@ -99,7 +101,7 @@ export default function ChatbotAdminPage() {
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       console.error('Save error:', err);
-      alert('저장 실패. DB 테이블이 생성되었는지 확인해주세요.');
+      toast.show('저장 실패. DB 테이블이 생성되었는지 확인해주세요.', 'error');
     }
     setSaving(false);
   }

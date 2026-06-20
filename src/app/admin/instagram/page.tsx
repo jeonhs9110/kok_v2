@@ -6,6 +6,7 @@ import { Upload, Trash2, ImageIcon, Save, RefreshCw, ExternalLink } from 'lucide
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
+import { useToast } from '@/components/admin/Toast';
 
 const EMPTY_BG: SectionBgValue = { type: null, color: null, mediaUrl: null, mediaType: null };
 
@@ -41,6 +42,7 @@ function IgIcon({ className }: { className?: string }) {
 const emptyPost = (i: number): IgPost => ({ id: null, image_url: '', link_url: '', post_url: '', sort_order: i });
 
 export default function InstagramAdminPage() {
+  const toast = useToast();
   const [handle, setHandle] = useState('');
   const [description, setDescription] = useState('');
   const [rssFeedUrl, setRssFeedUrl] = useState('');
@@ -110,8 +112,8 @@ export default function InstagramAdminPage() {
     try {
       await supabase.from('instagram_config').upsert({ id: 1, handle, description, rss_feed_url: rssFeedUrl, updated_at: new Date().toISOString() });
       revalidateHomepageData('instagram');
-      alert('인스타그램 설정이 저장되었습니다.');
-    } catch { alert('저장에 실패했습니다.'); }
+      toast.show('인스타그램 설정이 저장되었습니다', 'success');
+    } catch { toast.show('저장에 실패했습니다.', 'error'); }
     finally { setIsSavingConfig(false); }
   };
 
@@ -133,7 +135,7 @@ export default function InstagramAdminPage() {
       setTimeout(() => setHeaderSaved(false), 2000);
     } catch (err) {
       console.error('[admin/instagram] header save failed:', err);
-      alert('제목 스타일 저장에 실패했습니다.');
+      toast.show('제목 스타일 저장에 실패했습니다.', 'error');
     } finally {
       setSavingHeader(false);
     }
@@ -159,7 +161,7 @@ export default function InstagramAdminPage() {
       setTimeout(() => setBgSaved(false), 2000);
     } catch (err) {
       console.error('[admin/instagram] bg save failed:', err);
-      alert('배경 저장에 실패했습니다.');
+      toast.show('배경 저장에 실패했습니다.', 'error');
     } finally {
       setSavingBg(false);
     }
@@ -175,7 +177,7 @@ export default function InstagramAdminPage() {
       if (error) throw error;
       const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
       setPosts(prev => prev.map((p, i) => i === slot ? { ...p, image_url: urlData.publicUrl } : p));
-    } catch { alert('이미지 업로드에 실패했습니다.'); }
+    } catch { toast.show('이미지 업로드에 실패했습니다.', 'error'); }
     finally { setUploadingSlot(null); }
   };
 
@@ -186,7 +188,7 @@ export default function InstagramAdminPage() {
     if (!post.image_url && !post.post_url) return;
     // Validate post URL if provided
     if (post.post_url && !extractPostId(post.post_url)) {
-      alert('유효한 Instagram 포스트 URL이 아닙니다.\n예: https://www.instagram.com/p/ABC123/');
+      toast.show('유효한 Instagram 포스트 URL이 아닙니다. 예: https://www.instagram.com/p/ABC123/', 'warning');
       return;
     }
     setSavingSlot(slot);
@@ -204,7 +206,8 @@ export default function InstagramAdminPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : '알 수 없는 오류';
       console.error('Instagram save error:', err);
-      alert(`저장 실패:\n${msg}\n\n"post_url" 컬럼 오류라면 Supabase SQL Editor에서 다음을 실행하세요:\nALTER TABLE public.instagram_posts ADD COLUMN IF NOT EXISTS post_url text DEFAULT '';`);
+      toast.show(`저장 실패: ${msg}`, 'error');
+      console.warn('[admin/instagram] If this is a missing-column error, run: ALTER TABLE public.instagram_posts ADD COLUMN IF NOT EXISTS post_url text DEFAULT \'\';');
     }
     finally { setSavingSlot(null); }
   };

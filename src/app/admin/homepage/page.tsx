@@ -23,6 +23,7 @@ import {
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { isBannerKey } from '@/lib/api/sectionOrder';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { useToast } from '@/components/admin/Toast';
 import SectionCard, { type SectionDef } from './_components/SectionCard';
 import TopToolbar from './_components/TopToolbar';
 import EditorDrawer from './_components/EditorDrawer';
@@ -76,6 +77,7 @@ const EMPTY_COUNTS: SectionCounts = {
 };
 
 export default function HomepageBuilderPage() {
+  const toast = useToast();
   const [viewport, setViewport] = useState<ViewportMode>('pc');
   const [selectedKey, setSelectedKey] = useState<string>('carousel');
   const [iframeKey, setIframeKey] = useState(0);
@@ -504,7 +506,7 @@ export default function HomepageBuilderPage() {
       handleEdit(newKey);
     } catch (err) {
       console.error('[admin/homepage] add banner failed:', err);
-      alert('띠배너 추가에 실패했습니다.');
+      toast.show('띠배너 추가에 실패했습니다.', 'error');
     }
   }
 
