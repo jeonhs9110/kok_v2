@@ -8,6 +8,7 @@ import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { SUPPORTED_LANGS, LANG_LABELS, type Lang } from '@/lib/i18n/types';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { LoadingState } from '@/components/admin/CafeWidgets';
 
 const supabase = getSupabaseBrowser();
 
@@ -165,7 +166,7 @@ export default function BannerEditPage() {
   const dirty = JSON.stringify(data) !== JSON.stringify(saved);
 
   if (loading) {
-    return <div className="p-6 text-sm text-gray-500">불러오는 중...</div>;
+    return <LoadingState />;
   }
 
   return (

@@ -5,6 +5,7 @@ import { Save } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
+import { LoadingState } from '@/components/admin/CafeWidgets';
 
 const supabase = getSupabaseBrowser();
 
@@ -90,7 +91,7 @@ export default function TopStripeAdminPage() {
     }
   }
 
-  if (loading) return <div className="text-sm text-gray-400 p-8">불러오는 중...</div>;
+  if (loading) return <LoadingState />;
 
   return (
     <div className="max-w-2xl space-y-6">

@@ -7,7 +7,7 @@ import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 import { useToast } from '@/components/admin/Toast';
-import { PageHeader } from '@/components/admin/CafeWidgets';
+import { PageHeader, LoadingState } from '@/components/admin/CafeWidgets';
 
 const EMPTY_BG: SectionBgValue = { type: null, color: null, mediaUrl: null, mediaType: null };
 
@@ -253,9 +253,7 @@ export default function InstagramAdminPage() {
     }
   };
 
-  if (isLoading) return (
-    <div className="p-10 text-center text-gray-400 font-bold tracking-widest animate-pulse">불러오는 중...</div>
-  );
+  if (isLoading) return <LoadingState />;
 
   return (
     <div className="space-y-5">

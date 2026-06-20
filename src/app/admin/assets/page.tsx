@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import {
-  Search, Trash2, Copy, Check, ImageIcon, FileText, Film, Folder, ExternalLink, RefreshCw,
+  Search, Trash2, Copy, Check, ImageIcon, FileText, Film, ExternalLink, RefreshCw,
 } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
-import { PageHeader } from '@/components/admin/CafeWidgets';
+import { PageHeader, EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Reads go via public storage URLs but list() and
 // remove() require the storage RLS to authorize, which Phase 5 ties to
@@ -285,15 +285,9 @@ export default function AssetLibraryPage() {
         {/* Grid */}
         <div className="bg-white rounded border border-[#e5e7eb] p-4 min-h-[400px]">
           {isLoading && filtered.length === 0 ? (
-            <div className="py-20 text-center text-sm text-gray-400 font-bold tracking-widest">불러오는 중...</div>
+            <LoadingState />
           ) : filtered.length === 0 ? (
-            <div className="py-20 text-center text-gray-400">
-              <Folder className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="text-sm font-semibold">검색 결과 없음</p>
-              <p className="text-xs mt-1">
-                {assets.length === 0 ? '아직 업로드된 파일이 없습니다.' : '검색어 또는 버킷 필터를 변경해보세요.'}
-              </p>
-            </div>
+            <EmptyState label={assets.length === 0 ? '아직 업로드된 파일이 없습니다' : '검색 결과 없음 · 검색어 또는 버킷 필터를 변경해보세요'} />
           ) : (
             <>
               <p className="text-xs text-gray-400 mb-3 ml-1">총 {filtered.length}개</p>

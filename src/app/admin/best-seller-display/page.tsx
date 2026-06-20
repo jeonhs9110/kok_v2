@@ -5,7 +5,7 @@ import { Save } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
-import { PageHeader } from '@/components/admin/CafeWidgets';
+import { PageHeader, LoadingState } from '@/components/admin/CafeWidgets';
 import {
   DEFAULT_BEST_SELLER_DISPLAY,
   type BestSellerDisplay,
@@ -180,7 +180,7 @@ export default function BestSellerDisplayAdminPage() {
     JSON.stringify(fonts) !== JSON.stringify(savedFonts);
   const previewWidthLg = `calc(${25 * data.card_scale}% - ${data.gap_x * (1 - 1 / 4)}px)`;
 
-  if (loading) return <div className="p-6 text-sm text-gray-500">불러오는 중...</div>;
+  if (loading) return <LoadingState />;
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">

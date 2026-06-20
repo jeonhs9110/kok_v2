@@ -14,6 +14,7 @@ import { FONT_OPTIONS } from '@/lib/typography/options';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useToast } from '@/components/admin/Toast';
+import { LoadingState } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. site_settings writes require admin JWT (Phase 2 RLS).
 const supabase = getSupabaseBrowser();
@@ -184,7 +185,7 @@ export default function ThemePage() {
 
         <div className="overflow-y-auto p-5 space-y-5 flex-1">
           {isLoading ? (
-            <div className="text-center text-sm text-gray-400 py-10">불러오는 중...</div>
+            <LoadingState />
           ) : (
             <>
               <Section title="브랜드 색상">

@@ -10,6 +10,7 @@ import ContinuousPositionPicker from '@/components/admin/ContinuousPositionPicke
 import { fontFamilyForKey, anchorTextStyle, resolveAnchor, type PositionAnchor, type PositionKey } from '@/lib/typography/options';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useToast } from '@/components/admin/Toast';
+import { LoadingState } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 2 RLS lockdown on `sub_hero_banners` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -181,9 +182,7 @@ export default function SubHeroAdminPage() {
     }
   };
 
-  if (isLoading) return (
-    <div className="p-10 text-center text-gray-400 font-bold tracking-widest animate-pulse">불러오는 중...</div>
-  );
+  if (isLoading) return <LoadingState />;
 
   return (
     <div className="space-y-6 max-w-2xl">
