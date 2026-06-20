@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import { Upload, Trash2, ImageIcon, Save, RefreshCw, ExternalLink } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Save } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 import { useToast } from '@/components/admin/Toast';
 import { PageHeader, LoadingState } from '@/components/admin/CafeWidgets';
+import InstagramConfigCard from './_components/InstagramConfigCard';
+import InstagramHeaderStyleCard from './_components/InstagramHeaderStyleCard';
+import InstagramRssCard from './_components/InstagramRssCard';
+import InstagramPostsGrid, { type IgPost } from './_components/InstagramPostsGrid';
 
 const EMPTY_BG: SectionBgValue = { type: null, color: null, mediaUrl: null, mediaType: null };
 
@@ -15,30 +18,6 @@ const EMPTY_BG: SectionBgValue = { type: null, color: null, mediaUrl: null, medi
 const supabase = getSupabaseBrowser();
 const BUCKET = 'product-images';
 const SLOTS = 6;
-
-interface IgPost {
-  id: string | null;
-  image_url: string;
-  link_url: string;
-  post_url: string;
-  sort_order: number;
-}
-
-// Extract post ID from Instagram URL (handles p/, reel/, tv/)
-function extractPostId(url: string): string | null {
-  const match = url.match(/instagram\.com\/(?:p|reel|tv)\/([^/?#]+)/i);
-  return match ? match[1] : null;
-}
-
-function IgIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-      <circle cx="12" cy="12" r="4" />
-      <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
 
 const emptyPost = (i: number): IgPost => ({ id: null, image_url: '', link_url: '', post_url: '', sort_order: i });
 
@@ -54,9 +33,15 @@ export default function InstagramAdminPage() {
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [uploadingSlot, setUploadingSlot] = useState<number | null>(null);
   const [savingSlot, setSavingSlot] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const activeSlotRef = useRef<number | null>(null);
   // Section background — instagram_config columns added in migration 26.
+
+  // Validation helper — same regex as the embed iframe in PostsGrid.
+  function extractPostId(url: string): string | null {
+    const match = url.match(/instagram\.com\/(?:p|reel|tv)\/([^/?#]+)/i);
+    return match ? match[1] : null;
+  }
+  // Above declaration is only used by the validation guard below; the
+  // PostsGrid component has its own copy for rendering the embed src.
   const [bg, setBg] = useState<SectionBgValue>(EMPTY_BG);
   const [savingBg, setSavingBg] = useState(false);
   const [bgSaved, setBgSaved] = useState(false);
@@ -168,7 +153,7 @@ export default function InstagramAdminPage() {
     }
   }
 
-  const uploadImage = async (file: File, slot: number) => {
+  const uploadImage = async (slot: number, file: File) => {
     if (!supabase) return;
     setUploadingSlot(slot);
     try {
@@ -262,160 +247,36 @@ export default function InstagramAdminPage() {
         description="@핸들 · 자동 RSS 새로고침 · 홈 메인에 노출되는 포스트를 관리합니다"
       />
 
-      {/* Config card */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <IgIcon className="w-5 h-5 text-[#E1306C]" />
-          <h2 className="text-[14px] font-bold text-[#1f2937]">인스타그램 설정</h2>
-        </div>
+      <InstagramConfigCard
+        handle={handle}
+        description={description}
+        isSaving={isSavingConfig}
+        onHandleChange={setHandle}
+        onDescriptionChange={setDescription}
+        onSave={saveConfig}
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">계정 핸들 (@없이 입력)</label>
-            <div className="flex items-center border border-gray-200 rounded bg-gray-50 focus-within:border-black transition overflow-hidden">
-              <span className="px-3 text-gray-400 font-semibold text-sm select-none">@</span>
-              <input
-                type="text"
-                value={handle}
-                onChange={e => setHandle(e.target.value.replace('@', ''))}
-                placeholder="rdrd_official"
-                className="flex-1 py-2 pr-3 text-sm bg-transparent outline-none"
-              />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">설명 문구</label>
-            <input
-              type="text"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="인스타그램에서 최신 소식을 확인하세요"
-              className="w-full border border-gray-200 rounded px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:border-black outline-none transition"
-            />
-          </div>
-        </div>
+      <InstagramHeaderStyleCard
+        handle={handle}
+        fontSize={headerFontSize}
+        textColor={headerTextColor}
+        bgEnabled={headerBgEnabled}
+        bgColor={headerBgColor}
+        isSaving={savingHeader}
+        showSavedFlash={headerSaved}
+        onFontSizeChange={setHeaderFontSize}
+        onTextColorChange={setHeaderTextColor}
+        onBgEnabledChange={setHeaderBgEnabled}
+        onBgColorChange={setHeaderBgColor}
+        onSave={saveHeader}
+      />
 
-        <div className="flex items-center justify-between">
-          <a
-            href={`https://www.instagram.com/${handle}/`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-blue-500 hover:underline"
-          >
-            instagram.com/{handle} →
-          </a>
-          <button
-            onClick={saveConfig}
-            disabled={isSavingConfig}
-            className="bg-[#3b82f6] text-white px-6 py-2 rounded text-sm font-bold tracking-widest hover:bg-[#2563eb] transition disabled:opacity-40 flex items-center gap-2"
-          >
-            {isSavingConfig ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />저장 중...</> : <><Save className="w-4 h-4" />설정 저장</>}
-          </button>
-        </div>
-      </div>
-
-      {/* 섹션 제목 스타일 (migration 34) */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-5 space-y-4">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 제목 (@핸들) 스타일</h2>
-          <p className="text-xs text-gray-400">기본은 18px · 짙은 회색 · 배경 없음.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">글자 크기 (px)</label>
-            <input
-              type="number"
-              min={10}
-              max={48}
-              step={1}
-              value={headerFontSize}
-              onChange={e => setHeaderFontSize(e.target.value)}
-              className="w-full mt-1 px-3 py-2 text-sm border border-gray-200 rounded focus:outline-none focus:border-gray-400"
-            />
-            <p className="text-[10px] text-gray-400 mt-1">10–48 사이. 기본 18.</p>
-          </div>
-          <div>
-            <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">글자 색상</label>
-            <div className="flex items-center gap-2 mt-1">
-              <input
-                type="color"
-                value={headerTextColor}
-                onChange={e => setHeaderTextColor(e.target.value)}
-                className="w-10 h-10 rounded border border-gray-200 cursor-pointer p-0"
-              />
-              <input
-                type="text"
-                value={headerTextColor}
-                onChange={e => setHeaderTextColor(e.target.value)}
-                className="flex-1 px-3 py-2 text-sm font-mono border border-gray-200 rounded focus:outline-none focus:border-gray-400"
-              />
-            </div>
-          </div>
-          <div className="md:col-span-2">
-            <label className="flex items-center gap-2 text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider cursor-pointer">
-              <input
-                type="checkbox"
-                checked={headerBgEnabled}
-                onChange={e => setHeaderBgEnabled(e.target.checked)}
-                className="w-3.5 h-3.5"
-              />
-              제목 뒤 배경 색상 사용
-            </label>
-            <div className={`flex items-center gap-2 mt-1 ${!headerBgEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
-              <input
-                type="color"
-                value={headerBgColor}
-                onChange={e => setHeaderBgColor(e.target.value)}
-                className="w-10 h-10 rounded border border-gray-200 cursor-pointer p-0"
-              />
-              <input
-                type="text"
-                value={headerBgColor}
-                onChange={e => setHeaderBgColor(e.target.value)}
-                className="flex-1 px-3 py-2 text-sm font-mono border border-gray-200 rounded focus:outline-none focus:border-gray-400"
-              />
-            </div>
-            <p className="text-[10px] text-gray-400 mt-1">체크 해제 시 섹션 배경 위에 그대로 노출됩니다.</p>
-          </div>
-        </div>
-
-        <div className="pt-3 border-t border-gray-100">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">미리보기</p>
-          <div className="flex justify-center py-6 bg-neutral-50 rounded">
-            <div
-              className="flex items-center gap-2 font-bold tracking-wide"
-              style={{
-                color: headerTextColor,
-                fontSize: `${Math.max(10, Math.min(48, parseInt(headerFontSize, 10) || 18))}px`,
-                backgroundColor: headerBgEnabled ? headerBgColor : undefined,
-                padding: headerBgEnabled ? '0.5rem 1rem' : undefined,
-                borderRadius: headerBgEnabled ? '0.375rem' : undefined,
-              }}
-            >
-              <IgIcon className="w-6 h-6" />
-              <span>@{handle || 'your_handle'}</span>
-            </div>
-          </div>
-        </div>
-
-        <button
-          onClick={saveHeader}
-          disabled={savingHeader}
-          className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-            headerSaved ? 'bg-green-600 text-white' : 'bg-black/80 text-white hover:bg-black'
-          } disabled:opacity-50`}
-        >
-          <Save className="w-3.5 h-3.5" />
-          {savingHeader ? '저장 중...' : headerSaved ? '✓ 저장 완료' : '제목 스타일 저장'}
-        </button>
-      </div>
-
-      {/* 섹션 배경 설정 (migration 26) */}
+      {/* 섹션 배경 (migration 26) — uses the shared SectionBackgroundPanel
+          so leaving inline here keeps the bg/saveBg state local. */}
       <div className="bg-white rounded border border-[#e5e7eb] p-5 space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 배경</h2>
-          <p className="text-xs text-gray-400">기본값은 페이지 배경(투명)입니다.</p>
+          <p className="text-xs text-[#9ca3af]">기본값은 페이지 배경(투명)입니다.</p>
         </div>
         <SectionBackgroundPanel
           value={bg}
@@ -426,8 +287,8 @@ export default function InstagramAdminPage() {
         <button
           onClick={saveBg}
           disabled={savingBg}
-          className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-            bgSaved ? 'bg-green-600 text-white' : 'bg-black/80 text-white hover:bg-black'
+          className={`px-5 py-2 rounded text-xs font-semibold transition-all flex items-center gap-2 ${
+            bgSaved ? 'bg-[#16a34a] text-white' : 'bg-[#1f2937] text-white hover:bg-[#111827]'
           } disabled:opacity-50`}
         >
           <Save className="w-3.5 h-3.5" />
@@ -435,178 +296,26 @@ export default function InstagramAdminPage() {
         </button>
       </div>
 
-      {/* RSS Auto-Refresh card */}
-      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl shadow-sm border border-purple-200 p-6">
-        <div className="flex items-center gap-2 mb-2">
-          <RefreshCw className="w-5 h-5 text-purple-600" />
-          <h2 className="text-[14px] font-bold text-[#1f2937]">RSS 자동 새로고침</h2>
-          {rssFeedUrl && <span className="text-[10px] font-bold bg-green-500 text-white px-2 py-0.5 rounded-full">설정됨</span>}
-        </div>
-        <p className="text-sm text-gray-600 mb-4">
-          RSS.app에서 생성한 Instagram RSS 피드 URL을 입력하면 <strong>새로고침 버튼 한 번으로</strong> 최신 포스트 6개를 자동으로 가져옵니다.
-        </p>
+      <InstagramRssCard
+        handle={handle}
+        rssFeedUrl={rssFeedUrl}
+        isRefreshing={isRefreshing}
+        refreshMessage={refreshMessage}
+        onRssFeedUrlChange={setRssFeedUrl}
+        onRefresh={handleRefresh}
+      />
 
-        <div className="bg-white/80 border border-purple-200 rounded-lg p-3 mb-4 text-xs text-gray-700 space-y-1">
-          <p className="font-bold text-purple-800">RSS.app 설정 방법 (5분):</p>
-          <ol className="list-decimal ml-4 space-y-0.5">
-            <li><a href="https://rss.app/new-rss-feed" target="_blank" rel="noopener noreferrer" className="text-purple-600 underline font-semibold inline-flex items-center gap-0.5">rss.app/new-rss-feed <ExternalLink className="w-2.5 h-2.5" /></a>에서 무료 가입</li>
-            <li>&quot;Instagram&quot; 선택 → Instagram 프로필 URL 입력: <code className="bg-purple-100 px-1 rounded">https://www.instagram.com/{handle}/</code></li>
-            <li>Generate Feed → RSS URL 복사 (예: <code className="bg-purple-100 px-1 rounded">https://rss.app/feeds/ABC123.xml</code>)</li>
-            <li>아래에 붙여넣고 <strong>설정 저장</strong> 후 <strong>새로고침</strong> 버튼 클릭</li>
-          </ol>
-          <p className="pt-1 text-[11px] text-gray-500">💡 무료 플랜: 6시간마다 자동 업데이트, 피드 2개까지. 관리자가 수동으로 새로고침 버튼을 누를 때마다 최신화됩니다.</p>
-        </div>
-
-        <div className="flex gap-2 mb-3">
-          <input
-            type="url"
-            value={rssFeedUrl}
-            onChange={e => setRssFeedUrl(e.target.value)}
-            placeholder="https://rss.app/feeds/xxxxxxxx.xml"
-            className="flex-1 border border-purple-200 rounded px-3 py-2.5 text-sm bg-white focus:border-purple-500 outline-none transition font-mono"
-          />
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing || !rssFeedUrl.trim()}
-            className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-5 py-2.5 rounded font-bold text-sm hover:opacity-90 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 whitespace-nowrap"
-          >
-            {isRefreshing ? (
-              <><RefreshCw className="w-4 h-4 animate-spin" />가져오는 중...</>
-            ) : (
-              <><RefreshCw className="w-4 h-4" />새로고침</>
-            )}
-          </button>
-        </div>
-
-        {refreshMessage && (
-          <div className={`text-xs px-3 py-2 rounded-lg font-medium ${
-            refreshMessage.type === 'success'
-              ? 'bg-green-50 border border-green-200 text-green-800'
-              : 'bg-red-50 border border-red-200 text-red-800'
-          }`}>
-            {refreshMessage.text}
-          </div>
-        )}
-      </div>
-
-      {/* Posts grid */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-5">
-        <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">인스타그램 포스트 (최대 6개)</h2>
-        <p className="text-sm text-gray-500 mb-3">홈페이지에 표시될 포스트를 설정하세요. <strong>Instagram 포스트 URL을 붙여넣으면</strong> 실시간 공식 임베드가 표시됩니다 (이미지, 캡션, 좋아요 포함).</p>
-
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 text-xs text-blue-800 space-y-1">
-          <p className="font-bold">사용 방법:</p>
-          <ol className="list-decimal ml-4 space-y-0.5">
-            <li>Instagram에서 표시하고 싶은 포스트로 이동 (예: <code className="bg-blue-100 px-1 rounded">instagram.com/{handle}</code>)</li>
-            <li>포스트 URL 복사 (예: <code className="bg-blue-100 px-1 rounded">https://www.instagram.com/p/ABC123/</code>)</li>
-            <li>아래 슬롯에 붙여넣고 저장 → 홈페이지에 공식 임베드 표시</li>
-          </ol>
-          <p className="pt-1 text-[11px]">💡 지원: 일반 포스트 (p/), 릴스 (reel/), IGTV (tv/). URL만 바꾸면 홈페이지도 자동 업데이트됩니다.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {posts.map((post, slot) => {
-            const postId = extractPostId(post.post_url);
-            const hasEmbed = !!postId;
-            return (
-              <div key={slot} className={`border rounded-xl overflow-hidden ${hasEmbed ? 'border-pink-300 bg-pink-50/30' : 'border-gray-200'}`}>
-                {/* Preview */}
-                <div className="relative aspect-square bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden">
-                  {hasEmbed ? (
-                    <iframe
-                      src={`https://www.instagram.com/p/${postId}/embed/`}
-                      scrolling="no"
-                      className="w-full h-full"
-                      style={{ border: 'none', overflow: 'hidden' }}
-                      loading="lazy"
-                    />
-                  ) : post.image_url ? (
-                    <Image src={post.image_url} alt="" fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-gray-300">
-                      {uploadingSlot === slot
-                        ? <div className="w-7 h-7 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                        : <><ImageIcon className="w-8 h-8" /><span className="text-xs font-semibold">포스트 {slot + 1}</span></>}
-                    </div>
-                  )}
-                  <span className="absolute top-2 left-2 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded pointer-events-none">
-                    {slot + 1}
-                  </span>
-                  {hasEmbed && (
-                    <span className="absolute top-2 right-2 bg-gradient-to-r from-[#E1306C] to-[#F56040] text-white text-[10px] font-bold px-2 py-0.5 rounded pointer-events-none">
-                      LIVE
-                    </span>
-                  )}
-                  {(post.post_url || post.image_url) && (
-                    <button
-                      type="button"
-                      onClick={() => deletePost(slot)}
-                      className="absolute bottom-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-md"
-                      title="삭제"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Inputs */}
-                <div className="p-3 space-y-2">
-                  <div>
-                    <label className="text-[10px] font-bold text-pink-600 uppercase tracking-wider flex items-center gap-1 mb-1">
-                      <IgIcon className="w-3 h-3" />
-                      Instagram 포스트 URL
-                    </label>
-                    <input
-                      type="url"
-                      value={post.post_url}
-                      onChange={e => setPosts(prev => prev.map((p, i) => i === slot ? { ...p, post_url: e.target.value } : p))}
-                      placeholder="https://www.instagram.com/p/..."
-                      className="w-full border border-gray-200 rounded px-2 py-1.5 text-xs bg-gray-50 focus:bg-white focus:border-pink-400 outline-none transition font-mono"
-                    />
-                  </div>
-
-                  {!hasEmbed && (
-                    <>
-                      <div className="text-center text-[10px] text-gray-400 font-semibold py-1">또는</div>
-                      <button
-                        type="button"
-                        onClick={() => { activeSlotRef.current = slot; fileInputRef.current?.click(); }}
-                        className="w-full border border-dashed border-gray-300 rounded py-1.5 text-xs text-gray-500 hover:border-gray-500 hover:text-gray-700 transition flex items-center justify-center gap-1"
-                      >
-                        <Upload className="w-3 h-3" />
-                        {post.image_url ? '이미지 변경' : '이미지 직접 업로드'}
-                      </button>
-                    </>
-                  )}
-
-                  <button
-                    onClick={() => savePost(slot)}
-                    disabled={savingSlot === slot || (!post.image_url && !post.post_url)}
-                    className="w-full bg-[#3b82f6] text-white py-1.5 rounded text-xs font-bold tracking-widest hover:bg-[#2563eb] transition disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1 mt-2"
-                  >
-                    {savingSlot === slot
-                      ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />저장 중</>
-                      : <><Save className="w-3 h-3" />저장</>}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp,image/gif"
-        className="hidden"
-        onChange={async e => {
-          const file = e.target.files?.[0];
-          const slot = activeSlotRef.current;
-          if (!file || slot === null) return;
-          await uploadImage(file, slot);
-          e.target.value = '';
-        }}
+      <InstagramPostsGrid
+        handle={handle}
+        posts={posts}
+        uploadingSlot={uploadingSlot}
+        savingSlot={savingSlot}
+        onUpdatePost={(slot, patch) =>
+          setPosts(prev => prev.map((p, i) => (i === slot ? { ...p, ...patch } : p)))
+        }
+        onSavePost={savePost}
+        onDeletePost={deletePost}
+        onImageFilePicked={uploadImage}
       />
     </div>
   );
