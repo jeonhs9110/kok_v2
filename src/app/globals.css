@@ -487,3 +487,35 @@ textarea:disabled {
 .detail-body.ProseMirror-focused {
   outline: none;
 }
+
+/* ──────────────────────────────────────────────────────────
+   Cafe24 input baseline — applies to every text/select/textarea
+   under the admin shell (.kokkok-admin-shell on admin/layout's
+   outer wrapper). Unifies the focus state to Cafe24's signature
+   blue (#3b82f6) without touching 86+ markup sites that each
+   roll their own border-gray-200 / focus:ring-black/5 combo.
+
+   Specificity: .kokkok-admin-shell input:focus = (0,2,1) which
+   wins over Tailwind's single-class utility (.focus\:ring-2:focus
+   = (0,1,1)), so the rule lands without !important.
+
+   Color-pickers (type=color) and checkbox/radio are intentionally
+   excluded — they have their own native chrome we don't want to
+   override. Opt-out: add .kokkok-keep-focus to a specific input
+   that needs to keep its hand-rolled focus ring.
+   ────────────────────────────────────────────────────────── */
+.kokkok-admin-shell input[type="text"]:focus:not(.kokkok-keep-focus),
+.kokkok-admin-shell input[type="email"]:focus:not(.kokkok-keep-focus),
+.kokkok-admin-shell input[type="number"]:focus:not(.kokkok-keep-focus),
+.kokkok-admin-shell input[type="url"]:focus:not(.kokkok-keep-focus),
+.kokkok-admin-shell input[type="search"]:focus:not(.kokkok-keep-focus),
+.kokkok-admin-shell input[type="tel"]:focus:not(.kokkok-keep-focus),
+.kokkok-admin-shell input[type="password"]:focus:not(.kokkok-keep-focus),
+.kokkok-admin-shell input:not([type]):focus:not(.kokkok-keep-focus),
+.kokkok-admin-shell textarea:focus:not(.kokkok-keep-focus),
+.kokkok-admin-shell select:focus:not(.kokkok-keep-focus) {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px #3b82f6;
+}
+
