@@ -3,7 +3,7 @@
 import { Search, Trash2, Shield, ShieldOff, Users as UsersIcon, ShieldCheck } from 'lucide-react';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader, EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 
 // Session-aware client. Phase 4 RLS lockdown on `users` is admin-only for
@@ -118,12 +118,9 @@ export default function UsersAdminPage() {
 
       <div className="overflow-x-auto min-h-[300px]">
         {isLoading ? (
-          <div className="p-8 text-center text-sm text-gray-400 font-bold tracking-widest">불러오는 중...</div>
+          <LoadingState />
         ) : filtered.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <p className="text-sm font-semibold">{search ? '검색 결과가 없습니다' : '등록된 사용자가 없습니다'}</p>
-            <p className="text-xs mt-1">{!search && '회원가입한 사용자가 여기에 표시됩니다'}</p>
-          </div>
+          <EmptyState label={search ? '검색 결과가 없습니다' : '등록된 사용자가 없습니다'} />
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>

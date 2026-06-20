@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Phase 3 RLS lockdown on `posts` requires admin
 // JWT for cross-author updates/deletes — see migration 19.
@@ -97,11 +98,9 @@ export default function PostsAdminPage() {
 
       <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         {isLoading ? (
-          <div className="p-12 text-center text-gray-400 text-sm font-bold tracking-widest">불러오는 중...</div>
+          <LoadingState />
         ) : posts.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <p className="font-semibold">게시글이 없습니다</p>
-          </div>
+          <EmptyState label="게시글이 없습니다" />
         ) : (
           <table className="w-full text-left">
             <thead>

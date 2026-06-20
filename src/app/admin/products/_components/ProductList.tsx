@@ -2,6 +2,7 @@
 
 import { Pencil, Trash2, ImageIcon } from 'lucide-react';
 import type { Product } from '@/lib/api/products';
+import { EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 
 /**
  * Read-only table of products. Pure props in, callbacks out — owns no state.
@@ -45,19 +46,8 @@ export default function ProductList({
     );
   }
 
-  if (isLoading) {
-    return <div className="p-8 text-center text-sm text-gray-400 font-bold tracking-widest">불러오는 중...</div>;
-  }
-
-  if (products.length === 0) {
-    return (
-      <div className="p-12 text-center text-gray-400">
-        <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-        <p className="text-sm font-semibold">등록된 상품이 없습니다</p>
-        <p className="text-xs mt-1">상단의 상품 추가 버튼을 눌러 첫 상품을 등록하세요</p>
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingState />;
+  if (products.length === 0) return <EmptyState label="등록된 상품이 없습니다 · 상품 추가 버튼을 눌러 첫 상품을 등록하세요" />;
 
   return (
     <table className="w-full text-left border-collapse">

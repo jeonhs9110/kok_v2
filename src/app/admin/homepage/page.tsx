@@ -24,6 +24,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { isBannerKey } from '@/lib/api/sectionOrder';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
+import { LoadingState } from '@/components/admin/CafeWidgets';
 import SectionCard, { type SectionDef } from './_components/SectionCard';
 import TopToolbar from './_components/TopToolbar';
 import EditorDrawer from './_components/EditorDrawer';
@@ -587,7 +588,7 @@ export default function HomepageBuilderPage() {
 
             <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
               {isLoading ? (
-                <div className="text-center text-[13px] text-gray-400 py-12">불러오는 중...</div>
+                <LoadingState />
               ) : (
                 grouped.map(group => (
                   <div key={group.title}>

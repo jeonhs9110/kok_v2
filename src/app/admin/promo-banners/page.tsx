@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Upload, Trash2, Link as LinkIcon, ImageIcon, GalleryHorizontal, Eye } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader, LoadingState } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 
@@ -131,9 +131,7 @@ export default function PromoBannersAdminPage() {
     }
   };
 
-  if (isLoading) return (
-    <div className="p-10 text-center text-gray-400 font-bold tracking-widest animate-pulse">불러오는 중...</div>
-  );
+  if (isLoading) return <LoadingState />;
 
   const filledCount = banners.filter(b => b.image_url).length;
   const activeCount = banners.filter(b => b.is_active && b.image_url).length;

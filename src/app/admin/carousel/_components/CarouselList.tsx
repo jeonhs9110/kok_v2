@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import type { CarouselSlide } from '@/lib/api/carousel';
 import SortableList from '@/components/admin/SortableList';
+import { EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 
 interface Props {
   slides: CarouselSlide[];
@@ -32,23 +33,8 @@ export default function CarouselList({
   onToggleActive,
   onReorder,
 }: Props) {
-  if (isLoading) {
-    return (
-      <div className="p-8 text-center text-sm text-gray-400 font-bold tracking-widest">
-        불러오는 중...
-      </div>
-    );
-  }
-
-  if (slides.length === 0) {
-    return (
-      <div className="p-12 text-center text-gray-400">
-        <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-        <p className="text-sm font-semibold">등록된 슬라이드가 없습니다</p>
-        <p className="text-xs mt-1">슬라이드 추가 버튼을 눌러 캐러셀을 구성하세요</p>
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingState />;
+  if (slides.length === 0) return <EmptyState label="등록된 슬라이드가 없습니다 · 슬라이드 추가 버튼을 눌러 캐러셀을 구성하세요" />;
 
   return (
     <div className="p-4">
