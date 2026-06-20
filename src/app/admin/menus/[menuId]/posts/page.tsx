@@ -156,7 +156,7 @@ export default function PostsAdminPage() {
                 <textarea rows={10} value={form.content} onChange={e => setForm(f => ({ ...f, content: e.target.value }))} placeholder="게시글 내용을 입력하세요..." className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5 resize-none" />
               </div>
             </div>
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+            <div className="p-4 border-t border-[#e5e7eb] bg-[#fafbfc] flex justify-end gap-2">
               <button onClick={resetForm} className="px-4 py-2.5 text-sm text-gray-600">취소</button>
               <button onClick={handleSave} className="px-6 py-2.5 bg-[#3b82f6] text-white text-sm font-semibold rounded-lg hover:bg-[#2563eb] transition-colors">
                 {editingId ? '수정' : '추가'}
