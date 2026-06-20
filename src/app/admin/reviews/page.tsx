@@ -1,29 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Plus, Trash2, Save, ArrowUp, ArrowDown, Loader2, Star, Eye, EyeOff, Image as ImageIcon } from 'lucide-react';
+import { Plus, Star, Eye, EyeOff, Image as ImageIcon } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import ReviewCardEditor, { type ReviewRow } from './_components/ReviewCardEditor';
 
 // Session-aware client. Phase 2 RLS lockdown requires admin's JWT for
 // review_cards writes — see migration 18.
 const supabase = getSupabaseBrowser();
-import RichEditor from '@/components/admin/RichEditor';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const BUCKET = 'product-images';
-
-interface ReviewRow {
-  id: string | null;
-  image_url: string;
-  title: string;
-  content_html: string;
-  link_url: string;
-  sort_order: number;
-  is_active: boolean;
-}
 
 const EMPTY: ReviewRow = {
   id: null, image_url: '', title: '', content_html: '', link_url: '',
@@ -305,126 +295,27 @@ export default function ReviewsAdminPage() {
       )}
 
       {rows.map((r, i) => (
-        <div
+        <ReviewCardEditor
           key={r.id ?? `new-${i}`}
-          ref={el => { cardRefs.current[i] = el; }}
-          className={`bg-white rounded border p-5 space-y-4 transition-shadow ${
-            focusedIdx === i ? 'border-[#3b82f6] shadow-md' : 'border-[#e5e7eb]'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-bold">{r.title || '(제목 없음)'}</p>
-            <div className="flex gap-1">
-              <button onClick={() => move(i, -1)} disabled={i === 0} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30" title="위로"><ArrowUp className="w-4 h-4" /></button>
-              <button onClick={() => move(i, 1)} disabled={i === rows.length - 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30" title="아래로"><ArrowDown className="w-4 h-4" /></button>
-              <button onClick={() => remove(i)} className="p-1.5 rounded hover:bg-red-50 text-red-500" title="삭제"><Trash2 className="w-4 h-4" /></button>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase">썸네일 이미지</label>
-            <div className="flex gap-3 mt-1 items-start">
-              {r.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={r.image_url} alt="" className="w-24 h-24 object-cover rounded border border-gray-200" />
-              ) : (
-                <div className="w-24 h-24 bg-gray-100 rounded border border-gray-200 flex items-center justify-center text-[10px] text-gray-400">NO IMG</div>
-              )}
-              <div className="flex-1 space-y-2">
-                <input
-                  ref={el => { fileRefs.current[i] = el; }}
-                  type="file"
-                  accept="image/*"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(i, f); }}
-                  className="text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-                />
-                {uploadingIdx === i && <p className="text-[11px] text-blue-500 flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> 업로드 중...</p>}
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase">제목</label>
-            <input
-              type="text"
-              value={r.title}
-              onChange={e => update(i, { title: e.target.value })}
-              placeholder="리뷰 제목 (옵션, 썸네일 위에 표시)"
-              className="w-full mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-            />
-          </div>
-
-          <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase">외부 링크 (선택)</label>
-            <div className="flex gap-2 mt-1">
-              <input
-                type="text"
-                value={r.link_url}
-                onChange={e => update(i, { link_url: e.target.value })}
-                placeholder="https://... (지정하면 클릭 시 새 창에서 링크로 이동. 비워두면 아래 내용이 팝업으로 표시됩니다)"
-                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400 font-mono"
-              />
-              <button
-                type="button"
-                onClick={() => autoFillFromNaver(i)}
-                disabled={naverIdx === i || !r.link_url}
-                title="네이버 블로그/포스트 URL이면 제목·이미지·설명을 자동으로 채워요"
-                className="px-3 py-2 text-xs font-bold text-white bg-[#03c75a] hover:bg-[#02b14d] disabled:opacity-40 rounded-lg whitespace-nowrap flex items-center gap-1.5"
-              >
-                {naverIdx === i ? <><Loader2 className="w-3 h-3 animate-spin" />가져오는 중...</> : '네이버 자동 채우기'}
-              </button>
-            </div>
-            <p className="text-[10px] text-gray-400 mt-1">
-              네이버 블로그 / 포스트 / 네이버 단축 URL(naver.me)을 인식합니다. 이미 채워진 칸은 덮어쓰지 않아요.
-            </p>
-          </div>
-
-          <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase">리뷰 내용 (HTML, 팝업에 표시)</label>
-            <div className="mt-1">
-              <RichEditor
-                content={r.content_html}
-                onChange={html => update(i, { content_html: html })}
-                uploadPath="reviews-body"
-                minHeight={200}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div>
-              <label className="text-[10px] font-bold text-gray-500 uppercase">정렬</label>
-              <input
-                type="number"
-                value={r.sort_order}
-                onChange={e => update(i, { sort_order: Number(e.target.value) || 0 })}
-                className="w-24 mt-1 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-400"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm mt-5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={r.is_active}
-                onChange={e => update(i, { is_active: e.target.checked })}
-                className="w-4 h-4 rounded"
-              />
-              공개
-            </label>
-          </div>
-
-          <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
-            <button
-              onClick={() => save(i)}
-              disabled={saving === (r.id ?? `new-${i}`)}
-              className={`px-5 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition ${
-                savedId && savedId === r.id ? 'bg-green-500 text-white' : 'bg-[#3b82f6] text-white hover:bg-[#2563eb]'
-              } disabled:opacity-50`}
-            >
-              <Save className="w-4 h-4" />
-              {saving === (r.id ?? `new-${i}`) ? '저장 중...' : savedId === r.id ? '✓ 저장 완료' : (r.id ? '저장' : '추가')}
-            </button>
-          </div>
-        </div>
+          row={r}
+          index={i}
+          isFirst={i === 0}
+          isLast={i === rows.length - 1}
+          isFocused={focusedIdx === i}
+          isSaving={saving === (r.id ?? `new-${i}`)}
+          showSavedFlash={savedId !== null && savedId === r.id}
+          isUploading={uploadingIdx === i}
+          isNaverFetching={naverIdx === i}
+          cardRef={el => { cardRefs.current[i] = el; }}
+          fileRef={el => { fileRefs.current[i] = el; }}
+          onUpdate={patch => update(i, patch)}
+          onFile={file => handleFile(i, file)}
+          onMoveUp={() => move(i, -1)}
+          onMoveDown={() => move(i, 1)}
+          onRemove={() => remove(i)}
+          onAutoFillNaver={() => autoFillFromNaver(i)}
+          onSave={() => save(i)}
+        />
       ))}
     </div>
   );
