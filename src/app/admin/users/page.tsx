@@ -152,7 +152,7 @@ export default function UsersAdminPage() {
                       {user.is_verified ? '인증됨' : '미인증'}
                     </span>
                   </td>
-                  <td className="p-3 text-sm text-gray-500">
+                  <td className="p-3 text-[12px] text-gray-500">
                     {new Date(user.created_at).toLocaleDateString('ko-KR')}
                   </td>
                   <td className="p-3 pr-4 text-right flex gap-1.5 justify-end">

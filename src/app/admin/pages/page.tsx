@@ -229,7 +229,7 @@ export default function PagesAdminPage() {
                 const filledLangs = SUPPORTED_LANGS.filter(l => page.title?.[l] || page.content?.[l]);
                 return (
                   <tr key={page.id} className="hover:bg-[#fafbfc] transition-colors">
-                    <td className="p-3 pl-4 font-bold text-gray-900 text-sm">{getTitle(page)}</td>
+                    <td className="p-3 pl-4 font-bold text-gray-900 text-[12px]">{getTitle(page)}</td>
                     <td className="p-3 text-gray-500 text-xs font-mono">/pages/{page.slug}</td>
                     <td className="p-3">
                       <div className="flex gap-1">
