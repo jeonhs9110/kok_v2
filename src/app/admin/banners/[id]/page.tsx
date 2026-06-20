@@ -6,6 +6,7 @@ import { Save, Trash2 } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { SUPPORTED_LANGS, LANG_LABELS, type Lang } from '@/lib/i18n/types';
+import { useToast } from '@/components/admin/Toast';
 
 const supabase = getSupabaseBrowser();
 
@@ -40,6 +41,7 @@ const DEFAULT: BannerRow = {
 export default function BannerEditPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const toast = useToast();
   const id = params?.id;
 
   const [data, setData] = useState<BannerRow>(DEFAULT);
@@ -101,9 +103,10 @@ export default function BannerEditPage() {
       setSaved(data);
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
+      toast.show('띠배너가 저장되었습니다', 'success');
     } catch (err) {
       console.error('[admin/banners] save failed:', err);
-      alert('저장에 실패했습니다.');
+      toast.show('저장에 실패했습니다.', 'error');
     } finally {
       setSaving(false);
     }
@@ -152,7 +155,7 @@ export default function BannerEditPage() {
       }
     } catch (err) {
       console.error('[admin/banners] delete failed:', err);
-      alert('삭제에 실패했습니다.');
+      toast.show('삭제에 실패했습니다.', 'error');
     }
   }
 

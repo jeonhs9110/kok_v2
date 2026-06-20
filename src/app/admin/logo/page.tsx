@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Upload, Trash2, Check, Star, Eye, RefreshCw, Save } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { useToast } from '@/components/admin/Toast';
 import { getSiteSetting, setSiteSetting } from '@/lib/api/site-settings';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
 import {
@@ -40,6 +41,7 @@ const LOGO_HEIGHT_PRESETS: { v: string; l: string }[] = [
 ];
 
 export default function LogoAdminPage() {
+  const toast = useToast();
   // ── Logo state ───────────────────────────────────────────────
   const [logoUrl, setLogoUrl] = useState('');
   const [logoPreview, setLogoPreview] = useState('');
@@ -151,7 +153,7 @@ export default function LogoAdminPage() {
       setSavedTokens(tokens);
     } catch (err) {
       console.error('[admin/logo] tokens save failed:', err);
-      alert(err instanceof Error ? err.message : '저장 실패');
+      toast.show(err instanceof Error ? err.message : '저장 실패', 'error');
     } finally {
       setTokensSaving(false);
     }
@@ -187,7 +189,7 @@ export default function LogoAdminPage() {
       setIframeKey(k => k + 1);
     } catch (err) {
       console.error(err);
-      alert('로고 업로드에 실패했습니다. 다시 시도해주세요.');
+      toast.show('로고 업로드에 실패했습니다.', 'error');
     } finally {
       setLogoSaving(false);
     }
@@ -214,7 +216,7 @@ export default function LogoAdminPage() {
     const f = e.target.files?.[0];
     if (!f) return;
     if (f.size > MAX_BG_SIZE) {
-      alert(`파일 크기가 ${MAX_BG_SIZE / 1024 / 1024}MB를 초과합니다.`);
+      toast.show(`파일 크기가 ${MAX_BG_SIZE / 1024 / 1024}MB를 초과합니다.`, 'warning');
       e.target.value = '';
       return;
     }
@@ -247,7 +249,7 @@ export default function LogoAdminPage() {
       await loadBackgrounds();
     } catch (err) {
       console.error(err);
-      alert('배경 업로드에 실패했습니다.');
+      toast.show('배경 업로드에 실패했습니다.', 'error');
     } finally {
       setBgUploading(false);
     }

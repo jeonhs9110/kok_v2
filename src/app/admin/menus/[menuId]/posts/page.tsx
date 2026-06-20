@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, X, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 3 RLS lockdown on `posts` requires admin
 // JWT for cross-author updates/deletes — see migration 19.
@@ -13,6 +14,7 @@ import type { Post, Menu } from '@/lib/api/menus';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
 export default function PostsAdminPage() {
+  const toast = useToast();
   const { menuId } = useParams<{ menuId: string }>();
   const [menu, setMenu] = useState<Menu | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -63,7 +65,7 @@ export default function PostsAdminPage() {
       await revalidateHeaderData();
       resetForm();
       fetchAll();
-    } catch { alert('저장 실패'); }
+    } catch { toast.show('저장 실패', 'error'); }
   };
 
   const handleDelete = async (id: string) => {

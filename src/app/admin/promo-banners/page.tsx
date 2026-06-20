@@ -6,6 +6,7 @@ import { Upload, Trash2, Link as LinkIcon, ImageIcon, GalleryHorizontal, Eye } f
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 2 RLS lockdown on `promo_banners` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -27,6 +28,7 @@ const EMPTY_BANNER: Omit<PromoBanner, 'id'> = {
 };
 
 export default function PromoBannersAdminPage() {
+  const toast = useToast();
   const [banners, setBanners] = useState<PromoBanner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export default function PromoBannersAdminPage() {
       setBanners(prev => prev.map(b => b.id === bannerId ? { ...b, image_url: urlData.publicUrl } : b));
     } catch (e) {
       console.error('Upload failed:', e);
-      alert('이미지 업로드에 실패했습니다.');
+      toast.show('이미지 업로드에 실패했습니다.', 'error');
     } finally {
       setUploadingSlot(null);
     }
@@ -95,16 +97,16 @@ export default function PromoBannersAdminPage() {
         const { data, error } = await supabase.from('promo_banners').insert([payload]).select().single();
         if (error) throw error;
         setBanners(prev => prev.map(b => b.id === banner.id ? { ...data } : b));
-        alert('배너가 저장되었습니다.');
+        toast.show('배너가 저장되었습니다', 'success');
       } else {
         const { error } = await supabase.from('promo_banners').update(payload).eq('id', banner.id);
         if (error) throw error;
-        alert('배너가 수정되었습니다.');
+        toast.show('배너가 수정되었습니다', 'success');
       }
       revalidateHomepageData('promo_banners');
     } catch (e) {
       console.error(e);
-      alert('저장에 실패했습니다.');
+      toast.show('저장에 실패했습니다.', 'error');
     } finally {
       setSaving(null);
     }
@@ -122,7 +124,7 @@ export default function PromoBannersAdminPage() {
       setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, id: `new-${b.sort_order}`, image_url: '', link_url: '' } : b));
       revalidateHomepageData('promo_banners');
     } catch {
-      alert('삭제에 실패했습니다.');
+      toast.show('삭제에 실패했습니다.', 'error');
     }
   };
 

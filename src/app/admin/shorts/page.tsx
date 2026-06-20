@@ -5,6 +5,7 @@ import { Video, Trash2, Plus, Link as LinkIcon, Save, Link2, Package } from 'luc
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { useToast } from '@/components/admin/Toast';
 import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 
 // Session-aware client. Phase 2 RLS lockdown on `shorts` requires admin JWT.
@@ -26,6 +27,7 @@ interface Product {
 }
 
 export default function ShortsAdminPage() {
+  const toast = useToast();
   const [shorts, setShorts] = useState<Short[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [newUrl, setNewUrl] = useState('');
@@ -99,7 +101,7 @@ export default function ShortsAdminPage() {
       setTimeout(() => setHeaderSaved(false), 2000);
     } catch (err) {
       console.error('[admin/shorts] header save failed:', err);
-      alert('제목 스타일 저장에 실패했습니다.');
+      toast.show('제목 스타일 저장에 실패했습니다.', 'error');
     } finally {
       setSavingHeader(false);
     }
@@ -130,7 +132,7 @@ export default function ShortsAdminPage() {
       setTimeout(() => setBgSaved(false), 2000);
     } catch (err) {
       console.error('[admin/shorts] bg save failed:', err);
-      alert('배경 저장에 실패했습니다.');
+      toast.show('배경 저장에 실패했습니다.', 'error');
     } finally {
       setSavingBg(false);
     }
@@ -190,13 +192,13 @@ export default function ShortsAdminPage() {
         if (!supabase) throw new Error('클라이언트 없음');
         const { error } = await supabase.from('shorts').insert([{ youtube_id: videoId }]);
         if (!error) {
-          alert(`YouTube ID '${videoId}' 가 홈페이지에 추가되었습니다.`);
+          toast.show(`YouTube ID '${videoId}' 추가됨`, 'success');
           fetchShorts();
           revalidateHomepageData('shorts');
         }
       } catch { /* mock mode */ }
     } else {
-      alert('유효하지 않은 YouTube URL 또는 ID입니다.');
+      toast.show('유효하지 않은 YouTube URL 또는 ID입니다.', 'warning');
     }
   };
 

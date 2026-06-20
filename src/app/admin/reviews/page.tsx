@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Plus, Trash2, Save, ArrowUp, ArrowDown, Loader2, Star, Eye, EyeOff, Image as ImageIcon } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 2 RLS lockdown requires admin's JWT for
 // review_cards writes — see migration 18.
@@ -39,6 +40,7 @@ async function uploadImage(file: File): Promise<string> {
 }
 
 export default function ReviewsAdminPage() {
+  const toast = useToast();
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export default function ReviewsAdminPage() {
   async function autoFillFromNaver(i: number) {
     const row = rows[i];
     if (!row?.link_url) {
-      alert('먼저 외부 링크 칸에 네이버 블로그 / 포스트 URL을 입력해주세요.');
+      toast.show('먼저 외부 링크 칸에 네이버 블로그 / 포스트 URL을 입력해주세요.', 'warning');
       return;
     }
     setNaverIdx(i);
@@ -91,9 +93,9 @@ export default function ReviewsAdminPage() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        alert(err.error === 'unsupported_host'
+        toast.show(err.error === 'unsupported_host'
           ? '네이버 블로그/포스트 URL만 자동 채우기를 지원합니다.'
-          : '자동 채우기에 실패했습니다.');
+          : '자동 채우기에 실패했습니다.', 'error');
         return;
       }
       const data: {
@@ -118,7 +120,7 @@ export default function ReviewsAdminPage() {
       });
     } catch (err) {
       console.error('[admin/reviews] naver scrape failed:', err);
-      alert('자동 채우기 중 오류가 발생했습니다.');
+      toast.show('자동 채우기 중 오류가 발생했습니다.', 'error');
     } finally {
       setNaverIdx(null);
     }
@@ -134,7 +136,7 @@ export default function ReviewsAdminPage() {
   }
 
   async function save(i: number) {
-    if (!supabase) { alert('Supabase가 없습니다.'); return; }
+    if (!supabase) { toast.show('Supabase가 없습니다.', 'error'); return; }
     const r = rows[i];
     setSaving(r.id ?? `new-${i}`);
     const payload = {
@@ -150,7 +152,7 @@ export default function ReviewsAdminPage() {
       ? await supabase.from('review_cards').update(payload).eq('id', r.id).select().single()
       : await supabase.from('review_cards').insert(payload).select().single();
     setSaving(null);
-    if (res.error) { alert(`저장 실패: ${res.error.message}`); return; }
+    if (res.error) { toast.show(`저장 실패: ${res.error.message}`, 'error'); return; }
     if (res.data) update(i, { id: (res.data as { id: string }).id });
     setSavedId(res.data ? (res.data as { id: string }).id : null);
     setTimeout(() => setSavedId(null), 2000);
@@ -191,7 +193,7 @@ export default function ReviewsAdminPage() {
       const url = await uploadImage(file);
       update(i, { image_url: url });
     } catch {
-      alert('이미지 업로드 실패');
+      toast.show('이미지 업로드 실패', 'error');
     } finally {
       setUploadingIdx(null);
       if (fileRefs.current[i]) fileRefs.current[i]!.value = '';

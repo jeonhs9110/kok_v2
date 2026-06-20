@@ -3,6 +3,7 @@
 import { Plus, Trash2, Pencil, X, Eye, EyeOff, Menu as MenuIcon, LayoutTemplate, Code2 } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 4 RLS lockdown on `pages` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -31,6 +32,7 @@ interface Page {
 
 /* ── Main Page ─────────────────────────────────────────────────────── */
 export default function PagesAdminPage() {
+  const toast = useToast();
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -156,7 +158,7 @@ export default function PagesAdminPage() {
       resetModal();
     } catch (err) {
       console.error('페이지 저장 실패:', err);
-      alert('페이지 저장에 실패했습니다.');
+      toast.show('페이지 저장에 실패했습니다.', 'error');
     } finally {
       setIsSubmitting(false);
     }
