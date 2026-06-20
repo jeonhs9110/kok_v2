@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, ChevronRight, X, Tag, Layers, FolderTree } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 
 // Session-aware client. Phase 3 RLS lockdown on `categories` requires admin JWT.
@@ -128,12 +128,15 @@ export default function CategoriesAdminPage() {
         <StatCard accent="#f59e0b" label="평균 하위 수" value={stats.parents ? Math.round((stats.subs / stats.parents) * 10) / 10 : 0} icon={Layers} subLabel="대분류당" />
       </StatStrip>
 
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-500">카테고리와 서브카테고리를 관리합니다.</p>
-        <button onClick={() => openAdd()} className="flex items-center gap-2 px-4 py-2.5 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
-          <Plus className="w-4 h-4" /> 카테고리 추가
-        </button>
-      </div>
+      <PageHeader
+        title="카테고리"
+        description="카테고리와 서브카테고리를 관리합니다"
+        actions={
+          <button onClick={() => openAdd()} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-[#3b82f6] rounded hover:bg-[#2563eb] transition-colors">
+            <Plus className="w-3.5 h-3.5" /> 카테고리 추가
+          </button>
+        }
+      />
 
       <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         {isLoading ? (

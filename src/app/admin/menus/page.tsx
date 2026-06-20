@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, ChevronRight, X, FileText, MessageSquare, ExternalLink, MenuSquare, Layers } from 'lucide-react';
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 import RichEditor from '@/components/admin/RichEditor';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
@@ -154,12 +154,15 @@ export default function MenusAdminPage() {
         <StatCard accent="#f59e0b" label="게시판형" value={stats.boards} icon={MessageSquare} subLabel="board 페이지 타입" />
       </StatStrip>
 
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-500">헤더 내비게이션 메뉴를 관리합니다. 각 메뉴는 단순 페이지 또는 게시판 형태를 가질 수 있습니다.</p>
-        <button onClick={() => openAdd()} className="flex items-center gap-2 px-4 py-2.5 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors">
-          <Plus className="w-4 h-4" /> 메뉴 추가
-        </button>
-      </div>
+      <PageHeader
+        title="메뉴 관리"
+        description="헤더 내비게이션 메뉴를 관리합니다 · 페이지 또는 게시판 형태"
+        actions={
+          <button onClick={() => openAdd()} className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-[#3b82f6] rounded hover:bg-[#2563eb] transition-colors">
+            <Plus className="w-3.5 h-3.5" /> 메뉴 추가
+          </button>
+        }
+      />
 
       <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
         {isLoading ? (

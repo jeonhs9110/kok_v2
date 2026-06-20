@@ -108,7 +108,7 @@ export default function ContinuousPositionPicker({
             alt=""
             /* object-contain instead of object-cover so the full source
                image is visible in both PC (16:7) and 모바일 (9:14) picker
-               boxes — 송이's first round of testing pointed out that
+               boxes — operator's first round of testing pointed out that
                object-cover on a wide source in a tall mobile box hid
                most of the artwork, making it impossible to aim at
                content that exists in the source. With object-contain
@@ -148,7 +148,7 @@ export default function ContinuousPositionPicker({
 
       {/* Quick presets — 9 snap cells.
           Anchors land at the CENTER of each 3x3 grid cell (≈ 16.67 /
-          50 / 83.33%) rather than the extreme edges. 송이's 2026-06-10
+          50 / 83.33%) rather than the extreme edges. Operator's 2026-06-10
           feedback: clicking "top-left" used to pin text to the very
           corner — that was the box's edge, not the box's center. Now
           each snap reads as the center of the third the admin clicked. */}

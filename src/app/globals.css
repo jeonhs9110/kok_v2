@@ -34,7 +34,7 @@
 /* ──────────────────────────────────────────────────────────
    Header navigation menu font size — adjustable from /admin/theme
    via the --header-menu-font-size token (see src/lib/theme/tokens.ts).
-   Customer feedback (2026-06 via 한송이) was that 13.5px felt too
+   Customer feedback (2026-06 via the operator) was that 13.5px felt too
    small; admin can now bump to 15/17/19 without code changes.
    ────────────────────────────────────────────────────────── */
 .kokkok-nav-menu-text {
@@ -152,8 +152,8 @@ input[type="button"]:not(.kokkok-keep-font) {
    /admin/homepage builder highlight — applied by the
    postMessage listener in [lang]/layout.tsx when an admin
    clicks a section card in the hub. Pulses blue + scales
-   subtly so Songyi can see exactly where the section lives
-   on the storefront before she clicks 편집.
+   subtly so the operator can see exactly where the section
+   lives on the storefront before clicking 편집.
 
    `outline` instead of `border` so the highlight doesn't
    shift layout. `outline-offset: -3px` keeps the ring just
@@ -339,13 +339,13 @@ body {
                "Segoe UI", Roboto, sans-serif;
 
   /* Body base size — bumped from the browser default (16px) per
-     2026-06-08 송이 feedback that customers find the overall
+     2026-06-08 operator feedback that customers find the overall
      copy too small ("메뉴랑 전체적은 폰트 사이즈도 키웠으면").
      Components that pin their own text-[12px] / text-sm utility
      stay where they are; this only lifts unstyled paragraph copy. */
   font-size: 17px;
 
-  /* Glyph-rendering hints — 송이 also said customers describe the
+  /* Glyph-rendering hints — operator also reported customers describe the
      text as "흐릿하다" (blurry) and want it to read "쨍하게" (crisp).
      The antialiased + grayscale pair sharpens strokes on macOS/iOS;
      optimizeLegibility turns on kerning + ligatures on Chrome /
@@ -384,7 +384,7 @@ h1, h2, h3, h4, h5, h6 {
    version of this rule used :not([class*="rounded"]) so any button
    pinning Tailwind's rounded-lg / rounded-full was skipped — which
    meant the /admin/theme picker only affected raw unstyled buttons
-   and the 송이 testing pass turned up "where do I see this change?".
+   and the operator's testing pass turned up "where do I see this change?".
    This version flips the model: the rule wins by specificity over
    Tailwind utilities (compound element + pseudo beats a single class),
    so every <button>/[role=button]/submit/input adopts the admin's

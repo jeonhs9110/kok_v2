@@ -7,9 +7,9 @@ import type { LucideIcon } from 'lucide-react';
  * SectionCard — one row in the homepage builder's section list. Designed
  * to mirror Cafe24's section row pixel-by-pixel: drag handle, icon tile,
  * Korean name + status hint, visibility eye, and a chevron that doubles
- * as the edit affordance. Songyi compared our admin to Cafe24's at the
- * 2026-06-10 meeting; matching this row shape closely is the single
- * highest-leverage UX change we ship for her.
+ * as the edit affordance. Operator compared our admin to Cafe24's at
+ * the 2026-06-10 meeting; matching this row shape closely is the single
+ * highest-leverage UX change we ship.
  *
  * Visibility eye is read-only for Phase 1 MVP — it reflects whether the
  * section currently renders on the storefront (data present + active).
@@ -103,7 +103,7 @@ export default function SectionCard({
       </div>
 
       {/* Edit chevron — opens the inline EditorDrawer instead of
-          navigating out. Songyi stays in the builder context the
+          navigating out. The operator stays in the builder context the
           whole time. Shift/Ctrl/Cmd-click could fall back to the
           regular full-page route, but for the MVP we keep behavior
           consistent (always opens the drawer). */}

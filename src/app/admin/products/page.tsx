@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Plus, X, Package, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
-import { StatCard, StatStrip } from '@/components/admin/CafeWidgets';
+import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import type { Product } from '@/lib/api/products';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
@@ -192,31 +192,32 @@ function ProductsAdminPageInner() {
         <StatCard accent="#ef4444" label="관심 필요" value={stats.attention} icon={AlertTriangle} isLoading={isLoading} subLabel="숨김 또는 이미지 없음" />
       </StatStrip>
 
-    <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden relative">
-      <div className="p-6 border-b border-gray-100 flex flex-wrap justify-between items-center gap-3 bg-gray-50/50">
-        <div>
-          <h2 className="text-lg font-bold text-gray-800">상품 재고</h2>
-          <p className="text-sm text-gray-500 mt-1">스토어 상품 및 카탈로그를 관리하세요</p>
-        </div>
-        <div className="flex items-center gap-2">
-          {filter !== 'all' && (
+      <PageHeader
+        title="상품 재고"
+        description="스토어 상품 및 카탈로그를 관리하세요"
+        actions={
+          <>
+            {filter !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setFilter('all')}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors"
+              >
+                {FILTER_LABELS[filter]}
+                <X className="w-3 h-3" />
+              </button>
+            )}
             <button
-              type="button"
-              onClick={() => setFilter('all')}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-amber-100 text-amber-800 rounded-full hover:bg-amber-200 transition-colors"
+              onClick={() => setEditing({ product: null })}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-[#3b82f6] rounded hover:bg-[#2563eb] transition-colors"
             >
-              {FILTER_LABELS[filter]}
-              <X className="w-3 h-3" />
+              <Plus className="w-3.5 h-3.5" /> 상품 추가
             </button>
-          )}
-          <button
-            onClick={() => setEditing({ product: null })}
-            className="bg-brand-ink text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-black transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> 상품 추가
-          </button>
-        </div>
-      </div>
+          </>
+        }
+      />
+
+    <div className="bg-white rounded border border-[#e5e7eb] overflow-hidden relative">
 
       <div className="overflow-x-auto min-h-[400px]">
         <ProductList

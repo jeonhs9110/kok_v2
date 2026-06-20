@@ -65,7 +65,7 @@ export default function ThemePage() {
   // When this page renders inside the /admin/homepage builder's
   // slide-in drawer (?embedded=true), the local iframe is hidden
   // and we forward the same message to the parent window — the hub
-  // re-broadcasts it to ITS central preview iframe so Songyi sees
+  // re-broadcasts it to ITS central preview iframe so the operator sees
   // changes against the actual storefront while editing in the
   // drawer (no redundant in-drawer iframe stealing space).
   useEffect(() => {
@@ -228,7 +228,7 @@ export default function ThemePage() {
                   <div className="grid grid-cols-4 gap-1.5 mt-1">
                     {/* Labels renamed 2026-06-08 after the default moved
                         13.5px → 15px (tokens.ts). The picker now anchors
-                        '기본' on the new 15px default so 송이 doesn't see
+                        '기본' on the new 15px default so the operator doesn't see
                         '크게' selected by default on a fresh install. */}
                     {[
                       { v: '13.5px', l: '작게' },
@@ -527,7 +527,7 @@ export default function ThemePage() {
  * height. Saves ~75% of vertical space without losing any control.
  *
  * Why a tab UI instead of one slider with breakpoints: the responsive
- * heights aren't interchangeable — Songyi wants different defaults at
+ * heights aren't interchangeable — operator wants different defaults at
  * each device (mobile shorter, desktop taller). Tabs make this
  * explicit.
  */

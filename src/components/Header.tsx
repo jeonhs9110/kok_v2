@@ -269,7 +269,7 @@ export default function Header({
                 - the logo height + 24px breathing room
                 - the menu font size + 36px (font + line-height + padding)
               so neither a 150px logo nor a 40px menu font crops. Each
-              admin slider works independently — Songyi can push the
+              admin slider works independently — the operator can push the
               menu to 32px without touching the logo and the bar
               expands cleanly. */}
           <div

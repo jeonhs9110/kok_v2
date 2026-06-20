@@ -54,8 +54,8 @@ export interface ThemeTokens {
   /**
    * Header navigation menu font size. CSS length value (e.g. "13.5px",
    * "15px"). Drives both the desktop top-nav links and the mobile drawer
-   * via the --header-menu-font-size variable. Added 2026-06 after 한송이
-   * relayed customer feedback that the menu text felt too small.
+   * via the --header-menu-font-size variable. Added 2026-06 after the
+   * operator relayed customer feedback that the menu text felt too small.
    */
   header_menu_font_size: string;
   /**
@@ -146,7 +146,7 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   font_header: '',
   font_button: '',
   font_price: '',
-  // Bumped 2026-06-08 from 13.5px to 15px after 송이 forwarded customer
+  // Bumped 2026-06-08 from 13.5px to 15px after the operator forwarded customer
   // feedback that the homepage menu read too small. Admins can still pin
   // any preset (13.5 / 15 / 17 / 19) from /admin/theme; this only moves
   // the out-of-box value for installs without a saved row.

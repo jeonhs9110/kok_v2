@@ -43,9 +43,9 @@ export const metadata: Metadata = {
   title: 'Kokkok Garden',
   description: 'Premium Skincare featuring Heartleaf, Jericho Rose, and Sedum.',
   verification: {
-    // Naver Search Advisor site-ownership claim. Code provided by 송이
-    // after registering kokkokgarden.com at searchadvisor.naver.com — keep
-    // until Naver retires the meta-tag method or the site moves domains.
+    // Naver Search Advisor site-ownership claim. Code provided by the
+    // operator after registering kokkokgarden.com at searchadvisor.naver.com
+    // — keep until Naver retires the meta-tag method or the site moves domains.
     other: {
       'naver-site-verification': '0e893c9afdf558a2e821359770bfcc74cdadf7b5',
     },
