@@ -19,6 +19,8 @@ import {
 import CarouselSlidePreview from './CarouselSlidePreview';
 import SlideDisplayModePicker from './SlideDisplayModePicker';
 import SlideTextEditor from './SlideTextEditor';
+import SlideColorPicker from './SlideColorPicker';
+import SlideFontSizeOffsets from './SlideFontSizeOffsets';
 import { TypographyPanel } from '@/components/admin/TypographyPanel';
 import ContinuousPositionPicker from '@/components/admin/ContinuousPositionPicker';
 
@@ -512,95 +514,16 @@ export default function CarouselSlideModal({
             onUpdateLink={url => setFormData(prev => ({ ...prev, link_url: url }))}
           />
 
-          <div className="space-y-3 pt-2 border-t border-gray-100">
-            <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-              색상 설정
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              {(
-                [
-                  { key: 'bg_color', label: '배경색' },
-                  { key: 'text_color', label: '제목·부제목 색상' },
-                  { key: 'badge_bg_color', label: '뱃지 배경색' },
-                  { key: 'badge_text_color', label: '뱃지 폰트 색상' },
-                ] as const
-              ).map(({ key, label }) => (
-                <div key={key} className="space-y-1">
-                  <label className="text-[10px] font-semibold text-gray-500">{label}</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={formData[key]}
-                      onChange={e => setFormData(prev => ({ ...prev, [key]: e.target.value }))}
-                      className="w-14 h-10 rounded border border-gray-200 cursor-pointer p-0"
-                    />
-                    <input
-                      type="text"
-                      value={formData[key]}
-                      onChange={e => setFormData(prev => ({ ...prev, [key]: e.target.value }))}
-                      className="flex-1 border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none font-mono"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <SlideColorPicker
+            formData={formData}
+            onChange={(key, value) => setFormData(prev => ({ ...prev, [key]: value }))}
+          />
 
-          <div className="space-y-3 pt-2 border-t border-gray-100">
-            <div>
-              <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
-                폰트 크기 조절
-              </p>
-              <p className="text-[10px] text-gray-400 mt-0.5">
-                기본 크기 대비 ± px 단위로 조정 (예: -4 = 작게, +4 = 크게). 미리보기는 데스크탑 기준
-                실제 크기입니다.
-              </p>
-            </div>
-            <div className="grid grid-cols-3 gap-4">
-              {(
-                [
-                  { key: 'badge', label: '뱃지', basePx: 12, sample: '뱃지' },
-                  { key: 'title', label: '제목', basePx: 48, sample: '제목' },
-                  { key: 'subtitle', label: '부제목', basePx: 16, sample: '부제목' },
-                ] as const
-              ).map(({ key, label, basePx, sample }) => {
-                const offsetField = `${key}_size_offset` as
-                  | 'badge_size_offset'
-                  | 'title_size_offset'
-                  | 'subtitle_size_offset';
-                const offset = formData[offsetField] || 0;
-                const effectivePx = basePx + offset;
-                const sampleText = (formData[key][activeLang] || sample).split('\n')[0];
-                return (
-                  <div key={key} className="space-y-1">
-                    <div className="flex items-baseline justify-between">
-                      <label className="text-[10px] font-semibold text-gray-500">{label}</label>
-                      <span className="text-[10px] text-gray-400 font-mono">= {effectivePx}px</span>
-                    </div>
-                    <input
-                      type="number"
-                      value={offset}
-                      onChange={e =>
-                        setFormData(prev => ({
-                          ...prev,
-                          [offsetField]: parseInt(e.target.value) || 0,
-                        }))
-                      }
-                      placeholder="0"
-                      className="w-full border border-gray-200 p-2 text-sm rounded bg-gray-50 focus:bg-white focus:border-black transition outline-none"
-                    />
-                    <div
-                      className="px-2 py-1.5 border border-gray-200 rounded bg-white overflow-hidden truncate"
-                      style={{ fontSize: `${effectivePx}px`, lineHeight: 1.15 }}
-                      title={sampleText}
-                    >
-                      {sampleText}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <SlideFontSizeOffsets
+            formData={formData}
+            activeLang={activeLang}
+            onChange={(key, value) => setFormData(prev => ({ ...prev, [key]: value }))}
+          />
 
           {/* ── Phase 3 typography controls ─────────────────────────
               Same panel + position picker as the SubHero editor; admin
