@@ -421,7 +421,7 @@ export default function PagesAdminPage() {
               </div>
 
               {/* Actions */}
-              <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+              <div className="pt-4 border-t border-[#e5e7eb] flex justify-end gap-2">
                 <button type="button" onClick={resetModal}
                   className="px-6 py-2.5 border border-gray-200 text-gray-600 rounded text-sm font-semibold hover:bg-gray-50 transition-colors">
                   취소

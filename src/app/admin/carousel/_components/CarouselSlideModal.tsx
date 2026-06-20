@@ -880,7 +880,7 @@ export default function CarouselSlideModal({
             </div>
           </div>
 
-          <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+          <div className="pt-4 border-t border-[#e5e7eb] flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
