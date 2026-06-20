@@ -7,6 +7,7 @@ import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 import { useToast } from '@/components/admin/Toast';
+import { PageHeader } from '@/components/admin/CafeWidgets';
 
 const EMPTY_BG: SectionBgValue = { type: null, color: null, mediaUrl: null, mediaType: null };
 
@@ -257,7 +258,11 @@ export default function InstagramAdminPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <PageHeader
+        title="인스타그램"
+        description="@핸들 · 자동 RSS 새로고침 · 홈 메인에 노출되는 포스트를 관리합니다"
+      />
 
       {/* Config card */}
       <div className="bg-white rounded border border-[#e5e7eb] p-6">
