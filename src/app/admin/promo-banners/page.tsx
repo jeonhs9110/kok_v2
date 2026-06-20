@@ -7,6 +7,7 @@ import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 
 // Session-aware client. Phase 2 RLS lockdown on `promo_banners` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -29,6 +30,7 @@ const EMPTY_BANNER: Omit<PromoBanner, 'id'> = {
 
 export default function PromoBannersAdminPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [banners, setBanners] = useState<PromoBanner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -118,7 +120,8 @@ export default function PromoBannersAdminPage() {
       return;
     }
     if (!supabase) return;
-    if (!confirm('이 배너를 삭제할까요?')) return;
+    const ok = await confirm({ message: '이 배너를 삭제할까요?', tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     try {
       await supabase.from('promo_banners').delete().eq('id', banner.id);
       setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, id: `new-${b.sort_order}`, image_url: '', link_url: '' } : b));

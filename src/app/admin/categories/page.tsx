@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, ChevronRight, X, Tag, Layers, FolderTree } from '
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 
 // Session-aware client. Phase 3 RLS lockdown on `categories` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -24,6 +25,7 @@ const emptyForm: FormData = { slug: '', parent_id: '', sort_order: 0, is_active:
 
 export default function CategoriesAdminPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -105,7 +107,8 @@ export default function CategoriesAdminPage() {
     const msg = hasChildren
       ? '이 카테고리와 모든 서브카테고리가 삭제됩니다. 계속하시겠습니까?'
       : '이 카테고리를 삭제하시겠습니까?';
-    if (!confirm(msg)) return;
+    const ok = await confirm({ message: msg, tone: 'danger', confirmText: '삭제' });
+    if (!ok) return;
     if (!supabase) return;
     await supabase.from('categories').delete().eq('id', id);
     await revalidateHeaderData();

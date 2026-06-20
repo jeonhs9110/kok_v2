@@ -7,6 +7,7 @@ import {
 import { type Product, type DetailComponent } from '@/lib/api/products';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 
 // Session-aware client. Phase 3 RLS lockdown requires admin's JWT for
 // products writes — see migration 19.
@@ -96,6 +97,7 @@ export default function ProductDetailModal({
   onSaved,
 }: Props) {
   const toast = useToast();
+  const confirm = useConfirm();
   const editingProduct = editing?.product ?? null;
   const editingId = editingProduct?.id ?? null;
 
@@ -211,7 +213,8 @@ export default function ProductDetailModal({
     }
     if (file.size > 30 * 1024 * 1024) {
       const sizeMb = (file.size / 1024 / 1024).toFixed(1);
-      if (!confirm(`파일 크기가 ${sizeMb}MB로 큽니다. 30MB 이하를 권장합니다. 계속하시겠습니까?`)) return;
+      const ok = await confirm({ message: `파일 크기가 ${sizeMb}MB로 큽니다. 30MB 이하를 권장합니다. 계속하시겠습니까?`, confirmText: '업로드' });
+      if (!ok) return;
     }
     setDetailUploading(true);
     try {

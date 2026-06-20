@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 import { PageHeader } from '@/components/admin/CafeWidgets';
 
 // Session-aware client. Reads go via public storage URLs but list() and
@@ -89,6 +90,7 @@ async function listBucketRecursive(bucket: BucketId, prefix = '', depth = 0): Pr
 
 export default function AssetLibraryPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -206,7 +208,8 @@ export default function AssetLibraryPage() {
         // result for a build-your-own-page block image.
         confirmMsg = `정말 삭제하시겠습니까?\n\n${a.bucket}/${a.key}\n\n(상품 메인 이미지/서브 히어로/캐러셀/프로모/리뷰/인스타에서는 참조하지 않는 것으로 확인됨. 상품 상세 본문(에디터 내부 이미지) · 페이지 빌더 블록 내부 이미지는 자동 검사 대상이 아닙니다.)`;
       }
-      if (!confirm(confirmMsg)) {
+      const ok = await confirm({ message: confirmMsg, tone: 'danger', confirmText: '삭제' });
+      if (!ok) {
         setDeletingKey(null);
         return;
       }
