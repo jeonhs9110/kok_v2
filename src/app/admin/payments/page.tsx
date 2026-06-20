@@ -116,7 +116,7 @@ export default function PaymentsAdminPage() {
 
   return (
     <div className="space-y-4 max-w-4xl">
-      <div className="bg-white rounded border border-[#e5e7eb] p-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5">
         <h2 className="text-[14px] font-bold text-[#1f2937] mb-2">결제 시스템 설정</h2>
         <p className="text-sm text-gray-500 mb-4">각 결제 서비스의 API 키를 입력하고 토글로 활성화하세요. 테스트 키로 먼저 연동한 뒤 실서비스 키로 교체하세요.</p>
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">

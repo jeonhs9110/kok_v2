@@ -322,7 +322,7 @@ export default function ProductDetailModal({
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
           {/* Image upload zone */}
           <div className="space-y-2">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">상품 이미지</label>
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">상품 이미지</label>
             <div
               className={`relative border-2 border-dashed rounded-xl transition-colors cursor-pointer group ${
                 previewUrl ? 'border-gray-200' : 'border-gray-200 hover:border-gray-400'
@@ -396,7 +396,7 @@ export default function ProductDetailModal({
           {/* Name + Ingredient */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">상품명 *</label>
+              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">상품명 *</label>
               <input
                 required
                 type="text"
@@ -407,7 +407,7 @@ export default function ProductDetailModal({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">성분 태그</label>
+              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">성분 태그</label>
               <input
                 type="text"
                 value={formData.ingredient}
@@ -421,7 +421,7 @@ export default function ProductDetailModal({
           {/* Category + Subcategory */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">카테고리</label>
+              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">카테고리</label>
               <select
                 value={formData.categoryId}
                 onChange={e => setFormData(prev => ({ ...prev, categoryId: e.target.value, subcategoryId: '' }))}
@@ -434,7 +434,7 @@ export default function ProductDetailModal({
               </select>
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">서브카테고리</label>
+              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">서브카테고리</label>
               <select
                 value={formData.subcategoryId}
                 onChange={e => setFormData(prev => ({ ...prev, subcategoryId: e.target.value }))}
@@ -451,7 +451,7 @@ export default function ProductDetailModal({
 
           {/* Summary */}
           <div className="space-y-1">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">한 줄 요약 *</label>
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">한 줄 요약 *</label>
             <input
               required
               type="text"
@@ -466,7 +466,7 @@ export default function ProductDetailModal({
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">현재 판매가 (원) *</label>
+                <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">현재 판매가 (원) *</label>
                 <input
                   required
                   type="number"
@@ -479,7 +479,7 @@ export default function ProductDetailModal({
                 <p className="text-[10px] text-gray-400 leading-snug">실제로 결제되는 가격입니다.</p>
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">할인 전 가격 (취소선)</label>
+                <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">할인 전 가격 (취소선)</label>
                 <input
                   type="number"
                   min="0"
@@ -532,7 +532,7 @@ export default function ProductDetailModal({
 
           {/* Description */}
           <div className="space-y-1">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">한 줄 설명</label>
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">한 줄 설명</label>
             <textarea
               rows={3}
               value={formData.description}
@@ -545,7 +545,7 @@ export default function ProductDetailModal({
           {/* Detail components editor */}
           <div className="space-y-3">
             <div className="flex items-baseline justify-between">
-              <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">상세페이지 컴포넌트</label>
+              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">상세페이지 컴포넌트</label>
               <span className="text-[10px] text-gray-400">위 → 아래 순서, 컴포넌트 간 마진 없이 이어붙음</span>
             </div>
 
@@ -671,7 +671,7 @@ export default function ProductDetailModal({
 
           {/* Naver Store URL */}
           <div className="space-y-1">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">네이버 스토어 URL</label>
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">네이버 스토어 URL</label>
             <input
               type="url"
               value={formData.naverStoreUrl}
@@ -705,7 +705,7 @@ export default function ProductDetailModal({
 
           {/* Purchase button visibility toggles */}
           <div className="pt-4 border-t border-gray-100 space-y-3">
-            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">구매 버튼 노출 설정</p>
+            <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">구매 버튼 노출 설정</p>
             <p className="text-[11px] text-gray-400">기본값: 네이버 스토어 버튼만 노출됩니다. 아래를 켜면 추가로 노출됩니다.</p>
             <div className="flex items-center gap-3">
               <input

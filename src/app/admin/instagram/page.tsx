@@ -263,7 +263,7 @@ export default function InstagramAdminPage() {
       />
 
       {/* Config card */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5">
         <div className="flex items-center gap-2 mb-4">
           <IgIcon className="w-5 h-5 text-[#E1306C]" />
           <h2 className="text-[14px] font-bold text-[#1f2937]">인스타그램 설정</h2>
@@ -271,7 +271,7 @@ export default function InstagramAdminPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="space-y-1">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">계정 핸들 (@없이 입력)</label>
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">계정 핸들 (@없이 입력)</label>
             <div className="flex items-center border border-gray-200 rounded bg-gray-50 focus-within:border-black transition overflow-hidden">
               <span className="px-3 text-gray-400 font-semibold text-sm select-none">@</span>
               <input
@@ -284,7 +284,7 @@ export default function InstagramAdminPage() {
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">설명 문구</label>
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">설명 문구</label>
             <input
               type="text"
               value={description}
@@ -315,7 +315,7 @@ export default function InstagramAdminPage() {
       </div>
 
       {/* 섹션 제목 스타일 (migration 34) */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5 space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 제목 (@핸들) 스타일</h2>
           <p className="text-xs text-gray-400">기본은 18px · 짙은 회색 · 배경 없음.</p>
@@ -323,7 +323,7 @@ export default function InstagramAdminPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">글자 크기 (px)</label>
+            <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">글자 크기 (px)</label>
             <input
               type="number"
               min={10}
@@ -336,7 +336,7 @@ export default function InstagramAdminPage() {
             <p className="text-[10px] text-gray-400 mt-1">10–48 사이. 기본 18.</p>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">글자 색상</label>
+            <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">글자 색상</label>
             <div className="flex items-center gap-2 mt-1">
               <input
                 type="color"
@@ -353,7 +353,7 @@ export default function InstagramAdminPage() {
             </div>
           </div>
           <div className="md:col-span-2">
-            <label className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider cursor-pointer">
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider cursor-pointer">
               <input
                 type="checkbox"
                 checked={headerBgEnabled}
@@ -412,7 +412,7 @@ export default function InstagramAdminPage() {
       </div>
 
       {/* 섹션 배경 설정 (migration 26) */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5 space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 배경</h2>
           <p className="text-xs text-gray-400">기본값은 페이지 배경(투명)입니다.</p>
@@ -490,7 +490,7 @@ export default function InstagramAdminPage() {
       </div>
 
       {/* Posts grid */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5">
         <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">인스타그램 포스트 (최대 6개)</h2>
         <p className="text-sm text-gray-500 mb-3">홈페이지에 표시될 포스트를 설정하세요. <strong>Instagram 포스트 URL을 붙여넣으면</strong> 실시간 공식 임베드가 표시됩니다 (이미지, 캡션, 좋아요 포함).</p>
 

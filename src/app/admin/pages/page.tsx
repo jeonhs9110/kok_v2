@@ -285,7 +285,7 @@ export default function PagesAdminPage() {
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
               {/* Slug */}
               <div className="space-y-1">
-                <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">URL 경로 (slug) *</label>
+                <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">URL 경로 (slug) *</label>
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-gray-400">/pages/</span>
                   <input
@@ -347,7 +347,7 @@ export default function PagesAdminPage() {
                 <div className="p-4 space-y-4">
                   {/* Title for active language */}
                   <div className="space-y-1">
-                    <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+                    <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
                       페이지 제목 ({LANG_LABELS[activeLang as Lang]}) {activeLang === 'kr' && '*'}
                     </label>
                     <input
@@ -370,7 +370,7 @@ export default function PagesAdminPage() {
                   {/* Content editor — mode toggle */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+                      <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
                         페이지 내용 ({LANG_LABELS[activeLang as Lang]})
                       </label>
                       <div className="inline-flex bg-gray-100 rounded p-0.5 text-[11px] font-bold">
@@ -378,7 +378,7 @@ export default function PagesAdminPage() {
                           type="button"
                           onClick={() => setEditorMode('blocks')}
                           className={`px-2.5 py-1 rounded inline-flex items-center gap-1.5 transition ${
-                            editorMode === 'blocks' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
+                            editorMode === 'blocks' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-[#1f2937]'
                           }`}
                         >
                           <LayoutTemplate className="w-3 h-3" /> 섹션 빌더
@@ -387,7 +387,7 @@ export default function PagesAdminPage() {
                           type="button"
                           onClick={() => setEditorMode('rich')}
                           className={`px-2.5 py-1 rounded inline-flex items-center gap-1.5 transition ${
-                            editorMode === 'rich' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
+                            editorMode === 'rich' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-[#1f2937]'
                           }`}
                         >
                           <Code2 className="w-3 h-3" /> 클래식 (rich text)

@@ -321,7 +321,7 @@ export default function CarouselSlideModal({
           )}
 
           <div className="space-y-2">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
               배너 표시 모드
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -366,7 +366,7 @@ export default function CarouselSlideModal({
           </div>
 
           <div className="space-y-2">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
               슬라이드 이미지 — PC (가로형, 필수)
             </label>
             {/* 권장 해상도 안내. 메인 배너 (HeroSlider) 가 lg:h-[1000px]
@@ -474,7 +474,7 @@ export default function CarouselSlideModal({
               desktop image at every breakpoint, matching pre-2026-06-10
               behavior on rows from before this PR. */}
           <div className="space-y-2">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
               슬라이드 이미지 — 모바일 (세로형, 선택)
             </label>
             <p className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1.5">
@@ -565,7 +565,7 @@ export default function CarouselSlideModal({
             </div>
 
             <div className="space-y-1 mb-4">
-              <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
                 뱃지 ({LANG_LABELS[activeLang as keyof typeof LANG_LABELS]})
               </label>
               <input
@@ -578,7 +578,7 @@ export default function CarouselSlideModal({
             </div>
 
             <div className="space-y-1 mb-4">
-              <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
                 제목 ({LANG_LABELS[activeLang as keyof typeof LANG_LABELS]}){' '}
                 {activeLang === 'kr' && '*'}
               </label>
@@ -593,7 +593,7 @@ export default function CarouselSlideModal({
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
                 부제목 ({LANG_LABELS[activeLang as keyof typeof LANG_LABELS]})
               </label>
               <input
@@ -611,7 +611,7 @@ export default function CarouselSlideModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
               클릭 링크 URL (선택)
             </label>
             <input
@@ -627,7 +627,7 @@ export default function CarouselSlideModal({
           </div>
 
           <div className="space-y-3 pt-2 border-t border-gray-100">
-            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+            <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
               색상 설정
             </p>
             <div className="grid grid-cols-2 gap-4">
@@ -662,7 +662,7 @@ export default function CarouselSlideModal({
 
           <div className="space-y-3 pt-2 border-t border-gray-100">
             <div>
-              <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+              <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
                 폰트 크기 조절
               </p>
               <p className="text-[10px] text-gray-400 mt-0.5">
@@ -723,7 +723,7 @@ export default function CarouselSlideModal({
               existing "색상 설정" group above. */}
           <div className="space-y-4 pt-2 border-t border-gray-100">
             <div>
-              <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">타이포그래피</p>
+              <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">타이포그래피</p>
               <p className="text-[10px] text-gray-400 mt-0.5">
                 폰트와 굵기 / 기울임 / 밑줄을 텍스트별로 지정하고, 텍스트 블록의 위치를 슬라이드 안에서 골라보세요.
               </p>
@@ -798,7 +798,7 @@ export default function CarouselSlideModal({
                 slide media so the admin aims relative to the actual
                 photo, not a blank rectangle. */}
             <div>
-              <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-1">텍스트 위치</p>
+              <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase mb-1">텍스트 위치</p>
               <p className="text-[10px] text-gray-400 mb-2">
                 미리보기에서 원하는 위치를 클릭하거나 흰 점을 드래그하세요. (PC와 모바일을 따로 설정)
               </p>
@@ -826,7 +826,7 @@ export default function CarouselSlideModal({
                 view even when the wide-source image crops to portrait
                 on mobile. */}
             <div>
-              <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-1">이미지 중심점</p>
+              <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase mb-1">이미지 중심점</p>
               <p className="text-[10px] text-gray-400 mb-2">
                 이미지가 잘릴 때 어느 지점을 중심으로 보일지 정합니다. 원하는 부분을 클릭하세요.
               </p>
@@ -853,7 +853,7 @@ export default function CarouselSlideModal({
 
           <div className="grid grid-cols-2 gap-4 pt-2 border-t border-gray-100">
             <div className="space-y-1">
-              <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
                 표시 순서
               </label>
               <input
@@ -864,7 +864,7 @@ export default function CarouselSlideModal({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+              <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
                 상태
               </label>
               <select

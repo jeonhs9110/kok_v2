@@ -248,7 +248,7 @@ export default function ShortsAdminPage() {
       />
 
       {/* 섹션 제목 스타일 (migration 33) */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5 space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 제목</h2>
           <p className="text-xs text-gray-400">기본은 &ldquo;BRAND SHORTS&rdquo; · 흰색 · 15px.</p>
@@ -256,7 +256,7 @@ export default function ShortsAdminPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">제목 텍스트</label>
+            <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">제목 텍스트</label>
             <input
               type="text"
               value={headerText}
@@ -267,7 +267,7 @@ export default function ShortsAdminPage() {
             <p className="text-[10px] text-gray-400 mt-1">비워두면 기본값 &ldquo;BRAND SHORTS&rdquo;가 표시됩니다.</p>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">글자 크기 (px)</label>
+            <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">글자 크기 (px)</label>
             <input
               type="number"
               min={10}
@@ -280,7 +280,7 @@ export default function ShortsAdminPage() {
             <p className="text-[10px] text-gray-400 mt-1">10–48 사이. 기본 15.</p>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">글자 색상</label>
+            <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">글자 색상</label>
             <div className="flex items-center gap-2 mt-1">
               <input
                 type="color"
@@ -297,7 +297,7 @@ export default function ShortsAdminPage() {
             </div>
           </div>
           <div>
-            <label className="flex items-center gap-2 text-[10px] font-bold text-gray-500 uppercase tracking-wider cursor-pointer">
+            <label className="flex items-center gap-2 text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider cursor-pointer">
               <input
                 type="checkbox"
                 checked={headerBgEnabled}
@@ -357,7 +357,7 @@ export default function ShortsAdminPage() {
       </div>
 
       {/* 섹션 배경 설정 (migration 26) */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-4">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5 space-y-4">
         <div className="flex items-baseline justify-between">
           <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 배경</h2>
           <p className="text-xs text-gray-400">기본값은 검정(neutral-900) 배경입니다.</p>
@@ -381,7 +381,7 @@ export default function ShortsAdminPage() {
       </div>
 
       {/* 새 숏츠 추가 */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5">
         <h2 className="text-[14px] font-bold text-[#1f2937] mb-4 flex items-center gap-2">
           <Video className="w-5 h-5 text-purple-500" /> 새 브랜드 숏츠 추가
         </h2>

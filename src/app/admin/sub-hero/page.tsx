@@ -186,12 +186,12 @@ export default function SubHeroAdminPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="bg-white rounded border border-[#e5e7eb] p-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5">
         <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">서브 히어로 배너 관리</h2>
         <p className="text-sm text-gray-500">홈페이지 영상 리뷰 아래에 표시되는 전체 너비 배너입니다.</p>
       </div>
 
-      <div className="bg-white rounded border border-[#e5e7eb] p-6 space-y-5">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5 space-y-5">
 
         {/* ── Live preview ─────────────────────────────────────────
             Mirrors src/components/SubHeroBanner.tsx so admins see
@@ -199,7 +199,7 @@ export default function SubHeroAdminPage() {
             → repeat. Font sizes are halved to fit the editor card. */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">미리보기</label>
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">미리보기</label>
             <div className="inline-flex bg-gray-100 rounded p-0.5 text-[10px] font-bold">
               {(['pc', 'mobile'] as const).map(v => (
                 <button
@@ -207,7 +207,7 @@ export default function SubHeroAdminPage() {
                   type="button"
                   onClick={() => setPreviewView(v)}
                   className={`px-2.5 py-1 rounded transition-colors ${
-                    previewView === v ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-black'
+                    previewView === v ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-[#1f2937]'
                   }`}
                 >
                   {v === 'pc' ? 'PC' : '모바일'}
@@ -278,7 +278,7 @@ export default function SubHeroAdminPage() {
 
         {/* Image upload */}
         <div>
-          <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase block mb-2">배너 이미지</label>
+          <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase block mb-2">배너 이미지</label>
           <div
             className="relative w-full h-52 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 hover:border-gray-400 transition-colors cursor-pointer group bg-gray-50 flex items-center justify-center"
             onClick={() => fileInputRef.current?.click()}
@@ -329,7 +329,7 @@ export default function SubHeroAdminPage() {
 
         {/* Title */}
         <div className="space-y-1">
-          <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">제목 (선택)</label>
+          <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">제목 (선택)</label>
           <input
             type="text"
             value={banner.title}
@@ -341,7 +341,7 @@ export default function SubHeroAdminPage() {
 
         {/* Subtitle */}
         <div className="space-y-1">
-          <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">서브타이틀 (선택)</label>
+          <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">서브타이틀 (선택)</label>
           <input
             type="text"
             value={banner.subtitle}
@@ -354,7 +354,7 @@ export default function SubHeroAdminPage() {
         {/* Font size offsets */}
         <div className="space-y-3 pt-2 border-t border-gray-100">
           <div>
-            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">폰트 크기 조절</p>
+            <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">폰트 크기 조절</p>
             <p className="text-[10px] text-gray-400 mt-0.5">기본 크기 대비 ± px 단위로 조정 (예: -4 = 작게, +4 = 크게). 미리보기는 데스크탑 기준 실제 크기입니다.</p>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -399,7 +399,7 @@ export default function SubHeroAdminPage() {
             bold white title, regular white subtitle). */}
         <div className="space-y-4 pt-2 border-t border-gray-100">
           <div>
-            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">타이포그래피</p>
+            <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">타이포그래피</p>
             <p className="text-[10px] text-gray-400 mt-0.5">폰트 / 굵기 / 기울임 / 밑줄 / 색상을 텍스트별로 지정하고, 텍스트 블록의 위치를 이미지 안에서 골라보세요.</p>
           </div>
           <TypographyPanel
@@ -445,7 +445,7 @@ export default function SubHeroAdminPage() {
               from PR #89 so the admin gets consistent controls across
               both editors. */}
           <div>
-            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-1">텍스트 위치</p>
+            <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase mb-1">텍스트 위치</p>
             <p className="text-[10px] text-gray-400 mb-2">
               미리보기에서 원하는 위치를 클릭하거나 흰 점을 드래그하세요. (PC와 모바일을 따로 설정)
             </p>
@@ -472,7 +472,7 @@ export default function SubHeroAdminPage() {
               to portrait on mobile via object-cover, the focal point
               keeps the product visible. */}
           <div>
-            <p className="text-[11px] font-bold tracking-widest text-gray-500 uppercase mb-1">이미지 중심점</p>
+            <p className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase mb-1">이미지 중심점</p>
             <p className="text-[10px] text-gray-400 mb-2">
               이미지가 잘릴 때 어느 지점을 중심으로 보일지 정합니다. 원하는 부분을 클릭하세요.
             </p>
@@ -499,7 +499,7 @@ export default function SubHeroAdminPage() {
 
         {/* Link URL */}
         <div className="space-y-1">
-          <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">클릭 링크 URL (선택)</label>
+          <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">클릭 링크 URL (선택)</label>
           <input
             type="text"
             value={banner.link_url}

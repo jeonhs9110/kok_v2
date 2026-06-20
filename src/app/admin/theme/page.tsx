@@ -205,7 +205,7 @@ export default function ThemePage() {
 
               <Section title="모양">
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">버튼 모서리</label>
+                  <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">버튼 모서리</label>
                   <div className="grid grid-cols-4 gap-1.5 mt-1">
                     {[
                       { v: '0px', l: '직각' },
@@ -230,7 +230,7 @@ export default function ThemePage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">헤더 메뉴 글씨 크기</label>
+                  <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">헤더 메뉴 글씨 크기</label>
                   {/* Preset picker mirrors the button-radius UX; each option
                       previews at its own font-size so the admin sees the
                       relative difference at a glance. */}
@@ -292,7 +292,7 @@ export default function ThemePage() {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">서브헤더 (드롭다운) 글씨 크기</label>
+                  <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">서브헤더 (드롭다운) 글씨 크기</label>
                   <div className="grid grid-cols-4 gap-1.5 mt-1">
                     {[
                       { v: '11px',   l: '작게' },
@@ -342,7 +342,7 @@ export default function ThemePage() {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">서브 히어로 배너 — 서브타이틀 글씨 크기</label>
+                  <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">서브 히어로 배너 — 서브타이틀 글씨 크기</label>
                   <div className="grid grid-cols-5 gap-1.5 mt-1">
                     {/* Preset row goes up to 32px now. Anything bigger
                         goes through the numeric input below (range
@@ -509,7 +509,7 @@ export default function ThemePage() {
               href={`/${previewLang}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-gray-500 hover:text-black underline"
+              className="text-[11px] text-gray-500 hover:text-[#1f2937] underline"
             >
               새 탭
             </a>
@@ -578,7 +578,7 @@ function HeroSizeCompact({
             type="button"
             onClick={() => setVp(k)}
             className={`flex-1 px-2 py-1 rounded transition-colors ${
-              vp === k ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'
+              vp === k ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-[#1f2937]'
             }`}
             aria-pressed={vp === k}
           >
@@ -626,7 +626,7 @@ function HeroSizeCompact({
 
       {/* Max-width — compact single-row */}
       <div className="pt-2 mt-1 border-t border-gray-100">
-        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">가로 최대 너비</label>
+        <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">가로 최대 너비</label>
         <div className="flex items-center gap-1 mt-1">
           {[
             { v: '',       l: '전체' },
@@ -664,7 +664,7 @@ function HeroSizeCompact({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-2">
-      <h3 className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">{title}</h3>
+      <h3 className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">{title}</h3>
       <div className="space-y-3">{children}</div>
     </div>
   );
@@ -676,7 +676,7 @@ function ColorRow({
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 min-w-0">
-        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
+        <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">{label}</label>
         <div className="flex items-center gap-2 mt-1">
           <input
             type="color"
@@ -726,7 +726,7 @@ function FontRow({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
+      <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">{label}</label>
       <select
         value={selectValue}
         onChange={e => {

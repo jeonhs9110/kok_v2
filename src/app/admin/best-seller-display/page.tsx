@@ -321,7 +321,7 @@ export default function BestSellerDisplayAdminPage() {
               product photo. Taller ratios (3/4) make products look
               more imposing; wider (5/4) reads more like a thumbnail. */}
           <div>
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">제품 이미지 비율 (가로 : 세로)</label>
+            <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">제품 이미지 비율 (가로 : 세로)</label>
             <div className="grid grid-cols-5 gap-1 mt-1">
               {[
                 { v: '5/4', l: '5:4 (가로형)' },
@@ -460,7 +460,7 @@ function SizePicker({
   const safe = Number.isFinite(parsed) ? parsed : fallback;
   return (
     <div>
-      <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">{label}</label>
+      <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">{label}</label>
       <div className="grid grid-cols-4 gap-1.5 mt-1">
         {presets.map(opt => (
           <button

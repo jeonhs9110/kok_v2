@@ -402,7 +402,7 @@ export default function AdminDashboard() {
                     <tr key={item.id} className="hover:bg-[#fafbfc] transition-colors">
                       <td className="py-2 pl-1"><RankBadge rank={i + 1} small /></td>
                       <td className="py-2">
-                        <Link href="/admin/products" className="text-[12px] font-medium text-[#1f2937] hover:text-black transition-colors">
+                        <Link href="/admin/products" className="text-[12px] font-medium text-[#1f2937] hover:text-[#1f2937] transition-colors">
                           {item.name}
                         </Link>
                       </td>
