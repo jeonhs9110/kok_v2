@@ -243,7 +243,7 @@ export default function AssetLibraryPage() {
         }
       />
 
-      <div className="bg-white rounded border border-[#e5e7eb] p-6">
+      <div className="bg-white rounded border border-[#e5e7eb] p-5">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3 mt-4">
           <div className="relative flex-1 min-w-[240px]">

@@ -326,7 +326,7 @@ export default function LogoAdminPage() {
       {/* ── Controls pane (left) ────────────────────────────────────── */}
       <div className="space-y-6 min-w-0">
         {/* 사이트 로고 */}
-        <div className="bg-white rounded border border-[#e5e7eb] p-6">
+        <div className="bg-white rounded border border-[#e5e7eb] p-5">
           <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">사이트 로고</h2>
           <p className="text-sm text-gray-500 mb-6">
             상단 좌측에 노출되는 로고 이미지입니다. 업로드하지 않으면 기본 텍스트 &ldquo;KOKKOK GARDEN&rdquo;이 표시됩니다.
@@ -392,7 +392,7 @@ export default function LogoAdminPage() {
             and menu-font controls. Token writes go to the theme_tokens
             row in site_settings; the picker shows a Save bar at the
             bottom so the admin can preview-then-commit. */}
-        <div className="bg-white rounded border border-[#e5e7eb] p-6">
+        <div className="bg-white rounded border border-[#e5e7eb] p-5">
           <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">로고 크기</h2>
           <p className="text-sm text-gray-500 mb-4">
             상단 헤더에 표시되는 로고의 높이를 조절합니다. 가로 폭은 비율을 유지한 채 자동으로 맞춰집니다. 오른쪽 미리보기가 실시간으로 반영됩니다.
@@ -423,7 +423,7 @@ export default function LogoAdminPage() {
               20–80px — outside that the logo either disappears or
               breaks the 66px header bar. */}
           <div className="mt-3 flex items-center gap-2">
-            <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+            <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
               직접 입력
             </label>
             <input
@@ -464,7 +464,7 @@ export default function LogoAdminPage() {
               <button
                 type="button"
                 onClick={() => setTokens(savedTokens)}
-                className="text-xs text-gray-500 hover:text-black underline underline-offset-2"
+                className="text-xs text-gray-500 hover:text-[#1f2937] underline underline-offset-2"
               >
                 되돌리기
               </button>
@@ -473,7 +473,7 @@ export default function LogoAdminPage() {
         </div>
 
         {/* 배경 미디어 */}
-        <div className="bg-white rounded border border-[#e5e7eb] p-6">
+        <div className="bg-white rounded border border-[#e5e7eb] p-5">
           <h2 className="text-[14px] font-bold text-[#1f2937] mb-1">배경 미디어</h2>
           <p className="text-sm text-gray-500 mb-6">
             사이트 배경으로 사용할 이미지 또는 영상을 관리합니다. 여러 개 업로드 후 하나를 <strong className="text-green-600">활성</strong>으로 지정하면 오른쪽 미리보기에서 바로 확인할 수 있습니다.
@@ -616,7 +616,7 @@ export default function LogoAdminPage() {
             <button
               type="button"
               onClick={() => setIframeKey(k => k + 1)}
-              className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-black"
+              className="inline-flex items-center gap-1 text-[11px] text-gray-500 hover:text-[#1f2937]"
               title="미리보기 새로고침"
             >
               <RefreshCw className="w-3 h-3" /> 새로고침
@@ -625,7 +625,7 @@ export default function LogoAdminPage() {
               href="/kr"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] text-gray-500 hover:text-black underline"
+              className="text-[11px] text-gray-500 hover:text-[#1f2937] underline"
             >
               새 탭
             </a>

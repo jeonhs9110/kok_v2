@@ -91,7 +91,7 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl, prev
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-[11px] font-bold tracking-widest text-gray-500 uppercase">
+        <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
           미리보기 ({lang.toUpperCase()})
         </label>
         <div className="inline-flex bg-gray-100 rounded p-0.5 text-[10px] font-bold">
@@ -101,7 +101,7 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl, prev
               type="button"
               onClick={() => setView(v)}
               className={`px-2.5 py-1 rounded transition-colors ${
-                view === v ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-black'
+                view === v ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-[#1f2937]'
               }`}
             >
               {v === 'pc' ? 'PC' : '모바일'}

@@ -229,7 +229,7 @@ function BlockEditor({
   }
 }
 
-const labelClass = 'text-[10px] font-bold text-gray-500 uppercase tracking-wider';
+const labelClass = 'text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider';
 const inputClass = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-black bg-white';
 
 function HeroEditor({
