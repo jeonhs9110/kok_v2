@@ -36,19 +36,35 @@ resource "aws_cloudfront_distribution" "main" {
   comment             = "${var.project_name} storefront + admin edge cache"
   default_root_object = "" # Next.js handles the root; CloudFront shouldn't try /index.html
 
-  # The ALB is the only origin. CloudFront talks HTTPS to it so the
-  # edge-to-origin hop is encrypted end-to-end.
+  # The ALB is the only origin. Edge-to-origin uses HTTP because the
+  # ALB cert is *.kokkokgarden.com and CloudFront's SNI to the raw ALB
+  # hostname (kokkok-alb-...elb.amazonaws.com) fails the CN match,
+  # producing 502s. HTTP between CloudFront and ALB is acceptable —
+  # both endpoints are inside the AWS network — and viewer↔CloudFront
+  # is still HTTPS. The secret header below tells ALB this request
+  # came from CloudFront so its HTTP listener bypasses the normal
+  # HTTP→HTTPS redirect.
   origin {
     domain_name = aws_lb.main.dns_name
     origin_id   = "alb-origin"
 
     custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-      origin_read_timeout    = 30
+      http_port                = 80
+      https_port               = 443
+      origin_protocol_policy   = "http-only"
+      origin_ssl_protocols     = ["TLSv1.2"]
+      origin_read_timeout      = 30
       origin_keepalive_timeout = 5
+    }
+
+    # Secret header — ALB's port-80 listener has a rule that forwards
+    # to the target group ONLY when this exact header is present.
+    # Every other port-80 request (random scanners, accidental HTTP
+    # viewers) still gets the 301-to-HTTPS redirect, preserving the
+    # public TLS-only posture.
+    custom_header {
+      name  = "X-CloudFront-Auth"
+      value = var.cloudfront_origin_secret
     }
   }
 

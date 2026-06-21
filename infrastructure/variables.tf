@@ -40,6 +40,18 @@ variable "enable_cloudfront_custom_domain" {
   default     = false
 }
 
+# Secret header value CloudFront sends to the ALB so the ALB's HTTP
+# listener can distinguish CloudFront-origin traffic (forward to TG)
+# from direct HTTP viewers (redirect to HTTPS). Anyone who learns this
+# value could bypass HTTPS by hitting the ALB directly — set it long
+# and random. Stored in secrets.auto.tfvars (gitignored).
+variable "cloudfront_origin_secret" {
+  description = "Secret header value the ALB uses to authenticate CloudFront-origin requests on port 80. Generate with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 # ---- RDS ----
 variable "db_instance_class" {
   type    = string
