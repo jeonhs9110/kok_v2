@@ -80,6 +80,21 @@ export default async function RootLayout({
   return (
     <html lang="ko" className={`${freesentation.variable} ${freesentationExtras.variable}`}>
       <head>
+        {/* Preload the critical Regular weight so it starts downloading
+            during HTML parse instead of waiting for the CSS to declare
+            the font-face. Audit 2026-06-21: without this, the font
+            request chain was HTML → CSS → font, costing ~80-150ms LCP
+            on a cold visit. Bold weight (the other preloaded weight)
+            loads alongside as a slightly-later parallel request — fine
+            because body copy paints first, headlines a tick later. */}
+        <link
+          rel="preload"
+          href="/fonts/Freesentation-4Regular.ttf"
+          as="font"
+          type="font/ttf"
+          crossOrigin="anonymous"
+        />
+
         {/* Adobe Fonts — Tablet Gothic (영문 브랜드 서체). preconnect first so
             the TLS handshake overlaps the HTML stream, and use the
             ?display=swap flag on the Typekit URL — without it, Typekit

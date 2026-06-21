@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import Image from 'next/image';
 
 interface ActiveBg {
   file_url: string;
@@ -106,8 +107,19 @@ export default function SiteBackground({ initialBg }: Props) {
             : { loop: true, autoPlay: true })}
         />
       ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={bg.file_url} alt="" className="w-full h-full object-cover" />
+        // Full-viewport background image; `fill` lets next/image stretch
+        // to the parent while still serving AVIF/WebP variants. priority
+        // because this is above-the-fold on every storefront route — we
+        // want the browser to fetch it on the LCP critical path, not
+        // after the lazy-load observer fires.
+        <Image
+          src={bg.file_url}
+          alt=""
+          fill
+          sizes="100vw"
+          priority
+          className="object-cover"
+        />
       )}
     </div>
   );

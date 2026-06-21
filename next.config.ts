@@ -45,6 +45,21 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
+      // Cache static public/ assets aggressively. Default was
+      // Cache-Control: public, max-age=0 — meaning every visit
+      // re-downloaded the SVG logo (13KB), the fonts (1.2MB total),
+      // the robots.txt, etc. Probe 2026-06-21 showed both kr/en cold
+      // visits re-fetched all of these. 1 week max-age + must-revalidate
+      // lets the browser serve from disk cache without round-tripping.
+      // SVG / WOFF2 / TTF / PNG / JPG / WEBP / AVIF / ICO are the
+      // immutable-ish set; if any of these changes, the file name does
+      // too (operator uploads via /admin/assets get a hashed key).
+      {
+        source: '/:path*.:ext(svg|woff|woff2|ttf|otf|eot|png|jpg|jpeg|webp|avif|gif|ico)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=604800, must-revalidate' },
+        ],
+      },
     ];
   },
   async redirects() {
