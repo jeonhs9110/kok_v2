@@ -1,8 +1,7 @@
 'use client';
 
 import { RefreshCw, Heart, Users, Package, Activity } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { useEffect, useMemo, useState } from 'react';
 import { StatCard } from '@/components/admin/CafeWidgets';
 import {
   DailyVisitChart,
@@ -11,160 +10,22 @@ import {
   WishlistRanksPanel,
   ProductClicksTable,
 } from './_components/DashboardCharts';
-
-const supabase = getSupabaseBrowser();
+import { useDashboardData } from './_components/useDashboardData';
 
 /**
  * /admin — Cafe24 analytics-style dashboard.
  *
- * We don't have order/sales data (KCP integration is Phase 2 deploy),
- * so the boss's "Cafe24 analytics처럼 구현 가능한 것들만" directive
- * resolves to: keep the Cafe24 visual idiom (left-striped stat cards,
- * 최근 7일 date range, trend % vs previous 7-day window, funnel-shape
- * widgets) and feed it with the data we actually persist — pageviews,
- * users, products, wishlist, reviews.
+ * We don't have order/sales data (KCP integration is Phase 2 deploy), so
+ * the boss's "Cafe24 analytics처럼 구현 가능한 것들만" directive resolves
+ * to: keep the Cafe24 visual idiom (left-striped stat cards, 최근 7일 date
+ * range, trend % vs previous 7-day window, funnel-shape widgets) and feed
+ * it with the data we actually persist — pageviews, users, products,
+ * wishlist, reviews.
  */
-
-interface DashboardData {
-  isLive: boolean;
-  visits7d: number;
-  newMembers7d: number;
-  wishlistAdds7d: number;
-  visitsPrev7d: number;
-  newMembersPrev7d: number;
-  wishlistAddsPrev7d: number;
-  activeProducts: number;
-  totalProducts: number;
-  totalMembers: number;
-  totalWishlist: number;
-  totalVisits: number;
-  productDetailViews: number;
-  dailyVisits: { date: string; count: number }[];
-  countries: { country: string; count: number }[];
-  productClicks: { id: string; name: string; clicks: number }[];
-  wishRanks: { id: string; name: string; wishCount: number }[];
-}
-
-const EMPTY: DashboardData = {
-  isLive: false,
-  visits7d: 0, newMembers7d: 0, wishlistAdds7d: 0,
-  visitsPrev7d: 0, newMembersPrev7d: 0, wishlistAddsPrev7d: 0,
-  activeProducts: 0, totalProducts: 0, totalMembers: 0, totalWishlist: 0,
-  totalVisits: 0, productDetailViews: 0,
-  dailyVisits: [], countries: [], productClicks: [], wishRanks: [],
-};
-
 export default function AdminDashboard() {
-  const [data, setData] = useState<DashboardData>(EMPTY);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data, isLoading, fetchAll } = useDashboardData();
 
-  async function fetchAll() {
-    setIsLoading(true);
-    try {
-      if (!supabase) throw new Error('No client');
-
-      const now = Date.now();
-      const dayMs = 24 * 60 * 60 * 1000;
-      const start7d = new Date(now - 7 * dayMs).toISOString();
-      const start14d = new Date(now - 14 * dayMs).toISOString();
-
-      const [
-        analyticsAll,
-        analytics7d,
-        analyticsPrev7d,
-        productsAll,
-        productsActive,
-        usersAll,
-        users7d,
-        usersPrev7d,
-        wishAll,
-      ] = await Promise.all([
-        supabase.from('analytics').select('country, path, created_at'),
-        supabase.from('analytics').select('id', { count: 'exact', head: true }).gte('created_at', start7d),
-        supabase.from('analytics').select('id', { count: 'exact', head: true }).gte('created_at', start14d).lt('created_at', start7d),
-        supabase.from('products').select('id, name, is_active, images'),
-        supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('users').select('id', { count: 'exact', head: true }),
-        supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', start7d),
-        supabase.from('users').select('id', { count: 'exact', head: true }).gte('created_at', start14d).lt('created_at', start7d),
-        supabase.from('wishlist').select('product_id, created_at'),
-      ]);
-
-      const dailyBuckets: Record<string, number> = {};
-      const labels: string[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(now - i * dayMs);
-        const key = d.toISOString().slice(0, 10);
-        dailyBuckets[key] = 0;
-        labels.push(key);
-      }
-      const countryMap: Record<string, number> = {};
-      const productClickMap: Record<string, number> = {};
-      let productDetailViews = 0;
-      for (const row of analyticsAll.data ?? []) {
-        countryMap[row.country || 'UNKNOWN'] = (countryMap[row.country || 'UNKNOWN'] || 0) + 1;
-        const date = row.created_at?.slice(0, 10);
-        if (date && date in dailyBuckets) dailyBuckets[date]++;
-        const match = row.path?.match(/\/products\/([^/]+)$/);
-        if (match) {
-          productClickMap[match[1]] = (productClickMap[match[1]] || 0) + 1;
-          productDetailViews++;
-        }
-      }
-      const dailyVisits = labels.map(d => ({ date: d, count: dailyBuckets[d] }));
-
-      let wishlistAdds7d = 0;
-      let wishlistAddsPrev7d = 0;
-      for (const w of wishAll.data ?? []) {
-        if (!w.created_at) continue;
-        const t = new Date(w.created_at).getTime();
-        if (t >= now - 7 * dayMs) wishlistAdds7d++;
-        else if (t >= now - 14 * dayMs) wishlistAddsPrev7d++;
-      }
-
-      const nameMap: Record<string, string> = {};
-      for (const p of productsAll.data ?? []) nameMap[p.id] = p.name;
-
-      const productClicks = Object.entries(productClickMap)
-        .filter(([id]) => nameMap[id])
-        .map(([id, clicks]) => ({ id, name: nameMap[id], clicks }))
-        .sort((a, b) => b.clicks - a.clicks);
-
-      const wishMap: Record<string, number> = {};
-      for (const w of wishAll.data ?? []) wishMap[w.product_id] = (wishMap[w.product_id] || 0) + 1;
-      const wishRanks = Object.entries(wishMap)
-        .filter(([id]) => nameMap[id])
-        .map(([id, wishCount]) => ({ id, name: nameMap[id], wishCount }))
-        .sort((a, b) => b.wishCount - a.wishCount);
-
-      setData({
-        isLive: true,
-        visits7d: analytics7d.count ?? 0,
-        newMembers7d: users7d.count ?? 0,
-        wishlistAdds7d,
-        visitsPrev7d: analyticsPrev7d.count ?? 0,
-        newMembersPrev7d: usersPrev7d.count ?? 0,
-        wishlistAddsPrev7d,
-        activeProducts: productsActive.count ?? 0,
-        totalProducts: productsAll.data?.length ?? 0,
-        totalMembers: usersAll.count ?? 0,
-        totalWishlist: wishAll.data?.length ?? 0,
-        totalVisits: analyticsAll.data?.length ?? 0,
-        productDetailViews,
-        dailyVisits,
-        countries: Object.entries(countryMap).map(([country, count]) => ({ country, count })).sort((a, b) => b.count - a.count),
-        productClicks,
-        wishRanks,
-      });
-    } catch {
-      setData(EMPTY);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => { fetchAll(); }, []);
-
+  // % change vs prev window. Returns null when prev is 0 (can't divide).
   function trend(curr: number, prev: number): number | null {
     if (prev === 0) return curr > 0 ? 100 : null;
     return Math.round(((curr - prev) / prev) * 100);
@@ -188,9 +49,15 @@ export default function AdminDashboard() {
     ];
   }, [data]);
 
-  const todayStr = new Date().toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
-  const start7dStr = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
-  const dateRangeLabel = `${start7dStr} – ${todayStr} (최근 7일)`;
+  const [dateRangeLabel, setDateRangeLabel] = useState('');
+  useEffect(() => {
+    // Compute on mount so SSR + first client render agree; new Date() in
+    // the render body triggers the react-hooks/purity rule.
+    const today = new Date().toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+    const start7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDateRangeLabel(`${start7d} – ${today} (최근 7일)`);
+  }, []);
 
   return (
     <div className="space-y-5">
