@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { type Product } from '@/lib/api/products';
 import type { Category } from '@/lib/api/categories';
+import { useModalA11y } from '@/hooks/useModalA11y';
 import ProductImageUpload from './ProductImageUpload';
 import ProductPriceEditor from './ProductPriceEditor';
 import ProductBasicFields from './ProductBasicFields';
@@ -22,14 +23,22 @@ interface Props {
 
 export default function ProductDetailModal({ editing, categories, onClose, onSaved }: Props) {
   const f = useProductForm(editing, onSaved);
+  const dialogRef = useModalA11y(!!editing, onClose);
 
   if (!editing) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="product-detail-modal-title"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#fafbfc]">
-          <h3 className="text-[14px] font-bold text-[#1f2937]">{f.editingId ? '상품 수정' : '새 상품 추가'}</h3>
+          <h3 id="product-detail-modal-title" className="text-[14px] font-bold text-[#1f2937]">{f.editingId ? '상품 수정' : '새 상품 추가'}</h3>
           <button
             onClick={onClose}
             className="text-[#9ca3af] hover:text-[#1f2937] p-1 rounded hover:bg-[#f3f4f6] transition-colors"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { isBannerKey } from '@/lib/api/sectionOrder';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
@@ -49,27 +49,42 @@ export function useHomepageBuilder() {
   // tokens up to this window. Forward them to the central storefront iframe
   // so the admin sees changes against the real site while editing inside
   // the drawer — no in-drawer iframe needed.
+  //
+  // Audit 2026-06-21: relaying e.data unchecked across an iframe boundary
+  // is an XSS surface — a future sender could attach unexpected fields
+  // (e.g. javascript: link_url). Each relayed type now passes a shape
+  // check before the forward; unknown fields get stripped.
   useEffect(() => {
     function onMessage(e: MessageEvent) {
       if (e.origin !== window.location.origin) return;
       if (!e.data || typeof e.data !== 'object') return;
-      // Whitelist relayed message types. Everything else is ours-only
-      // (highlight, drawer close) or unrelated.
-      if (
-        e.data.type !== 'kokkok-theme-tokens' &&
-        e.data.type !== 'kokkok-builder-slide-preview'
-      ) return;
+      const data = e.data as { type?: unknown };
+      let safe: unknown = null;
+      if (data.type === 'kokkok-theme-tokens') {
+        const css = (data as { css?: unknown }).css;
+        if (typeof css === 'string' && css.length < 200_000) {
+          safe = { type: 'kokkok-theme-tokens', css };
+        }
+      } else if (data.type === 'kokkok-builder-slide-preview') {
+        const d = data as { slideId?: unknown; override?: unknown };
+        const slideIdOk = d.slideId === null || typeof d.slideId === 'string';
+        const overrideOk = d.override === null || (typeof d.override === 'object' && d.override !== null);
+        if (slideIdOk && overrideOk) {
+          safe = { type: 'kokkok-builder-slide-preview', slideId: d.slideId, override: d.override };
+        }
+      }
+      if (!safe) return;
       const iframe = iframeRef.current;
       if (!iframe?.contentWindow) return;
-      iframe.contentWindow.postMessage(e.data, window.location.origin);
+      iframe.contentWindow.postMessage(safe, window.location.origin);
     }
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
   }, []);
 
-  const handleReload = () => setIframeKey(k => k + 1);
+  const handleReload = useCallback(() => setIframeKey(k => k + 1), []);
 
-  function handleSelect(key: string) {
+  const handleSelect = useCallback((key: string) => {
     setSelectedKey(key);
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentWindow) return;
@@ -77,12 +92,12 @@ export function useHomepageBuilder() {
       { type: 'kokkok-builder-highlight', sectionKey: key },
       window.location.origin,
     );
-  }
+  }, []);
 
-  function handleEdit(key: string) {
+  const handleEdit = useCallback((key: string) => {
     setSelectedKey(key);
     setEditingKey(key);
-  }
+  }, []);
 
   const isReorderable = (k: string) => CORE_REORDERABLE.has(k) || isBannerKey(k);
 
@@ -105,19 +120,19 @@ export function useHomepageBuilder() {
     }
   }
 
-  function handleDragStart(key: string, e: React.DragEvent) {
+  const handleDragStart = useCallback((key: string, e: React.DragEvent) => {
     setDragKey(key);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', key);
-  }
-  function handleDragOver(key: string, e: React.DragEvent) {
+  }, []);
+  const handleDragOver = useCallback((key: string, e: React.DragEvent) => {
     if (!dragKey || dragKey === key) return;
     if (!isReorderable(key)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDragOverKey(key);
-  }
-  function handleDrop(targetKey: string, e: React.DragEvent) {
+  }, [dragKey]);
+  const handleDrop = useCallback((targetKey: string, e: React.DragEvent) => {
     e.preventDefault();
     if (!dragKey || dragKey === targetKey) return;
     if (!isReorderable(targetKey) || !isReorderable(dragKey)) return;
@@ -132,13 +147,13 @@ export function useHomepageBuilder() {
     setDragOverKey(null);
     void saveSectionOrder(next);
     setIframeKey(k => k + 1);
-  }
-  function handleDragEnd() {
+  }, [dragKey, sectionOrder, setSectionOrder]);
+  const handleDragEnd = useCallback(() => {
     setDragKey(null);
     setDragOverKey(null);
-  }
+  }, []);
 
-  async function handleAddBanner() {
+  const handleAddBanner = useCallback(async () => {
     if (!supabase) return;
     try {
       const { data, error } = await supabase
@@ -170,9 +185,9 @@ export function useHomepageBuilder() {
       console.error('[admin/homepage] add banner failed:', err);
       toast.show('띠배너 추가에 실패했습니다.', 'error');
     }
-  }
+  }, [sectionOrder, setBanners, setSectionOrder, handleEdit, toast]);
 
-  function handleDrawerClose() {
+  const handleDrawerClose = useCallback(() => {
     const wasEditingBanner = editingKey && isBannerKey(editingKey);
     setEditingKey(null);
     // Bump preview iframe key so it remounts and pulls fresh data —
@@ -190,7 +205,7 @@ export function useHomepageBuilder() {
         if (data) setBanners(data as HomepageBanner[]);
       })().catch(err => console.error('[admin/homepage] banner refresh failed:', err));
     }
-  }
+  }, [editingKey, setBanners]);
 
   // Find the section currently being edited so we can hand the drawer
   // its name + href without re-searching at render time.
@@ -203,7 +218,12 @@ export function useHomepageBuilder() {
     return null;
   }, [editingKey, grouped]);
 
-  return {
+  // Memoize the return bag so consumers that destructure into memoized
+  // child components don't see a new object identity on every render.
+  // Audit 2026-06-21: useHomepageBuilder is called by FullSectionRail
+  // which renders ~70 SectionDef cards; without this the drag handlers
+  // re-trigger memos every keystroke in unrelated state.
+  return useMemo(() => ({
     grouped, isLoading,
     selectedKey, editingKey,
     dragOverKey, isReorderable,
@@ -212,5 +232,10 @@ export function useHomepageBuilder() {
     handleReload, handleSelect, handleEdit,
     handleDragStart, handleDragOver, handleDrop, handleDragEnd,
     handleAddBanner, handleDrawerClose,
-  };
+  }), [
+    grouped, isLoading, selectedKey, editingKey, dragOverKey, iframeKey,
+    editingSection, handleReload, handleSelect, handleEdit,
+    handleDragStart, handleDragOver, handleDrop, handleDragEnd,
+    handleAddBanner, handleDrawerClose,
+  ]);
 }

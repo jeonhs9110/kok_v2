@@ -21,8 +21,12 @@ export default function EmbeddedShell({
 }) {
   const sp = useSearchParams();
   if (sp?.get('embedded') === 'true') {
+    // .kokkok-admin-shell scopes the Cafe24 input/border baseline in
+    // globals.css. Embedded editors (theme, carousel slide, sub-hero
+    // opened from the homepage builder drawer) must stay inside it or
+    // every input renders with no border at rest — audit 2026-06-21.
     return (
-      <div className="min-h-screen bg-white overflow-x-hidden">
+      <div className="kokkok-admin-shell min-h-screen bg-white overflow-x-hidden">
         {children}
       </div>
     );

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { useToast } from '@/components/admin/Toast';
 import type { Product } from '@/lib/api/products';
 import type { Category } from '@/lib/api/categories';
 
@@ -18,6 +19,7 @@ const supabase = getSupabaseBrowser();
  * empty table that looks like "no products yet".
  */
 export function useProducts() {
+  const toast = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -82,24 +84,34 @@ export function useProducts() {
   }, [fetchProducts, fetchCategories]);
 
   const handleToggle = async (id: string, currentStatus: boolean) => {
+    // Snapshot for rollback — if the DB write fails we put the row back
+    // so the UI doesn't show a ghost state the DB never persisted.
+    const snapshot = products;
     setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: !currentStatus } : p));
     try {
       if (!supabase) throw new Error('Supabase 클라이언트 없음');
-      await supabase.from('products').update({ is_active: !currentStatus }).eq('id', id);
+      const { error } = await supabase.from('products').update({ is_active: !currentStatus }).eq('id', id);
+      if (error) throw error;
       revalidateHomepageData('products');
     } catch (err) {
       console.warn('[admin/products] 토글 DB 동기화 실패:', err);
+      setProducts(snapshot);
+      toast.show('상태 변경에 실패했습니다.', 'error');
     }
   };
 
   const handleDelete = async (id: string) => {
+    const snapshot = products;
     setProducts(prev => prev.filter(p => p.id !== id));
     try {
       if (!supabase) throw new Error('Supabase 클라이언트 없음');
-      await supabase.from('products').delete().eq('id', id);
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
       revalidateHomepageData('products');
     } catch (err) {
       console.warn('[admin/products] 삭제 DB 동기화 실패:', err);
+      setProducts(snapshot);
+      toast.show('삭제에 실패했습니다.', 'error');
     }
   };
 

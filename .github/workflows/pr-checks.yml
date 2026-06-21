@@ -1,0 +1,31 @@
+name: PR checks
+
+# Runs on every PR opened against master. Blocks merge if tsc or lint
+# regress. Added 2026-06-21 — before this, the only CI was the
+# build-publish-artifact workflow that fires post-merge.
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  typecheck-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: tsc --noEmit
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        # Allow the single pre-existing custom-font warning to remain; fail
+        # on anything new. Tighten to --max-warnings=0 once that's fixed.
+        run: npm run lint -- --max-warnings=1

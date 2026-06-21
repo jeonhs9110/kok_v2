@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { SUPPORTED_LANGS, LANG_LABELS } from '@/lib/i18n/types';
 import type { Category } from '@/lib/api/categories';
+import { useModalA11y } from '@/hooks/useModalA11y';
 
 export interface CategoryFormData {
   slug: string;
@@ -23,6 +24,8 @@ interface Props {
 }
 
 export default function CategoryModal({ open, editingId, form, parents, onFormChange, onClose, onSave }: Props) {
+  const dialogRef = useModalA11y(open, onClose);
+
   if (!open) return null;
 
   const patch = (p: Partial<CategoryFormData>) => onFormChange({ ...form, ...p });
@@ -32,10 +35,17 @@ export default function CategoryModal({ open, editingId, form, parents, onFormCh
       className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="category-modal-title"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between p-4 border-b border-[#e5e7eb] bg-[#fafbfc]">
-          <h3 className="text-[14px] font-bold text-[#1f2937]">{editingId ? '카테고리 수정' : '카테고리 추가'}</h3>
-          <button onClick={onClose} className="text-[#9ca3af] hover:text-[#1f2937] p-1 rounded hover:bg-[#f3f4f6] transition-colors"><X className="w-4 h-4" /></button>
+          <h3 id="category-modal-title" className="text-[14px] font-bold text-[#1f2937]">{editingId ? '카테고리 수정' : '카테고리 추가'}</h3>
+          <button onClick={onClose} aria-label="닫기" className="text-[#9ca3af] hover:text-[#1f2937] p-1 rounded hover:bg-[#f3f4f6] transition-colors"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-6 space-y-5">
           <div>
