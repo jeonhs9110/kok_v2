@@ -1,27 +1,20 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, ChevronRight, X, Tag, Layers, FolderTree } from 'lucide-react';
+import { Plus, Tag, Layers, FolderTree } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader, EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { revalidateHeaderData } from '@/lib/cache/invalidate';
+import type { Category } from '@/lib/api/categories';
+import CategoryRows from './_components/CategoryRows';
+import CategoryModal, { type CategoryFormData } from './_components/CategoryModal';
 
 // Session-aware client. Phase 3 RLS lockdown on `categories` requires admin JWT.
 const supabase = getSupabaseBrowser();
-import type { Category } from '@/lib/api/categories';
-import { SUPPORTED_LANGS, LANG_LABELS } from '@/lib/i18n/types';
-import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
-interface FormData {
-  slug: string;
-  parent_id: string;
-  sort_order: number;
-  is_active: boolean;
-  name: Record<string, string>;
-}
-
-const emptyForm: FormData = { slug: '', parent_id: '', sort_order: 0, is_active: true, name: {} };
+const emptyForm: CategoryFormData = { slug: '', parent_id: '', sort_order: 0, is_active: true, name: {} };
 
 export default function CategoriesAdminPage() {
   const toast = useToast();
@@ -30,7 +23,7 @@ export default function CategoriesAdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormData>({ ...emptyForm });
+  const [form, setForm] = useState<CategoryFormData>({ ...emptyForm });
 
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
@@ -92,8 +85,8 @@ export default function CategoriesAdminPage() {
         if (error) throw error;
       }
       // Header mega-menu reads the categories tree from the same memo
-      // the menus admin invalidates — without this call the public site
-      // shows the old category list for up to 60s after a save.
+      // the menus admin invalidates — without this the public site shows
+      // the old category list for up to 60s after a save.
       await revalidateHeaderData();
       setModalOpen(false);
       fetchAll();
@@ -158,184 +151,30 @@ export default function CategoriesAdminPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#f3f4f6]">
-              {parents.map(parent => {
-                const children = getChildren(parent.id);
-                return (
-                  <CategoryRows
-                    key={parent.id}
-                    parent={parent}
-                    subItems={children}
-                    onEdit={openEdit}
-                    onDelete={handleDelete}
-                    onAddChild={() => openAdd(parent.id)}
-                  />
-                );
-              })}
+              {parents.map(parent => (
+                <CategoryRows
+                  key={parent.id}
+                  parent={parent}
+                  subItems={getChildren(parent.id)}
+                  onEdit={openEdit}
+                  onDelete={handleDelete}
+                  onAddChild={() => openAdd(parent.id)}
+                />
+              ))}
             </tbody>
           </table>
         )}
       </div>
 
-      {/* Modal */}
-      {modalOpen && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setModalOpen(false); }}>
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-[#e5e7eb] bg-[#fafbfc]">
-              <h3 className="text-[14px] font-bold text-[#1f2937]">{editingId ? '카테고리 수정' : '카테고리 추가'}</h3>
-              <button onClick={() => setModalOpen(false)} className="text-[#9ca3af] hover:text-[#1f2937] p-1 rounded hover:bg-[#f3f4f6] transition-colors"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="p-6 space-y-5">
-              {/* Parent selector */}
-              <div>
-                <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">분류</label>
-                <select
-                  value={form.parent_id}
-                  onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
-                >
-                  <option value="">최상위 카테고리</option>
-                  {parents.filter(p => p.id !== editingId).map(p => (
-                    <option key={p.id} value={p.id}>↳ {p.name.kr || p.slug} 의 서브카테고리</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Slug */}
-              <div>
-                <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">슬러그 (URL용, 영문)</label>
-                <input
-                  type="text"
-                  value={form.slug}
-                  onChange={e => setForm(f => ({ ...f, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
-                  placeholder="예: serum, cream, pdrn"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
-                />
-              </div>
-
-              {/* Language names */}
-              <div>
-                <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">카테고리명 (다국어)</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {SUPPORTED_LANGS.map(l => (
-                    <div key={l}>
-                      <label className="block text-[10px] text-gray-400 mb-1">{LANG_LABELS[l]}{l === 'kr' && ' *'}</label>
-                      <input
-                        type="text"
-                        value={form.name[l] || ''}
-                        onChange={e => setForm(f => ({ ...f, name: { ...f.name, [l]: e.target.value } }))}
-                        placeholder={l === 'kr' ? '필수' : '선택'}
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sort order + active */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-semibold text-[#6b7280] mb-1">정렬 순서</label>
-                  <input
-                    type="number"
-                    value={form.sort_order}
-                    onChange={e => setForm(f => ({ ...f, sort_order: Number(e.target.value) }))}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
-                  />
-                </div>
-                <div className="flex items-end pb-1">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.is_active}
-                      onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))}
-                      className="w-4 h-4 rounded"
-                    />
-                    <span className="text-sm text-gray-700">활성화</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-[#e5e7eb] bg-[#fafbfc] flex justify-end gap-2">
-              <button onClick={() => setModalOpen(false)} className="px-4 py-2.5 border border-[#d1d5db] text-[#374151] rounded text-sm font-semibold bg-white hover:bg-[#f9fafb] transition-colors">취소</button>
-              <button onClick={handleSave} className="px-6 py-2.5 bg-[#3b82f6] text-white text-sm font-semibold rounded-lg hover:bg-[#2563eb] transition-colors">
-                {editingId ? '수정' : '추가'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CategoryModal
+        open={modalOpen}
+        editingId={editingId}
+        form={form}
+        parents={parents}
+        onFormChange={setForm}
+        onClose={() => setModalOpen(false)}
+        onSave={handleSave}
+      />
     </div>
-  );
-}
-
-function CategoryRows({
-  parent, subItems, onEdit, onDelete, onAddChild,
-}: {
-  parent: Category;
-  subItems: Category[];
-  onEdit: (c: Category) => void;
-  onDelete: (id: string, hasChildren: boolean) => void;
-  onAddChild: () => void;
-}) {
-  return (
-    <>
-      {/* Parent row */}
-      <tr className="hover:bg-[#fafbfc] transition-colors">
-        <td className="p-3 pl-4 text-[12px] text-gray-500 w-16">{parent.sort_order}</td>
-        <td className="p-3">
-          <span className="font-bold text-gray-900 text-sm">{parent.name.kr || parent.slug}</span>
-          {parent.name.en && <span className="ml-2 text-xs text-gray-400">{parent.name.en}</span>}
-        </td>
-        <td className="p-3 text-[12px] text-gray-500 font-mono">{parent.slug}</td>
-        <td className="p-3">
-          <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${parent.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-            {parent.is_active ? '활성' : '비활성'}
-          </span>
-        </td>
-        <td className="p-3 pr-4 text-right">
-          <div className="flex gap-1 justify-end">
-            <button onClick={onAddChild} title="서브카테고리 추가" className="text-gray-400 hover:text-blue-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
-              <Plus className="w-4 h-4" />
-            </button>
-            <button onClick={() => onEdit(parent)} title="수정" className="text-gray-400 hover:text-amber-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
-              <Pencil className="w-4 h-4" />
-            </button>
-            <button onClick={() => onDelete(parent.id, subItems.length > 0)} title="삭제" className="text-gray-400 hover:text-red-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </td>
-      </tr>
-      {/* Child rows */}
-      {subItems.map(child => (
-        <tr key={child.id} className="hover:bg-[#fafbfc] transition-colors bg-gray-50/30">
-          <td className="p-3 pl-4 text-[12px] text-gray-400 w-16">{child.sort_order}</td>
-          <td className="p-3 pl-10">
-            <span className="flex items-center gap-1.5 text-sm text-gray-700">
-              <ChevronRight className="w-3 h-3 text-gray-300" />
-              {child.name.kr || child.slug}
-              {child.name.en && <span className="ml-1 text-xs text-gray-400">{child.name.en}</span>}
-            </span>
-          </td>
-          <td className="p-3 text-[12px] text-gray-400 font-mono">{child.slug}</td>
-          <td className="p-3">
-            <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold ${child.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-              {child.is_active ? '활성' : '비활성'}
-            </span>
-          </td>
-          <td className="p-3 pr-4 text-right">
-            <div className="flex gap-1 justify-end">
-              <button onClick={() => onEdit(child)} title="수정" className="text-gray-400 hover:text-amber-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
-                <Pencil className="w-4 h-4" />
-              </button>
-              <button onClick={() => onDelete(child.id, false)} title="삭제" className="text-gray-400 hover:text-red-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-          </td>
-        </tr>
-      ))}
-    </>
   );
 }
