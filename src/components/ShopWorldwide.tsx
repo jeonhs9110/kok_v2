@@ -158,8 +158,16 @@ export default function ShopWorldwide({ labels, retailers }: ShopWorldwideProps)
                   <div className="flex items-center gap-4 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg p-4 border border-white/20 transition-colors h-full">
                     <div className="flex-shrink-0 w-14 h-14 bg-white rounded flex items-center justify-center overflow-hidden">
                       {v.storeLogoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={v.storeLogoUrl} alt={v.storeName} className="max-w-full max-h-full object-contain" />
+                        <Image
+                          src={v.storeLogoUrl}
+                          alt={v.storeName}
+                          width={56}
+                          height={56}
+                          sizes="56px"
+                          className="max-w-full max-h-full object-contain"
+                          loading="lazy"
+                          unoptimized={v.storeLogoUrl.endsWith('.svg')}
+                        />
                       ) : (
                         <span className="text-[10px] font-black text-neutral-400 text-center leading-tight px-1">
                           {v.storeName.slice(0, 8).toUpperCase()}
