@@ -1,0 +1,241 @@
+import { useEffect, useState } from 'react';
+import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { useToast } from '@/components/admin/Toast';
+import type { SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
+
+const supabase = getSupabaseBrowser();
+const EMPTY_BG: SectionBgValue = { type: null, color: null, mediaUrl: null, mediaType: null };
+
+export interface Short {
+  id: string;
+  youtubeId: string;
+  productId: string | null;
+  productName: string | null;
+  addedAt: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+}
+
+/**
+ * Three-channel hook for /admin/shorts: the shorts list + product
+ * reference data + the shorts_config singleton (section bg + header
+ * style from migrations 26 and 33). Add / delete / link-to-product /
+ * config save all in one place.
+ *
+ * shorts_config bg + header columns share a single row so saves use
+ * the same id-eq update path; an insert with id capture is the fallback
+ * for fresh installs where the seed row never landed.
+ */
+export function useShorts() {
+  const toast = useToast();
+  const [shorts, setShorts] = useState<Short[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [newUrl, setNewUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
+  // Section background (migration 26).
+  const [bgConfigId, setBgConfigId] = useState<string | null>(null);
+  const [bg, setBg] = useState<SectionBgValue>(EMPTY_BG);
+  const [savingBg, setSavingBg] = useState(false);
+  const [bgSaved, setBgSaved] = useState(false);
+  // Migration 33 — admin-editable section title + style.
+  const [headerText, setHeaderText] = useState('');
+  const [headerFontSize, setHeaderFontSize] = useState('15');
+  const [headerTextColor, setHeaderTextColor] = useState('#ffffff');
+  const [headerBgEnabled, setHeaderBgEnabled] = useState(false);
+  const [headerBgColor, setHeaderBgColor] = useState('#000000');
+  const [savingHeader, setSavingHeader] = useState(false);
+  const [headerSaved, setHeaderSaved] = useState(false);
+
+  useEffect(() => {
+    fetchShorts();
+    fetchProducts();
+    fetchBg();
+  }, []);
+
+  async function fetchBg() {
+    if (!supabase) return;
+    const { data } = await supabase
+      .from('shorts_config')
+      .select('id, bg_type, bg_color, bg_media_url, bg_media_type, header_text, header_font_size, header_text_color, header_bg_color')
+      .limit(1).maybeSingle();
+    if (data) {
+      setBgConfigId(data.id);
+      setBg({
+        type: data.bg_type ?? null,
+        color: data.bg_color ?? null,
+        mediaUrl: data.bg_media_url ?? null,
+        mediaType: (data.bg_media_type as 'image' | 'video' | null) ?? null,
+      });
+      setHeaderText(data.header_text ?? '');
+      setHeaderFontSize(String(parseInt(data.header_font_size ?? '15', 10) || 15));
+      setHeaderTextColor(data.header_text_color ?? '#ffffff');
+      setHeaderBgEnabled(!!data.header_bg_color);
+      setHeaderBgColor(data.header_bg_color ?? '#000000');
+    }
+  }
+
+  async function saveHeader() {
+    if (!supabase) return;
+    setSavingHeader(true);
+    try {
+      const size = Math.max(10, Math.min(48, parseInt(headerFontSize, 10) || 15));
+      const payload = {
+        header_text: headerText.trim() || null,
+        header_font_size: `${size}px`,
+        header_text_color: headerTextColor || null,
+        header_bg_color: headerBgEnabled ? headerBgColor : null,
+      };
+      if (bgConfigId) {
+        const { error } = await supabase.from('shorts_config').update(payload).eq('id', bgConfigId);
+        if (error) throw error;
+      } else {
+        const { data, error } = await supabase.from('shorts_config').insert([payload]).select('id').single();
+        if (error) throw error;
+        setBgConfigId(data.id);
+      }
+      revalidateHomepageData('shorts');
+      setHeaderSaved(true);
+      setTimeout(() => setHeaderSaved(false), 2000);
+    } catch (err) {
+      console.error('[admin/shorts] header save failed:', err);
+      toast.show('제목 스타일 저장에 실패했습니다.', 'error');
+    } finally {
+      setSavingHeader(false);
+    }
+  }
+
+  async function saveBg() {
+    if (!supabase) return;
+    setSavingBg(true);
+    try {
+      const payload = {
+        bg_type: bg.type,
+        bg_color: bg.color,
+        bg_media_url: bg.mediaUrl,
+        bg_media_type: bg.mediaType,
+      };
+      if (bgConfigId) {
+        const { error } = await supabase.from('shorts_config').update(payload).eq('id', bgConfigId);
+        if (error) throw error;
+      } else {
+        // Seed row should exist from the migration; tolerate its absence
+        // so a fresh project doesn't get stuck.
+        const { data, error } = await supabase.from('shorts_config').insert([payload]).select('id').single();
+        if (error) throw error;
+        setBgConfigId(data.id);
+      }
+      revalidateHomepageData('shorts');
+      setBgSaved(true);
+      setTimeout(() => setBgSaved(false), 2000);
+    } catch (err) {
+      console.error('[admin/shorts] bg save failed:', err);
+      toast.show('배경 저장에 실패했습니다.', 'error');
+    } finally {
+      setSavingBg(false);
+    }
+  }
+
+  async function fetchProducts() {
+    if (!supabase) return;
+    const { data } = await supabase.from('products').select('id, name').eq('is_active', true).order('name');
+    if (data) setProducts(data);
+  }
+
+  async function fetchShorts() {
+    try {
+      if (!supabase) throw new Error('Supabase 클라이언트 없음');
+      const { data, error } = await supabase
+        .from('shorts')
+        .select('id, youtube_id, product_id, created_at, products(name)')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      type ShortsRow = {
+        id: string;
+        youtube_id: string;
+        product_id: string | null;
+        created_at: string;
+        products: { name: string } | null;
+      };
+      setShorts(((data ?? []) as unknown as ShortsRow[]).map(d => ({
+        id: d.id,
+        youtubeId: d.youtube_id,
+        productId: d.product_id || null,
+        productName: d.products?.name || null,
+        addedAt: new Date(d.created_at).toISOString().split('T')[0],
+      })));
+    } catch (err) {
+      // Previously fell back to 4 hardcoded demo YouTube IDs which masked
+      // real DB failures. Now surface the failure to the operator instead.
+      console.error('[admin/shorts] DB fetch failed:', err);
+      setShorts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!newUrl) return;
+
+    const match = newUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|shorts\/)([^"&?\/\s]{11})/);
+    const videoId = match ? match[1] : (newUrl.length === 11 ? newUrl : null);
+
+    if (videoId) {
+      const tempId = Date.now().toString();
+      setShorts(prev => [{ id: tempId, youtubeId: videoId, productId: null, productName: null, addedAt: new Date().toISOString().split('T')[0] }, ...prev]);
+      setNewUrl('');
+      try {
+        if (!supabase) throw new Error('클라이언트 없음');
+        const { error } = await supabase.from('shorts').insert([{ youtube_id: videoId }]);
+        if (!error) {
+          toast.show(`YouTube ID '${videoId}' 추가됨`, 'success');
+          fetchShorts();
+          revalidateHomepageData('shorts');
+        }
+      } catch { /* mock mode */ }
+    } else {
+      toast.show('유효하지 않은 YouTube URL 또는 ID입니다.', 'warning');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setShorts(prev => prev.filter(s => s.id !== id));
+    try {
+      if (!supabase) throw new Error('클라이언트 없음');
+      await supabase.from('shorts').delete().eq('id', id);
+      revalidateHomepageData('shorts');
+    } catch { /* ignore */ }
+  };
+
+  const handleLinkProduct = async (shortId: string, productId: string | null) => {
+    setLinkingId(shortId);
+    try {
+      if (supabase) {
+        await supabase.from('shorts').update({ product_id: productId || null }).eq('id', shortId);
+      }
+      const prod = products.find(p => p.id === productId);
+      setShorts(prev => prev.map(s => s.id === shortId ? { ...s, productId: productId, productName: prod?.name || null } : s));
+      revalidateHomepageData('shorts');
+    } catch { /* ignore */ }
+    finally { setLinkingId(null); }
+  };
+
+  return {
+    shorts, products,
+    newUrl, setNewUrl,
+    isLoading, linkingId,
+    bg, setBg, savingBg, bgSaved, saveBg,
+    headerText, setHeaderText,
+    headerFontSize, setHeaderFontSize,
+    headerTextColor, setHeaderTextColor,
+    headerBgEnabled, setHeaderBgEnabled,
+    headerBgColor, setHeaderBgColor,
+    savingHeader, headerSaved, saveHeader,
+    handleAdd, handleDelete, handleLinkProduct,
+  };
+}
