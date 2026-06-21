@@ -39,9 +39,11 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
         drawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}
     >
-      {/* Brand header — flat wordmark + collapse icon, no chip/gradient.
-          48px tall (Cafe24's ruler). */}
-      <div className="h-12 flex items-center justify-between px-4 border-b border-white/[0.06]">
+      {/* Brand header — Cafe24 hierarchy: the subheader / section-header
+          strip at the top of each nav column is a DARKER shade than the
+          menu items below it. Without this two-tone separation the rail
+          reads flat. Brand bar is #13151f; menu body stays #1c1c2e. */}
+      <div className="h-12 flex items-center justify-between px-4 bg-[#13151f] border-b border-black/30">
         <span className="text-[15px] font-extrabold tracking-tight text-white lowercase">kokkok</span>
         <div className="flex items-center gap-1">
           <button
@@ -95,7 +97,7 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
         })}
       </nav>
 
-      <div className="border-t border-white/[0.06] py-2">
+      <div className="bg-[#13151f] py-2">
         <Link
           href="/kr"
           target="_blank"

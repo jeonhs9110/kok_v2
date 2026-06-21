@@ -20,13 +20,27 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
       robots: { index: false, follow: true },
     };
   }
-  const title = `${product.name} · KOKKOK GARDEN`;
-  const desc = product.summary || product.description || product.name;
+  // SEO overrides — operator-configured per-product values from
+  // /admin/products → SEO 설정. Falls back to product.name / summary
+  // when each field is empty, so unmigrated rows render identically.
+  const seo = product.seo;
+  const title = seo?.title?.trim()
+    ? `${seo.title.trim()} · KOKKOK GARDEN`
+    : `${product.name} · KOKKOK GARDEN`;
+  const desc = seo?.description?.trim()
+    || product.summary
+    || product.description
+    || product.name;
   const image = product.imageUrl || undefined;
+  const imageAlt = seo?.imageAlt?.trim() || product.name;
   const url = `https://www.kokkokgarden.com/${lang}/products/${id}`;
+  const indexable = seo?.indexable !== false;
   return {
     title,
     description: desc,
+    keywords: seo?.keywords?.trim() || undefined,
+    authors: seo?.author?.trim() ? [{ name: seo.author.trim() }] : undefined,
+    robots: indexable ? undefined : { index: false, follow: true },
     alternates: {
       canonical: url,
       languages: {
@@ -39,7 +53,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
       description: desc,
       url,
       type: 'website',
-      images: image ? [{ url: image, width: 1200, height: 1200, alt: product.name }] : undefined,
+      images: image ? [{ url: image, width: 1200, height: 1200, alt: imageAlt }] : undefined,
       locale: lang === 'kr' ? 'ko_KR' : 'en_US',
       siteName: 'KOKKOK GARDEN',
     },

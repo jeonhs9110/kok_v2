@@ -8,6 +8,7 @@ import ProductImageUpload from './ProductImageUpload';
 import ProductPriceEditor from './ProductPriceEditor';
 import ProductBasicFields from './ProductBasicFields';
 import ProductPurchaseSettings from './ProductPurchaseSettings';
+import ProductSeoSettings from './ProductSeoSettings';
 import DetailComponentsEditor from './DetailComponentsEditor';
 import { useProductForm } from './useProductForm';
 
@@ -78,6 +79,11 @@ export default function ProductDetailModal({ editing, categories, onClose, onSav
           />
 
           <ProductPurchaseSettings
+            value={f.formData}
+            onChange={f.patch}
+          />
+
+          <ProductSeoSettings
             value={f.formData}
             onChange={f.patch}
           />
