@@ -1,11 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Video, Plus, Save, Link2, Package } from 'lucide-react';
+import { Video, Plus, Link2, Package } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
-import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
+import type { SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
+import SectionBgCard from '@/components/admin/SectionBgCard';
 import ShortsHeaderStyleCard from './_components/ShortsHeaderStyleCard';
 import ShortsGrid from './_components/ShortsGrid';
 
@@ -264,28 +265,16 @@ export default function ShortsAdminPage() {
       />
 
       {/* 섹션 배경 설정 (migration 26) */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-5 space-y-4">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 배경</h2>
-          <p className="text-xs text-gray-400">기본값은 검정(neutral-900) 배경입니다.</p>
-        </div>
-        <SectionBackgroundPanel
-          value={bg}
-          onChange={setBg}
-          defaultColor="#171717"
-          uploadPathPrefix="shorts-bg"
-        />
-        <button
-          onClick={saveBg}
-          disabled={savingBg}
-          className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${
-            bgSaved ? 'bg-green-600 text-white' : 'bg-black/80 text-white hover:bg-black'
-          } disabled:opacity-50`}
-        >
-          <Save className="w-3.5 h-3.5" />
-          {savingBg ? '저장 중...' : bgSaved ? '✓ 저장 완료' : '배경 저장'}
-        </button>
-      </div>
+      <SectionBgCard
+        value={bg}
+        onChange={setBg}
+        defaultColor="#171717"
+        uploadPathPrefix="shorts-bg"
+        isSaving={savingBg}
+        showSavedFlash={bgSaved}
+        onSave={saveBg}
+        hint="기본값은 검정(neutral-900) 배경입니다."
+      />
 
       {/* 새 숏츠 추가 */}
       <div className="bg-white rounded border border-[#e5e7eb] p-5">
