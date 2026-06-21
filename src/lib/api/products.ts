@@ -13,6 +13,21 @@ export interface DetailComponent {
   sort_order: number;
 }
 
+/**
+ * Per-product SEO settings — populated from the products.seo JSONB column
+ * (migration 00000000000040). All fields optional; storefront
+ * generateMetadata falls back to product.name / product.summary when
+ * unset so legacy rows render identically.
+ */
+export interface ProductSeo {
+  indexable?: boolean;
+  title?: string;
+  author?: string;
+  description?: string;
+  keywords?: string;
+  imageAlt?: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -31,6 +46,7 @@ export interface Product {
   subcategory_id?: string;
   show_cart_button?: boolean;
   show_buy_button?: boolean;
+  seo?: ProductSeo;
 }
 
 export const MOCK_PRODUCTS: Product[] = [
@@ -121,6 +137,10 @@ export async function getProducts(): Promise<Product[]> {
       subcategory_id: d.subcategory_id || undefined,
       show_cart_button: d.show_cart_button ?? false,
       show_buy_button: d.show_buy_button ?? false,
+      // d.seo may be missing on rows created before migration 40 — read
+      // defensively. JSON.parse not needed; supabase-js returns JSONB
+      // columns as already-parsed objects.
+      seo: (d.seo && typeof d.seo === 'object') ? (d.seo as ProductSeo) : undefined,
     }));
   } catch (err) {
     if (IS_DEV) {

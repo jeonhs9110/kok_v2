@@ -25,6 +25,15 @@ export interface FormState {
   isBestSeller: boolean;
   showCartButton: boolean;
   showBuyButton: boolean;
+  // SEO 설정 — Cafe24 product-page "SEO 설정" tab parity. Every field
+  // is optional; the storefront generateMetadata falls back to
+  // product.name / product.summary when these are empty.
+  seoIndexable: boolean;
+  seoTitle: string;
+  seoAuthor: string;
+  seoDescription: string;
+  seoKeywords: string;
+  seoImageAlt: string;
 }
 
 export const EMPTY_FORM: FormState = {
@@ -32,6 +41,8 @@ export const EMPTY_FORM: FormState = {
   imageUrl: '', imageFile: null, description: '', detailBody: '',
   detailComponents: [], naverStoreUrl: '', categoryId: '', subcategoryId: '',
   isBestSeller: false, showCartButton: false, showBuyButton: false,
+  seoIndexable: true, seoTitle: '', seoAuthor: '', seoDescription: '',
+  seoKeywords: '', seoImageAlt: '',
 };
 
 /**
@@ -89,6 +100,12 @@ export function useProductForm(
         isBestSeller: editingProduct.is_best_seller ?? false,
         showCartButton: editingProduct.show_cart_button ?? false,
         showBuyButton: editingProduct.show_buy_button ?? false,
+        seoIndexable: editingProduct.seo?.indexable ?? true,
+        seoTitle: editingProduct.seo?.title ?? '',
+        seoAuthor: editingProduct.seo?.author ?? '',
+        seoDescription: editingProduct.seo?.description ?? '',
+        seoKeywords: editingProduct.seo?.keywords ?? '',
+        seoImageAlt: editingProduct.seo?.imageAlt ?? '',
       });
       setPreviewUrl(editingProduct.imageUrl);
       setUploadProgress('idle');
@@ -153,6 +170,21 @@ export function useProductForm(
         sort_order: i,
       }));
 
+      // Build the seo payload only when at least one field carries a
+      // value — keeps unset rows as NULL instead of writing an empty
+      // object that the storefront would still treat as "configured."
+      const seoFields = {
+        indexable: formData.seoIndexable,
+        title: formData.seoTitle.trim() || null,
+        author: formData.seoAuthor.trim() || null,
+        description: formData.seoDescription.trim() || null,
+        keywords: formData.seoKeywords.trim() || null,
+        imageAlt: formData.seoImageAlt.trim() || null,
+      };
+      const hasSeo = !formData.seoIndexable
+        || seoFields.title || seoFields.author || seoFields.description
+        || seoFields.keywords || seoFields.imageAlt;
+
       const dbPayload = {
         name: formData.name,
         summary: formData.summary,
@@ -169,6 +201,7 @@ export function useProductForm(
         is_best_seller: formData.isBestSeller,
         show_cart_button: formData.showCartButton,
         show_buy_button: formData.showBuyButton,
+        seo: hasSeo ? seoFields : null,
       };
 
       if (!supabase) throw new Error('Supabase 클라이언트 없음');
