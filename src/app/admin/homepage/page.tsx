@@ -11,12 +11,8 @@ import CollapsedRail from './_components/CollapsedRail';
 import PreviewPanel from './_components/PreviewPanel';
 import FullSectionRail from './_components/FullSectionRail';
 import type { ViewportMode } from './_components/types';
-import {
-  useHomepageSections,
-  EMPTY_COUNTS,
-  type SectionCounts,
-  type HomepageBanner,
-} from './_components/useHomepageSections';
+import { useHomepageSections, type HomepageBanner } from './_components/useHomepageSections';
+import { useHomepageData } from './_components/useHomepageData';
 
 // Session-aware client. Only read-side count queries below.
 const supabase = getSupabaseBrowser();
@@ -50,114 +46,22 @@ export default function HomepageBuilderPage() {
   const [viewport, setViewport] = useState<ViewportMode>('pc');
   const [selectedKey, setSelectedKey] = useState<string>('carousel');
   const [iframeKey, setIframeKey] = useState(0);
-  const [counts, setCounts] = useState<SectionCounts>(EMPTY_COUNTS);
   // Drawer state — null when closed, holds the section key being edited
   // when open. The matching SectionDef is looked up from `grouped` to
   // get the display name + href for the iframe url.
   const [editingKey, setEditingKey] = useState<string | null>(null);
-  // Operator-controlled homepage section order. Initialized to the
-  // storefront's default order (lib/api/sectionOrder.DEFAULT_ORDER);
-  // overwritten by the saved DB row on mount. Drag-and-drop in the
-  // section list mutates this and saves back to site_settings.
-  const [sectionOrder, setSectionOrder] = useState<string[]>([
-    'carousel', 'promo-banners', 'products', 'shorts', 'sub-hero', 'instagram',
-  ]);
   const [dragKey, setDragKey] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
-  // Inline banners — N rows, each addressable by `banner:<uuid>` in
-  // sectionOrder. The hub spawns a new row via the + button next to the
-  // homepage-sections group title; each card lets the operator drag it
-  // anywhere in the flow and click 편집 to open the banner editor.
-  const [banners, setBanners] = useState<HomepageBanner[]>([]);
-  // Initial isLoading derives from supabase availability so we never sync
-  // setState inside the effect below (react-hooks/set-state-in-effect).
-  const [isLoading, setIsLoading] = useState(supabase !== null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Load every section's count concurrently. Errors per query degrade to
-  // 0 instead of crashing the hub — operator should never see a blank
-  // page because one of seven queries hiccuped.
-  // Load the saved section order on mount alongside section counts.
-  useEffect(() => {
-    if (!supabase) return;
-    (async () => {
-      const { data } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', 'homepage_section_order')
-        .maybeSingle();
-      if (data?.value) {
-        try {
-          const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
-          if (Array.isArray(parsed) && parsed.every(k => typeof k === 'string')) {
-            setSectionOrder(parsed);
-          }
-        } catch { /* keep default */ }
-      }
-    })().catch(err => console.error('[admin/homepage] section order load failed:', err));
-  }, []);
-
-  // Load the operator's inline banners. Same lifecycle as section order
-  // — load once on mount; mutations below (add / delete) update local
-  // state optimistically and re-fetch isn't necessary because the row
-  // shape is small and we control all writes from this page.
-  useEffect(() => {
-    if (!supabase) return;
-    (async () => {
-      const { data } = await supabase
-        .from('homepage_banners')
-        .select('id,text,bg_color,text_color,is_active');
-      if (data) setBanners(data as HomepageBanner[]);
-    })().catch(err => console.error('[admin/homepage] banners load failed:', err));
-  }, []);
-
-  useEffect(() => {
-    if (!supabase) return;
-    (async () => {
-      const [
-        carouselAll, carouselActive,
-        promoAll, promoActive,
-        productsAll, productsActive,
-        shorts,
-        subHeroAll, subHeroActive,
-        igConfig, igPosts,
-        reviewsAll, reviewsActive,
-      ] = await Promise.all([
-        supabase.from('carousel_slides').select('id', { count: 'exact', head: true }),
-        supabase.from('carousel_slides').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('promo_banners').select('id', { count: 'exact', head: true }),
-        supabase.from('promo_banners').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('products').select('id', { count: 'exact', head: true }),
-        supabase.from('products').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('shorts').select('id', { count: 'exact', head: true }),
-        supabase.from('sub_hero_banners').select('id', { count: 'exact', head: true }),
-        supabase.from('sub_hero_banners').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('instagram_config').select('handle').maybeSingle(),
-        supabase.from('instagram_posts').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('review_cards').select('id', { count: 'exact', head: true }),
-        supabase.from('review_cards').select('id', { count: 'exact', head: true }).eq('is_active', true),
-      ]);
-      setCounts({
-        carouselTotal:      carouselAll.count ?? 0,
-        carouselActive:     carouselActive.count ?? 0,
-        promoBannersTotal:  promoAll.count ?? 0,
-        promoBannersActive: promoActive.count ?? 0,
-        productsTotal:      productsAll.count ?? 0,
-        productsActive:     productsActive.count ?? 0,
-        shortsTotal:        shorts.count ?? 0,
-        subHeroTotal:       subHeroAll.count ?? 0,
-        subHeroActive:      subHeroActive.count ?? 0,
-        instagramHandle:    (igConfig.data as { handle: string } | null)?.handle ?? null,
-        instagramPosts:     igPosts.count ?? 0,
-        reviewsTotal:       reviewsAll.count ?? 0,
-        reviewsActive:      reviewsActive.count ?? 0,
-      });
-      setIsLoading(false);
-    })().catch(err => {
-      console.error('[admin/homepage] count fetch failed:', err);
-      setIsLoading(false);
-    });
-  }, []);
+  // Three-channel loader: saved order + inline banners + per-section
+  // counts. Each is independent; an error on one degrades to defaults.
+  const {
+    sectionOrder, setSectionOrder,
+    banners, setBanners,
+    counts,
+    isLoading,
+  } = useHomepageData();
 
   const grouped = useHomepageSections({ counts, sectionOrder, banners });
 
