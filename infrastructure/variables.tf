@@ -25,7 +25,19 @@ variable "project_name" {
 variable "domain_name" {
   description = "Public domain. Leave empty until Route 53 / ACM is wired."
   type        = string
-  default     = ""
+  default     = "kokkokgarden.com"
+}
+
+# Two-phase CloudFront rollout switch. With this false (default), the
+# distribution is created using the default *.cloudfront.net cert and no
+# domain aliases — so the operator can test the edge cache via the
+# CloudFront URL before any DNS changes. After the us-east-1 ACM cert
+# validates (5–30 min after the validation CNAMEs are added to Vercel),
+# flip this to true and apply again to attach the custom domain.
+variable "enable_cloudfront_custom_domain" {
+  description = "Attach kokkokgarden.com + www to the CloudFront distribution. Requires the us-east-1 ACM cert to be validated first (see cloudfront_cert_validation_records output)."
+  type        = bool
+  default     = false
 }
 
 # ---- RDS ----

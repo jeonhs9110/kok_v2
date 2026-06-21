@@ -30,6 +30,9 @@ provider "aws" {
   }
 }
 
+# us-east-1 alias provider lives in route53-healthcheck.tf — re-used by
+# acm-cloudfront.tf since CloudFront requires its ACM certs in us-east-1.
+
 # Random suffix for globally-unique resource names (S3 buckets etc.)
 resource "random_id" "suffix" {
   byte_length = 3
