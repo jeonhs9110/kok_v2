@@ -36,7 +36,13 @@ resource "aws_lb_target_group" "app" {
   deregistration_delay = 30
 
   health_check {
-    path                = "/"
+    # /api/health (added PR #214) is the dedicated probe that checks env
+    # presence + a live Supabase ping. Previous "/" path probed the
+    # storefront homepage — that's a public route that can render 200
+    # even when Supabase is degraded (cached HTML), so the ALB would
+    # keep an unhealthy app in rotation. The dedicated endpoint returns
+    # 503 the moment Supabase ping fails, so ALB drains promptly.
+    path                = "/api/health"
     port                = "3000"
     protocol            = "HTTP"
     healthy_threshold   = 2
@@ -46,7 +52,10 @@ resource "aws_lb_target_group" "app" {
     # app actually starts responding.
     interval            = 10
     timeout             = 6
-    matcher             = "200-399"
+    # /api/health returns 200 on ok, 503 on degraded — only 200 should
+    # keep the target in rotation. Was 200-399 which also accepted 3xx
+    # redirects from "/" (e.g. /admin → /login), masking real failures.
+    matcher             = "200"
   }
 
   tags = { Name = "${var.project_name}-tg" }

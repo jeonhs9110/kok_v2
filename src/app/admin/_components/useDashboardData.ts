@@ -66,7 +66,7 @@ function categorizeReferrer(ref: string | null): TrafficSource {
     if (host.includes('google.')) return 'google';
     if (host.includes('naver.')) return 'naver';
     if (host.includes('instagram.') || host === 'l.instagram.com') return 'instagram';
-    if (host.includes('kakao.') || host === 'pf.kakao.com' || host === 't.co' && false) return 'kakao';
+    if (host.includes('kakao.') || host === 'pf.kakao.com') return 'kakao';
     return 'other';
   } catch {
     return 'other';
@@ -105,7 +105,12 @@ export function useDashboardData() {
         usersPrev7d,
         wishAll,
       ] = await Promise.all([
-        supabase.from('analytics').select('country, path, referrer, created_at, ip_hash'),
+        // .limit(10000) caps memory pressure on the browser-side reducer.
+        // At ~3K visits/day this still covers >3 days of full detail; older
+        // history rolls off the country / referrer breakdowns silently
+        // rather than OOMing the admin tab. Replace with a server-aggregated
+        // RPC once the table cracks ~50K rows.
+        supabase.from('analytics').select('country, path, referrer, created_at, ip_hash').order('created_at', { ascending: false }).limit(10000),
         supabase.from('analytics').select('id', { count: 'exact', head: true }).gte('created_at', start7d),
         supabase.from('analytics').select('id', { count: 'exact', head: true }).gte('created_at', start14d).lt('created_at', start7d),
         supabase.from('products').select('id, name, is_active, images'),
@@ -204,8 +209,14 @@ export function useDashboardData() {
         productClicks,
         wishRanks,
       });
-    } catch {
-      setData(EMPTY);
+    } catch (err) {
+      // Previously this catch was silent — the dashboard rendered EMPTY
+      // (zeros across the board) with no console output, no toast, no
+      // explanation. Operators saw a "0 visits, 0 users" dashboard and
+      // assumed the metrics were broken when in fact a single query had
+      // thrown. Log + leave the previous data alone so the operator sees
+      // stale data + a refresh button instead of a wipe.
+      console.error('[dashboard] fetchAll failed:', err);
     } finally {
       setIsLoading(false);
     }

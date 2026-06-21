@@ -139,8 +139,11 @@ export async function getProducts(): Promise<Product[]> {
       show_buy_button: d.show_buy_button ?? false,
       // d.seo may be missing on rows created before migration 40 — read
       // defensively. JSON.parse not needed; supabase-js returns JSONB
-      // columns as already-parsed objects.
-      seo: (d.seo && typeof d.seo === 'object') ? (d.seo as ProductSeo) : undefined,
+      // columns as already-parsed objects. Array.isArray check rejects
+      // `seo: []` payloads (would otherwise pass `typeof === 'object'`
+      // and crash with "seo.title is not a function"-style errors when
+      // the storefront calls into it).
+      seo: (d.seo && typeof d.seo === 'object' && !Array.isArray(d.seo)) ? (d.seo as ProductSeo) : undefined,
     }));
   } catch (err) {
     if (IS_DEV) {

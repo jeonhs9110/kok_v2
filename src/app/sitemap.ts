@@ -38,6 +38,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     supabase.from('posts').select('id, menu_id, updated_at').eq('is_published', true),
   ]);
 
+  // Without these logs a single failing query (RLS misconfig, network
+  // blip, schema cache miss) silently omits thousands of URLs from the
+  // sitemap and crawlers stop discovering whole sections of the site.
+  // We still return what we got — partial sitemap beats an empty one —
+  // but the operator can see *which* category dropped out from logs.
+  for (const [name, res] of [
+    ['products', productsRes], ['menus', menusRes], ['pages', pagesRes], ['posts', postsRes],
+  ] as const) {
+    if (res.error) {
+      console.error(`[sitemap] ${name} query failed; URLs omitted:`, res.error);
+    }
+  }
+
   const productRoutes = (productsRes.data ?? []).flatMap(p => [
     { url: `${SITE_URL}/kr/products/${p.id}`, lastModified: new Date(p.created_at), changeFrequency: 'weekly' as const, priority: 0.8 },
     { url: `${SITE_URL}/en/products/${p.id}`, lastModified: new Date(p.created_at), changeFrequency: 'weekly' as const, priority: 0.8 },
