@@ -88,7 +88,10 @@ export const translateProduct = unstable_cache(
     description: string,
     ingredient: string
   ): Promise<TranslatableProduct> => {
-    console.log(`[translate] Translating product ${_productId} to ${lang} (Key preset: ${!!OPENAI_API_KEY})`);
+    // Was a console.log on every cache miss — flooded CloudWatch and
+    // also leaked OpenAI-key-presence into log searches. The
+    // unstable_cache wrapper already de-dupes within the 24h window;
+    // trust the cache metric rather than logging per-call.
     return callOpenAI({ name, summary, description, ingredient }, lang);
   },
   ['openai-product-translation-v2'], // Version 2 cache bust
@@ -160,7 +163,8 @@ export const translateProductsBatch = unstable_cache(
     lang: string,
     products: Array<{ id: string; name: string; summary: string }>
   ): Promise<Record<string, { name: string; summary: string }>> => {
-    console.log(`[translate-batch] Translating ${products.length} products to ${lang} (Key preset: ${!!OPENAI_API_KEY})`);
+    // See translateProduct comment — same log removed for the same
+    // CloudWatch-noise + key-leak reason.
     return callOpenAIBatch(products, lang);
   },
   ['openai-products-batch-translation-v2'], // Version 2 cache bust

@@ -18,7 +18,15 @@ export type HomepageTag =
   | 'top_stripe'
   | 'homepage_banners'
   | 'homepage_section_order'
-  | 'best_seller_display';
+  | 'best_seller_display'
+  // Added 2026-06-21 (final audit). getThemeTokens.ts:38 tags its
+  // unstable_cache with 'theme_tokens', but the admin theme save was
+  // only clearing the in-process header memo via revalidateHeaderData,
+  // leaving the global ISR cache live for up to 60s. Storefront
+  // customers saw the old palette for nearly a minute after an
+  // operator-driven theme change. Now part of the tag union so save
+  // handlers can evict properly.
+  | 'theme_tokens';
 
 export async function revalidateHomepageData(tag: HomepageTag): Promise<void> {
   updateTag(tag);

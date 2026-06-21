@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
@@ -54,14 +54,19 @@ export default function AssetLibraryPage() {
 
   useEffect(() => { reload(); }, [reload]);
 
+  // useDeferredValue lets React keep the search input responsive while
+  // a heavy filter (thousands of assets) catches up in a low-priority
+  // render. Cheaper than a debounce — the input never feels behind,
+  // the grid simply lags by one frame on slow lists. Audit 2026-06-21.
+  const deferredSearch = useDeferredValue(search);
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = deferredSearch.trim().toLowerCase();
     return assets.filter(a => {
       if (bucketFilter !== 'all' && a.bucket !== bucketFilter) return false;
       if (!q) return true;
       return a.key.toLowerCase().includes(q) || a.name.toLowerCase().includes(q);
     });
-  }, [assets, bucketFilter, search]);
+  }, [assets, bucketFilter, deferredSearch]);
 
   const handleCopy = async (a: Asset) => {
     try {
