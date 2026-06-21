@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronsLeft, LogOut, ExternalLink, X } from 'lucide-react';
+import { LogOut, ExternalLink, X } from 'lucide-react';
 import { NAV_ITEMS } from './nav';
 
 interface Props {
@@ -11,65 +11,68 @@ interface Props {
 }
 
 /**
- * Cafe24-style admin sidebar — rewritten 2026-06-21 against the actual
- * reference screenshot the boss is anchoring to.
+ * Cafe24-style hover-expand sidebar.
  *
- * What the previous iterations got wrong:
- *   - Active state was a 3px blue LEFT-BORDER on a darker tinted row.
- *     Cafe24's actual active state is a FULL BLUE ROW BG (#1565c0-ish)
- *     with white bold text. The slim border was the single biggest
- *     "this isn't Cafe24" tell — fixed now.
- *   - Section headers / collapsible groups were added. Cafe24's sidebar
- *     is a FLAT LIST with no group titles, no chevrons, no toggle. Every
- *     item is a single 36px row.
- *   - Brand area had a gradient KK chip, then a blue accent rule + bold
- *     wordmark. Cafe24's actual brand area is "cafe24" wordmark in white
- *     + a `«` collapse icon on the right, nothing else.
- *   - Background was #1b2330. Cafe24's is closer to #1c1c2e (cooler /
- *     blacker, less blue).
+ * Default desktop state: 56px wide, icons only. Hover anywhere over the
+ * rail expands it to 224px and the text labels fade in. Mouse leave
+ * collapses back to icons. This is the signature Cafe24 interaction
+ * earlier iterations missed — they shipped a permanently-expanded rail.
  *
- * Width 180px matches Cafe24's actual ruler — narrower than the 224 /
- * 210 we shipped previously. Items are listed in Cafe24's information
- * order (홈 first, then commerce, then design, then services).
+ * Sidebar is FIXED-positioned on desktop so the content area gets a
+ * static 56px gutter (md:ml-14 on <main>) — when the sidebar expands on
+ * hover it overlays content instead of shifting it. Without this the
+ * whole page would jump every time the cursor brushes the rail.
+ *
+ * Mobile: keeps the existing drawer behavior (full-width slide-in from
+ * left, backdrop on the rest of the screen). drawerOpen prop drives it.
+ *
+ * Color hierarchy:
+ *   bg          #181a26   (the rail body)
+ *   accent bar  #13151e   (brand strip top + footer strip — darker)
+ *   active row  #1976d2   (full blue bg + white bold text)
+ *   inactive    rgba(255,255,255,0.85)  (white-ish at hover-on)
+ *   hover bg    rgba(255,255,255,0.04)  (very faint)
+ *
+ * Font: forces Pretendard via the layout's preloaded CSS so the
+ * Cafe24-matching geometry lands. Without this the sidebar inherited
+ * Freesentation which has different letter widths and reads as off.
  */
 export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Props) {
   return (
     <aside
-      className={`fixed md:static inset-y-0 left-0 z-40 w-[180px] bg-[#1c1c2e] text-white flex flex-col transform transition-transform duration-200 ease-out md:transform-none ${
-        drawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      }`}
+      style={{ fontFamily: 'Pretendard, "Noto Sans KR", system-ui, sans-serif' }}
+      className={`
+        group/sb
+        fixed inset-y-0 left-0 z-40
+        flex flex-col
+        bg-[#181a26] text-white
+        overflow-hidden
+        transition-[width,transform] duration-200 ease-out
+        w-[224px] md:w-14 md:hover:w-[224px]
+        ${drawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `.replace(/\s+/g, ' ').trim()}
     >
-      {/* Brand header — Cafe24 hierarchy: the subheader / section-header
-          strip at the top of each nav column is a DARKER shade than the
-          menu items below it. Without this two-tone separation the rail
-          reads flat. Brand bar is #13151f; menu body stays #1c1c2e. */}
-      <div className="h-12 flex items-center justify-between px-4 bg-[#13151f] border-b border-black/30">
-        <span className="text-[15px] font-extrabold tracking-tight text-white lowercase">kokkok</span>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            className="hidden md:flex text-white/50 hover:text-white p-1 rounded transition-colors"
-            aria-label="사이드바 접기"
-            title="사이드바 접기"
-          >
-            <ChevronsLeft className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="md:hidden text-white/50 hover:text-white p-1 rounded transition-colors"
-            onClick={onCloseDrawer}
-            aria-label="메뉴 닫기"
-          >
-            <X className="w-4 h-4" />
-          </button>
+      {/* Brand strip — Cafe24's two-tone hierarchy: this strip is the
+          DARKER shade flanking the lighter menu body. 48px tall. */}
+      <div className="h-12 flex items-center justify-between bg-[#13151e] border-b border-black/30 whitespace-nowrap flex-shrink-0">
+        <div className="flex items-center pl-[18px] gap-2 min-w-0">
+          <span className="w-1 h-4 bg-[#1976d2] rounded-sm flex-shrink-0" />
+          <span className="text-[13px] font-bold tracking-tight text-white lowercase opacity-100 md:opacity-0 md:group-hover/sb:opacity-100 transition-opacity duration-150 md:delay-75">
+            kokkok 관리자
+          </span>
         </div>
+        <button
+          type="button"
+          className="md:hidden text-white/50 hover:text-white p-1 pr-3 rounded transition-colors flex-shrink-0"
+          onClick={onCloseDrawer}
+          aria-label="메뉴 닫기"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Flat nav — no section headers, no chevrons. Every item is a
-          single row. Cafe24's actual sidebar has chevrons because items
-          expand to sub-pages; our admin is flat (one page per item) so
-          chevrons would lie about the structure. */}
-      <nav className="flex-1 overflow-y-auto py-2">
+      {/* Nav body — flat list. Active row gets full blue bg. */}
+      <nav className="flex-1 overflow-y-auto py-1.5">
         {NAV_ITEMS.map(item => {
           const isActive =
             pathname === item.href ||
@@ -79,16 +82,21 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-2.5 h-9 px-4 text-[13px] transition-colors ${
-                isActive
-                  ? 'bg-[#1565c0] text-white font-semibold'
-                  : 'text-white/[0.82] hover:bg-white/[0.05]'
-              }`}
+              title={item.name}
+              className={`
+                flex items-center h-9 pl-[18px] pr-3 gap-3 text-[13px]
+                whitespace-nowrap transition-colors
+                ${isActive
+                  ? 'bg-[#1976d2] text-white font-semibold'
+                  : 'text-white/[0.85] hover:bg-white/[0.04]'}
+              `.replace(/\s+/g, ' ').trim()}
             >
               <Icon className="w-4 h-4 flex-shrink-0 stroke-[1.75]" />
-              <span className="truncate flex-1">{item.name}</span>
+              <span className="opacity-100 md:opacity-0 md:group-hover/sb:opacity-100 transition-opacity duration-150 md:delay-75">
+                {item.name}
+              </span>
               {item.isNew && (
-                <span className="text-[9px] font-bold text-white bg-[#ef4444] px-1 py-0 rounded leading-tight">
+                <span className="ml-auto text-[9px] font-bold text-white bg-[#ef4444] px-1 py-0 rounded leading-tight opacity-100 md:opacity-0 md:group-hover/sb:opacity-100 transition-opacity duration-150 md:delay-75">
                   NEW
                 </span>
               )}
@@ -97,25 +105,32 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
         })}
       </nav>
 
-      <div className="bg-[#13151f] py-2">
+      {/* Footer strip — same darker bg as the brand strip, two-tone caps. */}
+      <div className="bg-[#13151e] py-1.5 whitespace-nowrap flex-shrink-0">
         <Link
           href="/kr"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2.5 h-9 px-4 text-[12px] text-white/60 hover:text-white hover:bg-white/[0.05] transition-colors"
+          title="스토어 보기"
+          className="flex items-center h-9 pl-[18px] pr-3 gap-3 text-[12px] text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
         >
-          <ExternalLink className="w-3.5 h-3.5 stroke-[1.75]" />
-          스토어 보기
+          <ExternalLink className="w-3.5 h-3.5 flex-shrink-0 stroke-[1.75]" />
+          <span className="opacity-100 md:opacity-0 md:group-hover/sb:opacity-100 transition-opacity duration-150 md:delay-75">
+            스토어 보기
+          </span>
         </Link>
         <button
           onClick={() => {
             document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             window.location.href = '/';
           }}
-          className="w-full flex items-center gap-2.5 h-9 px-4 text-[12px] text-white/60 hover:text-white hover:bg-white/[0.05] transition-colors border-none bg-transparent text-left"
+          title="로그아웃"
+          className="w-full flex items-center h-9 pl-[18px] pr-3 gap-3 text-[12px] text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors border-none bg-transparent text-left"
         >
-          <LogOut className="w-3.5 h-3.5 stroke-[1.75]" />
-          로그아웃
+          <LogOut className="w-3.5 h-3.5 flex-shrink-0 stroke-[1.75]" />
+          <span className="opacity-100 md:opacity-0 md:group-hover/sb:opacity-100 transition-opacity duration-150 md:delay-75">
+            로그아웃
+          </span>
         </button>
       </div>
     </aside>
