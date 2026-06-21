@@ -5,77 +5,51 @@ import {
   Home as HomeIcon,
 } from 'lucide-react';
 
-export type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> };
-export type NavSection = { title: string | null; items: NavItem[] };
+export type NavItem = {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  /** Optional red "NEW" chip rendered next to the label, Cafe24-style. */
+  isNew?: boolean;
+};
 
-// 2026-06-21 collapse: the 디자인 + 콘텐츠 sections previously listed every
-// homepage section (캐러셀 / 서브히어로 / 프로모 / 상단 띠배너 / 쇼츠 /
-// 인스타 / 리뷰 / 테마 / 로고) as their own sidebar items. Every one of
-// those is already accessible as a section card inside /admin/homepage
-// (the Cafe24-style hub with slide-in editor panels + live preview), so
-// the sidebar duplication was cognitive load with no information gain.
+// 2026-06-21 rewrite against the actual Cafe24 reference screenshot.
 //
-// What stays under 디자인:
-//   - 홈페이지 빌더: the hub itself — the single entry point to all
-//     header / homepage / footer section editors.
-//   - 에셋 라이브러리: cross-cutting media manager (used across products,
-//     posts, pages — not section-bound), keep as a top-level surface.
-//   - 페이지 빌더: builds *separate* event/promo pages, not the homepage —
-//     genuinely a different surface from the hub.
+// Cafe24's sidebar is a FLAT LIST — no section headers, no collapsible
+// groups. Every item is a single row with an icon + label, and the
+// active item gets a full blue row-bg (not a slim left-border). The
+// ordering follows Cafe24's information hierarchy: 홈 first, then
+// commerce (상품 → 고객 → 게시판), then design (디자인 hub), then
+// services / global / settings.
 //
-// The deep URLs (/admin/theme, /admin/carousel, etc.) still resolve so
-// muscle-memory + deep-links from emails keep working. They're just not
-// advertised in the menu anymore — the path the operator should reach
-// for is /admin/homepage → click the section card.
-export const NAV_SECTIONS: NavSection[] = [
-  {
-    title: null,
-    items: [
-      { name: '대시보드', href: '/admin', icon: LayoutDashboard },
-      { name: '메뉴 관리', href: '/admin/menus', icon: MenuSquare },
-    ],
-  },
-  {
-    title: '상품',
-    items: [
-      { name: '상품 관리', href: '/admin/products', icon: Package },
-      { name: '카테고리', href: '/admin/categories', icon: Tag },
-    ],
-  },
-  {
-    title: '고객',
-    items: [
-      { name: '사용자', href: '/admin/users', icon: Users },
-      { name: '회원가입 정책', href: '/admin/registration', icon: UserPlus },
-    ],
-  },
-  {
-    title: '게시판',
-    items: [
-      { name: '게시글 관리', href: '/admin/posts', icon: FileText },
-      { name: '쇼핑 월드와이드', href: '/admin/worldwide', icon: Globe },
-    ],
-  },
-  {
-    title: '디자인 (PC/모바일)',
-    items: [
-      // Single entry: the hub absorbs 테마, 로고, 캐러셀, 서브히어로,
-      // 프로모, 띠배너, 쇼츠, 인스타, 리뷰 as section cards, AND now
-      // exposes 에셋 라이브러리 + 페이지 빌더 as quick-access icons in
-      // its top toolbar. Everything design-related happens behind one
-      // sidebar link → keeps the rail compact.
-      { name: '홈페이지 빌더', href: '/admin/homepage', icon: HomeIcon },
-    ],
-  },
-  {
-    title: '설정',
-    items: [
-      { name: '챗봇', href: '/admin/chatbot', icon: MessageCircle },
-      { name: '결제 시스템', href: '/admin/payments', icon: CreditCard },
-      { name: '법적 사항 / 비즈니스 정보', href: '/admin/legal', icon: Scale },
-    ],
-  },
+// Items absent in our admin (주문, 메시지, 프로모션, 통계, 통합엑셀,
+// PRO, 메일배송, 유튜브 쇼핑, 마켓플러스, 마케팅, 드랍쉬핑, 판매채널,
+// 앱) are intentionally omitted — the boss confirmed those concepts
+// don't exist in our product so they shouldn't be in the nav.
+//
+// Analytics moves out of the sidebar and into the dashboard body
+// per the boss's instruction ("put analytics at or below the
+// homepage dashboard").
+export const NAV_ITEMS: NavItem[] = [
+  { name: '홈',                href: '/admin',              icon: LayoutDashboard },
+  { name: '상품',              href: '/admin/products',     icon: Package },
+  { name: '카테고리',          href: '/admin/categories',   icon: Tag },
+  { name: '고객',              href: '/admin/users',        icon: Users },
+  { name: '게시판',            href: '/admin/posts',        icon: FileText },
+  { name: '디자인 (PC/모바일)', href: '/admin/homepage',     icon: HomeIcon },
+  { name: '글로벌',            href: '/admin/worldwide',    icon: Globe },
+  { name: '챗봇',              href: '/admin/chatbot',      icon: MessageCircle },
+  { name: '회원가입 정책',     href: '/admin/registration', icon: UserPlus },
+  { name: '결제 시스템',       href: '/admin/payments',     icon: CreditCard },
+  { name: '법적 사항',         href: '/admin/legal',        icon: Scale },
+  { name: '메뉴 관리',         href: '/admin/menus',        icon: MenuSquare },
 ];
+
+// Back-compat shim so any remaining import of NAV_SECTIONS keeps working.
+// The shell now reads NAV_ITEMS directly; NAV_SECTIONS will be removed
+// once nothing else references it.
+export type NavSection = { title: string | null; items: NavItem[] };
+export const NAV_SECTIONS: NavSection[] = [{ title: null, items: NAV_ITEMS }];
 
 export const PAGE_TITLE: Record<string, string> = {
   '/admin': '대시보드 개요',
