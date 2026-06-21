@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { ChevronRight } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -70,6 +71,39 @@ interface BusinessInfoRow {
   cs_lunch_en: string | null;
   cs_holiday_kr: string | null;
   cs_holiday_en: string | null;
+}
+
+const META: Record<string, { title: string; description: string }> = {
+  kr: { title: '문의 · KOKKOK GARDEN', description: 'KOKKOK GARDEN 고객센터 운영시간, 대표 번호, 이메일, 주소 안내.' },
+  en: { title: 'Contact · KOKKOK GARDEN', description: 'KOKKOK GARDEN customer service hours, phone, email, and address.' },
+  cn: { title: '联系我们 · KOKKOK GARDEN', description: 'KOKKOK GARDEN 客服时间、电话、邮箱、地址。' },
+  jp: { title: 'お問い合わせ · KOKKOK GARDEN', description: 'KOKKOK GARDEN カスタマーサポートの営業時間・電話・メール・住所のご案内。' },
+  vn: { title: 'Liên hệ · KOKKOK GARDEN', description: 'Giờ làm việc, số điện thoại, email và địa chỉ chăm sóc khách hàng KOKKOK GARDEN.' },
+  th: { title: 'ติดต่อเรา · KOKKOK GARDEN', description: 'เวลาทำการ โทรศัพท์ อีเมล และที่อยู่ของ KOKKOK GARDEN' },
+};
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang } = await params;
+  const meta = META[lang] ?? META.en;
+  return {
+    title: meta.title,
+    description: meta.description,
+    alternates: {
+      canonical: `https://www.kokkokgarden.com/${lang}/contact`,
+      languages: {
+        kr: 'https://www.kokkokgarden.com/kr/contact',
+        en: 'https://www.kokkokgarden.com/en/contact',
+      },
+    },
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      url: `https://www.kokkokgarden.com/${lang}/contact`,
+      type: 'website',
+      locale: lang === 'kr' ? 'ko_KR' : 'en_US',
+      siteName: 'KOKKOK GARDEN',
+    },
+  };
 }
 
 export default async function ContactPage({ params }: { params: Promise<{ lang: string }> }) {
