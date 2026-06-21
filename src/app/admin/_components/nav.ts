@@ -1,22 +1,32 @@
 import {
-  Users, Package, Video, LayoutDashboard, Tag, MenuSquare,
-  Image, GalleryHorizontal, PanelTop, Heart, MessageCircle, UserPlus, CreditCard,
-  Scale, Globe, ImagePlus, Star, FileText, FolderOpen, Palette, Layers,
+  Users, Package, LayoutDashboard, Tag, MenuSquare,
+  MessageCircle, UserPlus, CreditCard,
+  Scale, Globe, FileText, FolderOpen, Layers,
   Home as HomeIcon,
 } from 'lucide-react';
 
 export type NavItem = { name: string; href: string; icon: React.ComponentType<{ className?: string }> };
 export type NavSection = { title: string | null; items: NavItem[] };
 
-// Reorganized 2026-06-19 to match Cafe24's admin layout closer to the
-// boss's reference. Key moves:
-//   1. 메뉴 관리 pinned to the top (per boss directive — most-touched
-//      global config, was buried under "발행 & 페이지" before).
-//   2. 성분 태그 dropped from the sidebar — the admin page was deleted
-//      to reduce surface area; existing tags persist in the DB and the
-//      storefront keeps rendering them until a follow-up cleanup pass.
-//   3. Groups renamed to Cafe24 vocabulary: 상품 · 고객 · 게시판 ·
-//      디자인 · 콘텐츠 · 설정.
+// 2026-06-21 collapse: the 디자인 + 콘텐츠 sections previously listed every
+// homepage section (캐러셀 / 서브히어로 / 프로모 / 상단 띠배너 / 쇼츠 /
+// 인스타 / 리뷰 / 테마 / 로고) as their own sidebar items. Every one of
+// those is already accessible as a section card inside /admin/homepage
+// (the Cafe24-style hub with slide-in editor panels + live preview), so
+// the sidebar duplication was cognitive load with no information gain.
+//
+// What stays under 디자인:
+//   - 홈페이지 빌더: the hub itself — the single entry point to all
+//     header / homepage / footer section editors.
+//   - 에셋 라이브러리: cross-cutting media manager (used across products,
+//     posts, pages — not section-bound), keep as a top-level surface.
+//   - 페이지 빌더: builds *separate* event/promo pages, not the homepage —
+//     genuinely a different surface from the hub.
+//
+// The deep URLs (/admin/theme, /admin/carousel, etc.) still resolve so
+// muscle-memory + deep-links from emails keep working. They're just not
+// advertised in the menu anymore — the path the operator should reach
+// for is /admin/homepage → click the section card.
 export const NAV_SECTIONS: NavSection[] = [
   {
     title: null,
@@ -49,26 +59,9 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: '디자인 (PC/모바일)',
     items: [
-      // 홈페이지 빌더 is the PRIMARY entry — the Cafe24-style hub that
-      // pulls every section into one page with a live preview. Direct
-      // links below stay for muscle-memory routes admin opens often.
       { name: '홈페이지 빌더', href: '/admin/homepage', icon: HomeIcon },
-      { name: '테마 (색상 / 모양)', href: '/admin/theme', icon: Palette },
       { name: '에셋 라이브러리', href: '/admin/assets', icon: FolderOpen },
       { name: '페이지 빌더', href: '/admin/pages', icon: Layers },
-      { name: '로고 및 배경', href: '/admin/logo', icon: ImagePlus },
-      { name: '메인 배너 (캐러셀)', href: '/admin/carousel', icon: Image },
-      { name: '서브 히어로 (와이드)', href: '/admin/sub-hero', icon: PanelTop },
-      { name: '프로모 배너', href: '/admin/promo-banners', icon: GalleryHorizontal },
-      { name: '상단 띠배너', href: '/admin/top-stripe', icon: PanelTop },
-    ],
-  },
-  {
-    title: '콘텐츠',
-    items: [
-      { name: '숏츠', href: '/admin/shorts', icon: Video },
-      { name: '인스타그램', href: '/admin/instagram', icon: Heart },
-      { name: '리뷰 쇼케이스', href: '/admin/reviews', icon: Star },
     ],
   },
   {
