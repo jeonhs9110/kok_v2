@@ -3,28 +3,26 @@
 import { useState } from 'react';
 import { type SlideFormData } from '../_lib';
 import { fontFamilyForKey, anchorToObjectPosition, anchorTextStyle } from '@/lib/typography/options';
+import { SlidePreviewFullpage, SlidePreviewSplit } from './SlidePreviewLayouts';
 
 interface Props {
   form: SlideFormData;
-  /** Which language tab to show in the preview. Mirrors the editor's activeLang. */
+  /** Which language tab to show. Mirrors the editor's activeLang. */
   lang: string;
   /** Object URL for an unsaved imageFile (`URL.createObjectURL(file)`), or empty. */
   previewImageUrl: string;
   /** Object URL for the unsaved mobileImageFile (migration 35). Falls back
    *  to previewImageUrl when the admin hasn't picked a mobile-specific
-   *  file/URL — matching the storefront's HeroSlider fallback. */
+   *  file/URL — matches the storefront's HeroSlider fallback. */
   previewMobileImageUrl?: string;
 }
 
 /**
  * Storefront-accurate preview of a carousel slide. Mirrors the rendering
  * in src/components/HeroSlider.tsx so admins see exactly what the slide
- * will look like before saving — the previous workflow was save → open
- * /kr in another tab → realize text was the wrong color → repeat.
- *
- * Kept in /admin/carousel/_components/ (not /components/) so it can
- * import the editor's form type without dragging the editor schema
- * into the public chrome.
+ * will look like before saving. Two layouts (fullpage vs split) live in
+ * SlidePreviewLayouts.tsx; this file owns the chrome (PC/mobile toggle,
+ * frame wrapper, aspect ratio, font + anchor derivation).
  */
 export default function CarouselSlidePreview({ form, lang, previewImageUrl, previewMobileImageUrl }: Props) {
   const badge = form.badge[lang] || form.badge.kr || '';
@@ -39,16 +37,13 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl, prev
   const subtitlePx = 16 + (form.subtitle_size_offset || 0);
   const badgePx = 12 + (form.badge_size_offset || 0);
 
-  // Preview-only toggle so the admin can see how the slide looks at
-  // each breakpoint without leaving the modal. The picker just swaps
-  // which position key feeds the layout — same render, different anchor.
+  // PC/mobile toggle just swaps which anchor key feeds the layout.
   const [view, setView] = useState<'pc' | 'mobile'>('pc');
   const isMobileView = view === 'mobile';
 
   // Migration 30: continuous anchors. Replaces the 9-cell positionForKey
-  // lookup with a (x, y) percentage that the helper turns into inline
-  // styles (edge-aware so corner clicks pin to the corner instead of
-  // translating off-screen).
+  // lookup with (x, y) percentages the helper turns into edge-aware inline
+  // styles (corner clicks pin to the corner instead of translating off-screen).
   const textAnchor = isMobileView ? form.text_anchor_mobile : form.text_anchor;
   const textWrapperStyle = anchorTextStyle(textAnchor);
   const badgeStyle: React.CSSProperties = {
@@ -70,7 +65,7 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl, prev
     textDecoration: form.subtitle_underline ? 'underline' : 'none',
   };
 
-  // Image focal point (now continuous via migration 30 anchor).
+  // Image focal point (continuous via migration 30 anchor).
   const focalAnchor = isMobileView ? form.image_anchor_mobile : form.image_anchor;
   const focalImgStyle: React.CSSProperties = { objectPosition: anchorToObjectPosition(focalAnchor) };
 
@@ -88,20 +83,26 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl, prev
     </div>
   );
 
+  const layoutProps = {
+    form, badge, title, subtitle,
+    badgeStyle, titleStyle, subtitleStyle, textWrapperStyle,
+    badgePx, titlePx, subtitlePx, MediaEl,
+  };
+
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
           미리보기 ({lang.toUpperCase()})
         </label>
-        <div className="inline-flex bg-gray-100 rounded p-0.5 text-[10px] font-bold">
+        <div className="inline-flex bg-[#f3f4f6] rounded p-0.5 text-[10px] font-bold">
           {(['pc', 'mobile'] as const).map(v => (
             <button
               key={v}
               type="button"
               onClick={() => setView(v)}
               className={`px-2.5 py-1 rounded transition-colors ${
-                view === v ? 'bg-white text-black shadow-sm' : 'text-gray-500 hover:text-[#1f2937]'
+                view === v ? 'bg-white text-[#1f2937] shadow-sm' : 'text-[#6b7280] hover:text-[#1f2937]'
               }`}
             >
               {v === 'pc' ? 'PC' : '모바일'}
@@ -109,117 +110,19 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl, prev
           ))}
         </div>
       </div>
-      {/* 16:7 for PC view (hero band); 9:14 for mobile view (phone
-          portrait approximation, matching the storefront 440px @ 360 wide
-          ratio). Centered + max-width on mobile keeps the preview from
-          stretching the modal. */}
+      {/* 16:7 for PC view (hero band); 9:14 for mobile view (phone portrait
+          approximation, matching the storefront 440px @ 360 wide ratio).
+          Centered + max-width on mobile keeps the preview from stretching
+          the modal. */}
       <div
-        className={`relative rounded-lg overflow-hidden border border-gray-200 shadow-sm mx-auto ${
+        className={`relative rounded-lg overflow-hidden border border-[#e5e7eb] shadow-sm mx-auto ${
           isMobileView ? 'w-[220px] aspect-[9/14]' : 'w-full aspect-[16/7]'
         }`}
         style={{ backgroundColor: form.bg_color || '#eef4f7' }}
       >
-        {isFullpage ? (
-          <>
-            <div className="absolute inset-0">{MediaEl}</div>
-            {(badge || title || subtitle) && (
-              <div style={textWrapperStyle}>
-                <div>
-                  {badge && (
-                    <span
-                      className="inline-block px-2 py-1 rounded-full mb-2 backdrop-blur-sm"
-                      style={{
-                        ...badgeStyle,
-                        backgroundColor: form.badge_bg_color || 'rgba(0,0,0,0.7)',
-                        color: form.badge_text_color || '#fff',
-                        fontSize: `${Math.max(8, badgePx * 0.5)}px`,
-                      }}
-                    >
-                      {badge}
-                    </span>
-                  )}
-                  {title && (
-                    <h2
-                      className="whitespace-pre-line drop-shadow-lg mb-1"
-                      style={{
-                        ...titleStyle,
-                        color: form.text_color || '#fff',
-                        fontSize: `${Math.max(14, titlePx * 0.5)}px`,
-                        lineHeight: 1.2,
-                      }}
-                    >
-                      {title}
-                    </h2>
-                  )}
-                  {subtitle && (
-                    <p
-                      className="drop-shadow-md"
-                      style={{
-                        ...subtitleStyle,
-                        color: form.text_color || 'rgba(255,255,255,0.9)',
-                        fontSize: `${Math.max(10, subtitlePx * 0.5)}px`,
-                      }}
-                    >
-                      {subtitle}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="absolute inset-0 grid grid-cols-2">
-            {/* Text side — anchor pins the block within the left half
-                via the same edge-aware inline styles as fullpage mode. */}
-            <div className="relative px-6 py-4">
-              <div style={textWrapperStyle}>
-              {badge && (
-                <span
-                  className="inline-block w-fit px-2 py-1 rounded-full mb-2"
-                  style={{
-                    ...badgeStyle,
-                    backgroundColor: form.badge_bg_color || '#333',
-                    color: form.badge_text_color || '#fff',
-                    fontSize: `${Math.max(8, badgePx * 0.5)}px`,
-                  }}
-                >
-                  {badge}
-                </span>
-              )}
-              {title && (
-                <h2
-                  className="whitespace-pre-line mb-1"
-                  style={{
-                    ...titleStyle,
-                    color: form.text_color || '#111',
-                    fontSize: `${Math.max(14, titlePx * 0.5)}px`,
-                    lineHeight: 1.15,
-                  }}
-                >
-                  {title}
-                </h2>
-              )}
-              {subtitle && (
-                <p style={{
-                  ...subtitleStyle,
-                  color: form.text_color || '#111',
-                  fontSize: `${Math.max(10, subtitlePx * 0.5)}px`,
-                }}>
-                  {subtitle}
-                </p>
-              )}
-              </div>
-            </div>
-            {/* Media side */}
-            <div className="p-4 flex items-center justify-end">
-              <div className="relative h-[85%] aspect-[5/6] shadow-lg rounded-md overflow-hidden">
-                {MediaEl}
-              </div>
-            </div>
-          </div>
-        )}
+        {isFullpage ? <SlidePreviewFullpage {...layoutProps} /> : <SlidePreviewSplit {...layoutProps} />}
       </div>
-      <p className="text-[10px] text-gray-400 text-center">
+      <p className="text-[10px] text-[#9ca3af] text-center">
         {isMobileView
           ? '모바일 텍스트 위치를 기준으로 표시됩니다. 폰트 크기는 시각적 비율을 위해 50%로 축소되어 있습니다.'
           : 'PC 텍스트 위치를 기준으로 표시됩니다. 폰트 크기는 시각적 비율을 위해 50%로 축소되어 있습니다.'}
