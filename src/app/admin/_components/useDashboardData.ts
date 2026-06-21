@@ -3,6 +3,8 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
 const supabase = getSupabaseBrowser();
 
+export type TrafficSource = 'google' | 'naver' | 'instagram' | 'kakao' | 'direct' | 'other';
+
 export interface DashboardData {
   isLive: boolean;
   // current 7-day window
@@ -20,9 +22,13 @@ export interface DashboardData {
   totalWishlist: number;
   totalVisits: number;
   productDetailViews: number;
+  // 7d visitor uniqueness — derived from analytics.ip_hash
+  uniqueVisitors7d: number;
+  returningVisitors7d: number;
   // breakdowns
   dailyVisits: { date: string; count: number }[];
   countries: { country: string; count: number }[];
+  trafficSources: { source: TrafficSource; label: string; count: number }[];
   productClicks: { id: string; name: string; clicks: number }[];
   wishRanks: { id: string; name: string; wishCount: number }[];
 }
@@ -33,8 +39,39 @@ export const EMPTY: DashboardData = {
   visitsPrev7d: 0, newMembersPrev7d: 0, wishlistAddsPrev7d: 0,
   activeProducts: 0, totalProducts: 0, totalMembers: 0, totalWishlist: 0,
   totalVisits: 0, productDetailViews: 0,
-  dailyVisits: [], countries: [], productClicks: [], wishRanks: [],
+  uniqueVisitors7d: 0, returningVisitors7d: 0,
+  dailyVisits: [], countries: [], trafficSources: [], productClicks: [], wishRanks: [],
 };
+
+const SOURCE_LABEL: Record<TrafficSource, string> = {
+  google: '구글',
+  naver: '네이버',
+  instagram: '인스타그램',
+  kakao: '카카오',
+  direct: '직접 방문',
+  other: '기타',
+};
+
+/**
+ * Categorize a referrer URL into a Cafe24-style traffic source bucket.
+ * The categories cover the major Korean-market acquisition channels:
+ * Google + Naver are the search engines; Instagram + Kakao are the
+ * social/messenger channels; direct = no referrer (typed URL / app /
+ * https→http jump); other = everything else (Daum, Bing, blogs, etc.).
+ */
+function categorizeReferrer(ref: string | null): TrafficSource {
+  if (!ref || ref.trim() === '') return 'direct';
+  try {
+    const host = new URL(ref).hostname.toLowerCase();
+    if (host.includes('google.')) return 'google';
+    if (host.includes('naver.')) return 'naver';
+    if (host.includes('instagram.') || host === 'l.instagram.com') return 'instagram';
+    if (host.includes('kakao.') || host === 'pf.kakao.com' || host === 't.co' && false) return 'kakao';
+    return 'other';
+  } catch {
+    return 'other';
+  }
+}
 
 /**
  * 9 parallel queries against Supabase to feed the Cafe24-style dashboard
@@ -68,7 +105,7 @@ export function useDashboardData() {
         usersPrev7d,
         wishAll,
       ] = await Promise.all([
-        supabase.from('analytics').select('country, path, created_at'),
+        supabase.from('analytics').select('country, path, referrer, created_at, ip_hash'),
         supabase.from('analytics').select('id', { count: 'exact', head: true }).gte('created_at', start7d),
         supabase.from('analytics').select('id', { count: 'exact', head: true }).gte('created_at', start14d).lt('created_at', start7d),
         supabase.from('products').select('id, name, is_active, images'),
@@ -90,6 +127,15 @@ export function useDashboardData() {
       }
       const countryMap: Record<string, number> = {};
       const productClickMap: Record<string, number> = {};
+      const sourceMap: Record<TrafficSource, number> = {
+        google: 0, naver: 0, instagram: 0, kakao: 0, direct: 0, other: 0,
+      };
+      // Per-IP visit counts inside the 7d window — drives the
+      // returning-visitor stat. Without the migration-41 ip_hash column
+      // every row has ip_hash=null and the maps stay empty, so the
+      // dashboard surfaces 0 returning visitors instead of crashing.
+      const ipVisits7d: Record<string, number> = {};
+      const cutoff7d = now - 7 * dayMs;
       let productDetailViews = 0;
       for (const row of analyticsAll.data ?? []) {
         countryMap[row.country || 'UNKNOWN'] = (countryMap[row.country || 'UNKNOWN'] || 0) + 1;
@@ -100,8 +146,15 @@ export function useDashboardData() {
           productClickMap[match[1]] = (productClickMap[match[1]] || 0) + 1;
           productDetailViews++;
         }
+        const src = categorizeReferrer(row.referrer ?? null);
+        sourceMap[src]++;
+        if (row.ip_hash && row.created_at && new Date(row.created_at).getTime() >= cutoff7d) {
+          ipVisits7d[row.ip_hash] = (ipVisits7d[row.ip_hash] || 0) + 1;
+        }
       }
       const dailyVisits = labels.map(d => ({ date: d, count: dailyBuckets[d] }));
+      const uniqueVisitors7d = Object.keys(ipVisits7d).length;
+      const returningVisitors7d = Object.values(ipVisits7d).filter(c => c > 1).length;
 
       let wishlistAdds7d = 0;
       let wishlistAddsPrev7d = 0;
@@ -143,6 +196,11 @@ export function useDashboardData() {
         productDetailViews,
         dailyVisits,
         countries: Object.entries(countryMap).map(([country, count]) => ({ country, count })).sort((a, b) => b.count - a.count),
+        trafficSources: (Object.keys(sourceMap) as TrafficSource[])
+          .map(source => ({ source, label: SOURCE_LABEL[source], count: sourceMap[source] }))
+          .sort((a, b) => b.count - a.count),
+        uniqueVisitors7d,
+        returningVisitors7d,
         productClicks,
         wishRanks,
       });

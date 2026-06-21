@@ -1,6 +1,6 @@
 'use client';
 
-import { RefreshCw, Heart, Users, Package, Activity } from 'lucide-react';
+import { RefreshCw, Heart, Users, Package, Activity, Repeat } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { StatCard } from '@/components/admin/CafeWidgets';
 import {
@@ -9,6 +9,7 @@ import {
   CountryBreakdownPanel,
   WishlistRanksPanel,
   ProductClicksTable,
+  TrafficSourcesPanel,
 } from './_components/DashboardCharts';
 import { useDashboardData } from './_components/useDashboardData';
 
@@ -116,13 +117,40 @@ export default function AdminDashboard() {
         />
       </div>
 
+      {/* Returning-visitor stat — derived from analytics.ip_hash. Shows
+          the share of unique 7d IPs that visited more than once, which
+          is Cafe24's "방문자/재방문" pairing. Pre-migration-41 rows
+          have null ip_hash so this surfaces 0 until traffic with the new
+          column accumulates. */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          accent="#8b5cf6"
+          label="순 방문자 (7일)"
+          value={data.uniqueVisitors7d}
+          isLoading={isLoading}
+          subLabel="동일 IP 1회 카운트"
+          icon={Users}
+        />
+        <StatCard
+          accent="#06b6d4"
+          label="재방문자 (7일)"
+          value={data.returningVisitors7d}
+          isLoading={isLoading}
+          subLabel={data.uniqueVisitors7d
+            ? `순 방문자의 ${Math.round((data.returningVisitors7d / data.uniqueVisitors7d) * 100)}%`
+            : '데이터 누적 중'}
+          icon={Repeat}
+        />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <DailyVisitChart dailyVisits={data.dailyVisits} dateRangeLabel={dateRangeLabel} />
         <VisitFunnelPanel funnel={funnel} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <CountryBreakdownPanel countries={data.countries} />
+        <TrafficSourcesPanel sources={data.trafficSources} />
         <WishlistRanksPanel wishRanks={data.wishRanks} />
       </div>
 
