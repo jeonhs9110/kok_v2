@@ -1,16 +1,22 @@
 'use client';
 
-import { Save, Trash2, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
+import { Save, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import RichEditor from '@/components/admin/RichEditor';
+import ReviewThumbnailRow from './ReviewThumbnailRow';
+import ReviewNaverLinkRow from './ReviewNaverLinkRow';
 
 /**
  * Per-card editor for /admin/reviews. Each saved row gets its own
- * <ReviewCardEditor /> instance — thumbnail upload, title, external
- * URL with the Naver auto-fill button, RichEditor body, sort_order +
- * active toggle, and the row-level save button.
+ * <ReviewCardEditor /> — composed of:
+ *   - header (title preview + move up/down/delete actions)
+ *   - <ReviewThumbnailRow /> (image + file picker)
+ *   - title input
+ *   - <ReviewNaverLinkRow /> (link URL + auto-fill button)
+ *   - RichEditor body
+ *   - sort_order + active toggle + save button
  *
- * Extracted from /admin/reviews/page.tsx at 2026-06-21. Parent owns
- * the row state + every callback; this child is pure UI.
+ * Parent (useReviews hook) owns the row state + every callback; this
+ * child is pure UI.
  */
 
 export interface ReviewRow {
@@ -100,42 +106,12 @@ export default function ReviewCardEditor({
         </div>
       </div>
 
-      <div>
-        <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">
-          썸네일 이미지
-        </label>
-        <div className="flex gap-3 mt-1 items-start">
-          {row.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={row.image_url}
-              alt=""
-              className="w-24 h-24 object-cover rounded border border-[#e5e7eb]"
-            />
-          ) : (
-            <div className="w-24 h-24 bg-[#f3f4f6] rounded border border-[#e5e7eb] flex items-center justify-center text-[10px] text-[#9ca3af]">
-              NO IMG
-            </div>
-          )}
-          <div className="flex-1 space-y-2">
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              onChange={e => {
-                const f = e.target.files?.[0];
-                if (f) onFile(f);
-              }}
-              className="text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-[#f3f4f6] file:text-[#374151] hover:file:bg-[#e5e7eb]"
-            />
-            {isUploading && (
-              <p className="text-[11px] text-[#3b82f6] flex items-center gap-1.5">
-                <Loader2 className="w-3 h-3 animate-spin" /> 업로드 중...
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
+      <ReviewThumbnailRow
+        imageUrl={row.image_url}
+        isUploading={isUploading}
+        fileRef={fileRef}
+        onFile={onFile}
+      />
 
       <div>
         <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">
@@ -150,40 +126,12 @@ export default function ReviewCardEditor({
         />
       </div>
 
-      <div>
-        <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">
-          외부 링크 (선택)
-        </label>
-        <div className="flex gap-2 mt-1">
-          <input
-            type="text"
-            value={row.link_url}
-            onChange={e => onUpdate({ link_url: e.target.value })}
-            placeholder="https://... (지정하면 클릭 시 새 창에서 링크로 이동. 비워두면 아래 내용이 팝업으로 표시됩니다)"
-            className="flex-1 rounded px-3 py-2 text-sm font-mono"
-          />
-          <button
-            type="button"
-            onClick={onAutoFillNaver}
-            disabled={isNaverFetching || !row.link_url}
-            title="네이버 블로그/포스트 URL이면 제목·이미지·설명을 자동으로 채워요"
-            className="px-3 py-2 text-xs font-bold text-white bg-[#03c75a] hover:bg-[#02b14d] disabled:opacity-40 rounded whitespace-nowrap flex items-center gap-1.5"
-          >
-            {isNaverFetching ? (
-              <>
-                <Loader2 className="w-3 h-3 animate-spin" />
-                가져오는 중...
-              </>
-            ) : (
-              '네이버 자동 채우기'
-            )}
-          </button>
-        </div>
-        <p className="text-[10px] text-[#9ca3af] mt-1">
-          네이버 블로그 / 포스트 / 네이버 단축 URL(naver.me)을 인식합니다. 이미 채워진 칸은
-          덮어쓰지 않아요.
-        </p>
-      </div>
+      <ReviewNaverLinkRow
+        linkUrl={row.link_url}
+        isNaverFetching={isNaverFetching}
+        onChange={v => onUpdate({ link_url: v })}
+        onAutoFillNaver={onAutoFillNaver}
+      />
 
       <div>
         <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">
