@@ -30,6 +30,40 @@ locals {
   cf_origin_req_static   = "59781a5b-3903-41f3-afcb-af62929ccde1" # CORS-S3Origin: forward minimal
 }
 
+# Custom cache policy for /_next/image* — Next.js's image optimizer
+# returns AVIF / WebP / original based on the viewer's Accept header,
+# but the managed CachingOptimized policy doesn't include Accept in
+# the cache key. Result before fix: whichever format hit the edge
+# first got cached and served to every other viewer — browsers that
+# don't accept that format saw a broken image (Edge sometimes; older
+# Safari always). This policy keys on url+w+q query strings AND the
+# Accept header so each variant caches independently.
+resource "aws_cloudfront_cache_policy" "next_image" {
+  name        = "${var.project_name}-next-image"
+  comment     = "Cache /_next/image responses per Accept header so AVIF/WebP variants don't collide"
+  default_ttl = 86400      # 1 day
+  max_ttl     = 31536000   # 1 year (respects origin Cache-Control if shorter)
+  min_ttl     = 0
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    enable_accept_encoding_brotli = true
+    enable_accept_encoding_gzip   = true
+
+    headers_config {
+      header_behavior = "whitelist"
+      headers {
+        items = ["Accept"]
+      }
+    }
+    cookies_config {
+      cookie_behavior = "none"
+    }
+    query_strings_config {
+      query_string_behavior = "all"
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "main" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -119,10 +153,13 @@ resource "aws_cloudfront_distribution" "main" {
     origin_request_policy_id = local.cf_origin_req_static
   }
 
-  # next/image's optimizer serves under /_next/image — CloudFront caches
-  # the AVIF/WebP variants based on the accept header. Important: the
-  # query string drives the cached variant, so we need the Optimized
-  # policy which keys on `url` + `q` + `w`.
+  # next/image's optimizer serves under /_next/image. Needs two custom
+  # bits the managed policies don't cover:
+  #   1. Origin must receive the `url=`, `w=`, `q=` query strings —
+  #      cf_origin_req_static (CORS-S3Origin) strips them, producing
+  #      a 400 from Next.js for "missing url parameter".
+  #   2. Cache key must include the Accept header so AVIF/WebP/source
+  #      variants cache independently per viewer-capability.
   ordered_cache_behavior {
     path_pattern           = "/_next/image*"
     allowed_methods        = ["GET", "HEAD", "OPTIONS"]
@@ -130,8 +167,8 @@ resource "aws_cloudfront_distribution" "main" {
     target_origin_id       = "alb-origin"
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
-    cache_policy_id          = local.cf_caching_optimized
-    origin_request_policy_id = local.cf_origin_req_static
+    cache_policy_id          = aws_cloudfront_cache_policy.next_image.id
+    origin_request_policy_id = local.cf_origin_req_allviewer
   }
 
   # Aliases: empty until enable_cloudfront_custom_domain = true. Without
