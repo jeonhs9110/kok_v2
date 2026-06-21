@@ -1,7 +1,7 @@
 import {
   Users, Package, LayoutDashboard, Tag, MenuSquare,
   MessageCircle, UserPlus, CreditCard,
-  Scale, Globe, FileText, FolderOpen, Layers,
+  Scale, Globe, FileText,
   Home as HomeIcon,
 } from 'lucide-react';
 
@@ -59,9 +59,12 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: '디자인 (PC/모바일)',
     items: [
+      // Single entry: the hub absorbs 테마, 로고, 캐러셀, 서브히어로,
+      // 프로모, 띠배너, 쇼츠, 인스타, 리뷰 as section cards, AND now
+      // exposes 에셋 라이브러리 + 페이지 빌더 as quick-access icons in
+      // its top toolbar. Everything design-related happens behind one
+      // sidebar link → keeps the rail compact.
       { name: '홈페이지 빌더', href: '/admin/homepage', icon: HomeIcon },
-      { name: '에셋 라이브러리', href: '/admin/assets', icon: FolderOpen },
-      { name: '페이지 빌더', href: '/admin/pages', icon: Layers },
     ],
   },
   {

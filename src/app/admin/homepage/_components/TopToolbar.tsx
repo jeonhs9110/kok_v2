@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import {
   Monitor, Smartphone, Maximize2, RefreshCw, ExternalLink, LogOut,
-  ChevronDown, Lock, HelpCircle, Settings,
+  ChevronDown, Lock, HelpCircle, Settings, FolderOpen, Layers,
 } from 'lucide-react';
 import type { ViewportMode } from './types';
 
@@ -96,8 +96,30 @@ export default function TopToolbar({ viewport, onViewportChange, onReload }: Pro
         <span className="hidden sm:inline">새로고침</span>
       </button>
 
-      {/* ── Right cluster: account state / help / settings / exit ── */}
+      {/* ── Right cluster: tools / account / help / settings / exit ──
+            에셋 라이브러리 + 페이지 빌더 were promoted out of the
+            global sidebar and now live here — they're design tools, not
+            navigation targets, so they belong inside the design surface
+            (the hub) instead of competing with /admin/products etc. for
+            sidebar real estate. */}
       <div className="ml-auto flex items-center gap-1">
+        <Link
+          href="/admin/assets?from=homepage"
+          className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition-colors text-xs"
+          title="에셋 라이브러리"
+        >
+          <FolderOpen className="w-3.5 h-3.5" />
+          <span>에셋</span>
+        </Link>
+        <Link
+          href="/admin/pages?from=homepage"
+          className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition-colors text-xs"
+          title="페이지 빌더 (이벤트/프로모 페이지)"
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>페이지</span>
+        </Link>
+        <div className="w-px h-5 bg-white/10 mx-1 hidden md:block" />
         <button
           type="button"
           className="hidden md:inline-flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/10 transition-colors text-xs"
