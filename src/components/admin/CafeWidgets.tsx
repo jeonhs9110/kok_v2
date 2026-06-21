@@ -171,3 +171,88 @@ export function PageHeader({
     </div>
   );
 }
+
+/**
+ * StatusDot — Cafe24's canonical row-status indicator. A 6px colored dot
+ * + label, NOT a rounded pill with a colored bg. Pill badges read as
+ * Western SaaS dashboard; Cafe24's actual tables use dots universally
+ * (게시중, 숨김, 인증, 미인증, 활성, 비활성, etc.).
+ *
+ * tone presets cover the common cases; pass `color` directly for ad-hoc.
+ */
+export type StatusTone = 'active' | 'inactive' | 'warn' | 'info' | 'muted';
+
+const TONE_COLOR: Record<StatusTone, { dot: string; text: string }> = {
+  active:   { dot: '#22c55e', text: '#16a34a' },
+  inactive: { dot: '#d1d5db', text: '#6b7280' },
+  warn:     { dot: '#f59e0b', text: '#b45309' },
+  info:     { dot: '#3b82f6', text: '#2563eb' },
+  muted:    { dot: '#9ca3af', text: '#6b7280' },
+};
+
+export function StatusDot({
+  tone = 'active',
+  label,
+  onClick,
+  title,
+}: {
+  tone?: StatusTone;
+  label: string;
+  /** If provided, renders as a button (clickable status toggle). */
+  onClick?: () => void;
+  title?: string;
+}) {
+  const c = TONE_COLOR[tone];
+  const inner = (
+    <>
+      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: c.dot }} />
+      {label}
+    </>
+  );
+  const base = 'inline-flex items-center gap-1.5 text-[11.5px]';
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        title={title}
+        className={`${base} hover:underline transition-colors`}
+        style={{ color: c.text }}
+      >
+        {inner}
+      </button>
+    );
+  }
+  return (
+    <span className={base} style={{ color: c.text }} title={title}>
+      {inner}
+    </span>
+  );
+}
+
+/**
+ * TableShell — wraps a Cafe24-style data table. Pure presentational —
+ * caller passes <thead> + <tbody> as children. Provides the canonical
+ * border + background pattern so every list page renders identical
+ * chrome instead of each rolling its own div+border combo.
+ */
+export function TableShell({ children }: { children: React.ReactNode }) {
+  return (
+    <table className="w-full text-left border-collapse">
+      {children}
+    </table>
+  );
+}
+
+/**
+ * TableHeaderRow — Cafe24's canonical header row: light-gray bg,
+ * 10.5px uppercase tracking, thin bottom border. Cells passed as
+ * children.
+ */
+export function TableHeaderRow({ children }: { children: React.ReactNode }) {
+  return (
+    <tr className="bg-[#fafbfc] border-b border-[#e5e7eb] text-[10.5px] uppercase tracking-wider text-[#6b7280] font-semibold">
+      {children}
+    </tr>
+  );
+}
