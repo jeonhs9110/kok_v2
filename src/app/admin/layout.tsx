@@ -44,7 +44,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // deep-links to /admin (dashboard).
   if (pathname === '/admin/homepage') {
     return (
-      <div className="kokkok-admin-shell h-screen w-screen bg-[#f5f6f8] font-sans overflow-hidden">
+      <div
+        className="kokkok-admin-shell h-screen w-screen bg-[#f5f6f8] overflow-hidden"
+        style={{ fontFamily: 'Pretendard, "Noto Sans KR", system-ui, sans-serif' }}
+      >
         {children}
         <AdminSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       </div>
@@ -53,8 +56,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Body bg #f5f6f8 matches Cafe24's admin panel exactly — slightly cooler
   // than gray-50 so the content cards lift off the surface the way Cafe24's do.
+  //
+  // The sidebar is fixed-positioned + hover-expand on desktop (icon-only
+  // 56px default → 224px on hover, overlaying content). So <main> gets a
+  // static md:ml-14 gutter and content never shifts when the rail
+  // expands. Mobile stays as a slide-in drawer.
+  //
+  // font-['Pretendard'] applied on the shell so the admin renders in the
+  // same geometry as Cafe24's reference (Freesentation's wider letters
+  // were one of the "feels off" signals the boss kept flagging).
   const normalChrome = (
-    <div className="kokkok-admin-shell flex h-screen bg-[#f5f6f8] font-sans">
+    <div
+      className="kokkok-admin-shell h-screen bg-[#f5f6f8]"
+      style={{ fontFamily: 'Pretendard, "Noto Sans KR", system-ui, sans-serif' }}
+    >
       {/* Mobile backdrop — sits between content and drawer; tap to dismiss. */}
       {drawerOpen && (
         <div
@@ -70,7 +85,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         onCloseDrawer={() => setDrawerOpen(false)}
       />
 
-      <main className="flex-1 overflow-auto md:ml-0">
+      <main className="h-full overflow-auto md:ml-14 transition-[margin-left] duration-200">
         <AdminTopBar
           title={title}
           previewUrl={previewUrl}
