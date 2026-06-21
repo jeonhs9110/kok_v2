@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import {
   Trash2,
   ImageIcon,
@@ -27,8 +28,14 @@ interface Props {
  * video preview) + display-mode + media-type chips + title/subtitle/link
  * preview + bg color swatch + active toggle + edit/delete actions. Pure
  * UI; the parent's useCarousel handlers drive everything via callbacks.
+ *
+ * memo'd so reorder operations (which change one slide's sort_order)
+ * don't force every other row to re-render. dragHandleProps is a
+ * stable object reference per render of the parent — for memo to
+ * actually help, the parent should also useCallback the handlers.
+ * Audit 2026-06-21 final pass.
  */
-export default function CarouselListRow({ s, dragHandleProps, onEdit, onDelete, onToggleActive }: Props) {
+function CarouselListRowComponent({ s, dragHandleProps, onEdit, onDelete, onToggleActive }: Props) {
   return (
     <div
       className={`flex items-center gap-3 bg-white border border-[#e5e7eb] rounded-lg p-3 hover:border-[#9ca3af] transition-colors ${
@@ -136,3 +143,5 @@ export default function CarouselListRow({ s, dragHandleProps, onEdit, onDelete, 
     </div>
   );
 }
+
+export default memo(CarouselListRowComponent);

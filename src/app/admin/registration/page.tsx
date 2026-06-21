@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import RegistrationFieldsSection from './_components/RegistrationFieldsSection';
 import SocialProvidersSection from './_components/SocialProvidersSection';
@@ -28,6 +28,18 @@ export default function RegistrationAdminPage() {
   const [saved, setSaved] = useState<string | null>(null);
   const [openSection, setOpenSection] = useState<string>('fields');
   const [newField, setNewField] = useState({ key: '', label_kr: '', label_en: '', type: 'text' });
+  // saved-flash timers — three setTimeout sites (fields / provider /
+  // verification saves) previously leaked timers if the operator
+  // navigated away mid-flash. Tracked in this ref + cleared on unmount.
+  const savedTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => {
+    savedTimers.current.forEach(clearTimeout);
+    savedTimers.current = [];
+  }, []);
+  function scheduleSavedClear() {
+    const id = setTimeout(() => setSaved(null), 2000);
+    savedTimers.current.push(id);
+  }
 
   async function loadAll() {
     if (!supabase) { setLoading(false); return; }
@@ -68,7 +80,7 @@ export default function RegistrationAdminPage() {
       id: 1, fields, require_marketing_consent: marketingConsent, require_privacy_consent: privacyConsent,
     });
     setSaved('fields');
-    setTimeout(() => setSaved(null), 2000);
+    scheduleSavedClear();
     setSaving(null);
   }
 
@@ -81,7 +93,7 @@ export default function RegistrationAdminPage() {
       client_secret: p.client_secret,
     }).eq('id', p.id);
     setSaved(`provider-${p.provider}`);
-    setTimeout(() => setSaved(null), 2000);
+    scheduleSavedClear();
     setSaving(null);
   }
 
@@ -92,7 +104,7 @@ export default function RegistrationAdminPage() {
       id: 1, ...verification,
     });
     setSaved('verification');
-    setTimeout(() => setSaved(null), 2000);
+    scheduleSavedClear();
     setSaving(null);
   }
 

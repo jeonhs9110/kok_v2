@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Eye, ExternalLink } from 'lucide-react';
 import type { ViewportMode } from './types';
@@ -10,11 +11,14 @@ import type { ViewportMode } from './types';
  * thin header bar that reports the viewport width and offers a
  * new-tab escape. Extracted from /admin/homepage/page.tsx at
  * 2026-06-21.
+ *
+ * Loading state: the iframe boots blank until the storefront hydrates
+ * (1-2s on a cold visit). Audit 2026-06-21 final pass added an overlay
+ * spinner that fades once `load` fires so operators don't stare at a
+ * blank white frame.
  */
 
 interface Props {
-  /** Outer frame style — width + optional aspect-ratio cap from the
-   *  parent's previewFrameStyle calc. */
   frameStyle: React.CSSProperties;
   viewport: ViewportMode;
   viewportWidth: { pc: number; mobile: number };
@@ -30,10 +34,19 @@ export default function PreviewPanel({
   iframeKey,
   iframeRef,
 }: Props) {
+  const [loaded, setLoaded] = useState(false);
+  // Reset to "loading" whenever the iframe key bumps (admin clicked
+  // refresh / changed section / etc). Accepted codebase pattern — same
+  // disable used in admin/layout.tsx for the drawer-close-on-route.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLoaded(false);
+  }, [iframeKey]);
+
   return (
     <section className="flex-1 overflow-auto bg-[#f5f6f8] p-4 sm:p-6 flex justify-center items-start">
       <div
-        className="bg-white shadow-md overflow-hidden flex-shrink-0"
+        className="bg-white shadow-md overflow-hidden flex-shrink-0 relative"
         style={{
           ...frameStyle,
           minHeight: '100%',
@@ -68,7 +81,21 @@ export default function PreviewPanel({
           title="홈페이지 미리보기"
           className="w-full bg-white"
           style={{ height: 'calc(100vh - 9rem)', border: 'none', display: 'block' }}
+          onLoad={() => setLoaded(true)}
         />
+        {/* Loading overlay — fades out once the iframe's load event
+            fires. pointer-events-none after fade so the iframe stays
+            interactable. Matches the rest of the admin's gray pulse
+            empty-state idiom (CafeWidgets.EmptyState). */}
+        <div
+          className={`absolute inset-x-0 bottom-0 top-9 flex flex-col items-center justify-center gap-2 bg-[#fafbfc]/90 transition-opacity duration-200 ${
+            loaded ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+          aria-hidden={loaded}
+        >
+          <div className="w-5 h-5 border-2 border-[#d1d5db] border-t-[#3b82f6] rounded-full animate-spin" />
+          <p className="text-[11px] text-[#9ca3af] font-medium">미리보기 불러오는 중...</p>
+        </div>
       </div>
     </section>
   );

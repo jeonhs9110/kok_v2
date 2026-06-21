@@ -10,7 +10,7 @@ import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useIsDirty } from '@/hooks/useIsDirty';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useToast } from '@/components/admin/Toast';
-import { revalidateHeaderData } from '@/lib/cache/invalidate';
+import { revalidateHeaderData, revalidateHomepageData } from '@/lib/cache/invalidate';
 
 const supabase = getSupabaseBrowser();
 
@@ -118,11 +118,18 @@ export function useTheme() {
       setSavedTokens(merged);
       setTokens(merged);
       setSavedFlash(true);
-      // Theme tokens drive header chrome + global CSS vars. Clearing
-      // the header memo evicts the cache the next request reads —
-      // audit 2026-06-21 ('we save but storefront shows the old
-      // palette until ISR TTL').
-      await revalidateHeaderData();
+      // Theme tokens drive header chrome + global CSS vars. We have to
+      // evict BOTH caches:
+      //   - process-local header memo (lib/cache/header.ts) for this EC2
+      //     instance's next render
+      //   - Next.js ISR cache tag 'theme_tokens' (getThemeTokens.ts) for
+      //     storefront SSR across instances
+      // Without the second call, the storefront kept the old palette
+      // for up to 60s after the admin save — audit 2026-06-21.
+      await Promise.all([
+        revalidateHeaderData(),
+        revalidateHomepageData('theme_tokens'),
+      ]);
       setTimeout(() => setSavedFlash(false), 2500);
     } catch (err) {
       console.error('[admin/theme] save failed:', err);
