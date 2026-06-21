@@ -35,6 +35,13 @@ const nextConfig: NextConfig = {
       'embla-carousel-autoplay',
     ],
   },
+  // Don't let Turbopack bundle these — they read their own filesystem
+  // (package.json, embedded data files) at runtime, which the standalone
+  // bundle wouldn't preserve. Loading them from node_modules at runtime
+  // keeps the file resolver intact. Currently:
+  //   geoip-country — MaxMind country lookup; reads its own package.json
+  //   to find the bundled IP→country binary database.
+  serverExternalPackages: ['geoip-country'],
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
