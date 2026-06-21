@@ -1,24 +1,17 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Save, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
-import { SUPPORTED_LANGS, LANG_LABELS, type Lang } from '@/lib/i18n/types';
+import type { Lang } from '@/lib/i18n/types';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { LoadingState } from '@/components/admin/CafeWidgets';
+import BannerEditForm, { type BannerRow } from './_components/BannerEditForm';
 
 const supabase = getSupabaseBrowser();
-
-interface BannerRow {
-  text: Record<string, string>;
-  link_url: string;
-  bg_color: string;
-  text_color: string;
-  is_active: boolean;
-}
 
 const DEFAULT: BannerRow = {
   text: {},
@@ -34,11 +27,6 @@ const DEFAULT: BannerRow = {
  * editing the row's content and deleting it. Placement (where the
  * banner sits in the homepage flow) is owned by the homepage builder's
  * drag-reorder — there is no order control on this form.
- *
- * 6-language text editor (matches carousel slide modal pattern). Live
- * preview chip mirrors the storefront's HomepageBanner rendering, and
- * every formData change posts up to the hub which forwards to the
- * central 1440px iframe (same pipeline as the slide live preview).
  */
 export default function BannerEditPage() {
   const params = useParams<{ id: string }>();
@@ -75,17 +63,6 @@ export default function BannerEditPage() {
       setLoading(false);
     })().catch(() => setLoading(false));
   }, [id]);
-
-  // Note: banner edits don't drive a live preview in the central
-  // iframe today — save → hub bumps iframe key → DB refetch.
-  // The earlier `kokkok-builder-banner-preview` postMessage was wired
-  // here but never listened anywhere; removed to avoid silent dead
-  // traffic. If we add live preview later, mirror the slide-preview
-  // pipeline in CarouselSlideModal + admin/homepage + HomepageBanner.
-
-  const updateText = useCallback((lang: Lang, value: string) => {
-    setData(prev => ({ ...prev, text: { ...prev.text, [lang]: value } }));
-  }, []);
 
   async function handleSave() {
     if (!supabase || !id) return;
@@ -146,7 +123,7 @@ export default function BannerEditPage() {
         } catch { /* ignore */ }
       }
       revalidateHomepageData('homepage_banners');
-      // If we're in the embedded drawer, signal close; else go back.
+      // If embedded in the homepage drawer, signal close; else go back.
       if (typeof window !== 'undefined' && window.parent !== window) {
         try {
           window.parent.postMessage(
@@ -165,9 +142,7 @@ export default function BannerEditPage() {
 
   const dirty = JSON.stringify(data) !== JSON.stringify(saved);
 
-  if (loading) {
-    return <LoadingState />;
-  }
+  if (loading) return <LoadingState />;
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
@@ -176,133 +151,22 @@ export default function BannerEditPage() {
         <button
           type="button"
           onClick={handleDelete}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-[#dc2626] border border-[#fecaca] rounded hover:bg-[#fef2f2] transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium text-[#dc2626] border border-[#fecaca] rounded hover:bg-[#fef2f2] transition-colors kokkok-keep-border"
         >
           <Trash2 className="w-3.5 h-3.5" /> 삭제
         </button>
       </div>
 
-      {/* Live preview chip */}
-      <div className="rounded border border-[#e5e7eb] overflow-hidden">
-        <div className="px-3 py-2 text-[11px] text-[#6b7280] bg-[#fafbfc] border-b border-[#e5e7eb]">
-          미리보기
-        </div>
-        <div
-          className="py-3 px-4 text-center text-[13px] sm:text-[14px] font-medium tracking-wide"
-          style={{ backgroundColor: data.bg_color, color: data.text_color }}
-        >
-          {data.text?.[activeLang] || data.text?.kr || data.text?.en || '(텍스트를 입력하세요)'}
-        </div>
-      </div>
-
-      {/* Active toggle */}
-      <label className="flex items-center gap-2 text-[13px]">
-        <input
-          type="checkbox"
-          checked={data.is_active}
-          onChange={e => setData(prev => ({ ...prev, is_active: e.target.checked }))}
-          className="w-4 h-4"
-        />
-        활성화 (체크 해제 시 사이트에 표시 안 됨)
-      </label>
-
-      {/* Multi-language text */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <label className="text-[12px] font-semibold text-[#374151]">텍스트</label>
-          <div className="flex gap-1">
-            {SUPPORTED_LANGS.map(lang => (
-              <button
-                key={lang}
-                type="button"
-                onClick={() => setActiveLang(lang)}
-                className={`px-2 py-0.5 text-[11px] rounded ${
-                  activeLang === lang
-                    ? 'bg-[#3b82f6] text-white'
-                    : 'bg-[#f3f4f6] text-[#6b7280] hover:bg-[#e5e7eb]'
-                }`}
-              >
-                {LANG_LABELS[lang]}
-              </button>
-            ))}
-          </div>
-        </div>
-        <input
-          type="text"
-          maxLength={120}
-          value={data.text?.[activeLang] || ''}
-          onChange={e => updateText(activeLang, e.target.value)}
-          placeholder={`${LANG_LABELS[activeLang]} 텍스트 (최대 120자)`}
-          className="w-full px-3 py-2 text-[13px] border border-[#d1d5db] rounded focus:border-[#3b82f6] focus:outline-none"
-        />
-      </div>
-
-      {/* Link URL */}
-      <div className="space-y-2">
-        <label className="text-[12px] font-semibold text-[#374151]">링크 (선택)</label>
-        <input
-          type="text"
-          value={data.link_url}
-          onChange={e => setData(prev => ({ ...prev, link_url: e.target.value }))}
-          placeholder="/products 또는 https://..."
-          className="w-full px-3 py-2 text-[13px] border border-[#d1d5db] rounded focus:border-[#3b82f6] focus:outline-none"
-        />
-        <p className="text-[11px] text-[#9ca3af]">비워두면 클릭 불가</p>
-      </div>
-
-      {/* Colors */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <label className="text-[12px] font-semibold text-[#374151]">배경색</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={data.bg_color}
-              onChange={e => setData(prev => ({ ...prev, bg_color: e.target.value }))}
-              className="w-10 h-9 rounded border border-[#d1d5db] cursor-pointer"
-            />
-            <input
-              type="text"
-              value={data.bg_color}
-              onChange={e => setData(prev => ({ ...prev, bg_color: e.target.value }))}
-              className="flex-1 px-2 py-1.5 text-[12px] font-mono border border-[#d1d5db] rounded"
-            />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <label className="text-[12px] font-semibold text-[#374151]">글자색</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={data.text_color}
-              onChange={e => setData(prev => ({ ...prev, text_color: e.target.value }))}
-              className="w-10 h-9 rounded border border-[#d1d5db] cursor-pointer"
-            />
-            <input
-              type="text"
-              value={data.text_color}
-              onChange={e => setData(prev => ({ ...prev, text_color: e.target.value }))}
-              className="flex-1 px-2 py-1.5 text-[12px] font-mono border border-[#d1d5db] rounded"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Save */}
-      <div className="flex items-center gap-3 pt-2">
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={!dirty || saving}
-          className="flex items-center gap-2 px-4 py-2 text-[13px] font-semibold text-white bg-[#3b82f6] rounded hover:bg-[#2563eb] disabled:bg-[#9ca3af] disabled:cursor-not-allowed transition-colors"
-        >
-          <Save className="w-3.5 h-3.5" />
-          {saving ? '저장 중...' : '저장'}
-        </button>
-        {savedFlash && (
-          <span className="text-[12px] text-[#059669]">저장됨 ✓</span>
-        )}
-      </div>
+      <BannerEditForm
+        data={data}
+        activeLang={activeLang}
+        dirty={dirty}
+        saving={saving}
+        savedFlash={savedFlash}
+        onActiveLangChange={setActiveLang}
+        onChange={setData}
+        onSave={handleSave}
+      />
     </div>
   );
 }

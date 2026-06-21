@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Save } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
-import SectionBackgroundPanel, { type SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
+import type { SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
+import SectionBgCard from '@/components/admin/SectionBgCard';
 import { useToast } from '@/components/admin/Toast';
 import { PageHeader, LoadingState } from '@/components/admin/CafeWidgets';
 import InstagramConfigCard from './_components/InstagramConfigCard';
@@ -271,30 +271,17 @@ export default function InstagramAdminPage() {
         onSave={saveHeader}
       />
 
-      {/* 섹션 배경 (migration 26) — uses the shared SectionBackgroundPanel
-          so leaving inline here keeps the bg/saveBg state local. */}
-      <div className="bg-white rounded border border-[#e5e7eb] p-5 space-y-4">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-[14px] font-bold text-[#1f2937]">섹션 배경</h2>
-          <p className="text-xs text-[#9ca3af]">기본값은 페이지 배경(투명)입니다.</p>
-        </div>
-        <SectionBackgroundPanel
-          value={bg}
-          onChange={setBg}
-          defaultColor="#ffffff"
-          uploadPathPrefix="instagram-bg"
-        />
-        <button
-          onClick={saveBg}
-          disabled={savingBg}
-          className={`px-5 py-2 rounded text-xs font-semibold transition-all flex items-center gap-2 ${
-            bgSaved ? 'bg-[#16a34a] text-white' : 'bg-[#1f2937] text-white hover:bg-[#111827]'
-          } disabled:opacity-50`}
-        >
-          <Save className="w-3.5 h-3.5" />
-          {savingBg ? '저장 중...' : bgSaved ? '✓ 저장 완료' : '배경 저장'}
-        </button>
-      </div>
+      {/* 섹션 배경 (migration 26) */}
+      <SectionBgCard
+        value={bg}
+        onChange={setBg}
+        defaultColor="#ffffff"
+        uploadPathPrefix="instagram-bg"
+        isSaving={savingBg}
+        showSavedFlash={bgSaved}
+        onSave={saveBg}
+        hint="기본값은 페이지 배경(투명)입니다."
+      />
 
       <InstagramRssCard
         handle={handle}

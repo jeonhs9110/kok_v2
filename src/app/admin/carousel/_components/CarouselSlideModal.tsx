@@ -22,7 +22,8 @@ import SlideTextEditor from './SlideTextEditor';
 import SlideColorPicker from './SlideColorPicker';
 import SlideFontSizeOffsets from './SlideFontSizeOffsets';
 import SlideTypographyAndPosition from './SlideTypographyAndPosition';
-import SlideImageUpload from './SlideImageUpload';
+import SlideImagesSection from './SlideImagesSection';
+import { useSlideLivePreview } from './useSlideLivePreview';
 
 interface Props {
   editingId: string | null;
@@ -69,73 +70,8 @@ export default function CarouselSlideModal({
     setIsEmbedded(new URLSearchParams(window.location.search).get('embedded') === 'true');
   }, []);
 
-  // Live preview pipeline — every formData change posts to the hub which
-  // forwards to the central 1440px storefront iframe. The storefront's
-  // HeroSlider listens and overlays the in-flight values on the matching
-  // slide. Image swaps are post-save only (blob URLs do not survive a
-  // postMessage hop). When the modal closes the unmount cleanup sends a
-  // null override so the storefront drops back to the persisted slide.
-  useEffect(() => {
-    if (typeof window === 'undefined' || window.parent === window) return;
-    if (!editingId) return; // New slides have no id to overlay yet.
-    const override = {
-      badge: formData.badge,
-      title: formData.title,
-      subtitle: formData.subtitle,
-      bg_color: formData.bg_color,
-      text_color: formData.text_color,
-      badge_bg_color: formData.badge_bg_color,
-      badge_text_color: formData.badge_text_color,
-      title_size_offset: formData.title_size_offset,
-      subtitle_size_offset: formData.subtitle_size_offset,
-      badge_size_offset: formData.badge_size_offset,
-      display_mode: formData.display_mode,
-      media_type: formData.media_type,
-      link_url: formData.link_url,
-      badge_font_family: formData.badge_font_family,
-      title_font_family: formData.title_font_family,
-      subtitle_font_family: formData.subtitle_font_family,
-      badge_bold: formData.badge_bold,
-      badge_italic: formData.badge_italic,
-      badge_underline: formData.badge_underline,
-      title_bold: formData.title_bold,
-      title_italic: formData.title_italic,
-      title_underline: formData.title_underline,
-      subtitle_bold: formData.subtitle_bold,
-      subtitle_italic: formData.subtitle_italic,
-      subtitle_underline: formData.subtitle_underline,
-      text_position: formData.text_position,
-      text_position_mobile: formData.text_position_mobile,
-      image_position: formData.image_position,
-      image_position_mobile: formData.image_position_mobile,
-      text_anchor: formData.text_anchor,
-      text_anchor_mobile: formData.text_anchor_mobile,
-      image_anchor: formData.image_anchor,
-      image_anchor_mobile: formData.image_anchor_mobile,
-    };
-    try {
-      window.parent.postMessage(
-        { type: 'kokkok-builder-slide-preview', slideId: editingId, override },
-        window.location.origin,
-      );
-    } catch {
-      // Ignore — preview is best-effort; save is the source of truth.
-    }
-  }, [formData, editingId]);
-
-  useEffect(() => {
-    return () => {
-      if (typeof window === 'undefined' || window.parent === window) return;
-      try {
-        window.parent.postMessage(
-          { type: 'kokkok-builder-slide-preview', slideId: null, override: null },
-          window.location.origin,
-        );
-      } catch {
-        // Ignore — modal is closing anyway.
-      }
-    };
-  }, []);
+  // Live preview broadcast to the homepage hub's central 1440px iframe.
+  useSlideLivePreview(formData, editingId);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -326,72 +262,27 @@ export default function CarouselSlideModal({
             onChange={mode => setFormData(prev => ({ ...prev, display_mode: mode }))}
           />
 
-          <SlideImageUpload
-            label="슬라이드 이미지 — PC (가로형, 필수)"
-            tip={
-              /* 권장 해상도 안내. 메인 배너 (HeroSlider) 가 lg:h-[1000px]
-                 까지 늘어나기 때문에, 세로 픽셀이 모자란 소스 (예: 2400×800)
-                 는 데스크탑에서 25% 이상 업스케일되며 흐릿하게 보입니다.
-                 2400×1200(2:1) 이상이 가장 안전합니다. */
-              <p className="text-[10px] text-[#92400e] bg-[#fef3c7] border border-[#fde68a] rounded px-2 py-1.5">
-                <strong className="font-bold">권장 해상도</strong> · 2400 × 1200 px (2:1) 이상 · 가로폭은 1920 px 이상이면 OK · 세로폭이 1000 px 미만이면 큰 화면에서 흐릿하게 보일 수 있습니다.
-              </p>
-            }
+          <SlideImagesSection
+            formData={formData}
             previewUrl={previewUrl}
-            urlValue={formData.imageUrl}
-            isVideo={formData.media_type === 'video'}
-            hasFile={!!formData.imageFile}
+            mobilePreviewUrl={mobilePreviewUrl}
             uploadProgress={uploadProgress}
-            accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
-            emptyTitle="클릭하여 이미지 업로드"
-            emptySubtitle="JPG, PNG, WEBP, GIF, MP4 — 최대 20MB"
-            emptyHint={
-              <p className="text-[11px] text-[#9ca3af] mt-2 leading-relaxed text-center">
-                권장: <strong className="font-semibold">데스크탑 2400×1500px (16:10) 이상</strong>, 가급적 원본 화질로 업로드해주세요.<br />
-                출시 시 자동으로 화면 크기에 맞춰 최적화되며 품질은 95%로 유지됩니다.
-              </p>
-            }
-            emptyHeight="h-36"
-            iconSize="w-8 h-8"
-            urlPlaceholder="https://example.com/image.jpg"
-            onFileSelect={handleFileSelect}
-            onUrlChange={url => {
+            onDesktopFileSelect={handleFileSelect}
+            onDesktopUrlChange={url => {
               setFormData(prev => ({ ...prev, imageUrl: url }));
               setPreviewUrl(url);
             }}
-            onClear={() => {
+            onDesktopClear={() => {
               setPreviewUrl('');
               setFormData(prev => ({ ...prev, imageFile: null, imageUrl: '' }));
               setUploadProgress('idle');
             }}
-          />
-
-          {/* Migration 35 — optional mobile-specific composition. If the
-              admin leaves this empty, HeroSlider falls back to the
-              desktop image at every breakpoint, matching pre-2026-06-10
-              behavior on rows from before this PR. */}
-          <SlideImageUpload
-            label="슬라이드 이미지 — 모바일 (세로형, 선택)"
-            tip={
-              <p className="text-[10px] text-[#1e40af] bg-[#eff6ff] border border-[#bfdbfe] rounded px-2 py-1.5">
-                모바일 전용 이미지를 업로드하면 작은 화면에서 자동으로 이 이미지가 표시됩니다. <strong>비워두면 PC 이미지를 그대로 사용</strong>합니다. 권장: 1200 × 1500 px (4:5) 또는 1080 × 1920 px (9:16).
-              </p>
-            }
-            previewUrl={mobilePreviewUrl}
-            urlValue={formData.mobileImageUrl}
-            hasFile={!!formData.mobileImageFile}
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            emptyTitle="클릭하여 모바일 이미지 업로드"
-            emptySubtitle="선택 사항 — 비워두면 PC 이미지 사용"
-            emptyHeight="h-28"
-            iconSize="w-6 h-6"
-            urlPlaceholder="https://example.com/mobile.jpg"
-            onFileSelect={handleMobileFileSelect}
-            onUrlChange={url => {
+            onMobileFileSelect={handleMobileFileSelect}
+            onMobileUrlChange={url => {
               setFormData(prev => ({ ...prev, mobileImageUrl: url }));
               setMobilePreviewUrl(url);
             }}
-            onClear={() => {
+            onMobileClear={() => {
               setMobilePreviewUrl('');
               setFormData(prev => ({ ...prev, mobileImageFile: null, mobileImageUrl: '' }));
             }}
