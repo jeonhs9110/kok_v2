@@ -96,6 +96,19 @@ variable "openai_api_key" {
   default   = ""
 }
 
+# Salt mixed into the SHA-256 IP hash before persisting to
+# analytics.ip_hash. Keeps the hash irreversible (you can't rainbow-table
+# 4 billion IPv4 addresses without the salt) AND uncorrelatable across
+# deployments — rotate this to invalidate every historical ip_hash.
+# Falls back to the Supabase URL inside /api/track if empty, which works
+# but isn't as strong as a dedicated secret.
+variable "analytics_ip_salt" {
+  type        = string
+  sensitive   = true
+  default     = ""
+  description = "Server-side salt for /api/track's IP hashing. Set in secrets.auto.tfvars."
+}
+
 # ---- Monitoring ----
 variable "alerts_email" {
   description = "Email address to receive CloudWatch alarm notifications. AWS sends a one-click confirmation link to this address on first apply — alarms fire silently until that link is clicked."
