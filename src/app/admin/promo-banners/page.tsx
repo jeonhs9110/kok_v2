@@ -1,25 +1,17 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import { Upload, Trash2, Link as LinkIcon, ImageIcon, GalleryHorizontal, Eye } from 'lucide-react';
+import { ImageIcon, GalleryHorizontal, Eye } from 'lucide-react';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader, LoadingState } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import PromoBannerSlot, { type PromoBanner } from './_components/PromoBannerSlot';
 
 // Session-aware client. Phase 2 RLS lockdown on `promo_banners` requires admin JWT.
 const supabase = getSupabaseBrowser();
 const BUCKET = 'product-images';
-
-interface PromoBanner {
-  id: string;
-  image_url: string;
-  link_url: string;
-  sort_order: number;
-  is_active: boolean;
-}
 
 const EMPTY_BANNER: Omit<PromoBanner, 'id'> = {
   image_url: '',
@@ -152,90 +144,21 @@ export default function PromoBannersAdminPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {banners.map((banner, idx) => (
-          <div key={banner.id} className="bg-white rounded border border-[#e5e7eb] overflow-hidden">
-            <div className="p-3 border-b border-[#e5e7eb] bg-[#fafbfc] flex items-center justify-between">
-              <span className="text-sm font-bold text-gray-700">배너 {idx + 1}</span>
-              {banner.image_url && (
-                <button
-                  onClick={() => handleDelete(banner)}
-                  className="text-red-400 hover:text-red-600 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
-            {/* Image slot */}
-            <div
-              className="relative aspect-square bg-gray-50 flex items-center justify-center cursor-pointer group border-2 border-dashed border-gray-200 hover:border-gray-400 transition-colors m-4 rounded-lg overflow-hidden"
-              onClick={() => {
-                activeSlotRef.current = banner.id;
-                fileInputRef.current?.click();
-              }}
-            >
-              {banner.image_url ? (
-                <>
-                  <Image src={banner.image_url} alt="" fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                    <Upload className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center gap-2 text-gray-400 group-hover:text-gray-600 transition-colors">
-                  {uploadingSlot === banner.id ? (
-                    <div className="w-8 h-8 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <ImageIcon className="w-8 h-8" />
-                      <span className="text-xs font-semibold">클릭하여 이미지 업로드</span>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Or paste URL */}
-            <div className="px-4 pb-2">
-              <div className="flex items-center gap-2 text-[10px] text-gray-400 mb-2">
-                <div className="h-px flex-1 bg-gray-100" />
-                <span className="font-semibold">또는 URL 직접 입력</span>
-                <div className="h-px flex-1 bg-gray-100" />
-              </div>
-              <input
-                type="url"
-                value={banner.image_url}
-                onChange={e => setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, image_url: e.target.value } : b))}
-                placeholder="https://..."
-                className="w-full border border-gray-200 rounded px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:border-black outline-none transition"
-              />
-            </div>
-
-            {/* Link URL */}
-            <div className="px-4 pb-4 space-y-1">
-              <label className="text-[10px] font-bold tracking-widest text-gray-500 uppercase flex items-center gap-1">
-                <LinkIcon className="w-3 h-3" /> 클릭 링크 URL
-              </label>
-              <input
-                type="text"
-                value={banner.link_url}
-                onChange={e => setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, link_url: e.target.value } : b))}
-                placeholder="https://example.com 또는 /kr/products"
-                className="w-full border border-gray-200 rounded px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:border-black outline-none transition"
-              />
-            </div>
-
-            <div className="px-4 pb-4">
-              <button
-                onClick={() => handleSave(banner)}
-                disabled={saving === banner.id || !banner.image_url}
-                className="w-full bg-[#3b82f6] text-white py-2.5 rounded text-sm font-bold tracking-widest hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {saving === banner.id ? (
-                  <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 저장 중...</>
-                ) : '저장'}
-              </button>
-            </div>
-          </div>
+          <PromoBannerSlot
+            key={banner.id}
+            banner={banner}
+            index={idx}
+            uploadingSlot={uploadingSlot}
+            saving={saving}
+            onPickFile={() => {
+              activeSlotRef.current = banner.id;
+              fileInputRef.current?.click();
+            }}
+            onUrlChange={url => setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, image_url: url } : b))}
+            onLinkChange={link => setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, link_url: link } : b))}
+            onSave={() => handleSave(banner)}
+            onDelete={() => handleDelete(banner)}
+          />
         ))}
       </div>
 

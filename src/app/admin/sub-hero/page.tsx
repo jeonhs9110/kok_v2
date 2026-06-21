@@ -12,6 +12,7 @@ import SubHeroPreview from './_components/SubHeroPreview';
 import SubHeroImageUpload from './_components/SubHeroImageUpload';
 import SubHeroFontSizeOffsets from './_components/SubHeroFontSizeOffsets';
 import SubHeroTypographyAndPosition from './_components/SubHeroTypographyAndPosition';
+import SubHeroBasicFields from './_components/SubHeroBasicFields';
 
 // Session-aware client. Phase 2 RLS lockdown on `sub_hero_banners` requires admin JWT.
 const supabase = getSupabaseBrowser();
@@ -173,30 +174,6 @@ export default function SubHeroAdminPage() {
           onUrlChange={url => setBanner(prev => ({ ...prev, image_url: url }))}
         />
 
-        {/* Title */}
-        <div className="space-y-1">
-          <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">제목 (선택)</label>
-          <input
-            type="text"
-            value={banner.title}
-            onChange={e => setBanner(prev => ({ ...prev, title: e.target.value }))}
-            placeholder="예: Available worldwide"
-            className="w-full rounded px-3 py-2 text-sm"
-          />
-        </div>
-
-        {/* Subtitle */}
-        <div className="space-y-1">
-          <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">서브타이틀 (선택)</label>
-          <input
-            type="text"
-            value={banner.subtitle}
-            onChange={e => setBanner(prev => ({ ...prev, subtitle: e.target.value }))}
-            placeholder="예: Let's make together"
-            className="w-full rounded px-3 py-2 text-sm"
-          />
-        </div>
-
         <SubHeroFontSizeOffsets
           banner={banner}
           onChange={(key, value) => setBanner(prev => ({ ...prev, [key]: value }))}
@@ -207,42 +184,12 @@ export default function SubHeroAdminPage() {
           onChange={patch => setBanner(prev => ({ ...prev, ...patch }))}
         />
 
-
-        {/* Link URL */}
-        <div className="space-y-1">
-          <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">클릭 링크 URL (선택)</label>
-          <input
-            type="text"
-            value={banner.link_url}
-            onChange={e => setBanner(prev => ({ ...prev, link_url: e.target.value }))}
-            placeholder="https://example.com 또는 /kr/worldwide"
-            className="w-full border border-gray-200 rounded px-3 py-2 text-sm bg-gray-50 focus:bg-white focus:border-black outline-none transition"
-          />
-        </div>
-
-        {/* Active toggle */}
-        <div className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            id="subHeroActive"
-            checked={banner.is_active}
-            onChange={e => setBanner(prev => ({ ...prev, is_active: e.target.checked }))}
-            className="w-4 h-4 accent-[#00693A] cursor-pointer"
-          />
-          <label htmlFor="subHeroActive" className="text-sm font-semibold text-gray-700 cursor-pointer select-none">
-            홈페이지에 표시
-          </label>
-        </div>
-
-        <button
-          onClick={handleSave}
-          disabled={isSaving || !banner.image_url}
-          className="w-full bg-[#3b82f6] text-white py-3 rounded text-sm font-bold tracking-widest hover:bg-[#2563eb] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          {isSaving ? (
-            <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> 저장 중...</>
-          ) : '배너 저장'}
-        </button>
+        <SubHeroBasicFields
+          banner={banner}
+          isSaving={isSaving}
+          onChange={patch => setBanner(prev => ({ ...prev, ...patch }))}
+          onSave={handleSave}
+        />
       </div>
     </div>
   );
