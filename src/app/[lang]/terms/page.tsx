@@ -2,11 +2,30 @@ import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import type { Metadata } from 'next';
 import BusinessInfoDisclosure from '@/components/BusinessInfoDisclosure';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang } = await params;
+  const isKr = lang === 'kr';
+  const title = isKr ? '이용약관 · KOKKOK GARDEN' : 'Terms of Service · KOKKOK GARDEN';
+  const desc = isKr
+    ? 'KOKKOK GARDEN 서비스 이용 약관, 회원의 권리·의무, 청약 철회·환불 규정 안내.'
+    : 'KOKKOK GARDEN terms of service: account rights, ordering, returns, and refunds.';
+  return {
+    title,
+    description: desc,
+    alternates: {
+      canonical: `https://www.kokkokgarden.com/${lang}/terms`,
+      languages: { kr: 'https://www.kokkokgarden.com/kr/terms', en: 'https://www.kokkokgarden.com/en/terms' },
+    },
+    openGraph: { title, description: desc, type: 'article', locale: isKr ? 'ko_KR' : 'en_US', siteName: 'KOKKOK GARDEN' },
+  };
+}
 
 export default async function TermsPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;

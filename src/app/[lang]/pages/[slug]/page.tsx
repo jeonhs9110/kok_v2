@@ -2,8 +2,59 @@ import { createClient } from '@supabase/supabase-js';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
+import type { Metadata } from 'next';
 import PageBlocks from '@/components/PageBlocks';
 import type { PageBlock } from '@/lib/pages/blocks';
+
+function pickLangString(map: unknown, lang: string): string {
+  if (!map || typeof map !== 'object') return '';
+  const m = map as Record<string, unknown>;
+  const v = m[lang] ?? m.kr ?? m.en;
+  return typeof v === 'string' ? v : '';
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string; slug: string }>;
+}): Promise<Metadata> {
+  const { lang, slug } = await params;
+  if (!supabase) {
+    return { title: 'KOKKOK GARDEN', robots: { index: false, follow: true } };
+  }
+  const { data: page } = await supabase
+    .from('pages')
+    .select('title, content')
+    .eq('slug', slug)
+    .eq('is_published', true)
+    .single();
+  if (!page) {
+    return { title: '페이지를 찾을 수 없습니다 · KOKKOK GARDEN', robots: { index: false, follow: true } };
+  }
+  const titleText = pickLangString(page.title, lang) || slug;
+  const contentText = pickLangString(page.content, lang);
+  const desc = contentText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+  const url = `https://www.kokkokgarden.com/${lang}/pages/${slug}`;
+  return {
+    title: `${titleText} · KOKKOK GARDEN`,
+    description: desc || titleText,
+    alternates: {
+      canonical: url,
+      languages: {
+        kr: `https://www.kokkokgarden.com/kr/pages/${slug}`,
+        en: `https://www.kokkokgarden.com/en/pages/${slug}`,
+      },
+    },
+    openGraph: {
+      title: `${titleText} · KOKKOK GARDEN`,
+      description: desc,
+      url,
+      type: 'article',
+      locale: lang === 'kr' ? 'ko_KR' : 'en_US',
+      siteName: 'KOKKOK GARDEN',
+    },
+  };
+}
 
 // Strip script tags and event handlers from HTML content
 function sanitizeHtml(html: string): string {
