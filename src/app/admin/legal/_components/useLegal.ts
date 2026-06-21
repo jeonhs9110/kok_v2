@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
 const supabase = getSupabaseBrowser();
 
@@ -91,6 +92,9 @@ export function useLegal() {
       content_kr: p.content_kr, content_en: p.content_en,
       is_published: p.is_published,
     }).eq('id', p.id);
+    // Audit 2026-06-21: footer + /terms + /privacy weren't refreshing
+    // until the 60s ISR TTL expired.
+    await revalidateHeaderData();
     setSaved(p.slug);
     setTimeout(() => setSaved(null), 2000);
     setSaving(null);
@@ -100,6 +104,7 @@ export function useLegal() {
     if (!supabase) return;
     setSaving('biz');
     await supabase.from('business_info').upsert({ id: 1, ...biz });
+    await revalidateHeaderData();
     setSaved('biz');
     setTimeout(() => setSaved(null), 2000);
     setSaving(null);

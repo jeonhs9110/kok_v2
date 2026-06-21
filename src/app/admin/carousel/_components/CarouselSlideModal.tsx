@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react';
 import { type SlideFormData } from '../_lib';
+import { useModalA11y } from '@/hooks/useModalA11y';
 import CarouselSlidePreview from './CarouselSlidePreview';
 import SlideDisplayModePicker from './SlideDisplayModePicker';
 import SlideTextEditor from './SlideTextEditor';
@@ -28,6 +29,7 @@ export default function CarouselSlideModal({
   onSaved,
 }: Props) {
   const f = useSlideForm(editingId, initialForm, initialPreviewUrl, onSaved);
+  const dialogRef = useModalA11y(true, onClose);
 
   // Live preview broadcast to the homepage hub's central 1440px iframe.
   useSlideLivePreview(f.formData, editingId);
@@ -40,12 +42,18 @@ export default function CarouselSlideModal({
       {/* In embedded mode the modal fills the drawer pane — no backdrop,
           no rounded card, no max-width clamp. Outside embedded mode it
           stays the classic centered modal card with backdrop. */}
-      <div className={f.isEmbedded
-        ? 'bg-white overflow-hidden flex flex-col w-full h-full'
-        : 'bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh]'
-      }>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="carousel-slide-modal-title"
+        className={f.isEmbedded
+          ? 'bg-white overflow-hidden flex flex-col w-full h-full'
+          : 'bg-white rounded-xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh]'
+        }
+      >
         <div className="p-4 border-b border-[#e5e7eb] flex justify-between items-center bg-[#fafbfc]">
-          <h3 className="text-[14px] font-bold text-[#1f2937]">
+          <h3 id="carousel-slide-modal-title" className="text-[14px] font-bold text-[#1f2937]">
             {editingId ? '슬라이드 수정' : '새 슬라이드 추가'}
           </h3>
           <button

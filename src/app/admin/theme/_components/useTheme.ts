@@ -9,6 +9,7 @@ import {
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useToast } from '@/components/admin/Toast';
+import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
 const supabase = getSupabaseBrowser();
 
@@ -82,7 +83,7 @@ export function useTheme() {
     setIsEmbedded(new URLSearchParams(window.location.search).get('embedded') === 'true');
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!supabase) return;
     setIsSaving(true);
     try {
@@ -116,6 +117,11 @@ export function useTheme() {
       setSavedTokens(merged);
       setTokens(merged);
       setSavedFlash(true);
+      // Theme tokens drive header chrome + global CSS vars. Clearing
+      // the header memo evicts the cache the next request reads —
+      // audit 2026-06-21 ('we save but storefront shows the old
+      // palette until ISR TTL').
+      await revalidateHeaderData();
       setTimeout(() => setSavedFlash(false), 2500);
     } catch (err) {
       console.error('[admin/theme] save failed:', err);
@@ -123,20 +129,20 @@ export function useTheme() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [tokens, toast]);
 
-  const handleReset = async () => {
+  const handleReset = useCallback(async () => {
     const ok = await confirm({
       message: '기본값으로 되돌리시겠습니까? 저장 전까지는 변경 사항이 반영되지 않습니다.',
       confirmText: '초기화',
     });
     if (!ok) return;
     setTokens(DEFAULT_THEME_TOKENS);
-  };
+  }, [confirm]);
 
-  const handleRevert = () => {
+  const handleRevert = useCallback(() => {
     setTokens(savedTokens);
-  };
+  }, [savedTokens]);
 
   const isDirty = JSON.stringify(tokens) !== JSON.stringify(savedTokens);
   useUnsavedChanges(isDirty);

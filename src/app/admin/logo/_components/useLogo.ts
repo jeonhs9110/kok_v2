@@ -118,6 +118,9 @@ export function useLogo() {
         );
       if (error) throw error;
       setSavedTokens(tokens);
+      // Token changes affect the header (logo height + font sizes).
+      // Audit 2026-06-21: storefront was stale for up to 60s before.
+      await revalidateHeaderData();
     } catch (err) {
       console.error('[admin/logo] tokens save failed:', err);
       toast.show(err instanceof Error ? err.message : '저장 실패', 'error');

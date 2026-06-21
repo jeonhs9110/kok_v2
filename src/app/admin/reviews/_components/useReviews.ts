@@ -146,11 +146,21 @@ export function useReviews() {
     const r = rows[i];
     const ok = await confirm({ message: '이 리뷰 카드를 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    if (r.id && supabase) {
-      await supabase.from('review_cards').delete().eq('id', r.id);
-      revalidateHomepageData('reviews');
-    }
+    // Optimistic remove. If the DB call fails, restore + toast so the
+    // card doesn't silently vanish from the UI.
+    const snapshot = rows;
     setRows(prev => prev.filter((_, idx) => idx !== i));
+    if (r.id && supabase) {
+      try {
+        const { error } = await supabase.from('review_cards').delete().eq('id', r.id);
+        if (error) throw error;
+        revalidateHomepageData('reviews');
+      } catch (err) {
+        console.warn('[admin/reviews] 삭제 실패:', err);
+        setRows(snapshot);
+        toast.show('삭제에 실패했습니다.', 'error');
+      }
+    }
   }
 
   async function move(i: number, dir: -1 | 1) {
@@ -168,6 +178,9 @@ export function useReviews() {
         supabase.from('review_cards').update({ sort_order: b.sort_order }).eq('id', a.id),
         supabase.from('review_cards').update({ sort_order: a.sort_order }).eq('id', b.id),
       ]);
+      // Tag eviction so the storefront's unstable_cache wrapper drops
+      // the cached order immediately — was staling for up to 60s before.
+      revalidateHomepageData('reviews');
     }
   }
 
