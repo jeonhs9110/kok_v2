@@ -105,7 +105,7 @@ export default function ChatbotConfigCard({ config, saving, saved, onChange, onS
       <div className="space-y-3">
         <p className="font-semibold text-[#374151]">인사말 메시지</p>
         <div>
-          <label className="text-xs text-[#6b7280] mb-1 block">English</label>
+          <label className="text-xs text-[#6b7280] mb-1 block">영어 (English)</label>
           <textarea
             value={config.greeting_en}
             onChange={e => patch({ greeting_en: e.target.value })}

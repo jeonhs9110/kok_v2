@@ -89,7 +89,7 @@ export default function RegistrationFieldsSection({
             <div className="grid grid-cols-4 gap-2">
               <input type="text" placeholder="key (영문)" value={newField.key} onChange={e => onChangeNewField({ ...newField, key: e.target.value.replace(/\s/g, '_').toLowerCase() })} className="rounded-lg px-3 py-2 text-xs" />
               <input type="text" placeholder="라벨 (한국어)" value={newField.label_kr} onChange={e => onChangeNewField({ ...newField, label_kr: e.target.value })} className="rounded-lg px-3 py-2 text-xs" />
-              <input type="text" placeholder="Label (English)" value={newField.label_en} onChange={e => onChangeNewField({ ...newField, label_en: e.target.value })} className="rounded-lg px-3 py-2 text-xs" />
+              <input type="text" placeholder="라벨 (영어)" value={newField.label_en} onChange={e => onChangeNewField({ ...newField, label_en: e.target.value })} className="rounded-lg px-3 py-2 text-xs" />
               <div className="flex gap-2">
                 <select value={newField.type} onChange={e => onChangeNewField({ ...newField, type: e.target.value })} className="flex-1 rounded-lg px-2 py-2 text-xs">
                   <option value="text">텍스트</option>

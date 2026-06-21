@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { useIsDirty } from '@/hooks/useIsDirty';
 import { getSiteSetting, setSiteSetting } from '@/lib/api/site-settings';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
 import {
@@ -104,7 +105,7 @@ export function useLogo() {
     setIsEmbedded(new URLSearchParams(window.location.search).get('embedded') === 'true');
   }, []);
 
-  const tokensDirty = JSON.stringify(tokens) !== JSON.stringify(savedTokens);
+  const tokensDirty = useIsDirty(tokens, savedTokens);
 
   const handleTokensSave = async () => {
     if (!supabase) return;

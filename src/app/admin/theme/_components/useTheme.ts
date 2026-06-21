@@ -7,6 +7,7 @@ import {
   type ThemeTokens,
 } from '@/lib/theme/tokens';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { useIsDirty } from '@/hooks/useIsDirty';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useToast } from '@/components/admin/Toast';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
@@ -144,7 +145,8 @@ export function useTheme() {
     setTokens(savedTokens);
   }, [savedTokens]);
 
-  const isDirty = JSON.stringify(tokens) !== JSON.stringify(savedTokens);
+  // Memoized — avoids reserializing the 30+-key tokens object every render.
+  const isDirty = useIsDirty(tokens, savedTokens);
   useUnsavedChanges(isDirty);
 
   return {
