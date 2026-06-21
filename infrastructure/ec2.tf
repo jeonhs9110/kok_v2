@@ -43,6 +43,7 @@ locals {
     NEXT_PUBLIC_SUPABASE_URL=${var.next_public_supabase_url}
     NEXT_PUBLIC_SUPABASE_ANON_KEY=${var.next_public_supabase_anon_key}
     OPENAI_API_KEY=${var.openai_api_key}
+    ANALYTICS_IP_SALT=${var.analytics_ip_salt}
     ENVEOF
     chmod 640 /etc/kokkok/env
     chown root:ec2-user /etc/kokkok/env

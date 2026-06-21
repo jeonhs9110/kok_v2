@@ -1,8 +1,8 @@
 name: PR checks
 
-# Runs on every PR opened against master. Blocks merge if tsc or lint
-# regress. Added 2026-06-21 — before this, the only CI was the
-# build-publish-artifact workflow that fires post-merge.
+# Runs on every PR opened against master. Blocks merge if tsc, lint, or
+# next build regress. Added 2026-06-21 — before this, the only CI was
+# the build-publish-artifact workflow that fires post-merge.
 
 on:
   pull_request:
@@ -29,3 +29,17 @@ jobs:
         # Allow the single pre-existing custom-font warning to remain; fail
         # on anything new. Tighten to --max-warnings=0 once that's fixed.
         run: npm run lint -- --max-warnings=1
+
+      # PR #223 shipped a build-breaking import (geoip-country reads its
+      # own package.json — Turbopack's standalone bundler didn't preserve
+      # it). tsc + lint both passed because the failure only surfaces in
+      # `next build`'s "Collecting page data" phase. Run a full build in
+      # PR checks so we catch this class of bug pre-merge instead of
+      # discovering it from a red Build & Publish run after master is
+      # already at the broken SHA.
+      - name: next build (catch bundler/runtime issues)
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npx next build
