@@ -61,7 +61,7 @@ export default function LegalAdminPage() {
               <div className="flex items-center justify-between">
                 <div className="flex gap-1">
                   <button onClick={() => setEditLang('kr')} className={`px-3 py-1.5 text-xs font-semibold rounded ${editLang === 'kr' ? 'bg-[#1f2937] text-white' : 'bg-[#f3f4f6] text-[#6b7280]'}`}>한국어</button>
-                  <button onClick={() => setEditLang('en')} className={`px-3 py-1.5 text-xs font-semibold rounded ${editLang === 'en' ? 'bg-[#1f2937] text-white' : 'bg-[#f3f4f6] text-[#6b7280]'}`}>English</button>
+                  <button onClick={() => setEditLang('en')} className={`px-3 py-1.5 text-xs font-semibold rounded ${editLang === 'en' ? 'bg-[#1f2937] text-white' : 'bg-[#f3f4f6] text-[#6b7280]'}`}>영어</button>
                 </div>
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={p.is_published} onChange={() => updatePage(p.slug, { is_published: !p.is_published })} className="w-4 h-4 rounded" />

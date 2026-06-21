@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { useIsDirty } from '@/hooks/useIsDirty';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { resolveAnchor } from '@/lib/typography/options';
 import type { SubHero } from './types';
@@ -68,7 +69,7 @@ export function useSubHero() {
     finally { setIsLoading(false); }
   }
 
-  useUnsavedChanges(JSON.stringify(banner) !== JSON.stringify(savedBanner));
+  useUnsavedChanges(useIsDirty(banner, savedBanner));
 
   const handleFileUpload = async (file: File) => {
     if (!supabase) return;

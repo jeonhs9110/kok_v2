@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
+import { useIsDirty } from '@/hooks/useIsDirty';
 
 const supabase = getSupabaseBrowser();
 
@@ -58,7 +59,7 @@ export function useTopStripe() {
     });
   }, []);
 
-  const isDirty = JSON.stringify(data) !== JSON.stringify(saved);
+  const isDirty = useIsDirty(data, saved);
 
   async function handleSave() {
     if (!supabase) return;

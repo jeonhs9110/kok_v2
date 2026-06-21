@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import withBundleAnalyzer from '@next/bundle-analyzer';
 
 // Baseline security headers applied to every response. Cheap defense
 // against the obvious browser-side attack classes (clickjacking, MIME
@@ -92,4 +93,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Wrap with bundle analyzer — only active when ANALYZE=true. Cheap when
+// disabled (no-op wrapper). Audit 2026-06-21 added this to spot bundle
+// bloat after the admin refactor + future feature additions.
+export default withBundleAnalyzer({ enabled: process.env.ANALYZE === 'true' })(nextConfig);
