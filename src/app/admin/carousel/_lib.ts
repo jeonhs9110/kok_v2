@@ -153,6 +153,61 @@ export function formFromSlide(s: CarouselSlide): SlideFormData {
   };
 }
 
+/**
+ * Build the DB payload from a SlideFormData + resolved image URLs. Pulled
+ * out of the modal so the save handler can stay readable, and so the legacy
+ * 9-cell positions + new continuous anchors stay defined in the same
+ * place (the row needs to be in sync for rollback safety).
+ */
+export function buildSlidePayload(
+  formData: SlideFormData,
+  finalImageUrl: string,
+  finalMobileImageUrl: string,
+) {
+  return {
+    badge: formData.badge,
+    title: formData.title,
+    subtitle: formData.subtitle,
+    image_url: finalImageUrl || null,
+    mobile_image_url: finalMobileImageUrl || null,
+    bg_color: formData.bg_color,
+    text_color: formData.text_color,
+    badge_bg_color: formData.badge_bg_color,
+    badge_text_color: formData.badge_text_color,
+    title_size_offset: formData.title_size_offset,
+    subtitle_size_offset: formData.subtitle_size_offset,
+    badge_size_offset: formData.badge_size_offset,
+    sort_order: parseInt(formData.sort_order) || 0,
+    is_active: formData.is_active,
+    link_url: formData.link_url || null,
+    display_mode: formData.display_mode,
+    media_type: formData.media_type,
+    badge_font_family: formData.badge_font_family,
+    title_font_family: formData.title_font_family,
+    subtitle_font_family: formData.subtitle_font_family,
+    badge_bold: formData.badge_bold,
+    badge_italic: formData.badge_italic,
+    badge_underline: formData.badge_underline,
+    title_bold: formData.title_bold,
+    title_italic: formData.title_italic,
+    title_underline: formData.title_underline,
+    subtitle_bold: formData.subtitle_bold,
+    subtitle_italic: formData.subtitle_italic,
+    subtitle_underline: formData.subtitle_underline,
+    // Legacy 9-cell keys (kept in sync as a backward-compat rollback safety
+    // until the next minor sweep can drop the old columns).
+    text_position: formData.text_position,
+    text_position_mobile: formData.text_position_mobile,
+    image_position: formData.image_position,
+    image_position_mobile: formData.image_position_mobile,
+    // Migration 30 — JSONB anchors are the real source of truth now.
+    text_anchor: formData.text_anchor,
+    text_anchor_mobile: formData.text_anchor_mobile,
+    image_anchor: formData.image_anchor,
+    image_anchor_mobile: formData.image_anchor_mobile,
+  };
+}
+
 export async function uploadSlideAsset(file: File): Promise<string> {
   const ext = file.name.split('.').pop() ?? 'jpg';
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
