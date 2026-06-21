@@ -1,7 +1,49 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { getReviewCard } from '@/lib/api/reviews';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string; id: string }>;
+}): Promise<Metadata> {
+  const { lang, id } = await params;
+  const review = await getReviewCard(id);
+  if (!review || !review.is_active) {
+    return { title: '리뷰를 찾을 수 없습니다 · KOKKOK GARDEN', robots: { index: false, follow: true } };
+  }
+  const title = `${review.title || 'Review'} · KOKKOK GARDEN`;
+  const desc = (review.content_html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160) || review.title || '';
+  const url = `https://www.kokkokgarden.com/${lang}/reviews/${id}`;
+  return {
+    title,
+    description: desc,
+    alternates: {
+      canonical: url,
+      languages: {
+        kr: `https://www.kokkokgarden.com/kr/reviews/${id}`,
+        en: `https://www.kokkokgarden.com/en/reviews/${id}`,
+      },
+    },
+    openGraph: {
+      title,
+      description: desc,
+      url,
+      type: 'article',
+      images: review.image_url ? [{ url: review.image_url, alt: review.title }] : undefined,
+      locale: lang === 'kr' ? 'ko_KR' : 'en_US',
+      siteName: 'KOKKOK GARDEN',
+    },
+    twitter: {
+      card: review.image_url ? 'summary_large_image' : 'summary',
+      title,
+      description: desc,
+      images: review.image_url ? [review.image_url] : undefined,
+    },
+  };
+}
 
 const LABELS: Record<string, { home: string; reviews: string }> = {
   kr: { home: '홈', reviews: 'REVIEW & COMMUNITY' },

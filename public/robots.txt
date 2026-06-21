@@ -4,5 +4,11 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /login
 Disallow: /register
+Disallow: /forgot-password
+Disallow: /auth/
+Disallow: /*/mypage
+Disallow: /*/recent
+Disallow: /*/menus/*/write
+Disallow: /*/menus/*/*/edit
 
 Sitemap: https://www.kokkokgarden.com/sitemap.xml
