@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { LogOut, ExternalLink, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, LogOut, ExternalLink, X } from 'lucide-react';
 import { NAV_SECTIONS } from './nav';
 
 interface Props {
@@ -10,23 +11,74 @@ interface Props {
   onCloseDrawer: () => void;
 }
 
+const COLLAPSE_KEY = 'kokkok-admin-sidebar-collapsed';
+
 /**
- * The Cafe24-style dark slate sidebar. Renders the grouped NAV_SECTIONS,
- * the brand chip, and the "스토어 보기" + "로그아웃" footer. Mobile
- * drawer behavior is the parent's concern (it owns drawerOpen).
+ * Cafe24-mimicking sidebar.
+ *
+ * Cafe24's admin sidebar has a very specific gestalt that previous
+ * iterations missed:
+ *   - Collapsible section groups with chevron arrows (state persisted
+ *     in localStorage across sessions).
+ *   - 3px blue left-border on the active item (not a tinted bg fill).
+ *   - Section titles are normal-weight Korean, NOT all-caps tracking —
+ *     all-caps reads "Western SaaS dashboard," not Cafe24.
+ *   - 36px row height + 13px text + monochrome 16px icons. Anything
+ *     denser feels cramped, anything looser feels modern-SaaS.
+ *   - Simple wordmark in the brand area, no chip/gradient — Cafe24
+ *     never decorates its own brand area.
+ *   - Auto-expand whichever section contains the active page so
+ *     deep-linked admins can see where they are without manually
+ *     opening their group.
  */
 export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Props) {
+  // Which section is the active page in? That one is always open on
+  // mount even if the user previously collapsed it — orientation beats
+  // strict persistence.
+  const activeSectionIdx = useMemo(() => {
+    return NAV_SECTIONS.findIndex(s =>
+      s.items.some(i =>
+        pathname === i.href || (i.href !== '/admin' && pathname.startsWith(i.href + '/')),
+      ),
+    );
+  }, [pathname]);
+
+  const [collapsed, setCollapsed] = useState<Set<number>>(() => new Set());
+
+  // Restore collapse state from localStorage on mount. Run once; later
+  // navigations don't reset because the active section gets force-opened
+  // in the render path below. The set-state-in-effect lint rule fires
+  // for any post-mount hydration of client-only storage — accepted
+  // codebase pattern (see /admin/layout.tsx drawerOpen reset).
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(COLLAPSE_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (raw) setCollapsed(new Set(JSON.parse(raw)));
+    } catch { /* ignore corrupt JSON */ }
+  }, []);
+
+  const persist = (next: Set<number>) => {
+    setCollapsed(next);
+    try { localStorage.setItem(COLLAPSE_KEY, JSON.stringify([...next])); } catch { /* quota */ }
+  };
+
+  const toggle = (idx: number) => {
+    const next = new Set(collapsed);
+    if (next.has(idx)) next.delete(idx); else next.add(idx);
+    persist(next);
+  };
+
   return (
     <aside
-      className={`fixed md:static inset-y-0 left-0 z-40 w-[232px] bg-[#1b2330] text-gray-300 flex flex-col transform transition-transform duration-200 ease-out md:transform-none ${
+      className={`fixed md:static inset-y-0 left-0 z-40 w-[224px] bg-[#1b2330] text-gray-300 flex flex-col transform transition-transform duration-200 ease-out md:transform-none ${
         drawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}
     >
-      <div className="h-14 flex items-center justify-between px-5 border-b border-[#0e1521]">
+      {/* Brand header — Cafe24's wordmark area is flat, no chip, no gradient. */}
+      <div className="h-14 flex items-center justify-between px-5 border-b border-black/40">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded bg-gradient-to-br from-[#3b82f6] to-[#1e40af] flex items-center justify-center text-white text-[11px] font-extrabold tracking-tighter">
-            KK
-          </div>
+          <span className="w-1.5 h-5 bg-[#3b82f6] rounded-sm" />
           <span className="text-[13px] font-bold tracking-wide text-white">KOKKOK 관리자</span>
         </div>
         <button
@@ -39,45 +91,69 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
         </button>
       </div>
 
-      <nav className="flex-1 py-3 px-2 overflow-y-auto">
-        {NAV_SECTIONS.map((section, idx) => (
-          <div key={idx} className="mb-3 last:mb-0">
-            {section.title && (
-              <p className="px-3 pt-3 pb-1.5 text-[10px] font-semibold tracking-[0.14em] uppercase text-gray-500">
-                {section.title}
-              </p>
-            )}
-            {section.items.map((item) => {
-              const isActive = pathname === item.href ||
-                               (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center gap-2.5 pl-3 pr-2 py-2 rounded transition-colors text-[12px] ${
-                    isActive
-                      ? 'bg-[#2b6cb0]/30 text-white font-semibold'
-                      : 'text-gray-400 hover:text-white hover:bg-[#2a3140]'
-                  }`}
+      <nav className="flex-1 py-2 overflow-y-auto">
+        {NAV_SECTIONS.map((section, idx) => {
+          // Section is "open" if (a) it contains the active item, or
+          // (b) the user hasn't manually collapsed it. Sections with no
+          // title (the top group containing 대시보드 + 메뉴 관리) are
+          // always rendered as a flat list, never collapsed.
+          const isActiveSection = idx === activeSectionIdx;
+          const isOpen = !section.title || isActiveSection || !collapsed.has(idx);
+
+          return (
+            <div key={idx} className="mb-0.5">
+              {section.title && (
+                <button
+                  type="button"
+                  onClick={() => toggle(idx)}
+                  className="w-full flex items-center justify-between px-5 pt-4 pb-1.5 text-[11.5px] font-bold text-white/80 hover:text-white transition-colors"
                 >
-                  <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span className="truncate">{item.name}</span>
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+                  <span>{section.title}</span>
+                  <ChevronDown
+                    className={`w-3 h-3 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
+                  />
+                </button>
+              )}
+              {isOpen && section.items.map(item => {
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`relative flex items-center gap-3 pl-5 pr-3 h-9 text-[13px] transition-colors ${
+                      isActive
+                        ? 'bg-[#222d3d] text-white font-semibold'
+                        : 'text-gray-400 hover:text-white hover:bg-white/[0.03]'
+                    }`}
+                  >
+                    {/* Slim left indicator — Cafe24's active-state signature. */}
+                    {isActive && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#3b82f6]"
+                      />
+                    )}
+                    <Icon className="w-4 h-4 flex-shrink-0 stroke-[1.75]" />
+                    <span className="truncate">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })}
       </nav>
 
-      <div className="p-3 border-t border-[#0e1521] space-y-0.5">
+      <div className="p-2 border-t border-black/40 space-y-0">
         <Link
           href="/kr"
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] text-gray-400 hover:text-white hover:bg-[#2a3140] rounded transition-colors"
+          className="w-full flex items-center gap-3 pl-5 pr-3 h-9 text-[12.5px] text-gray-400 hover:text-white hover:bg-white/[0.03] transition-colors"
         >
-          <ExternalLink className="w-3.5 h-3.5" />
+          <ExternalLink className="w-4 h-4 stroke-[1.75]" />
           스토어 보기
         </Link>
         <button
@@ -85,9 +161,9 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
             document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             window.location.href = '/';
           }}
-          className="w-full flex items-center gap-2.5 px-3 py-2 text-[12px] text-gray-400 hover:text-white hover:bg-[#2a3140] rounded transition-colors border-none bg-transparent"
+          className="w-full flex items-center gap-3 pl-5 pr-3 h-9 text-[12.5px] text-gray-400 hover:text-white hover:bg-white/[0.03] transition-colors border-none bg-transparent text-left"
         >
-          <LogOut className="w-3.5 h-3.5" />
+          <LogOut className="w-4 h-4 stroke-[1.75]" />
           로그아웃
         </button>
       </div>
