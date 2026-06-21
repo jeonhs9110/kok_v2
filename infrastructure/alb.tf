@@ -77,10 +77,15 @@ resource "aws_lb_target_group_attachment" "app" {
   }
 }
 
-# HTTP listener — 301 redirect to HTTPS. Previously this forwarded
-# plaintext traffic to the app (cookies, form posts, all unencrypted).
-# Now any http://www.kokkokgarden.com request gets bounced to https://
-# before reaching the backend.
+# HTTP listener — 301 redirect to HTTPS by default. Direct viewers
+# (cookies, form posts, all unencrypted) get bounced to https:// before
+# reaching the backend.
+#
+# CloudFront is exempted via the listener rule below: when the
+# X-CloudFront-Auth secret header matches, the request forwards
+# straight to the target group instead of redirecting. Edge-to-origin
+# stays inside AWS so plaintext is acceptable; viewer↔CloudFront is
+# still HTTPS-only.
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
@@ -92,6 +97,27 @@ resource "aws_lb_listener" "http" {
       port        = "443"
       protocol    = "HTTPS"
       status_code = "HTTP_301"
+    }
+  }
+}
+
+# Bypass the redirect for CloudFront-origin traffic. priority = 1 so
+# this evaluates before the listener's default_action. The secret
+# header value lives in secrets.auto.tfvars and is mirrored on the
+# CloudFront origin's custom_header block.
+resource "aws_lb_listener_rule" "http_cloudfront_bypass" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 1
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.app.arn
+  }
+
+  condition {
+    http_header {
+      http_header_name = "X-CloudFront-Auth"
+      values           = [var.cloudfront_origin_secret]
     }
   }
 }
