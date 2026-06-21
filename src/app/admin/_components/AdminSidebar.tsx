@@ -71,15 +71,15 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
 
   return (
     <aside
-      className={`fixed md:static inset-y-0 left-0 z-40 w-[224px] bg-[#1b2330] text-gray-300 flex flex-col transform transition-transform duration-200 ease-out md:transform-none ${
+      className={`fixed md:static inset-y-0 left-0 z-40 w-[210px] bg-[#1b2330] text-gray-300 flex flex-col transform transition-transform duration-200 ease-out md:transform-none ${
         drawerOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}
     >
-      {/* Brand header — Cafe24's wordmark area is flat, no chip, no gradient. */}
-      <div className="h-14 flex items-center justify-between px-5 border-b border-black/40">
+      {/* Brand header — 48px (Cafe24's ruler), flat, no chip / no gradient. */}
+      <div className="h-12 flex items-center justify-between px-4 border-b border-black/40">
         <div className="flex items-center gap-2">
-          <span className="w-1.5 h-5 bg-[#3b82f6] rounded-sm" />
-          <span className="text-[13px] font-bold tracking-wide text-white">KOKKOK 관리자</span>
+          <span className="w-1 h-4 bg-[#3b82f6] rounded-sm" />
+          <span className="text-[12.5px] font-bold tracking-wide text-white">KOKKOK 관리자</span>
         </div>
         <button
           type="button"
@@ -91,7 +91,7 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
         </button>
       </div>
 
-      <nav className="flex-1 py-2 overflow-y-auto">
+      <nav className="flex-1 py-1.5 overflow-y-auto">
         {NAV_SECTIONS.map((section, idx) => {
           // Section is "open" if (a) it contains the active item, or
           // (b) the user hasn't manually collapsed it. Sections with no
@@ -101,16 +101,16 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
           const isOpen = !section.title || isActiveSection || !collapsed.has(idx);
 
           return (
-            <div key={idx} className="mb-0.5">
+            <div key={idx}>
               {section.title && (
                 <button
                   type="button"
                   onClick={() => toggle(idx)}
-                  className="w-full flex items-center justify-between px-5 pt-4 pb-1.5 text-[11.5px] font-bold text-white/80 hover:text-white transition-colors"
+                  className="w-full flex items-center justify-between px-4 pt-3 pb-1 text-[10.5px] font-bold text-white/70 hover:text-white transition-colors"
                 >
                   <span>{section.title}</span>
                   <ChevronDown
-                    className={`w-3 h-3 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
+                    className={`w-2.5 h-2.5 text-gray-500 transition-transform ${isOpen ? '' : '-rotate-90'}`}
                   />
                 </button>
               )}
@@ -123,7 +123,7 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`relative flex items-center gap-3 pl-5 pr-3 h-9 text-[13px] transition-colors ${
+                    className={`relative flex items-center gap-2.5 pl-4 pr-3 h-8 text-[12px] transition-colors ${
                       isActive
                         ? 'bg-[#222d3d] text-white font-semibold'
                         : 'text-gray-400 hover:text-white hover:bg-white/[0.03]'
@@ -136,7 +136,7 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
                         className="absolute left-0 top-0 bottom-0 w-[3px] bg-[#3b82f6]"
                       />
                     )}
-                    <Icon className="w-4 h-4 flex-shrink-0 stroke-[1.75]" />
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0 stroke-[1.75]" />
                     <span className="truncate">{item.name}</span>
                   </Link>
                 );
@@ -146,14 +146,14 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
         })}
       </nav>
 
-      <div className="p-2 border-t border-black/40 space-y-0">
+      <div className="border-t border-black/40 py-1.5">
         <Link
           href="/kr"
           target="_blank"
           rel="noopener noreferrer"
-          className="w-full flex items-center gap-3 pl-5 pr-3 h-9 text-[12.5px] text-gray-400 hover:text-white hover:bg-white/[0.03] transition-colors"
+          className="w-full flex items-center gap-2.5 pl-4 pr-3 h-8 text-[11.5px] text-gray-400 hover:text-white hover:bg-white/[0.03] transition-colors"
         >
-          <ExternalLink className="w-4 h-4 stroke-[1.75]" />
+          <ExternalLink className="w-3.5 h-3.5 stroke-[1.75]" />
           스토어 보기
         </Link>
         <button
@@ -161,9 +161,9 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
             document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             window.location.href = '/';
           }}
-          className="w-full flex items-center gap-3 pl-5 pr-3 h-9 text-[12.5px] text-gray-400 hover:text-white hover:bg-white/[0.03] transition-colors border-none bg-transparent text-left"
+          className="w-full flex items-center gap-2.5 pl-4 pr-3 h-8 text-[11.5px] text-gray-400 hover:text-white hover:bg-white/[0.03] transition-colors border-none bg-transparent text-left"
         >
-          <LogOut className="w-4 h-4 stroke-[1.75]" />
+          <LogOut className="w-3.5 h-3.5 stroke-[1.75]" />
           로그아웃
         </button>
       </div>
