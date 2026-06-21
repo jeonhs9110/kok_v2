@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useI18n } from '@/lib/i18n/context';
 import Link from 'next/link';
 
@@ -45,8 +45,24 @@ export default function CookieConsent() {
   const t = L[lang] ?? L['en'];
   const hasConsent = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
   const [dismissed, setDismissed] = useState(false);
+  const visible = !hasConsent && !dismissed;
 
-  if (hasConsent || dismissed) return null;
+  // Esc-close — declared before the early return so hook order stays
+  // stable. Gated on `visible` inside the effect so the listener only
+  // binds while the banner is on screen.
+  useEffect(() => {
+    if (!visible) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        document.cookie = 'kokkok_cookie_consent=declined; path=/; max-age=31536000; SameSite=Lax';
+        setDismissed(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [visible]);
+
+  if (!visible) return null;
 
   const handleAccept = () => {
     document.cookie = 'kokkok_cookie_consent=accepted; path=/; max-age=31536000; SameSite=Lax';
@@ -59,7 +75,11 @@ export default function CookieConsent() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 p-4 animate-in slide-in-from-bottom-4 duration-300">
+    <div
+      className="fixed bottom-0 left-0 right-0 z-40 p-4 animate-in slide-in-from-bottom-4 duration-300"
+      role="region"
+      aria-label={t.message}
+    >
       <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] border border-gray-200 p-4 flex flex-col sm:flex-row items-center gap-3">
         <p className="text-sm text-gray-600 flex-1">
           {t.message}{' '}

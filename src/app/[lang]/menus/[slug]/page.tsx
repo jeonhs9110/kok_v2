@@ -1,4 +1,53 @@
+import type { Metadata } from 'next';
 import MenuPage from '@/components/pages/MenuPage';
+import { getMenuBySlug } from '@/lib/api/menus';
+
+function pickLang(map: Record<string, string> | string | null | undefined, lang: string, fallback: string): string {
+  if (!map) return fallback;
+  if (typeof map === 'string') return map;
+  return map[lang] || map.kr || map.en || Object.values(map).find(v => v && v.trim()) || fallback;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string; slug: string }>;
+}): Promise<Metadata> {
+  const { lang, slug } = await params;
+  // getMenuBySlug already filters on is_published — null = not found OR
+  // unpublished, both of which should render the 404 metadata.
+  const menu = await getMenuBySlug(slug);
+  if (!menu) {
+    return {
+      title: '페이지를 찾을 수 없습니다 · KOKKOK GARDEN',
+      robots: { index: false, follow: true },
+    };
+  }
+  const title = `${pickLang(menu.title, lang, slug)} · KOKKOK GARDEN`;
+  // content is HTML; strip tags + clamp to 160 chars for description.
+  const raw = pickLang(menu.content, lang, '');
+  const desc = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+  const url = `https://www.kokkokgarden.com/${lang}/menus/${slug}`;
+  return {
+    title,
+    description: desc || `${pickLang(menu.title, lang, slug)} — KOKKOK GARDEN`,
+    alternates: {
+      canonical: url,
+      languages: {
+        kr: `https://www.kokkokgarden.com/kr/menus/${slug}`,
+        en: `https://www.kokkokgarden.com/en/menus/${slug}`,
+      },
+    },
+    openGraph: {
+      title,
+      description: desc,
+      url,
+      type: 'article',
+      locale: lang === 'kr' ? 'ko_KR' : 'en_US',
+      siteName: 'KOKKOK GARDEN',
+    },
+  };
+}
 
 export default async function MenuRoute({
   params,

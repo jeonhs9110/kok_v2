@@ -67,26 +67,37 @@ export default function ProductGrid({
         {title && (
           <h2 className="text-2xl font-extrabold text-center mb-12 text-brand-ink">{title}</h2>
         )}
-        <div
-          className="flex flex-wrap justify-center"
-          style={{
-            columnGap: `${displayConfig.gap_x}px`,
-            rowGap: `${displayConfig.gap_y}px`,
-          }}
-        >
-          {products.map((p) => (
-            <div
-              key={p.id}
-              style={{
-                ['--cardW-sm' as string]: smWidth,
-                ['--cardW-lg' as string]: lgWidth,
-              }}
-              className="kokkok-product-card-cell"
-            >
-              <ProductCard {...p} canPurchase={canPurchase} />
-            </div>
-          ))}
-        </div>
+        {products.length === 0 ? (
+          // Empty state — previously the grid rendered to a zero-height
+          // div, which on /products with all-inactive products read as a
+          // broken page. A short message keeps the chrome and signals
+          // "intentional, not failed."
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <p className="text-sm text-neutral-500 mb-1">상품이 없습니다.</p>
+            <p className="text-xs text-neutral-400">곧 새로운 상품으로 찾아뵙겠습니다.</p>
+          </div>
+        ) : (
+          <div
+            className="flex flex-wrap justify-center"
+            style={{
+              columnGap: `${displayConfig.gap_x}px`,
+              rowGap: `${displayConfig.gap_y}px`,
+            }}
+          >
+            {products.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  ['--cardW-sm' as string]: smWidth,
+                  ['--cardW-lg' as string]: lgWidth,
+                }}
+                className="kokkok-product-card-cell"
+              >
+                <ProductCard {...p} canPurchase={canPurchase} />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

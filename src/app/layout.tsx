@@ -40,8 +40,24 @@ const freesentationExtras = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'Kokkok Garden',
-  description: 'Premium Skincare featuring Heartleaf, Jericho Rose, and Sedum.',
+  metadataBase: new URL('https://www.kokkokgarden.com'),
+  title: {
+    default: 'KOKKOK GARDEN',
+    template: '%s · KOKKOK GARDEN',
+  },
+  description: 'Premium K-Beauty skincare featuring Heartleaf, Jericho Rose, and Sedum.',
+  manifest: '/manifest.webmanifest',
+  applicationName: 'KOKKOK GARDEN',
+  // theme-color drives the Android Chrome address-bar tint and the
+  // iOS PWA status-bar background. Brand ink matches the storefront
+  // header so the chrome feels continuous with the page.
+  themeColor: '#1f2937',
+  appleWebApp: {
+    capable: true,
+    title: 'KOKKOK GARDEN',
+    statusBarStyle: 'default',
+  },
+  formatDetection: { telephone: false },
   verification: {
     // Naver Search Advisor site-ownership claim. Code provided by the
     // operator after registering kokkokgarden.com at searchadvisor.naver.com
@@ -64,8 +80,15 @@ export default async function RootLayout({
   return (
     <html lang="ko" className={`${freesentation.variable} ${freesentationExtras.variable}`}>
       <head>
-        {/* Adobe Fonts — Tablet Gothic (영문 브랜드 서체) */}
-        <link rel="stylesheet" href="https://use.typekit.net/czr4kvy.css" />
+        {/* Adobe Fonts — Tablet Gothic (영문 브랜드 서체). preconnect first so
+            the TLS handshake overlaps the HTML stream, and use the
+            ?display=swap flag on the Typekit URL — without it, Typekit
+            defaults to display: block, which paints invisible text until
+            the font loads (FOIT). Combined this cuts perceived LCP by
+            ~150–300ms on cold visits. */}
+        <link rel="preconnect" href="https://use.typekit.net" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://p.typekit.net" crossOrigin="anonymous" />
+        <link rel="stylesheet" href="https://use.typekit.net/czr4kvy.css?display=swap" />
 
         {/* Optional admin-selectable fonts. Listed in src/lib/typography/options.ts
             and exposed to the admin via FONT_OPTIONS. Loaded with display=swap

@@ -172,6 +172,18 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
     }
   }, [isOpen, isTyping]);
 
+  // Global Esc-close — handleKey on the input handles Esc only while the
+  // input is focused. If the operator opens the chatbot but tabs to a
+  // suggested-question button or the Copy button, Esc would do nothing.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen]);
+
   // Check if user or bot response triggers escalation
   const checkEscalation = useCallback((text: string) => {
     const lower = text.toLowerCase();
@@ -284,7 +296,12 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
 
       {/* ── Expanded: Chat panel (bottom-right) ── */}
       {isOpen && (
-        <div className="fixed bottom-6 right-3 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[380px] max-h-[min(80vh,600px)] sm:max-h-[600px] flex flex-col bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] border border-gray-200/80 overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200">
+        <div
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="chatbot-title"
+          className="fixed bottom-6 right-3 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[380px] max-h-[min(80vh,600px)] sm:max-h-[600px] flex flex-col bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] border border-gray-200/80 overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200"
+        >
 
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gradient-to-r from-brand-notice-to to-brand-notice-from">
@@ -293,7 +310,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
                 <Bot className="w-4 h-4 text-white" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-white">KOKKOK {L.poweredBy}</p>
+                <p id="chatbot-title" className="text-sm font-semibold text-white">KOKKOK {L.poweredBy}</p>
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
                   <span className="text-[10px] text-white/70">Online</span>
@@ -302,6 +319,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
             </div>
             <button
               onClick={() => setIsOpen(false)}
+              aria-label="Close AI Chatbot"
               className="w-8 h-8 rounded-lg hover:bg-white/20 flex items-center justify-center transition-colors"
             >
               <X className="w-4 h-4 text-white" />

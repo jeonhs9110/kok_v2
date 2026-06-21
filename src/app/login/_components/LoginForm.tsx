@@ -131,29 +131,39 @@ function LoginFormInner({ lang }: { lang: Lang }) {
           <p className="text-sm text-gray-500">{t.subtitle}</p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-6" aria-describedby={error ? 'login-error' : undefined}>
           <div className="space-y-4">
+            <label htmlFor="login-email" className="sr-only">{t.email}</label>
             <input
+              id="login-email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder={t.email}
               autoComplete="email"
               required
+              aria-invalid={!!error}
               className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-brand-ink placeholder:text-gray-400"
             />
+            <label htmlFor="login-password" className="sr-only">{t.password}</label>
             <input
+              id="login-password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder={t.password}
               autoComplete="current-password"
               required
+              aria-invalid={!!error}
               className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-brand-ink placeholder:text-gray-400"
             />
           </div>
 
-          {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
+          {error && (
+            <p id="login-error" role="alert" aria-live="polite" className="text-red-500 text-xs font-bold text-center">
+              {error}
+            </p>
+          )}
 
           <button
             type="submit"
