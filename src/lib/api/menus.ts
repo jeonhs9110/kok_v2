@@ -226,6 +226,15 @@ export async function createComment(data: {
   content: string;
   is_admin_comment: boolean;
 }): Promise<Comment | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { createCommentInPg } = await import('@/lib/db/admin-writes');
+      return (await createCommentInPg(data)) as unknown as Comment | null;
+    } catch (err) {
+      console.error('[menus] RDS createComment failed:', err);
+      return null;
+    }
+  }
   if (!supabase) return null;
   const { data: row, error } = await supabase
     .from('comments')
@@ -243,6 +252,15 @@ export async function createComment(data: {
 }
 
 export async function deleteComment(commentId: string): Promise<boolean> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { deleteCommentInPg } = await import('@/lib/db/admin-writes');
+      return await deleteCommentInPg(commentId);
+    } catch (err) {
+      console.error('[menus] RDS deleteComment failed:', err);
+      return false;
+    }
+  }
   if (!supabase) return false;
   const { error } = await supabase
     .from('comments')
@@ -255,6 +273,15 @@ export async function updatePost(
   postId: string,
   data: { title: string; content: string }
 ): Promise<boolean> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { updatePostInPg } = await import('@/lib/db/admin-writes');
+      return await updatePostInPg(postId, data);
+    } catch (err) {
+      console.error('[menus] RDS updatePost failed:', err);
+      return false;
+    }
+  }
   if (!supabase) return false;
   const { error } = await supabase
     .from('posts')
@@ -264,6 +291,15 @@ export async function updatePost(
 }
 
 export async function deletePost(postId: string): Promise<boolean> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { deletePostInPg } = await import('@/lib/db/admin-writes');
+      return await deletePostInPg(postId);
+    } catch (err) {
+      console.error('[menus] RDS deletePost failed:', err);
+      return false;
+    }
+  }
   if (!supabase) return false;
   const { error } = await supabase
     .from('posts')
