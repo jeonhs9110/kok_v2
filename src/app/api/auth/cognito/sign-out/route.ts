@@ -22,5 +22,7 @@ export async function POST() {
   res.cookies.delete('cognito_id_token');
   res.cookies.delete('cognito_access_token');
   res.cookies.delete('cognito_refresh_token');
+  res.cookies.delete('kokkok_auth');
+  res.cookies.delete('kokkok_admin_auth');
   return res;
 }

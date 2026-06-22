@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, ArrowLeft } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { USE_COGNITO_FROM_BROWSER } from '@/lib/auth/clientFlags';
 
 /**
  * Korean-only form (matching the pre-lift behavior). The surrounding
@@ -22,6 +23,18 @@ export default function ForgotPasswordForm() {
     setError('');
     setIsLoading(true);
     try {
+      if (USE_COGNITO_FROM_BROWSER) {
+        // The /api/auth/cognito/forgot-password route already returns
+        // ok=true even when the email is unknown — preserves the
+        // account-enumeration guard without any extra branching here.
+        await fetch('/api/auth/cognito/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() }),
+        });
+        setSent(true);
+        return;
+      }
       const supabase = getSupabaseBrowser();
       const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
         '/auth/reset-password'

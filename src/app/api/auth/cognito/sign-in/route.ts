@@ -34,8 +34,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
   }
 
+  // Verify the freshly-issued ID token so we can read its claims.
+  // Belt-and-suspenders — Cognito would have rejected the credentials
+  // upstream — but reading the JWT also tells us whether the user is
+  // in the admins group, which the mirror cookie below exposes to the
+  // header's client-side state check.
+  const { verifyCognitoIdToken, isAdminFromCognito } = await import('@/lib/auth/cognito');
+  const claims = await verifyCognitoIdToken(result.idToken);
+  const isAdmin = isAdminFromCognito(claims);
+
   const isProd = process.env.NODE_ENV === 'production';
-  const res = NextResponse.json({ ok: true });
+  const res = NextResponse.json({ ok: true, isAdmin });
   res.cookies.set('cognito_id_token', result.idToken, {
     httpOnly: true,
     sameSite: 'lax',
@@ -57,5 +66,26 @@ export async function POST(request: Request) {
     path: '/',
     maxAge: 60 * 60 * 24 * 30, // 30 days (matches cognito.tf's refresh_token_validity)
   });
+  // Non-httpOnly mirror cookies for the storefront header's client-side
+  // auth state check (Header.tsx reads document.cookie). httpOnly would
+  // break the existing pattern that the Supabase /auth/callback route
+  // uses too. The mirror carries no secret — just true/false — and is
+  // cleared by the sign-out route.
+  res.cookies.set('kokkok_auth', 'true', {
+    httpOnly: false,
+    sameSite: 'lax',
+    secure: isProd,
+    path: '/',
+    maxAge: result.expiresInSeconds,
+  });
+  if (isAdmin) {
+    res.cookies.set('kokkok_admin_auth', 'true', {
+      httpOnly: false,
+      sameSite: 'lax',
+      secure: isProd,
+      path: '/',
+      maxAge: result.expiresInSeconds,
+    });
+  }
   return res;
 }
