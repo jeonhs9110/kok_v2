@@ -46,7 +46,21 @@ export async function getSiteSettings(keys: SiteSettingKey[]): Promise<Record<st
 // Writes require a session-aware client (admin's JWT must ride along
 // to satisfy the Phase 2 RLS admin_write policy on site_settings).
 // Callers should pass their own getSupabaseBrowser() client.
+//
+// Under USE_RDS=true the `client` arg is ignored — pg bypasses RLS and
+// the admin check happens at the API-route boundary (Phase D). Callers
+// keep passing the client so the call sites stay unchanged across the
+// cutover.
 export async function setSiteSetting(client: SupabaseClient, key: SiteSettingKey, value: string): Promise<boolean> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { setSiteSettingInPg } = await import('@/lib/db/admin-writes');
+      return await setSiteSettingInPg(key, value);
+    } catch (err) {
+      console.error('[site-settings] RDS setSiteSetting failed:', err);
+      return false;
+    }
+  }
   const { error } = await client
     .from('site_settings')
     .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
@@ -54,6 +68,15 @@ export async function setSiteSetting(client: SupabaseClient, key: SiteSettingKey
 }
 
 export async function setSiteSettings(client: SupabaseClient, entries: Record<string, string>): Promise<boolean> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { setSiteSettingsInPg } = await import('@/lib/db/admin-writes');
+      return await setSiteSettingsInPg(entries);
+    } catch (err) {
+      console.error('[site-settings] RDS setSiteSettings failed:', err);
+      return false;
+    }
+  }
   const rows = Object.entries(entries).map(([key, value]) => ({
     key, value, updated_at: new Date().toISOString(),
   }));
