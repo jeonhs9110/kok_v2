@@ -81,3 +81,169 @@ export interface UserRow {
   is_verified: boolean;
   created_at: string;
 }
+
+export interface CarouselSlideRow {
+  id: string;
+  badge: Record<string, string> | null;
+  title: Record<string, string> | null;
+  subtitle: Record<string, string> | null;
+  image_url: string | null;
+  mobile_image_url: string | null;
+  bg_color: string | null;
+  text_color: string | null;
+  badge_bg_color: string | null;
+  badge_text_color: string | null;
+  title_size_offset: number | null;
+  subtitle_size_offset: number | null;
+  badge_size_offset: number | null;
+  sort_order: number;
+  is_active: boolean;
+  link_url: string | null;
+  display_mode: 'default' | 'fullpage' | null;
+  media_type: 'image' | 'video' | 'gif' | null;
+  badge_font_family: string | null;
+  title_font_family: string | null;
+  subtitle_font_family: string | null;
+  badge_bold: boolean | null;
+  badge_italic: boolean | null;
+  badge_underline: boolean | null;
+  title_bold: boolean | null;
+  title_italic: boolean | null;
+  title_underline: boolean | null;
+  subtitle_bold: boolean | null;
+  subtitle_italic: boolean | null;
+  subtitle_underline: boolean | null;
+  text_position: string | null;
+  text_position_mobile: string | null;
+  image_anchor: string | null;
+  image_anchor_mobile: string | null;
+  created_at: string;
+}
+
+export interface ReviewCardRow {
+  id: string;
+  image_url: string | null;
+  title: string | null;
+  content_html: string | null;
+  link_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface SiteSettingRow {
+  key: string;
+  value: unknown;
+  updated_at: string | null;
+}
+
+export interface SiteBackgroundRow {
+  id: string;
+  file_url: string;
+  file_type: 'image' | 'video';
+  scroll_driven: boolean | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface HomepageBannerRow {
+  id: string;
+  text: Record<string, string> | null;
+  link_url: string | null;
+  bg_color: string | null;
+  text_color: string | null;
+  is_active: boolean;
+}
+
+export interface ShortsRow {
+  id: string;
+  youtube_id: string;
+  product_id: string | null;
+  created_at: string;
+}
+
+export interface ShortsConfigRow {
+  id: string;
+  bg_type: string | null;
+  bg_color: string | null;
+  bg_media_url: string | null;
+  bg_media_type: string | null;
+  header_text: string | null;
+  header_font_size: string | null;
+  header_text_color: string | null;
+  header_bg_color: string | null;
+}
+
+export interface InstagramConfigRow {
+  id: number;
+  handle: string | null;
+  description: string | null;
+  bg_type: string | null;
+  bg_color: string | null;
+  bg_media_url: string | null;
+  bg_media_type: string | null;
+  header_font_size: string | null;
+  header_text_color: string | null;
+  header_bg_color: string | null;
+}
+
+export interface InstagramPostRow {
+  id: string;
+  image_url: string | null;
+  link_url: string | null;
+  post_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface PromoBannerRow {
+  id: string;
+  image_url: string | null;
+  link_url: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+export interface SubHeroBannerRow {
+  id: string;
+  image_url: string | null;
+  link_url: string | null;
+  title: string | null;
+  subtitle: string | null;
+  title_size_offset: number | null;
+  subtitle_size_offset: number | null;
+  title_font_family: string | null;
+  subtitle_font_family: string | null;
+  title_bold: boolean | null;
+  title_italic: boolean | null;
+  title_underline: boolean | null;
+  subtitle_bold: boolean | null;
+  subtitle_italic: boolean | null;
+  subtitle_underline: boolean | null;
+  title_color: string | null;
+  subtitle_color: string | null;
+  text_position: string | null;
+  text_position_mobile: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CategoryRow {
+  id: string;
+  parent_id: string | null;
+  slug: string;
+  name: Record<string, string>;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CommentRow {
+  id: string;
+  post_id: string;
+  parent_id: string | null;
+  author_name: string;
+  content: string;
+  is_admin_comment: boolean;
+  created_at: string;
+}
