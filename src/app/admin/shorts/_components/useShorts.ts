@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import type { SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 
 const supabase = getSupabaseBrowser();
@@ -58,86 +59,113 @@ export function useShorts() {
   }, []);
 
   async function fetchBg() {
-    if (!supabase) return;
-    const { data } = await supabase
-      .from('shorts_config')
-      .select('id, bg_type, bg_color, bg_media_url, bg_media_type, header_text, header_font_size, header_text_color, header_bg_color')
-      .limit(1).maybeSingle();
+    let data: Record<string, unknown> | null = null;
+    if (USE_RDS_FROM_BROWSER) {
+      const res = await fetch('/api/admin/shorts-config', { cache: 'no-store' });
+      if (res.ok) {
+        const body = await res.json() as { row: Record<string, unknown> | null };
+        data = body.row;
+      }
+    } else if (supabase) {
+      const r = await supabase
+        .from('shorts_config')
+        .select('id, bg_type, bg_color, bg_media_url, bg_media_type, header_text, header_font_size, header_text_color, header_bg_color')
+        .limit(1).maybeSingle();
+      data = (r.data as Record<string, unknown> | null) ?? null;
+    }
     if (data) {
-      setBgConfigId(data.id);
+      setBgConfigId(data.id as string);
       setBg({
-        type: data.bg_type ?? null,
-        color: data.bg_color ?? null,
-        mediaUrl: data.bg_media_url ?? null,
+        type: (data.bg_type as 'color' | 'image' | 'video' | null) ?? null,
+        color: (data.bg_color as string | null) ?? null,
+        mediaUrl: (data.bg_media_url as string | null) ?? null,
         mediaType: (data.bg_media_type as 'image' | 'video' | null) ?? null,
       });
-      setHeaderText(data.header_text ?? '');
-      setHeaderFontSize(String(parseInt(data.header_font_size ?? '15', 10) || 15));
-      setHeaderTextColor(data.header_text_color ?? '#ffffff');
+      setHeaderText((data.header_text as string | null) ?? '');
+      setHeaderFontSize(String(parseInt((data.header_font_size as string | null) ?? '15', 10) || 15));
+      setHeaderTextColor((data.header_text_color as string | null) ?? '#ffffff');
       setHeaderBgEnabled(!!data.header_bg_color);
-      setHeaderBgColor(data.header_bg_color ?? '#000000');
+      setHeaderBgColor((data.header_bg_color as string | null) ?? '#000000');
+    }
+  }
+
+  async function saveShortsConfig(
+    payload: Record<string, unknown>,
+    onSuccess: () => void,
+    onError: (err: unknown) => void,
+  ) {
+    try {
+      if (USE_RDS_FROM_BROWSER) {
+        // The PUT route is upsert-aware: no need to thread bgConfigId
+        // from the client. The route looks up the singleton row id
+        // server-side then dispatches insert vs update accordingly.
+        const res = await fetch('/api/admin/shorts-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+      } else {
+        if (!supabase) throw new Error('no client');
+        if (bgConfigId) {
+          const { error } = await supabase.from('shorts_config').update(payload).eq('id', bgConfigId);
+          if (error) throw error;
+        } else {
+          const { data, error } = await supabase.from('shorts_config').insert([payload]).select('id').single();
+          if (error) throw error;
+          setBgConfigId(data.id);
+        }
+      }
+      revalidateHomepageData('shorts');
+      onSuccess();
+    } catch (err) {
+      onError(err);
     }
   }
 
   async function saveHeader() {
-    if (!supabase) return;
     setSavingHeader(true);
-    try {
-      const size = Math.max(10, Math.min(48, parseInt(headerFontSize, 10) || 15));
-      const payload = {
-        header_text: headerText.trim() || null,
-        header_font_size: `${size}px`,
-        header_text_color: headerTextColor || null,
-        header_bg_color: headerBgEnabled ? headerBgColor : null,
-      };
-      if (bgConfigId) {
-        const { error } = await supabase.from('shorts_config').update(payload).eq('id', bgConfigId);
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase.from('shorts_config').insert([payload]).select('id').single();
-        if (error) throw error;
-        setBgConfigId(data.id);
-      }
-      revalidateHomepageData('shorts');
-      setHeaderSaved(true);
-      setTimeout(() => setHeaderSaved(false), 2000);
-    } catch (err) {
-      console.error('[admin/shorts] header save failed:', err);
-      toast.show('제목 스타일 저장에 실패했습니다.', 'error');
-    } finally {
-      setSavingHeader(false);
-    }
+    const size = Math.max(10, Math.min(48, parseInt(headerFontSize, 10) || 15));
+    const payload = {
+      header_text: headerText.trim() || null,
+      header_font_size: `${size}px`,
+      header_text_color: headerTextColor || null,
+      header_bg_color: headerBgEnabled ? headerBgColor : null,
+    };
+    await saveShortsConfig(
+      payload,
+      () => {
+        setHeaderSaved(true);
+        setTimeout(() => setHeaderSaved(false), 2000);
+      },
+      (err) => {
+        console.error('[admin/shorts] header save failed:', err);
+        toast.show('제목 스타일 저장에 실패했습니다.', 'error');
+      },
+    );
+    setSavingHeader(false);
   }
 
   async function saveBg() {
-    if (!supabase) return;
     setSavingBg(true);
-    try {
-      const payload = {
-        bg_type: bg.type,
-        bg_color: bg.color,
-        bg_media_url: bg.mediaUrl,
-        bg_media_type: bg.mediaType,
-      };
-      if (bgConfigId) {
-        const { error } = await supabase.from('shorts_config').update(payload).eq('id', bgConfigId);
-        if (error) throw error;
-      } else {
-        // Seed row should exist from the migration; tolerate its absence
-        // so a fresh project doesn't get stuck.
-        const { data, error } = await supabase.from('shorts_config').insert([payload]).select('id').single();
-        if (error) throw error;
-        setBgConfigId(data.id);
-      }
-      revalidateHomepageData('shorts');
-      setBgSaved(true);
-      setTimeout(() => setBgSaved(false), 2000);
-    } catch (err) {
-      console.error('[admin/shorts] bg save failed:', err);
-      toast.show('배경 저장에 실패했습니다.', 'error');
-    } finally {
-      setSavingBg(false);
-    }
+    const payload = {
+      bg_type: bg.type,
+      bg_color: bg.color,
+      bg_media_url: bg.mediaUrl,
+      bg_media_type: bg.mediaType,
+    };
+    await saveShortsConfig(
+      payload,
+      () => {
+        setBgSaved(true);
+        setTimeout(() => setBgSaved(false), 2000);
+      },
+      (err) => {
+        console.error('[admin/shorts] bg save failed:', err);
+        toast.show('배경 저장에 실패했습니다.', 'error');
+      },
+    );
+    setSavingBg(false);
   }
 
   async function fetchProducts() {
@@ -190,12 +218,25 @@ export function useShorts() {
       setShorts(prev => [{ id: tempId, youtubeId: videoId, productId: null, productName: null, addedAt: new Date().toISOString().split('T')[0] }, ...prev]);
       setNewUrl('');
       try {
-        if (!supabase) throw new Error('클라이언트 없음');
-        const { error } = await supabase.from('shorts').insert([{ youtube_id: videoId }]);
-        if (!error) {
-          toast.show(`YouTube ID '${videoId}' 추가됨`, 'success');
-          fetchShorts();
-          revalidateHomepageData('shorts');
+        if (USE_RDS_FROM_BROWSER) {
+          const res = await fetch('/api/admin/shorts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ youtube_id: videoId }),
+          });
+          if (res.ok) {
+            toast.show(`YouTube ID '${videoId}' 추가됨`, 'success');
+            fetchShorts();
+            revalidateHomepageData('shorts');
+          }
+        } else {
+          if (!supabase) throw new Error('클라이언트 없음');
+          const { error } = await supabase.from('shorts').insert([{ youtube_id: videoId }]);
+          if (!error) {
+            toast.show(`YouTube ID '${videoId}' 추가됨`, 'success');
+            fetchShorts();
+            revalidateHomepageData('shorts');
+          }
         }
       } catch { /* mock mode */ }
     } else {
@@ -206,8 +247,11 @@ export function useShorts() {
   const handleDelete = async (id: string) => {
     setShorts(prev => prev.filter(s => s.id !== id));
     try {
-      if (!supabase) throw new Error('클라이언트 없음');
-      await supabase.from('shorts').delete().eq('id', id);
+      if (USE_RDS_FROM_BROWSER) {
+        await fetch(`/api/admin/shorts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      } else if (supabase) {
+        await supabase.from('shorts').delete().eq('id', id);
+      }
       revalidateHomepageData('shorts');
     } catch { /* ignore */ }
   };
@@ -215,7 +259,13 @@ export function useShorts() {
   const handleLinkProduct = async (shortId: string, productId: string | null) => {
     setLinkingId(shortId);
     try {
-      if (supabase) {
+      if (USE_RDS_FROM_BROWSER) {
+        await fetch(`/api/admin/shorts?id=${encodeURIComponent(shortId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: productId || null }),
+        });
+      } else if (supabase) {
         await supabase.from('shorts').update({ product_id: productId || null }).eq('id', shortId);
       }
       const prod = products.find(p => p.id === productId);
