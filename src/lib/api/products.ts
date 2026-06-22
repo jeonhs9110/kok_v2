@@ -114,6 +114,19 @@ export const MOCK_PRODUCTS: Product[] = [
 const IS_DEV = process.env.NODE_ENV === 'development';
 
 export async function getProducts(): Promise<Product[]> {
+  // Phase C1 of the RDS migration: dispatch to the pg implementation
+  // when USE_RDS=true. Until cutover (Phase F), USE_RDS stays false in
+  // prod so the Supabase path below is the live one. The pg path runs
+  // in dev / CI for parity testing.
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getProductsFromPg } = await import('@/lib/db/products');
+      return await getProductsFromPg();
+    } catch (err) {
+      console.error('[products] RDS fetch failed — no Supabase fallback when USE_RDS=true:', err);
+      return [];
+    }
+  }
   try {
     if (!supabase) throw new Error("No Supabase Client");
     const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });

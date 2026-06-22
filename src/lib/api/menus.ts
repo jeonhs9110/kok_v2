@@ -41,7 +41,19 @@ export interface Comment {
   created_at: string;
 }
 
+// Phase C1: dispatcher reads + writes. RDS path activates when
+// USE_RDS=true (Phase F cutover). Until then, Supabase branch serves
+// every call in prod.
 export async function getMenuTree(): Promise<MenuWithChildren[]> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getMenuTreeFromPg } = await import('@/lib/db/menus');
+      return await getMenuTreeFromPg();
+    } catch (err) {
+      console.error('[menus] RDS getMenuTree failed:', err);
+      return [];
+    }
+  }
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('menus')
@@ -58,6 +70,15 @@ export async function getMenuTree(): Promise<MenuWithChildren[]> {
 }
 
 export async function getAllMenus(): Promise<Menu[]> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getAllMenusFromPg } = await import('@/lib/db/menus');
+      return await getAllMenusFromPg();
+    } catch (err) {
+      console.error('[menus] RDS getAllMenus failed:', err);
+      return [];
+    }
+  }
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('menus')
@@ -69,6 +90,15 @@ export async function getAllMenus(): Promise<Menu[]> {
 }
 
 export async function getMenuBySlug(slug: string): Promise<Menu | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getMenuBySlugFromPg } = await import('@/lib/db/menus');
+      return await getMenuBySlugFromPg(slug);
+    } catch (err) {
+      console.error('[menus] RDS getMenuBySlug failed:', err);
+      return null;
+    }
+  }
   if (!supabase) return null;
   const { data, error } = await supabase
     .from('menus')
@@ -130,6 +160,15 @@ export async function getPostsByMenuPaginated(
  * posts the operator hasn't released yet.
  */
 export async function getPostById(postId: string): Promise<Post | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getPostByIdFromPg } = await import('@/lib/db/menus');
+      return await getPostByIdFromPg(postId);
+    } catch (err) {
+      console.error('[menus] RDS getPostById failed:', err);
+      return null;
+    }
+  }
   if (!supabase) return null;
   const { data, error } = await supabase
     .from('posts')
