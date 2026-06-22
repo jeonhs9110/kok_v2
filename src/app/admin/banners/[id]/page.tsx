@@ -9,6 +9,7 @@ import type { Lang } from '@/lib/i18n/types';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { LoadingState } from '@/components/admin/CafeWidgets';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import BannerEditForm, { type BannerRow } from './_components/BannerEditForm';
 
 const supabase = getSupabaseBrowser();
@@ -43,20 +44,31 @@ export default function BannerEditPage() {
   const [activeLang, setActiveLang] = useState<Lang>('kr');
 
   useEffect(() => {
-    if (!supabase || !id) { setLoading(false); return; }
+    if (!id) { setLoading(false); return; }
     (async () => {
-      const { data: row, error } = await supabase
-        .from('homepage_banners')
-        .select('text,link_url,bg_color,text_color,is_active')
-        .eq('id', id)
-        .maybeSingle();
-      if (error || !row) { setLoading(false); return; }
+      let row: Record<string, unknown> | null = null;
+      if (USE_RDS_FROM_BROWSER) {
+        // The list route returns ALL active banners; filter to ours.
+        const res = await fetch('/api/admin/homepage-banners', { cache: 'no-store' });
+        if (res.ok) {
+          const body = await res.json() as { rows: Record<string, unknown>[] };
+          row = body.rows.find(r => r.id === id) ?? null;
+        }
+      } else if (supabase) {
+        const r = await supabase
+          .from('homepage_banners')
+          .select('text,link_url,bg_color,text_color,is_active')
+          .eq('id', id)
+          .maybeSingle();
+        row = (r.data as Record<string, unknown> | null) ?? null;
+      }
+      if (!row) { setLoading(false); return; }
       const next: BannerRow = {
-        text: typeof row.text === 'object' && row.text !== null ? row.text : {},
-        link_url: row.link_url || '',
-        bg_color: row.bg_color || DEFAULT.bg_color,
-        text_color: row.text_color || DEFAULT.text_color,
-        is_active: row.is_active ?? true,
+        text: typeof row.text === 'object' && row.text !== null ? row.text as Record<string, string> : {},
+        link_url: (row.link_url as string | null) || '',
+        bg_color: (row.bg_color as string | null) || DEFAULT.bg_color,
+        text_color: (row.text_color as string | null) || DEFAULT.text_color,
+        is_active: (row.is_active as boolean | null) ?? true,
       };
       setData(next);
       setSaved(next);
@@ -65,20 +77,28 @@ export default function BannerEditPage() {
   }, [id]);
 
   async function handleSave() {
-    if (!supabase || !id) return;
+    if (!id) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('homepage_banners')
-        .update({
-          text: data.text,
-          link_url: data.link_url || null,
-          bg_color: data.bg_color,
-          text_color: data.text_color,
-          is_active: data.is_active,
-        })
-        .eq('id', id);
-      if (error) throw error;
+      const payload = {
+        text: data.text,
+        link_url: data.link_url || null,
+        bg_color: data.bg_color,
+        text_color: data.text_color,
+        is_active: data.is_active,
+      };
+      if (USE_RDS_FROM_BROWSER) {
+        const res = await fetch(`/api/admin/homepage-banners?id=${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+      } else {
+        if (!supabase) return;
+        const { error } = await supabase.from('homepage_banners').update(payload).eq('id', id);
+        if (error) throw error;
+      }
       revalidateHomepageData('homepage_banners');
       setSaved(data);
       setSavedFlash(true);
@@ -93,34 +113,41 @@ export default function BannerEditPage() {
   }
 
   async function handleDelete() {
-    if (!supabase || !id) return;
+    if (!id) return;
     const ok = await confirm({ message: '이 띠배너를 삭제할까요? 되돌릴 수 없습니다.', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
     try {
-      const { error } = await supabase
-        .from('homepage_banners')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
+      if (USE_RDS_FROM_BROWSER) {
+        const res = await fetch(`/api/admin/homepage-banners?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+      } else {
+        if (!supabase) return;
+        const { error } = await supabase.from('homepage_banners').delete().eq('id', id);
+        if (error) throw error;
+      }
       // Best-effort: also strip the matching key from the section order
       // so the deleted banner never paints. The hub re-loads order on
-      // next mount, so the order array stays accurate.
-      const { data: row } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', 'homepage_section_order')
-        .maybeSingle();
-      if (row?.value) {
-        try {
-          const arr = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
-          if (Array.isArray(arr)) {
-            const filtered = arr.filter((k: string) => k !== `banner:${id}`);
-            await supabase
-              .from('site_settings')
-              .update({ value: JSON.stringify(filtered), updated_at: new Date().toISOString() })
-              .eq('key', 'homepage_section_order');
-          }
-        } catch { /* ignore */ }
+      // next mount, so the order array stays accurate. site_settings
+      // edits still go through supabase here — they don't yet have an
+      // admin API route, and the read path is best-effort cleanup.
+      if (supabase) {
+        const { data: row } = await supabase
+          .from('site_settings')
+          .select('value')
+          .eq('key', 'homepage_section_order')
+          .maybeSingle();
+        if (row?.value) {
+          try {
+            const arr = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
+            if (Array.isArray(arr)) {
+              const filtered = arr.filter((k: string) => k !== `banner:${id}`);
+              await supabase
+                .from('site_settings')
+                .update({ value: JSON.stringify(filtered), updated_at: new Date().toISOString() })
+                .eq('key', 'homepage_section_order');
+            }
+          } catch { /* ignore */ }
+        }
       }
       revalidateHomepageData('homepage_banners');
       // If embedded in the homepage drawer, signal close; else go back.

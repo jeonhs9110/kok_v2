@@ -7,6 +7,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader, LoadingState } from '@/components/admin/CafeWidgets';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import PromoBannerSlot, { type PromoBanner } from './_components/PromoBannerSlot';
 
 // Session-aware client. Phase 2 RLS lockdown on `promo_banners` requires admin JWT.
@@ -35,14 +36,23 @@ export default function PromoBannersAdminPage() {
   async function fetchBanners() {
     setIsLoading(true);
     try {
-      if (!supabase) throw new Error('no client');
-      const { data, error } = await supabase
-        .from('promo_banners')
-        .select('*')
-        .order('sort_order');
-      if (error) throw error;
+      let data: PromoBanner[] = [];
+      if (USE_RDS_FROM_BROWSER) {
+        const res = await fetch('/api/admin/promo-banners', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const body = await res.json() as { rows: PromoBanner[] };
+        data = body.rows ?? [];
+      } else {
+        if (!supabase) throw new Error('no client');
+        const r = await supabase
+          .from('promo_banners')
+          .select('*')
+          .order('sort_order');
+        if (r.error) throw r.error;
+        data = (r.data as PromoBanner[] | null) ?? [];
+      }
       // Ensure exactly 2 slots
-      const existing = (data || []).slice(0, 2);
+      const existing = data.slice(0, 2);
       while (existing.length < 2) {
         existing.push({ id: `new-${existing.length}`, ...EMPTY_BANNER, sort_order: existing.length });
       }
@@ -78,7 +88,6 @@ export default function PromoBannersAdminPage() {
   };
 
   const handleSave = async (banner: PromoBanner) => {
-    if (!supabase) return;
     setSaving(banner.id);
     try {
       const payload = {
@@ -87,16 +96,33 @@ export default function PromoBannersAdminPage() {
         sort_order: banner.sort_order,
         is_active: banner.is_active,
       };
-      if (banner.id.startsWith('new-')) {
-        const { data, error } = await supabase.from('promo_banners').insert([payload]).select().single();
-        if (error) throw error;
-        setBanners(prev => prev.map(b => b.id === banner.id ? { ...data } : b));
-        toast.show('배너가 저장되었습니다', 'success');
+      const isNew = banner.id.startsWith('new-');
+      if (USE_RDS_FROM_BROWSER) {
+        const url = isNew
+          ? '/api/admin/promo-banners'
+          : `/api/admin/promo-banners?id=${encodeURIComponent(banner.id)}`;
+        const res = await fetch(url, {
+          method: isNew ? 'POST' : 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        if (isNew) {
+          const { row } = await res.json() as { row: PromoBanner | null };
+          if (row) setBanners(prev => prev.map(b => b.id === banner.id ? row : b));
+        }
       } else {
-        const { error } = await supabase.from('promo_banners').update(payload).eq('id', banner.id);
-        if (error) throw error;
-        toast.show('배너가 수정되었습니다', 'success');
+        if (!supabase) return;
+        if (isNew) {
+          const { data, error } = await supabase.from('promo_banners').insert([payload]).select().single();
+          if (error) throw error;
+          setBanners(prev => prev.map(b => b.id === banner.id ? { ...data } : b));
+        } else {
+          const { error } = await supabase.from('promo_banners').update(payload).eq('id', banner.id);
+          if (error) throw error;
+        }
       }
+      toast.show(isNew ? '배너가 저장되었습니다' : '배너가 수정되었습니다', 'success');
       revalidateHomepageData('promo_banners');
     } catch (e) {
       console.error(e);
@@ -111,11 +137,14 @@ export default function PromoBannersAdminPage() {
       setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, image_url: '', link_url: '' } : b));
       return;
     }
-    if (!supabase) return;
     const ok = await confirm({ message: '이 배너를 삭제할까요?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
     try {
-      await supabase.from('promo_banners').delete().eq('id', banner.id);
+      if (USE_RDS_FROM_BROWSER) {
+        await fetch(`/api/admin/promo-banners?id=${encodeURIComponent(banner.id)}`, { method: 'DELETE' });
+      } else if (supabase) {
+        await supabase.from('promo_banners').delete().eq('id', banner.id);
+      }
       setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, id: `new-${b.sort_order}`, image_url: '', link_url: '' } : b));
       revalidateHomepageData('promo_banners');
     } catch {

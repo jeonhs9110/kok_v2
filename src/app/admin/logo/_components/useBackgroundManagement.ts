@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useToast } from '@/components/admin/Toast';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import type { Background } from './BackgroundMediaCard';
 
 const BUCKET = 'site-assets';
@@ -28,6 +29,13 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
   const bgInputRef = useRef<HTMLInputElement>(null);
 
   const loadBackgrounds = useCallback(async () => {
+    if (USE_RDS_FROM_BROWSER) {
+      const res = await fetch('/api/admin/site-backgrounds', { cache: 'no-store' });
+      if (!res.ok) return;
+      const { rows } = await res.json() as { rows: Background[] };
+      setBackgrounds(rows ?? []);
+      return;
+    }
     if (!supabase) return;
     const { data } = await supabase
       .from('site_backgrounds')
@@ -60,14 +68,24 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
       });
       if (upErr) throw upErr;
       const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      const { error: insErr } = await supabase.from('site_backgrounds').insert({
+      const payload = {
         file_url: urlData.publicUrl,
         file_name: bgPending.name,
         file_type: isVideo ? 'video' : 'image',
         mime_type: bgPending.type || '',
         is_active: false,
-      });
-      if (insErr) throw insErr;
+      };
+      if (USE_RDS_FROM_BROWSER) {
+        const res = await fetch('/api/admin/site-backgrounds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+      } else {
+        const { error: insErr } = await supabase.from('site_backgrounds').insert(payload);
+        if (insErr) throw insErr;
+      }
       setBgPending(null);
       if (bgInputRef.current) bgInputRef.current.value = '';
       await loadBackgrounds();
@@ -80,11 +98,34 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
   };
 
   const activateBackground = async (id: string) => {
-    if (!supabase) return;
     setBgBusyId(id);
     try {
-      await supabase.from('site_backgrounds').update({ is_active: false }).neq('id', id);
-      await supabase.from('site_backgrounds').update({ is_active: true }).eq('id', id);
+      if (USE_RDS_FROM_BROWSER) {
+        // Mark all others inactive, then activate this one. The generic
+        // route doesn't expose a bulk WHERE id != $1; do it in two steps
+        // (list + PATCH each) so the toggle stays atomic from the user's
+        // perspective.
+        const listRes = await fetch('/api/admin/site-backgrounds', { cache: 'no-store' });
+        if (listRes.ok) {
+          const body = await listRes.json() as { rows: Background[] };
+          await Promise.all(body.rows
+            .filter(r => r.id !== id && r.is_active)
+            .map(r => fetch(`/api/admin/site-backgrounds?id=${encodeURIComponent(r.id)}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ is_active: false }),
+            })));
+        }
+        await fetch(`/api/admin/site-backgrounds?id=${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_active: true }),
+        });
+      } else {
+        if (!supabase) return;
+        await supabase.from('site_backgrounds').update({ is_active: false }).neq('id', id);
+        await supabase.from('site_backgrounds').update({ is_active: true }).eq('id', id);
+      }
       await loadBackgrounds();
       onIframeReload();
     } finally {
@@ -93,10 +134,17 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
   };
 
   const deactivateBackground = async (id: string) => {
-    if (!supabase) return;
     setBgBusyId(id);
     try {
-      await supabase.from('site_backgrounds').update({ is_active: false }).eq('id', id);
+      if (USE_RDS_FROM_BROWSER) {
+        await fetch(`/api/admin/site-backgrounds?id=${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_active: false }),
+        });
+      } else if (supabase) {
+        await supabase.from('site_backgrounds').update({ is_active: false }).eq('id', id);
+      }
       await loadBackgrounds();
       onIframeReload();
     } finally {
@@ -105,13 +153,20 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
   };
 
   const toggleScrollDriven = async (bg: Background) => {
-    if (!supabase) return;
     setBgBusyId(bg.id);
     try {
-      await supabase
-        .from('site_backgrounds')
-        .update({ scroll_driven: !bg.scroll_driven })
-        .eq('id', bg.id);
+      if (USE_RDS_FROM_BROWSER) {
+        await fetch(`/api/admin/site-backgrounds?id=${encodeURIComponent(bg.id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scroll_driven: !bg.scroll_driven }),
+        });
+      } else if (supabase) {
+        await supabase
+          .from('site_backgrounds')
+          .update({ scroll_driven: !bg.scroll_driven })
+          .eq('id', bg.id);
+      }
       await loadBackgrounds();
     } finally {
       setBgBusyId(null);
@@ -119,18 +174,26 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
   };
 
   const deleteBackground = async (bg: Background) => {
-    if (!supabase) return;
     const ok = await confirm({ message: `"${bg.file_name || '이 배경'}"을(를) 삭제하시겠습니까?`, tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
     setBgBusyId(bg.id);
     try {
-      const marker = `/${BUCKET}/`;
-      const idx = bg.file_url.indexOf(marker);
-      if (idx >= 0) {
-        const objPath = bg.file_url.slice(idx + marker.length);
-        await supabase.storage.from(BUCKET).remove([objPath]);
+      // Object removal stays on supabase until S3-side delete lands —
+      // the bucket itself is supabase-controlled. Phase F's storage
+      // mirror will repoint this when the cutover happens.
+      if (supabase) {
+        const marker = `/${BUCKET}/`;
+        const idx = bg.file_url.indexOf(marker);
+        if (idx >= 0) {
+          const objPath = bg.file_url.slice(idx + marker.length);
+          await supabase.storage.from(BUCKET).remove([objPath]);
+        }
       }
-      await supabase.from('site_backgrounds').delete().eq('id', bg.id);
+      if (USE_RDS_FROM_BROWSER) {
+        await fetch(`/api/admin/site-backgrounds?id=${encodeURIComponent(bg.id)}`, { method: 'DELETE' });
+      } else if (supabase) {
+        await supabase.from('site_backgrounds').delete().eq('id', bg.id);
+      }
       await loadBackgrounds();
       onIframeReload();
     } finally {
