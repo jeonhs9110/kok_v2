@@ -6,11 +6,25 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { PageHeader } from '@/components/admin/CafeWidgets';
+import { USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import type { Asset, BucketId, BucketInfo } from './_components/types';
 import AssetFilters from './_components/AssetFilters';
 import AssetGrid from './_components/AssetGrid';
 import AssetDetail from './_components/AssetDetail';
 import { listBucketRecursive, buildDeleteConfirmMessage } from './_lib';
+
+// Fetch one bucket's assets from the S3-backed admin route. The
+// route prepends `<bucket>/` to the prefix; the returned keys are
+// relative (e.g. 'products/abc.jpg' not 'product-images/products/abc.jpg')
+// so the UI labels match what they show under Supabase.
+async function listBucketFromS3Api(bucket: BucketId): Promise<Asset[]> {
+  const res = await fetch(`/api/admin/storage/list?bucket=${encodeURIComponent(bucket)}`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`API ${res.status}`);
+  const { rows } = await res.json() as { rows: Asset[] };
+  return rows;
+}
 
 // Session-aware client. Reads go via public storage URLs but list() and
 // remove() require the storage RLS to authorize, which Phase 5 ties to
@@ -38,10 +52,15 @@ export default function AssetLibraryPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [a, b] = await Promise.all([
-        listBucketRecursive(supabase, 'site-assets'),
-        listBucketRecursive(supabase, 'product-images'),
-      ]);
+      const [a, b] = USE_S3_FROM_BROWSER
+        ? await Promise.all([
+            listBucketFromS3Api('site-assets'),
+            listBucketFromS3Api('product-images'),
+          ])
+        : await Promise.all([
+            listBucketRecursive(supabase, 'site-assets'),
+            listBucketRecursive(supabase, 'product-images'),
+          ]);
       const all = [...a, ...b].sort((x, y) => y.updatedAt.localeCompare(x.updatedAt));
       setAssets(all);
     } catch (err) {
@@ -92,8 +111,16 @@ export default function AssetLibraryPage() {
         return;
       }
 
-      const { error: removeErr } = await supabase.storage.from(a.bucket).remove([a.key]);
-      if (removeErr) throw removeErr;
+      if (USE_S3_FROM_BROWSER) {
+        const res = await fetch(
+          `/api/admin/storage/delete?bucket=${encodeURIComponent(a.bucket)}&key=${encodeURIComponent(a.key)}`,
+          { method: 'DELETE' },
+        );
+        if (!res.ok) throw new Error(`API ${res.status}`);
+      } else {
+        const { error: removeErr } = await supabase.storage.from(a.bucket).remove([a.key]);
+        if (removeErr) throw removeErr;
+      }
       setAssets(prev => prev.filter(x => !(x.bucket === a.bucket && x.key === a.key)));
       if (selected?.bucket === a.bucket && selected?.key === a.key) setSelected(null);
     } catch (err) {

@@ -4,6 +4,7 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   type PutObjectCommandInput,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -110,6 +111,46 @@ export async function deleteObject(key: string): Promise<boolean> {
     console.error('[storage/s3] deleteObject failed:', err);
     return false;
   }
+}
+
+export interface S3ListedObject {
+  key: string;
+  size: number;
+  updatedAt: string;
+  publicUrl: string;
+}
+
+/**
+ * List every object under `prefix` in the storage bucket. Handles
+ * ListObjectsV2 pagination (1000 keys per page).
+ *
+ * Used by /admin/assets after the cutover swaps storage to S3. The
+ * existing browser page passes `<supabase-bucket>/` as the prefix
+ * since the mirror script writes objects under that namespace.
+ */
+export async function listObjects(prefix: string): Promise<S3ListedObject[]> {
+  const Bucket = bucket();
+  const out: S3ListedObject[] = [];
+  let token: string | undefined;
+  do {
+    const res = await getClient().send(new ListObjectsV2Command({
+      Bucket,
+      Prefix: prefix,
+      ContinuationToken: token,
+      MaxKeys: 1000,
+    }));
+    for (const obj of res.Contents ?? []) {
+      if (!obj.Key) continue;
+      out.push({
+        key: obj.Key,
+        size: obj.Size ?? 0,
+        updatedAt: obj.LastModified?.toISOString() ?? '',
+        publicUrl: publicUrl(obj.Key),
+      });
+    }
+    token = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (token);
+  return out;
 }
 
 export async function objectExists(key: string): Promise<boolean> {
