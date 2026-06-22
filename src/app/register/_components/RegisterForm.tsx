@@ -4,6 +4,7 @@ import { UserPlus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { USE_COGNITO_FROM_BROWSER } from '@/lib/auth/clientFlags';
 import type { Lang } from '@/lib/i18n/types';
 
 const supabase = getSupabaseBrowser();
@@ -83,6 +84,10 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
   const [config, setConfig] = useState<RegConfig | null>(null);
   const [socialProviders, setSocialProviders] = useState<AuthProviderInfo[]>([]);
   const [configLoading, setConfigLoading] = useState(true);
+  // Cognito flow has a code-entry step between sign-up and success.
+  // 'form' → 'code' → 'success'. Supabase flow skips 'code'.
+  const [step, setStep] = useState<'form' | 'code'>('form');
+  const [confirmCode, setConfirmCode] = useState('');
 
   const t = L[lang];
 
@@ -143,6 +148,28 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
     }
 
     try {
+      if (USE_COGNITO_FROM_BROWSER) {
+        // Step 1: Cognito SignUp. The route emails a 6-digit code; we
+        // advance the form to the 'code' step and keep the form fields
+        // in state so they can be sent in step 4 (complete-registration).
+        const res = await fetch('/api/auth/cognito/sign-up', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email?.trim(),
+            password: formData.password?.trim(),
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setError(body.error === 'weak_password'
+            ? t.minChars
+            : t.failMsg);
+          return;
+        }
+        setStep('code');
+        return;
+      }
       const emailRedirectTo = `${window.location.origin}/auth/callback?next=/`;
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email?.trim(),
@@ -184,6 +211,74 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
     }
   };
 
+  const handleConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!confirmCode.trim()) {
+      setError(lang === 'kr' ? '인증번호를 입력해주세요.' : 'Enter the verification code.');
+      return;
+    }
+    setError('');
+    setIsLoading(true);
+    try {
+      // Step 2: Confirm sign-up with the emailed code.
+      const confirmRes = await fetch('/api/auth/cognito/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email?.trim(),
+          code: confirmCode.trim(),
+        }),
+      });
+      if (!confirmRes.ok) {
+        setError(lang === 'kr' ? '인증번호가 올바르지 않습니다.' : 'Invalid verification code.');
+        return;
+      }
+      // Step 3: Auto-sign-in so the cognito_id_token cookie is set and
+      // step 4's route can read the sub claim.
+      const signInRes = await fetch('/api/auth/cognito/sign-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email?.trim(),
+          password: formData.password?.trim(),
+        }),
+      });
+      if (!signInRes.ok) {
+        // Edge case: confirmation succeeded but auto-login failed — the
+        // user can still sign in manually. Show success without the
+        // profile having been written.
+        setSuccess(true);
+        return;
+      }
+      // Step 4: Persist the customer_profiles row.
+      const standardKeys = ['email', 'password', 'name', 'phone', 'gender', 'birthday', 'age_range', 'country', 'skin_type'];
+      const customFields: Record<string, string> = {};
+      for (const [k, v] of Object.entries(formData)) {
+        if (!standardKeys.includes(k) && v) customFields[k] = v;
+      }
+      await fetch('/api/auth/cognito/complete-registration', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name?.trim() || null,
+          phone: formData.phone?.trim() || null,
+          gender: formData.gender || null,
+          birthday: formData.birthday || null,
+          country: formData.country?.trim() || null,
+          skin_type: formData.skin_type || null,
+          marketing_consent: marketingChecked,
+          privacy_consent: privacyChecked,
+          custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
+        }),
+      });
+      setSuccess(true);
+    } catch {
+      setError(t.failMsg);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSocialLogin = async (provider: string) => {
     try {
       await supabase.auth.signInWithOAuth({
@@ -208,6 +303,48 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         <h1 className="text-2xl font-extrabold tracking-tight text-brand-ink mb-4">{t.successTitle}</h1>
         <p className="text-sm text-gray-500 mb-8">{t.successMsg}</p>
         <Link href="/login" className="px-8 py-3 bg-brand-ink text-white tracking-widest text-xs font-bold w-full block">{t.backToLogin}</Link>
+      </div>
+    );
+  }
+
+  if (step === 'code') {
+    return (
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-5 bg-gray-50">
+            <UserPlus className="w-5 h-5 text-brand-ink" />
+          </div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-brand-ink mb-2">
+            {lang === 'kr' ? '이메일 인증' : 'Verify Email'}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {lang === 'kr'
+              ? `${formData.email?.trim()} 로 발송된 6자리 인증번호를 입력하세요.`
+              : `Enter the 6-digit code sent to ${formData.email?.trim()}.`}
+          </p>
+        </div>
+        <form onSubmit={handleConfirm} className="space-y-6">
+          <input
+            type="text"
+            inputMode="numeric"
+            value={confirmCode}
+            onChange={e => setConfirmCode(e.target.value)}
+            placeholder={lang === 'kr' ? '인증번호' : 'Verification code'}
+            autoComplete="one-time-code"
+            required
+            className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-brand-ink placeholder:text-gray-400 tracking-widest text-center"
+          />
+          {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-brand-ink text-white py-3.5 font-bold tracking-widest text-[13px] rounded-lg hover:bg-black hover:shadow-lg transition-all disabled:opacity-50"
+          >
+            {isLoading
+              ? (lang === 'kr' ? '인증 중...' : 'VERIFYING...')
+              : (lang === 'kr' ? '인증 완료' : 'CONFIRM')}
+          </button>
+        </form>
       </div>
     );
   }
