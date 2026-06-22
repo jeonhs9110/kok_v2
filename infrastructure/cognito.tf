@@ -92,3 +92,7 @@ resource "aws_cognito_user_pool_client" "web" {
 
   prevent_user_existence_errors = "ENABLED"
 }
+
+# Cognito outputs live in outputs.tf alongside the other module-level
+# values. See cognito_user_pool_id / cognito_client_id /
+# cognito_user_pool_endpoint / cognito_admin_group_name there.
