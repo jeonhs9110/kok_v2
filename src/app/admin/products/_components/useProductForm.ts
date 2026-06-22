@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import type { Product, DetailComponent } from '@/lib/api/products';
 import { extractLegacyImagesAsComponents } from './productDetailHelpers';
 
@@ -134,21 +135,31 @@ export function useProductForm(
     setUploadProgress('idle');
   };
 
-  const uploadImageToSupabase = async (file: File): Promise<string> => {
-    if (!supabase) throw new Error('Supabase 클라이언트 없음');
+  const uploadImage = async (file: File): Promise<string> => {
     setUploadProgress('uploading');
-    const ext = file.name.split('.').pop() ?? 'jpg';
-    const filePath = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: file.type });
-    if (uploadError) {
+    try {
+      if (USE_S3_FROM_BROWSER) {
+        const { publicUrl } = await uploadFileToS3(file, {
+          keyPrefix: 'products',
+          contentType: file.type,
+        });
+        setUploadProgress('done');
+        return publicUrl;
+      }
+      if (!supabase) throw new Error('Supabase 클라이언트 없음');
+      const ext = file.name.split('.').pop() ?? 'jpg';
+      const filePath = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+      setUploadProgress('done');
+      return urlData.publicUrl;
+    } catch (err) {
       setUploadProgress('error');
-      throw uploadError;
+      throw err;
     }
-    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
-    setUploadProgress('done');
-    return urlData.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,7 +169,7 @@ export function useProductForm(
       let finalImageUrl = formData.imageUrl;
       if (formData.imageFile) {
         try {
-          finalImageUrl = await uploadImageToSupabase(formData.imageFile);
+          finalImageUrl = await uploadImage(formData.imageFile);
         } catch (uploadErr) {
           console.warn('[ProductDetailModal] image upload failed, saving without it:', uploadErr);
           finalImageUrl = '';
