@@ -71,6 +71,13 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-user-country', country);
 
+  // Phase D — Cognito-backed auth path. Activated by USE_COGNITO=true,
+  // which Phase F sets at cutover (alongside USE_RDS=true). Until then,
+  // the legacy Supabase branch below serves every request.
+  if (process.env.USE_COGNITO === 'true') {
+    return await proxyWithCognito(request, requestHeaders, country);
+  }
+
   // Initial response. The Supabase cookie setter below may replace this
   // if it needs to refresh the access/refresh token tuple during the
   // upcoming `getUser()` call.
@@ -160,6 +167,62 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   }
 
   // ---- Public language routing ------------------------------------------
+  return routeLanguageOnly(request, response, country);
+}
+
+/**
+ * Cognito-backed branch of the proxy. Mirrors the Supabase path's
+ * /admin gate but verifies a Cognito ID token cookie instead of a
+ * Supabase session, and reads the admin role from the JWT's
+ * `cognito:groups` claim (set by `infrastructure/cognito.tf`'s
+ * `aws_cognito_user_group.admins`) — no DB round-trip needed.
+ *
+ * Cookie name: `cognito_id_token`. The sign-in / sign-out flows that
+ * set/clear this cookie land alongside Phase F's storefront cutover;
+ * until then this path is unreachable in production because
+ * USE_COGNITO is unset.
+ */
+async function proxyWithCognito(
+  request: NextRequest,
+  requestHeaders: Headers,
+  country: string,
+): Promise<NextResponse> {
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set('x-user-country', country);
+
+  const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith('/admin')) {
+    const idToken = request.cookies.get('cognito_id_token')?.value;
+    if (!idToken) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('next', pathname + request.nextUrl.search);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const { verifyCognitoIdToken, isAdminFromCognito } =
+      await import('@/lib/auth/cognito');
+    const claims = await verifyCognitoIdToken(idToken);
+    if (!claims) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('next', pathname + request.nextUrl.search);
+      const redirect = NextResponse.redirect(loginUrl);
+      // Clear the stale cookie so the browser doesn't keep retrying
+      // with an expired/invalid token on every navigation.
+      redirect.cookies.delete('cognito_id_token');
+      return redirect;
+    }
+    if (!isAdminFromCognito(claims)) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
+    return response;
+  }
+
+  if (pathname.startsWith('/login') || pathname.startsWith('/register')) {
+    return response;
+  }
+
   return routeLanguageOnly(request, response, country);
 }
 
