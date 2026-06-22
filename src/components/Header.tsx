@@ -7,6 +7,7 @@ import { useI18n } from '@/lib/i18n/context';
 import LanguagePicker from '@/components/LanguagePicker';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client-singleton';
+import { USE_COGNITO_FROM_BROWSER } from '@/lib/auth/clientFlags';
 import type { CategoryWithChildren } from '@/lib/api/categories';
 import type { MenuWithChildren } from '@/lib/api/menus';
 import { useCart } from '@/lib/cart/CartContext';
@@ -226,9 +227,16 @@ export default function Header({
           )}
           {isLoggedIn ? (
             <button
-              onClick={() => {
-                document.cookie = "kokkok_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+              onClick={async () => {
+                if (USE_COGNITO_FROM_BROWSER) {
+                  // Cognito cookies are httpOnly — only the server can
+                  // clear them. Same call also runs Cognito GlobalSignOut
+                  // so any stolen JWT becomes inert backend-side.
+                  await fetch('/api/auth/cognito/sign-out', { method: 'POST' });
+                } else {
+                  document.cookie = "kokkok_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                  document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                }
                 window.location.reload();
               }}
               className="hover:text-black transition-colors"
