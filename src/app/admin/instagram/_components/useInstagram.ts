@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import type { SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 import type { IgPost } from './InstagramPostsGrid';
 
@@ -58,32 +59,50 @@ export function useInstagram() {
   async function fetchAll() {
     setIsLoading(true);
     try {
-      if (!supabase) throw new Error('no client');
-      const [configRes, postsRes] = await Promise.all([
-        supabase.from('instagram_config').select('*').single(),
-        supabase.from('instagram_posts').select('*').order('sort_order').limit(SLOTS),
-      ]);
-      if (configRes.data) {
-        setHandle(configRes.data.handle || '');
-        setDescription(configRes.data.description || '');
-        setRssFeedUrl(configRes.data.rss_feed_url || '');
-        setBg({
-          type: configRes.data.bg_type ?? null,
-          color: configRes.data.bg_color ?? null,
-          mediaUrl: configRes.data.bg_media_url ?? null,
-          mediaType: (configRes.data.bg_media_type as 'image' | 'video' | null) ?? null,
-        });
-        setHeaderFontSize(String(parseInt(configRes.data.header_font_size ?? '18', 10) || 18));
-        setHeaderTextColor(configRes.data.header_text_color ?? '#262626');
-        setHeaderBgEnabled(!!configRes.data.header_bg_color);
-        setHeaderBgColor(configRes.data.header_bg_color ?? '#ffffff');
+      let config: Record<string, unknown> | null = null;
+      let fetched: Record<string, unknown>[] = [];
+      if (USE_RDS_FROM_BROWSER) {
+        const [cRes, pRes] = await Promise.all([
+          fetch('/api/admin/instagram-config', { cache: 'no-store' }),
+          fetch('/api/admin/instagram-posts', { cache: 'no-store' }),
+        ]);
+        if (cRes.ok) {
+          const body = await cRes.json() as { row: Record<string, unknown> | null };
+          config = body.row;
+        }
+        if (pRes.ok) {
+          const body = await pRes.json() as { rows: Record<string, unknown>[] };
+          fetched = body.rows ?? [];
+        }
+      } else {
+        if (!supabase) throw new Error('no client');
+        const [configRes, postsRes] = await Promise.all([
+          supabase.from('instagram_config').select('*').single(),
+          supabase.from('instagram_posts').select('*').order('sort_order').limit(SLOTS),
+        ]);
+        config = (configRes.data as Record<string, unknown> | null) ?? null;
+        fetched = (postsRes.data as Record<string, unknown>[] | null) ?? [];
       }
-      const fetched = postsRes.data || [];
+      if (config) {
+        setHandle((config.handle as string | null) ?? '');
+        setDescription((config.description as string | null) ?? '');
+        setRssFeedUrl((config.rss_feed_url as string | null) ?? '');
+        setBg({
+          type: (config.bg_type as 'color' | 'image' | 'video' | null) ?? null,
+          color: (config.bg_color as string | null) ?? null,
+          mediaUrl: (config.bg_media_url as string | null) ?? null,
+          mediaType: (config.bg_media_type as 'image' | 'video' | null) ?? null,
+        });
+        setHeaderFontSize(String(parseInt((config.header_font_size as string | null) ?? '18', 10) || 18));
+        setHeaderTextColor((config.header_text_color as string | null) ?? '#262626');
+        setHeaderBgEnabled(!!config.header_bg_color);
+        setHeaderBgColor((config.header_bg_color as string | null) ?? '#ffffff');
+      }
       const filled = Array.from({ length: SLOTS }, (_, i) => fetched[i] ? {
-        id: fetched[i].id,
-        image_url: fetched[i].image_url,
-        link_url: fetched[i].link_url || '',
-        post_url: fetched[i].post_url || '',
+        id: fetched[i].id as string,
+        image_url: fetched[i].image_url as string,
+        link_url: (fetched[i].link_url as string | null) ?? '',
+        post_url: (fetched[i].post_url as string | null) ?? '',
         sort_order: i,
       } : emptyPost(i));
       setPosts(filled);
@@ -91,11 +110,26 @@ export function useInstagram() {
     finally { setIsLoading(false); }
   }
 
+  async function putInstagramConfig(payload: Record<string, unknown>): Promise<void> {
+    if (USE_RDS_FROM_BROWSER) {
+      const res = await fetch('/api/admin/instagram-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+    } else {
+      if (!supabase) throw new Error('no client');
+      const supabasePayload = { id: 1, ...payload, updated_at: new Date().toISOString() };
+      const { error } = await supabase.from('instagram_config').upsert(supabasePayload);
+      if (error) throw error;
+    }
+  }
+
   const saveConfig = async () => {
-    if (!supabase) return;
     setIsSavingConfig(true);
     try {
-      await supabase.from('instagram_config').upsert({ id: 1, handle, description, rss_feed_url: rssFeedUrl, updated_at: new Date().toISOString() });
+      await putInstagramConfig({ handle, description, rss_feed_url: rssFeedUrl });
       revalidateHomepageData('instagram');
       toast.show('인스타그램 설정이 저장되었습니다', 'success');
     } catch { toast.show('저장에 실패했습니다.', 'error'); }
@@ -103,18 +137,14 @@ export function useInstagram() {
   };
 
   async function saveHeader() {
-    if (!supabase) return;
     setSavingHeader(true);
     try {
       const size = Math.max(10, Math.min(48, parseInt(headerFontSize, 10) || 18));
-      const { error } = await supabase.from('instagram_config').upsert({
-        id: 1,
+      await putInstagramConfig({
         header_font_size: `${size}px`,
         header_text_color: headerTextColor || null,
         header_bg_color: headerBgEnabled ? headerBgColor : null,
-        updated_at: new Date().toISOString(),
       });
-      if (error) throw error;
       revalidateHomepageData('instagram');
       setHeaderSaved(true);
       setTimeout(() => setHeaderSaved(false), 2000);
@@ -127,19 +157,14 @@ export function useInstagram() {
   }
 
   async function saveBg() {
-    if (!supabase) return;
     setSavingBg(true);
     try {
-      // Bg columns piggyback on the instagram_config singleton (id:1).
-      const { error } = await supabase.from('instagram_config').upsert({
-        id: 1,
+      await putInstagramConfig({
         bg_type: bg.type,
         bg_color: bg.color,
         bg_media_url: bg.mediaUrl,
         bg_media_type: bg.mediaType,
-        updated_at: new Date().toISOString(),
       });
-      if (error) throw error;
       revalidateHomepageData('instagram');
       setBgSaved(true);
       setTimeout(() => setBgSaved(false), 2000);
@@ -166,7 +191,6 @@ export function useInstagram() {
   };
 
   const savePost = async (slot: number) => {
-    if (!supabase) return;
     const post = posts[slot];
     // Must have either image or post URL.
     if (!post.image_url && !post.post_url) return;
@@ -178,13 +202,30 @@ export function useInstagram() {
     setSavingSlot(slot);
     try {
       const payload = { image_url: post.image_url, link_url: post.link_url, post_url: post.post_url, sort_order: slot, is_active: true };
-      if (post.id) {
-        const { error } = await supabase.from('instagram_posts').update(payload).eq('id', post.id);
-        if (error) throw error;
+      if (USE_RDS_FROM_BROWSER) {
+        const url = post.id
+          ? `/api/admin/instagram-posts?id=${encodeURIComponent(post.id)}`
+          : '/api/admin/instagram-posts';
+        const res = await fetch(url, {
+          method: post.id ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        if (!post.id) {
+          const { row } = await res.json() as { row: { id: string } | null };
+          if (row?.id) setPosts(prev => prev.map((p, i) => i === slot ? { ...p, id: row.id } : p));
+        }
       } else {
-        const { data, error } = await supabase.from('instagram_posts').insert([payload]).select().single();
-        if (error) throw error;
-        setPosts(prev => prev.map((p, i) => i === slot ? { ...p, id: data.id } : p));
+        if (!supabase) return;
+        if (post.id) {
+          const { error } = await supabase.from('instagram_posts').update(payload).eq('id', post.id);
+          if (error) throw error;
+        } else {
+          const { data, error } = await supabase.from('instagram_posts').insert([payload]).select().single();
+          if (error) throw error;
+          setPosts(prev => prev.map((p, i) => i === slot ? { ...p, id: data.id } : p));
+        }
       }
       revalidateHomepageData('instagram');
     } catch (err) {
@@ -198,8 +239,12 @@ export function useInstagram() {
 
   const deletePost = async (slot: number) => {
     const post = posts[slot];
-    if (post.id && supabase) {
-      await supabase.from('instagram_posts').delete().eq('id', post.id);
+    if (post.id) {
+      if (USE_RDS_FROM_BROWSER) {
+        await fetch(`/api/admin/instagram-posts?id=${encodeURIComponent(post.id)}`, { method: 'DELETE' });
+      } else if (supabase) {
+        await supabase.from('instagram_posts').delete().eq('id', post.id);
+      }
       revalidateHomepageData('instagram');
     }
     setPosts(prev => prev.map((p, i) => i === slot ? emptyPost(i) : p));
