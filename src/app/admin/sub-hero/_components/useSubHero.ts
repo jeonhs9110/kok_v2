@@ -5,6 +5,7 @@ import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useIsDirty } from '@/hooks/useIsDirty';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { resolveAnchor } from '@/lib/typography/options';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import type { SubHero } from './types';
 
 const supabase = getSupabaseBrowser();
@@ -45,22 +46,33 @@ export function useSubHero() {
   async function fetchBanner() {
     setIsLoading(true);
     try {
-      if (!supabase) throw new Error('no client');
-      const { data } = await supabase
-        .from('sub_hero_banners')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      let data: Record<string, unknown> | null = null;
+      if (USE_RDS_FROM_BROWSER) {
+        const res = await fetch('/api/admin/sub-hero-banners', { cache: 'no-store' });
+        if (res.ok) {
+          const { rows } = await res.json() as { rows: Record<string, unknown>[] };
+          data = rows[0] ?? null;
+        }
+      } else {
+        if (!supabase) throw new Error('no client');
+        const r = await supabase
+          .from('sub_hero_banners')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        data = (r.data as Record<string, unknown> | null) ?? null;
+      }
       if (data) {
+        const d = data as Record<string, unknown>;
         // Resolve continuous anchors with legacy 9-cell key as fallback
         // for rows saved before migration 30.
         const hydrated: SubHero = {
-          ...(data as SubHero),
-          text_anchor:        resolveAnchor(data.text_anchor, data.text_position),
-          text_anchor_mobile: resolveAnchor(data.text_anchor_mobile, data.text_position_mobile),
-          image_anchor:       resolveAnchor(data.image_anchor, null),
-          image_anchor_mobile: resolveAnchor(data.image_anchor_mobile, null),
+          ...(data as unknown as SubHero),
+          text_anchor:        resolveAnchor(d.text_anchor, d.text_position as string | null),
+          text_anchor_mobile: resolveAnchor(d.text_anchor_mobile, d.text_position_mobile as string | null),
+          image_anchor:       resolveAnchor(d.image_anchor, null),
+          image_anchor_mobile: resolveAnchor(d.image_anchor_mobile, null),
         };
         setBanner(hydrated);
         setSavedBanner(hydrated);
@@ -92,7 +104,7 @@ export function useSubHero() {
   };
 
   const handleSave = async () => {
-    if (!supabase || !banner.image_url) return;
+    if (!banner.image_url) return;
     setIsSaving(true);
     try {
       const payload = {
@@ -123,14 +135,32 @@ export function useSubHero() {
         image_anchor_mobile: banner.image_anchor_mobile,
       };
       let savedId = banner.id;
-      if (banner.id) {
-        const { error } = await supabase.from('sub_hero_banners').update(payload).eq('id', banner.id);
-        if (error) throw error;
+      if (USE_RDS_FROM_BROWSER) {
+        const url = banner.id
+          ? `/api/admin/sub-hero-banners?id=${encodeURIComponent(banner.id)}`
+          : '/api/admin/sub-hero-banners';
+        const res = await fetch(url, {
+          method: banner.id ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        if (!banner.id) {
+          const { row } = await res.json() as { row: { id: string } | null };
+          savedId = row?.id ?? null;
+          if (savedId) setBanner(prev => ({ ...prev, id: savedId }));
+        }
       } else {
-        const { data, error } = await supabase.from('sub_hero_banners').insert([payload]).select().single();
-        if (error) throw error;
-        savedId = data.id;
-        setBanner(prev => ({ ...prev, id: data.id }));
+        if (!supabase) throw new Error('no client');
+        if (banner.id) {
+          const { error } = await supabase.from('sub_hero_banners').update(payload).eq('id', banner.id);
+          if (error) throw error;
+        } else {
+          const { data, error } = await supabase.from('sub_hero_banners').insert([payload]).select().single();
+          if (error) throw error;
+          savedId = data.id;
+          setBanner(prev => ({ ...prev, id: data.id }));
+        }
       }
       setSavedBanner({ ...banner, id: savedId });
       revalidateHomepageData('sub_hero');
