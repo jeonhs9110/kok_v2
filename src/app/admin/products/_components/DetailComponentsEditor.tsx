@@ -6,6 +6,7 @@ import { type DetailComponent } from '@/lib/api/products';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import { isValidYouTubeUrl } from '@/lib/youtube';
 import ProductDetailComponents from '@/components/ProductDetailComponents';
 import SortableList from '@/components/admin/SortableList';
@@ -63,15 +64,21 @@ export default function DetailComponentsEditor({ components, onChange }: Props) 
     }
     setUploading(true);
     try {
-      if (!supabase) throw new Error('Supabase 클라이언트 없음');
-      const ext = file.name.split('.').pop() ?? 'bin';
-      const path = `detail-components/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
-        cacheControl: '3600', upsert: false, contentType: file.type,
-      });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      add({ type: isVideo ? 'video' : 'image', url: urlData.publicUrl });
+      let publicUrl: string;
+      if (USE_S3_FROM_BROWSER) {
+        const r = await uploadFileToS3(file, { keyPrefix: 'detail-components', contentType: file.type });
+        publicUrl = r.publicUrl;
+      } else {
+        if (!supabase) throw new Error('Supabase 클라이언트 없음');
+        const ext = file.name.split('.').pop() ?? 'bin';
+        const path = `detail-components/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from(BUCKET).upload(path, file, {
+          cacheControl: '3600', upsert: false, contentType: file.type,
+        });
+        if (error) throw error;
+        publicUrl = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+      }
+      add({ type: isVideo ? 'video' : 'image', url: publicUrl });
     } catch (err) {
       console.error('[DetailComponentsEditor] upload failed:', err);
       toast.show('업로드에 실패했습니다. 다시 시도해주세요.', 'error');

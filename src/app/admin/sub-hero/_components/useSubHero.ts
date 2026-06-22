@@ -6,6 +6,7 @@ import { useIsDirty } from '@/hooks/useIsDirty';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { resolveAnchor } from '@/lib/typography/options';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import type { SubHero } from './types';
 
 const supabase = getSupabaseBrowser();
@@ -84,17 +85,23 @@ export function useSubHero() {
   useUnsavedChanges(useIsDirty(banner, savedBanner));
 
   const handleFileUpload = async (file: File) => {
-    if (!supabase) return;
     setIsUploading(true);
     try {
-      const ext = file.name.split('.').pop() ?? 'jpg';
-      const fileName = `sub-hero/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(fileName, file, {
-        cacheControl: '3600', upsert: false, contentType: file.type,
-      });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
-      setBanner(prev => ({ ...prev, image_url: urlData.publicUrl }));
+      let publicUrl: string;
+      if (USE_S3_FROM_BROWSER) {
+        const r = await uploadFileToS3(file, { keyPrefix: 'sub-hero', contentType: file.type });
+        publicUrl = r.publicUrl;
+      } else {
+        if (!supabase) return;
+        const ext = file.name.split('.').pop() ?? 'jpg';
+        const fileName = `sub-hero/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from(BUCKET).upload(fileName, file, {
+          cacheControl: '3600', upsert: false, contentType: file.type,
+        });
+        if (error) throw error;
+        publicUrl = supabase.storage.from(BUCKET).getPublicUrl(fileName).data.publicUrl;
+      }
+      setBanner(prev => ({ ...prev, image_url: publicUrl }));
     } catch (e) {
       console.error(e);
       toast.show('이미지 업로드에 실패했습니다.', 'error');

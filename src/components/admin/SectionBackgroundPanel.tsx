@@ -3,6 +3,7 @@
 import { useRef } from 'react';
 import { Upload, X, Square, Image as ImageIcon, Video as VideoIcon } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 
 // Session-aware client. Background media uploads target the storage
 // bucket whose RLS only admits authenticated admins (Phase 5 lockdown).
@@ -69,21 +70,32 @@ export default function SectionBackgroundPanel({
 
   async function handleUpload(file: File) {
     const isVideo = file.type.startsWith('video/');
-    const ext = file.name.split('.').pop() ?? (isVideo ? 'mp4' : 'jpg');
-    const path = `${uploadPathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from(uploadBucket).upload(path, file, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: file.type,
-    });
-    if (error) {
-      alert('업로드에 실패했습니다: ' + error.message);
-      return;
+    let publicUrl: string;
+    if (USE_S3_FROM_BROWSER) {
+      try {
+        const r = await uploadFileToS3(file, { keyPrefix: uploadPathPrefix, contentType: file.type });
+        publicUrl = r.publicUrl;
+      } catch (err) {
+        alert('업로드에 실패했습니다: ' + (err instanceof Error ? err.message : '알 수 없는 오류'));
+        return;
+      }
+    } else {
+      const ext = file.name.split('.').pop() ?? (isVideo ? 'mp4' : 'jpg');
+      const path = `${uploadPathPrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from(uploadBucket).upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type,
+      });
+      if (error) {
+        alert('업로드에 실패했습니다: ' + error.message);
+        return;
+      }
+      publicUrl = supabase.storage.from(uploadBucket).getPublicUrl(path).data.publicUrl;
     }
-    const { data } = supabase.storage.from(uploadBucket).getPublicUrl(path);
     onChange({
       ...value,
-      mediaUrl: data.publicUrl,
+      mediaUrl: publicUrl,
       mediaType: isVideo ? 'video' : 'image',
     });
   }

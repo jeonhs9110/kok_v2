@@ -5,6 +5,7 @@
  */
 
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import type { CarouselSlide } from '@/lib/api/carousel';
 import { resolveAnchor } from '@/lib/typography/options';
 import type { PositionAnchor, PositionKey } from '@/lib/typography/options';
@@ -209,6 +210,13 @@ export function buildSlidePayload(
 }
 
 export async function uploadSlideAsset(file: File): Promise<string> {
+  if (USE_S3_FROM_BROWSER) {
+    const { publicUrl } = await uploadFileToS3(file, {
+      keyPrefix: 'carousel',
+      contentType: file.type,
+    });
+    return publicUrl;
+  }
   const ext = file.name.split('.').pop() ?? 'jpg';
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const filePath = `carousel/${fileName}`;

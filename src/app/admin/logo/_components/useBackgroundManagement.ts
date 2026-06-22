@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useToast } from '@/components/admin/Toast';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import type { Background } from './BackgroundMediaCard';
 
 const BUCKET = 'site-assets';
@@ -56,20 +57,27 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
   };
 
   const uploadBackground = async () => {
-    if (!bgPending || !supabase) return;
+    if (!bgPending) return;
     setBgUploading(true);
     try {
-      const ext = bgPending.name.split('.').pop()?.toLowerCase() ?? 'bin';
       const isVideo = bgPending.type.startsWith('video/');
-      const path = `backgrounds/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, bgPending, {
-        upsert: false,
-        contentType: bgPending.type || undefined,
-      });
-      if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+      let publicUrl: string;
+      if (USE_S3_FROM_BROWSER) {
+        const r = await uploadFileToS3(bgPending, { keyPrefix: 'backgrounds', contentType: bgPending.type });
+        publicUrl = r.publicUrl;
+      } else {
+        if (!supabase) return;
+        const ext = bgPending.name.split('.').pop()?.toLowerCase() ?? 'bin';
+        const path = `backgrounds/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, bgPending, {
+          upsert: false,
+          contentType: bgPending.type || undefined,
+        });
+        if (upErr) throw upErr;
+        publicUrl = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+      }
       const payload = {
-        file_url: urlData.publicUrl,
+        file_url: publicUrl,
         file_name: bgPending.name,
         file_type: isVideo ? 'video' : 'image',
         mime_type: bgPending.type || '',
@@ -83,6 +91,7 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
         });
         if (!res.ok) throw new Error(`API ${res.status}`);
       } else {
+        if (!supabase) return;
         const { error: insErr } = await supabase.from('site_backgrounds').insert(payload);
         if (insErr) throw insErr;
       }

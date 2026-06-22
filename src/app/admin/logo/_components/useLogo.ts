@@ -5,6 +5,7 @@ import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useIsDirty } from '@/hooks/useIsDirty';
 import { getSiteSetting, setSiteSetting } from '@/lib/api/site-settings';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import {
   DEFAULT_THEME_TOKENS,
   parseThemeTokens,
@@ -138,19 +139,29 @@ export function useLogo() {
   };
 
   const uploadLogo = async () => {
-    if (!logoPending || !supabase) return;
+    if (!logoPending) return;
     setLogoSaving(true);
     try {
-      const ext = logoPending.name.split('.').pop() ?? 'png';
-      const path = `logo/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, logoPending, { upsert: false });
-      if (upErr) throw upErr;
-      const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-      const ok = await setSiteSetting(supabase, 'logo_url', data.publicUrl);
+      let publicUrl: string;
+      if (USE_S3_FROM_BROWSER) {
+        const r = await uploadFileToS3(logoPending, { keyPrefix: 'logo', contentType: logoPending.type });
+        publicUrl = r.publicUrl;
+      } else {
+        if (!supabase) return;
+        const ext = logoPending.name.split('.').pop() ?? 'png';
+        const path = `logo/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, logoPending, { upsert: false });
+        if (upErr) throw upErr;
+        publicUrl = supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+      }
+      // setSiteSetting already dispatches on USE_RDS server-side. The
+      // supabase arg is ignored under the RDS path; pass it for the
+      // supabase path's RLS requirement when USE_RDS is unset.
+      const ok = await setSiteSetting(supabase!, 'logo_url', publicUrl);
       if (!ok) throw new Error('저장 실패');
       await revalidateHeaderData();
-      setLogoUrl(data.publicUrl);
-      setLogoPreview(data.publicUrl);
+      setLogoUrl(publicUrl);
+      setLogoPreview(publicUrl);
       setLogoPending(null);
       if (logoInputRef.current) logoInputRef.current.value = '';
       setLogoSavedFlash(true);
