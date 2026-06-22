@@ -1,0 +1,72 @@
+import 'server-only';
+import { Pool, type PoolConfig } from 'pg';
+
+/**
+ * Singleton Postgres connection pool for the RDS backend.
+ *
+ * Lifecycle: one pool per Node.js process. Next.js's Node runtime keeps
+ * the same process across requests (unlike edge), so the pool persists
+ * and reuses TCP/TLS handshakes. Hot reload during dev recreates the
+ * module — globalThis caching below survives that.
+ *
+ * Use only from server code (route handlers, server components, server
+ * actions). Marked `server-only` so accidental client imports fail
+ * loudly at build time instead of leaking the connection string to
+ * the browser bundle.
+ *
+ * RDS-specific config:
+ *   - `?sslmode=require` in DATABASE_URL forces TLS; pg respects it
+ *     automatically. We DON'T pin a CA cert here because RDS rotates
+ *     its CA periodically and pinning would force a rebuild on every
+ *     rotation. The connection is encrypted either way.
+ *   - max=10 sits comfortably below the t4g.micro's ~85 connection
+ *     ceiling, leaving room for migrations + ad-hoc psql sessions.
+ *   - idleTimeout=30s cleans up idle connections so a slow night
+ *     doesn't keep ~10 sockets warm.
+ */
+
+const POOL_CONFIG: PoolConfig = {
+  // node-postgres reads PGHOST/PGUSER/etc. from env automatically when
+  // connectionString isn't set, but DATABASE_URL is more portable and
+  // matches the convention in scripts/db/README.md.
+  connectionString: process.env.DATABASE_URL,
+  max: 10,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 5_000,
+  // Reject the connection rather than queue it forever — surfacing a
+  // pool exhaustion as a fast 500 is better than silent latency.
+  allowExitOnIdle: false,
+};
+
+// Cache on globalThis to survive Next.js dev hot reload (each reload
+// re-evaluates this module). In prod the cache is harmless overhead.
+const globalForPg = globalThis as unknown as { __kokkokPgPool?: Pool };
+
+export function getPgPool(): Pool {
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      '[db/pool] DATABASE_URL is not set. RDS migration requires this env var on EC2 + .env.local for development.',
+    );
+  }
+  if (!globalForPg.__kokkokPgPool) {
+    globalForPg.__kokkokPgPool = new Pool(POOL_CONFIG);
+    // Surface any unhandled pool error rather than crashing the worker.
+    // A flapping RDS or a leaked connection that's been killed by RDS
+    // surfaces here; route handlers see the next acquire() throw.
+    globalForPg.__kokkokPgPool.on('error', (err) => {
+      console.error('[db/pool] idle client error:', err);
+    });
+  }
+  return globalForPg.__kokkokPgPool;
+}
+
+/**
+ * Whether the app should route data reads/writes to RDS instead of
+ * Supabase. Controlled by the `USE_RDS` env var (read-once at module
+ * load — flipping requires a restart).
+ *
+ * Migration plan: stays `false` through C1/C2/C3 development, gets
+ * flipped to `true` in the cutover phase (F) once all services have
+ * a pg implementation behind the flag.
+ */
+export const USE_RDS = process.env.USE_RDS === 'true';

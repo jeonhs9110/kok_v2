@@ -92,7 +92,10 @@ resource "random_password" "rds_master" {
 resource "aws_db_instance" "main" {
   identifier             = "${var.project_name}-postgres"
   engine                 = "postgres"
-  engine_version         = "16.4"
+  # 16.14 is the latest Postgres 16 minor in ap-northeast-2 as of
+  # 2026-06-22. Initial apply targeted 16.4 — that point release has
+  # since been retired from the region's RDS catalog.
+  engine_version         = "16.14"
   instance_class         = "db.t4g.micro"
   allocated_storage      = var.db_allocated_storage_gb
   max_allocated_storage  = var.db_max_allocated_storage_gb
