@@ -11,6 +11,16 @@ import { supabase } from './products';
 export type SiteSettingKey = 'logo_url';
 
 export async function getSiteSetting(key: SiteSettingKey): Promise<string> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getSiteSettingFromPg } = await import('@/lib/db/storefront-reads');
+      const v = await getSiteSettingFromPg(key);
+      return typeof v === 'string' ? v : '';
+    } catch (err) {
+      console.error('[site-settings] RDS getSiteSetting failed:', err);
+      return '';
+    }
+  }
   if (!supabase) return '';
   try {
     const { data, error } = await supabase
@@ -26,6 +36,21 @@ export async function getSiteSetting(key: SiteSettingKey): Promise<string> {
 }
 
 export async function getSiteSettings(keys: SiteSettingKey[]): Promise<Record<string, string>> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getSiteSettingsFromPg } = await import('@/lib/db/storefront-reads');
+      const raw = await getSiteSettingsFromPg(keys);
+      const out = Object.fromEntries(keys.map(k => [k, '']));
+      for (const k of keys) {
+        const v = raw[k];
+        if (typeof v === 'string') out[k] = v;
+      }
+      return out;
+    } catch (err) {
+      console.error('[site-settings] RDS getSiteSettings failed:', err);
+      return Object.fromEntries(keys.map(k => [k, '']));
+    }
+  }
   if (!supabase) return Object.fromEntries(keys.map(k => [k, '']));
   try {
     const { data, error } = await supabase

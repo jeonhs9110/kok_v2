@@ -44,6 +44,16 @@ function client() {
 
 export const getBestSellerDisplay = unstable_cache(
   async (): Promise<BestSellerDisplay> => {
+    if (process.env.USE_RDS === 'true') {
+      try {
+        const { getSiteSettingFromPg } = await import('@/lib/db/storefront-reads');
+        const v = await getSiteSettingFromPg('best_seller_display');
+        return parse(v);
+      } catch (err) {
+        console.error('[cache:best_seller_display] RDS failed:', err);
+        return DEFAULT_BEST_SELLER_DISPLAY;
+      }
+    }
     const c = client();
     if (!c) return DEFAULT_BEST_SELLER_DISPLAY;
     try {

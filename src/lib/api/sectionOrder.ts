@@ -82,6 +82,16 @@ function client() {
 
 export const getSectionOrder = unstable_cache(
   async (): Promise<HomepageSectionKey[]> => {
+    if (process.env.USE_RDS === 'true') {
+      try {
+        const { getSiteSettingFromPg } = await import('@/lib/db/storefront-reads');
+        const v = await getSiteSettingFromPg('homepage_section_order');
+        return parse(v);
+      } catch (err) {
+        console.error('[cache:section_order] RDS failed:', err);
+        return DEFAULT_ORDER;
+      }
+    }
     const c = client();
     if (!c) return DEFAULT_ORDER;
     try {

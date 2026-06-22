@@ -44,6 +44,16 @@ function client() {
 
 export const getTopStripe = unstable_cache(
   async (): Promise<TopStripeBannerData> => {
+    if (process.env.USE_RDS === 'true') {
+      try {
+        const { getSiteSettingFromPg } = await import('@/lib/db/storefront-reads');
+        const v = await getSiteSettingFromPg('top_stripe');
+        return parse(v);
+      } catch (err) {
+        console.error('[cache:top_stripe] RDS failed:', err);
+        return DEFAULT;
+      }
+    }
     const c = client();
     if (!c) return DEFAULT;
     try {

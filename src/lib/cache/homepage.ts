@@ -64,6 +64,16 @@ export async function getCachedSlides(): Promise<CarouselSlide[]> {
 // ─── promo banners ────────────────────────────────────────────────
 const cachedPromoBannersInner = unstable_cache(
   async (): Promise<PromoBanner[]> => {
+    if (process.env.USE_RDS === 'true') {
+      const { getPromoBannersFromPg } = await import('@/lib/db/storefront-reads');
+      const rows = await withTimeout(getPromoBannersFromPg(), QUERY_BUDGET_MS);
+      return rows.map(r => ({
+        id: r.id,
+        image_url: r.image_url ?? '',
+        link_url: r.link_url ?? '',
+        sort_order: r.sort_order ?? 0,
+      }));
+    }
     const c = client();
     if (!c) return [];
     const { data, error } = await withTimeout(
@@ -90,6 +100,32 @@ export async function getCachedPromoBanners(): Promise<PromoBanner[]> {
 // ─── sub-hero ─────────────────────────────────────────────────────
 const cachedSubHeroInner = unstable_cache(
   async (): Promise<SubHeroBannerData | null> => {
+    if (process.env.USE_RDS === 'true') {
+      const { getActiveSubHeroFromPg } = await import('@/lib/db/storefront-reads');
+      const data = await withTimeout(getActiveSubHeroFromPg(), QUERY_BUDGET_MS);
+      if (!data) return null;
+      return {
+        id: data.id,
+        image_url: data.image_url ?? '',
+        link_url: data.link_url ?? '',
+        title: data.title ?? '',
+        subtitle: data.subtitle ?? '',
+        title_size_offset: data.title_size_offset,
+        subtitle_size_offset: data.subtitle_size_offset,
+        title_font_family: data.title_font_family,
+        subtitle_font_family: data.subtitle_font_family,
+        title_bold: data.title_bold,
+        title_italic: data.title_italic,
+        title_underline: data.title_underline,
+        subtitle_bold: data.subtitle_bold,
+        subtitle_italic: data.subtitle_italic,
+        subtitle_underline: data.subtitle_underline,
+        title_color: data.title_color,
+        subtitle_color: data.subtitle_color,
+        text_position: data.text_position,
+        text_position_mobile: data.text_position_mobile,
+      };
+    }
     const c = client();
     if (!c) return null;
     const { data, error } = await withTimeout(
@@ -140,6 +176,34 @@ export async function getCachedSubHero(): Promise<SubHeroBannerData | null> {
 // ─── instagram ────────────────────────────────────────────────────
 const cachedInstagramInner = unstable_cache(
   async (): Promise<InstagramData | null> => {
+    if (process.env.USE_RDS === 'true') {
+      const { getInstagramConfigFromPg, getInstagramPostsFromPg } =
+        await import('@/lib/db/storefront-reads');
+      const [config, postsRows] = await withTimeout(
+        Promise.all([getInstagramConfigFromPg(), getInstagramPostsFromPg()]),
+        QUERY_BUDGET_MS,
+      );
+      if (!config || !config.handle) return null;
+      const posts: InstagramPost[] = postsRows.map(p => ({
+        id: p.id,
+        image_url: p.image_url ?? '',
+        link_url: p.link_url ?? '',
+        post_url: p.post_url ?? undefined,
+        sort_order: p.sort_order ?? 0,
+      }));
+      return {
+        handle: config.handle,
+        description: config.description ?? '',
+        posts,
+        bg_type: config.bg_type ?? null,
+        bg_color: config.bg_color ?? null,
+        bg_media_url: config.bg_media_url ?? null,
+        bg_media_type: config.bg_media_type ?? null,
+        header_font_size: config.header_font_size ?? null,
+        header_text_color: config.header_text_color ?? null,
+        header_bg_color: config.header_bg_color ?? null,
+      };
+    }
     const c = client();
     if (!c) return null;
     const [configRes, postsRes] = await withTimeout(
@@ -202,6 +266,21 @@ export interface ShortsBgConfig {
 
 const cachedShortsBgInner = unstable_cache(
   async (): Promise<ShortsBgConfig | null> => {
+    if (process.env.USE_RDS === 'true') {
+      const { getShortsConfigFromPg } = await import('@/lib/db/storefront-reads');
+      const data = await withTimeout(getShortsConfigFromPg(), QUERY_BUDGET_MS);
+      if (!data) return null;
+      return {
+        bg_type: data.bg_type ?? null,
+        bg_color: data.bg_color ?? null,
+        bg_media_url: data.bg_media_url ?? null,
+        bg_media_type: data.bg_media_type ?? null,
+        header_text: data.header_text ?? null,
+        header_font_size: data.header_font_size ?? null,
+        header_text_color: data.header_text_color ?? null,
+        header_bg_color: data.header_bg_color ?? null,
+      };
+    }
     const c = client();
     if (!c) return null;
     const { data, error } = await withTimeout(
@@ -239,6 +318,14 @@ export interface RawShort {
 
 const cachedShortsInner = unstable_cache(
   async (): Promise<RawShort[]> => {
+    if (process.env.USE_RDS === 'true') {
+      const { getShortsFromPg } = await import('@/lib/db/storefront-reads');
+      const rows = await withTimeout(getShortsFromPg(), QUERY_BUDGET_MS);
+      return rows.map(r => ({
+        youtube_id: r.youtube_id,
+        product_id: r.product_id ?? null,
+      }));
+    }
     const c = client();
     if (!c) return [];
     const { data, error } = await withTimeout(
@@ -271,6 +358,17 @@ export interface RawReviewCard {
 
 const cachedReviewsInner = unstable_cache(
   async (): Promise<RawReviewCard[]> => {
+    if (process.env.USE_RDS === 'true') {
+      const { getActiveReviewCardsFromPg } = await import('@/lib/db/storefront-reads');
+      const rows = await withTimeout(getActiveReviewCardsFromPg(), QUERY_BUDGET_MS);
+      return rows.slice(0, 8).map(r => ({
+        id: r.id,
+        image_url: r.image_url ?? '',
+        title: r.title ?? '',
+        link_url: r.link_url ?? null,
+        sort_order: r.sort_order ?? 0,
+      }));
+    }
     const c = client();
     if (!c) return [];
     const { data, error } = await withTimeout(

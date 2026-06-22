@@ -24,6 +24,20 @@ function client() {
 
 export const getActiveSiteBackground = unstable_cache(
   async (): Promise<ActiveSiteBackground | null> => {
+    if (process.env.USE_RDS === 'true') {
+      try {
+        const { getActiveSiteBackgroundFromPg } = await import('@/lib/db/storefront-reads');
+        const r = await getActiveSiteBackgroundFromPg();
+        return r ? {
+          file_url: r.file_url,
+          file_type: r.file_type,
+          scroll_driven: r.scroll_driven ?? undefined,
+        } : null;
+      } catch (err) {
+        console.error('[cache:site_background] RDS failed:', err);
+        return null;
+      }
+    }
     const c = client();
     if (!c) return null;
     try {

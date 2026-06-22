@@ -29,6 +29,25 @@ function client() {
 
 export const getHomepageBanners = unstable_cache(
   async (): Promise<HomepageBanner[]> => {
+    if (process.env.USE_RDS === 'true') {
+      try {
+        const { getHomepageBannersFromPg } = await import('@/lib/db/storefront-reads');
+        const rows = await getHomepageBannersFromPg();
+        return rows.map(row => ({
+          id: row.id,
+          text: typeof row.text === 'object' && row.text !== null
+            ? (row.text as Record<string, string>)
+            : {},
+          link_url: row.link_url || null,
+          bg_color: row.bg_color || DEFAULTS.bg_color,
+          text_color: row.text_color || DEFAULTS.text_color,
+          is_active: row.is_active ?? true,
+        }));
+      } catch (err) {
+        console.error('[cache:homepage_banners] RDS failed:', err);
+        return [];
+      }
+    }
     const c = client();
     if (!c) return [];
     try {

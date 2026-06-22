@@ -111,6 +111,15 @@ export async function getMenuBySlug(slug: string): Promise<Menu | null> {
 }
 
 export async function getPostsByMenu(menuId: string): Promise<Post[]> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getPostsByMenuFromPg } = await import('@/lib/db/storefront-reads');
+      return (await getPostsByMenuFromPg(menuId)) as unknown as Post[];
+    } catch (err) {
+      console.error('[menus] RDS getPostsByMenu failed:', err);
+      return [];
+    }
+  }
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('posts')
@@ -128,6 +137,16 @@ export async function getPostsByMenuPaginated(
   page: number = 1,
   pageSize: number = 20
 ): Promise<{ posts: Post[]; totalCount: number }> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getPostsByMenuPaginatedFromPg } = await import('@/lib/db/storefront-reads');
+      const { posts, total } = await getPostsByMenuPaginatedFromPg(menuId, page, pageSize);
+      return { posts: posts as unknown as Post[], totalCount: total };
+    } catch (err) {
+      console.error('[menus] RDS getPostsByMenuPaginated failed:', err);
+      return { posts: [], totalCount: 0 };
+    }
+  }
   if (!supabase) return { posts: [], totalCount: 0 };
 
   const { count } = await supabase
@@ -181,6 +200,15 @@ export async function getPostById(postId: string): Promise<Post | null> {
 }
 
 export async function getCommentsByPost(postId: string): Promise<Comment[]> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getCommentsByPostFromPg } = await import('@/lib/db/storefront-reads');
+      return (await getCommentsByPostFromPg(postId)) as unknown as Comment[];
+    } catch (err) {
+      console.error('[menus] RDS getCommentsByPost failed:', err);
+      return [];
+    }
+  }
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('comments')

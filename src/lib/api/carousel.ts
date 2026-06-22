@@ -53,6 +53,15 @@ export interface CarouselSlide {
 }
 
 export async function getActiveSlides(): Promise<CarouselSlide[]> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getActiveSlidesFromPg } = await import('@/lib/db/storefront-reads');
+      return (await getActiveSlidesFromPg()) as unknown as CarouselSlide[];
+    } catch (err) {
+      console.error('[carousel] RDS getActiveSlides failed:', err);
+      return [];
+    }
+  }
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('carousel_slides')
@@ -64,6 +73,15 @@ export async function getActiveSlides(): Promise<CarouselSlide[]> {
 }
 
 export async function getAllSlides(): Promise<CarouselSlide[]> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getAllSlidesFromPg } = await import('@/lib/db/storefront-reads');
+      return (await getAllSlidesFromPg()) as unknown as CarouselSlide[];
+    } catch (err) {
+      console.error('[carousel] RDS getAllSlides failed:', err);
+      return [];
+    }
+  }
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('carousel_slides')
