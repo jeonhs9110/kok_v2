@@ -1,4 +1,4 @@
-import 'server-only';
+// See src/lib/db/pool.ts for why 'server-only' is intentionally absent.
 import { getPgPool } from './pool';
 import type { MenuRow, PostRow } from './types';
 import type { Menu, MenuWithChildren, Post } from '@/lib/api/menus';

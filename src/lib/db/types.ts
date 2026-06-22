@@ -1,4 +1,4 @@
-import 'server-only';
+// See src/lib/db/pool.ts for why 'server-only' is intentionally absent.
 
 /**
  * Hand-rolled DB row types matching `supabase/migrations/`.

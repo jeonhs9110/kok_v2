@@ -1,4 +1,11 @@
-import 'server-only';
+// 'server-only' annotation removed: it threw at build time whenever a
+// transitively-importing module was reachable from a Client Component,
+// even through a dynamic-import dispatcher. The actual safety guard is
+// the `USE_RDS === 'true'` env check at every call site — the env var
+// is undefined in the browser, so this pool is never instantiated
+// client-side. Webpack's resolve.fallback (next.config.ts) stubs the
+// Node-only modules pg pulls in (tls, net, fs, ...) so the unreachable
+// client chunk compiles cleanly.
 import { Pool, type PoolConfig } from 'pg';
 
 /**

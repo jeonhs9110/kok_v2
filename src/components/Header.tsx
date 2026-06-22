@@ -6,7 +6,7 @@ import { Search, ShoppingBag, User, Menu, X, Globe } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
 import LanguagePicker from '@/components/LanguagePicker';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/api/products';
+import { supabase } from '@/lib/supabase/client-singleton';
 import type { CategoryWithChildren } from '@/lib/api/categories';
 import type { MenuWithChildren } from '@/lib/api/menus';
 import { useCart } from '@/lib/cart/CartContext';

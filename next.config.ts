@@ -35,13 +35,66 @@ const nextConfig: NextConfig = {
       'embla-carousel-autoplay',
     ],
   },
-  // Don't let Turbopack bundle these — they read their own filesystem
-  // (package.json, embedded data files) at runtime, which the standalone
-  // bundle wouldn't preserve. Loading them from node_modules at runtime
-  // keeps the file resolver intact. Currently:
-  //   geoip-country — MaxMind country lookup; reads its own package.json
-  //   to find the bundled IP→country binary database.
-  serverExternalPackages: ['geoip-country'],
+  // Don't let Turbopack bundle these — either they read their own
+  // filesystem at runtime (which the standalone bundle wouldn't
+  // preserve) or they reach for Node-only modules (tls, util/types,
+  // fs) that the browser bundler can't resolve. Loading them from
+  // node_modules at server runtime keeps both intact.
+  //
+  //   geoip-country     — MaxMind country lookup; reads its own
+  //                       package.json to find the bundled IP→country
+  //                       binary database.
+  //   pg                — Postgres driver; pg/lib/stream.js does
+  //                       require('tls') at module top level. The
+  //                       'server-only' annotation in db/pool.ts
+  //                       throws at runtime but Webpack still
+  //                       statically traces the dynamic import from
+  //                       api/products.ts (reachable from Header.tsx,
+  //                       a Client Component) and fails the browser
+  //                       build trying to resolve 'tls' / 'util/types'.
+  serverExternalPackages: ['geoip-country', 'pg'],
+  /**
+   * The RDS dispatchers in `src/lib/api/*` do
+   *
+   *   if (process.env.USE_RDS === 'true') {
+   *     const { fnFromPg } = await import('@/lib/db/...');
+   *     ...
+   *   }
+   *
+   * so pg is only ever reached at runtime when the flag is on, and the
+   * `'server-only'` annotation on `src/lib/db/pool.ts` throws if a
+   * Client Component ever imports it.
+   *
+   * Webpack still builds a chunk for the dynamic import in both server
+   * AND client contexts (the dispatcher lives in `api/products.ts`,
+   * which is reachable from `Header.tsx` — a Client Component). That
+   * client-side trace resolves `pg/lib/stream.js` → `require('tls')`
+   * and fails because the browser has no `tls` / `util/types` / `fs` /
+   * `net` / `dns` built-ins.
+   *
+   * The right fix is to stub those modules as `false` in the *client*
+   * bundle only. The unreachable chunk still compiles (with an empty
+   * stub it would crash if called), but `USE_RDS` is never `'true'`
+   * on the client so the chunk is never executed.
+   *
+   * Server bundle is untouched — pg + tls etc. resolve normally and
+   * `serverExternalPackages: ['pg']` keeps it out of the standalone
+   * bundle so node loads it from node_modules at runtime.
+   */
+  webpack(config, { isServer }) {
+    if (!isServer) {
+      config.resolve = config.resolve ?? {};
+      config.resolve.fallback = {
+        ...(config.resolve.fallback ?? {}),
+        tls: false,
+        net: false,
+        fs: false,
+        dns: false,
+        'util/types': false,
+      };
+    }
+    return config;
+  },
   async headers() {
     return [
       { source: '/:path*', headers: securityHeaders },
