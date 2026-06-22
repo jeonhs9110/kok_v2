@@ -20,7 +20,28 @@ interface ReviewCardRow {
   is_active: boolean;
 }
 
+function normalize(r: ReviewCardRow): ReviewCard {
+  return {
+    id: r.id,
+    image_url: r.image_url ?? '',
+    title: r.title ?? '',
+    content_html: r.content_html ?? '',
+    link_url: r.link_url,
+    sort_order: r.sort_order,
+    is_active: r.is_active,
+  };
+}
+
 export async function getActiveReviewCards(): Promise<ReviewCard[]> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getActiveReviewCardsFromPg } = await import('@/lib/db/storefront-reads');
+      return (await getActiveReviewCardsFromPg()).map(normalize);
+    } catch (err) {
+      console.error('[reviews] RDS getActiveReviewCards failed:', err);
+      return [];
+    }
+  }
   if (!supabase) return [];
   try {
     const { data, error } = await supabase
@@ -29,21 +50,23 @@ export async function getActiveReviewCards(): Promise<ReviewCard[]> {
       .eq('is_active', true)
       .order('sort_order', { ascending: true });
     if (error || !data) return [];
-    return (data as ReviewCardRow[]).map(r => ({
-      id: r.id,
-      image_url: r.image_url ?? '',
-      title: r.title ?? '',
-      content_html: r.content_html ?? '',
-      link_url: r.link_url,
-      sort_order: r.sort_order,
-      is_active: r.is_active,
-    }));
+    return (data as ReviewCardRow[]).map(normalize);
   } catch {
     return [];
   }
 }
 
 export async function getReviewCard(id: string): Promise<ReviewCard | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getReviewCardFromPg } = await import('@/lib/db/storefront-reads');
+      const r = await getReviewCardFromPg(id);
+      return r ? normalize(r) : null;
+    } catch (err) {
+      console.error('[reviews] RDS getReviewCard failed:', err);
+      return null;
+    }
+  }
   if (!supabase) return null;
   try {
     const { data, error } = await supabase
@@ -52,22 +75,22 @@ export async function getReviewCard(id: string): Promise<ReviewCard | null> {
       .eq('id', id)
       .maybeSingle();
     if (error || !data) return null;
-    const r = data as ReviewCardRow;
-    return {
-      id: r.id,
-      image_url: r.image_url ?? '',
-      title: r.title ?? '',
-      content_html: r.content_html ?? '',
-      link_url: r.link_url,
-      sort_order: r.sort_order,
-      is_active: r.is_active,
-    };
+    return normalize(data as ReviewCardRow);
   } catch {
     return null;
   }
 }
 
 export async function getAllReviewCards(): Promise<ReviewCard[]> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getAllReviewCardsFromPg } = await import('@/lib/db/storefront-reads');
+      return (await getAllReviewCardsFromPg()).map(normalize);
+    } catch (err) {
+      console.error('[reviews] RDS getAllReviewCards failed:', err);
+      return [];
+    }
+  }
   if (!supabase) return [];
   try {
     const { data, error } = await supabase
@@ -75,15 +98,7 @@ export async function getAllReviewCards(): Promise<ReviewCard[]> {
       .select('*')
       .order('sort_order', { ascending: true });
     if (error || !data) return [];
-    return (data as ReviewCardRow[]).map(r => ({
-      id: r.id,
-      image_url: r.image_url ?? '',
-      title: r.title ?? '',
-      content_html: r.content_html ?? '',
-      link_url: r.link_url,
-      sort_order: r.sort_order,
-      is_active: r.is_active,
-    }));
+    return (data as ReviewCardRow[]).map(normalize);
   } catch {
     return [];
   }
