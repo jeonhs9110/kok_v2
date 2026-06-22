@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import type { Product, DetailComponent } from '@/lib/api/products';
 import { extractLegacyImagesAsComponents } from './productDetailHelpers';
 
@@ -204,16 +205,30 @@ export function useProductForm(
         seo: hasSeo ? seoFields : null,
       };
 
-      if (!supabase) throw new Error('Supabase 클라이언트 없음');
-
-      if (editingId) {
-        const { error } = await supabase.from('products').update(dbPayload).eq('id', editingId);
-        if (error) throw error;
+      if (USE_RDS_FROM_BROWSER) {
+        const url = editingId
+          ? `/api/admin/products?id=${encodeURIComponent(editingId)}`
+          : '/api/admin/products';
+        const res = await fetch(url, {
+          method: editingId ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dbPayload),
+        });
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error(errBody.error ?? `API ${res.status}`);
+        }
       } else {
-        const { error } = await supabase
-          .from('products')
-          .insert([{ ...dbPayload, is_active: true }]);
-        if (error) throw error;
+        if (!supabase) throw new Error('Supabase 클라이언트 없음');
+        if (editingId) {
+          const { error } = await supabase.from('products').update(dbPayload).eq('id', editingId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('products')
+            .insert([{ ...dbPayload, is_active: true }]);
+          if (error) throw error;
+        }
       }
 
       revalidateHomepageData('products');
