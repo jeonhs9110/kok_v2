@@ -1,0 +1,61 @@
+import { NextResponse } from 'next/server';
+
+/**
+ * POST /api/auth/cognito/sign-in
+ *
+ * Body: { email, password }
+ * Returns: { ok: boolean }
+ *
+ * On success, sets THREE httpOnly cookies:
+ *   - cognito_id_token       (JWT — read by proxy.ts + requireAdmin)
+ *   - cognito_access_token   (kept for the eventual GlobalSignOut call)
+ *   - cognito_refresh_token  (for the silent refresh flow — D3)
+ *
+ * httpOnly so no client JS can read or steal them via XSS. Same-site
+ * lax so the cookie survives the post-sign-in redirect but does not
+ * ride on cross-origin top-level navigations.
+ */
+export async function POST(request: Request) {
+  let body: { email?: unknown; password?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
+  }
+  const email = typeof body.email === 'string' ? body.email.trim() : '';
+  const password = typeof body.password === 'string' ? body.password : '';
+  if (!email || !password) {
+    return NextResponse.json({ error: 'email_and_password_required' }, { status: 400 });
+  }
+
+  const { signInWithCognito } = await import('@/lib/auth/cognito-server');
+  const result = await signInWithCognito(email, password);
+  if (!result) {
+    return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
+  }
+
+  const isProd = process.env.NODE_ENV === 'production';
+  const res = NextResponse.json({ ok: true });
+  res.cookies.set('cognito_id_token', result.idToken, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProd,
+    path: '/',
+    maxAge: result.expiresInSeconds,
+  });
+  res.cookies.set('cognito_access_token', result.accessToken, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProd,
+    path: '/',
+    maxAge: result.expiresInSeconds,
+  });
+  res.cookies.set('cognito_refresh_token', result.refreshToken, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProd,
+    path: '/',
+    maxAge: 60 * 60 * 24 * 30, // 30 days (matches cognito.tf's refresh_token_validity)
+  });
+  return res;
+}

@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { USE_COGNITO_FROM_BROWSER } from '@/lib/auth/clientFlags';
 import type { Lang } from '@/lib/i18n/types';
 
 interface Labels {
@@ -89,6 +90,25 @@ function LoginFormInner({ lang }: { lang: Lang }) {
     setError('');
 
     try {
+      if (USE_COGNITO_FROM_BROWSER) {
+        const res = await fetch('/api/auth/cognito/sign-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), password: password.trim() }),
+        });
+        if (!res.ok) {
+          setError(t.error);
+          return;
+        }
+        // Cookie is already set by the server. Trust `next` if present;
+        // otherwise land on the storefront — the admin layout's own
+        // proxy gate will hop the user to /admin if their JWT has the
+        // admins group claim. Skipping the post-login role round-trip
+        // keeps Cognito's 1-call promise (vs Supabase needed `users`).
+        window.location.href = next ?? `/${lang}`;
+        return;
+      }
+
       const supabase = getSupabaseBrowser();
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim(),

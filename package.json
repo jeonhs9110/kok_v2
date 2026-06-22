@@ -13,8 +13,12 @@
     "analyze": "ANALYZE=true next build"
   },
   "dependencies": {
+<<<<<<< HEAD
     "@aws-sdk/client-s3": "^3.1073.0",
     "@aws-sdk/s3-request-presigner": "^3.1073.0",
+=======
+    "@aws-sdk/client-cognito-identity-provider": "^3.1073.0",
+>>>>>>> bd247ef (feat(auth): Phase D2 — Cognito sign-in/up/confirm/forgot/reset/out routes + LoginForm rewire)
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
