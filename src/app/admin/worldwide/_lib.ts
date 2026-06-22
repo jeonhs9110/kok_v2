@@ -7,6 +7,7 @@
  */
 
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import {
   DEFAULT_LABELS,
   SUPPORTED_LANGS,
@@ -57,6 +58,13 @@ export async function uploadWorldwideAsset(
   file: File,
   prefix: 'vendor-logo' | 'country-image'
 ): Promise<string> {
+  if (USE_S3_FROM_BROWSER) {
+    const { publicUrl } = await uploadFileToS3(file, {
+      keyPrefix: `worldwide/${prefix}`,
+      contentType: file.type,
+    });
+    return publicUrl;
+  }
   const ext = file.name.split('.').pop() ?? 'png';
   const path = `worldwide/${prefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const { error } = await supabase.storage

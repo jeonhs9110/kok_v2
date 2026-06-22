@@ -7,6 +7,7 @@ import StarterKit from '@tiptap/starter-kit';
 import TiptapLink from '@tiptap/extension-link';
 import TiptapImage from '@tiptap/extension-image';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 
 // Session-aware client. Phase 5 storage RLS requires the admin JWT
 // for the inline image uploads triggered by paste/drop in this editor.
@@ -79,6 +80,13 @@ interface Props {
 }
 
 async function uploadFile(file: File, path: string): Promise<string> {
+  if (USE_S3_FROM_BROWSER) {
+    const { publicUrl } = await uploadFileToS3(file, {
+      keyPrefix: path,
+      contentType: file.type,
+    });
+    return publicUrl;
+  }
   if (!supabase) throw new Error('Supabase 클라이언트가 없습니다.');
   const ext = file.name.split('.').pop()?.toLowerCase() ?? 'bin';
   const fileName = `${path}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;

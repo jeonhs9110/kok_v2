@@ -3,6 +3,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import type { SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 import type { IgPost } from './InstagramPostsGrid';
 
@@ -177,15 +178,21 @@ export function useInstagram() {
   }
 
   const uploadImage = async (slot: number, file: File) => {
-    if (!supabase) return;
     setUploadingSlot(slot);
     try {
-      const ext = file.name.split('.').pop() ?? 'jpg';
-      const fileName = `instagram/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(fileName, file, { cacheControl: '3600', upsert: false, contentType: file.type });
-      if (error) throw error;
-      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
-      setPosts(prev => prev.map((p, i) => i === slot ? { ...p, image_url: urlData.publicUrl } : p));
+      let publicUrl: string;
+      if (USE_S3_FROM_BROWSER) {
+        const r = await uploadFileToS3(file, { keyPrefix: 'instagram', contentType: file.type });
+        publicUrl = r.publicUrl;
+      } else {
+        if (!supabase) return;
+        const ext = file.name.split('.').pop() ?? 'jpg';
+        const fileName = `instagram/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from(BUCKET).upload(fileName, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+        if (error) throw error;
+        publicUrl = supabase.storage.from(BUCKET).getPublicUrl(fileName).data.publicUrl;
+      }
+      setPosts(prev => prev.map((p, i) => i === slot ? { ...p, image_url: publicUrl } : p));
     } catch { toast.show('이미지 업로드에 실패했습니다.', 'error'); }
     finally { setUploadingSlot(null); }
   };

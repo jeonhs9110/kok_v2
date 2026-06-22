@@ -4,6 +4,7 @@ import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import type { ReviewRow } from './ReviewCardEditor';
 
 const supabase = getSupabaseBrowser();
@@ -15,6 +16,13 @@ const EMPTY: ReviewRow = {
 };
 
 async function uploadImage(file: File): Promise<string> {
+  if (USE_S3_FROM_BROWSER) {
+    const { publicUrl } = await uploadFileToS3(file, {
+      keyPrefix: 'reviews',
+      contentType: file.type,
+    });
+    return publicUrl;
+  }
   if (!supabase) throw new Error('No Supabase');
   const ext = file.name.split('.').pop() ?? 'jpg';
   const path = `reviews/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;

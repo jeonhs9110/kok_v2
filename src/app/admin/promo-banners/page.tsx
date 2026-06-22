@@ -8,6 +8,7 @@ import { StatCard, StatStrip, PageHeader, LoadingState } from '@/components/admi
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
+import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import PromoBannerSlot, { type PromoBanner } from './_components/PromoBannerSlot';
 
 // Session-aware client. Phase 2 RLS lockdown on `promo_banners` requires admin JWT.
@@ -68,17 +69,23 @@ export default function PromoBannersAdminPage() {
   }
 
   const handleImageUpload = async (file: File, bannerId: string) => {
-    if (!supabase) return;
     setUploadingSlot(bannerId);
     try {
-      const ext = file.name.split('.').pop() ?? 'jpg';
-      const fileName = `promo-banners/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from(BUCKET).upload(fileName, file, {
-        cacheControl: '3600', upsert: false, contentType: file.type,
-      });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
-      setBanners(prev => prev.map(b => b.id === bannerId ? { ...b, image_url: urlData.publicUrl } : b));
+      let publicUrl: string;
+      if (USE_S3_FROM_BROWSER) {
+        const r = await uploadFileToS3(file, { keyPrefix: 'promo-banners', contentType: file.type });
+        publicUrl = r.publicUrl;
+      } else {
+        if (!supabase) return;
+        const ext = file.name.split('.').pop() ?? 'jpg';
+        const fileName = `promo-banners/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: uploadError } = await supabase.storage.from(BUCKET).upload(fileName, file, {
+          cacheControl: '3600', upsert: false, contentType: file.type,
+        });
+        if (uploadError) throw uploadError;
+        publicUrl = supabase.storage.from(BUCKET).getPublicUrl(fileName).data.publicUrl;
+      }
+      setBanners(prev => prev.map(b => b.id === bannerId ? { ...b, image_url: publicUrl } : b));
     } catch (e) {
       console.error('Upload failed:', e);
       toast.show('이미지 업로드에 실패했습니다.', 'error');
