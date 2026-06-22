@@ -1,8 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-export const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+// Re-export the supabase singleton from its standalone module so the
+// long tail of `import { supabase } from '@/lib/api/products'` callers
+// keeps working. NEW callers should import from
+// '@/lib/supabase/client-singleton' directly — Client Components in
+// particular MUST do so, otherwise the dispatcher's dynamic import to
+// '@/lib/db/products' below drags pg into the browser bundle and the
+// build fails at `require('tls')`.
+export { supabase } from '@/lib/supabase/client-singleton';
+import { supabase } from '@/lib/supabase/client-singleton';
 
 export type DetailComponentType = 'image' | 'video' | 'youtube';
 

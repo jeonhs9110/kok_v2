@@ -1,4 +1,4 @@
-import 'server-only';
+// See src/lib/db/pool.ts for why 'server-only' is intentionally absent.
 import { getPgPool } from './pool';
 import type {
   CarouselSlideRow, ReviewCardRow, SiteSettingRow, SiteBackgroundRow,

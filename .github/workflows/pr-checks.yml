@@ -42,4 +42,8 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_TELEMETRY_DISABLED: '1'
-        run: npx next build
+        # `npm run build` (not `npx next build`) so the --webpack flag
+        # pinned in package.json applies. Turbopack doesn't honor the
+        # webpack resolve.fallback in next.config.ts that keeps pg's
+        # Node-only deps (tls, util/types) out of the client bundle.
+        run: npm run build

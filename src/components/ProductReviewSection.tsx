@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Star, Loader2, MessageCircle } from 'lucide-react';
-import { supabase } from '@/lib/api/products';
+import { supabase } from '@/lib/supabase/client-singleton';
 
 interface ProductReview {
   id: string;
