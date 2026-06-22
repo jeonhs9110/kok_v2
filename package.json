@@ -24,6 +24,7 @@
     "@tiptap/react": "^3.22.1",
     "@tiptap/starter-kit": "^3.22.1",
     "@types/pg": "^8.20.0",
+    "aws-jwt-verify": "^5.2.1",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "geoip-country": "^5.0.202605270000",

@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase/server';
 
@@ -8,9 +9,12 @@ import { getSupabaseServer } from '@/lib/supabase/server';
  * proceeds normally); returns a NextResponse (401/403) the route handler
  * should `return` immediately when the caller is not authorized.
  *
- * Pattern matches src/proxy.ts's /admin/* gating: verify the user via
- * getUser() (NOT getSession — getSession trusts the cookie payload), then
- * check users.role === 'admin'. Fails closed on DB error.
+ * Two paths:
+ *   - USE_COGNITO=true → verify a Cognito ID token cookie + check the
+ *     `cognito:groups` claim for `admins`. No DB round-trip needed.
+ *   - default → Supabase getUser() + users.role === 'admin' check.
+ *
+ * Both fail closed on unexpected error.
  *
  * Usage:
  *   export async function POST(request: Request) {
@@ -20,6 +24,35 @@ import { getSupabaseServer } from '@/lib/supabase/server';
  *   }
  */
 export async function requireAdmin(): Promise<NextResponse | null> {
+  if (process.env.USE_COGNITO === 'true') {
+    return await requireAdminCognito();
+  }
+  return await requireAdminSupabase();
+}
+
+async function requireAdminCognito(): Promise<NextResponse | null> {
+  try {
+    const jar = await cookies();
+    const idToken = jar.get('cognito_id_token')?.value;
+    if (!idToken) {
+      return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+    }
+    const { verifyCognitoIdToken, isAdminFromCognito } = await import('./cognito');
+    const claims = await verifyCognitoIdToken(idToken);
+    if (!claims) {
+      return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+    }
+    if (!isAdminFromCognito(claims)) {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
+    return null;
+  } catch (err) {
+    console.error('[requireAdmin/cognito] unexpected error:', err);
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+}
+
+async function requireAdminSupabase(): Promise<NextResponse | null> {
   try {
     const supabase = await getSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
