@@ -7,6 +7,7 @@ import { StatCard, StatStrip, PageHeader, EmptyState, LoadingState } from '@/com
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import type { Category } from '@/lib/api/categories';
 import CategoryRows from './_components/CategoryRows';
 import CategoryModal, { type CategoryFormData } from './_components/CategoryModal';
@@ -28,14 +29,21 @@ export default function CategoriesAdminPage() {
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     try {
-      if (!supabase) return;
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      setCategories(data ?? []);
+      if (USE_RDS_FROM_BROWSER) {
+        const res = await fetch('/api/admin/categories', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const { rows } = await res.json() as { rows: Category[] };
+        setCategories(rows);
+      } else {
+        if (!supabase) return;
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*')
+          .order('sort_order', { ascending: true })
+          .order('created_at', { ascending: true });
+        if (error) throw error;
+        setCategories(data ?? []);
+      }
     } catch {
       setCategories([]);
     } finally {
@@ -67,7 +75,7 @@ export default function CategoriesAdminPage() {
   };
 
   const handleSave = async () => {
-    if (!supabase || !form.slug.trim() || !form.name.kr?.trim()) return;
+    if (!form.slug.trim() || !form.name.kr?.trim()) return;
     const payload = {
       slug: form.slug.trim(),
       parent_id: form.parent_id || null,
@@ -77,12 +85,25 @@ export default function CategoriesAdminPage() {
     };
 
     try {
-      if (editingId) {
-        const { error } = await supabase.from('categories').update(payload).eq('id', editingId);
-        if (error) throw error;
+      if (USE_RDS_FROM_BROWSER) {
+        const url = editingId
+          ? `/api/admin/categories?id=${encodeURIComponent(editingId)}`
+          : '/api/admin/categories';
+        const res = await fetch(url, {
+          method: editingId ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
       } else {
-        const { error } = await supabase.from('categories').insert(payload);
-        if (error) throw error;
+        if (!supabase) return;
+        if (editingId) {
+          const { error } = await supabase.from('categories').update(payload).eq('id', editingId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('categories').insert(payload);
+          if (error) throw error;
+        }
       }
       // Header mega-menu reads the categories tree from the same memo
       // the menus admin invalidates — without this the public site shows
@@ -102,8 +123,11 @@ export default function CategoriesAdminPage() {
       : '이 카테고리를 삭제하시겠습니까?';
     const ok = await confirm({ message: msg, tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    if (!supabase) return;
-    await supabase.from('categories').delete().eq('id', id);
+    if (USE_RDS_FROM_BROWSER) {
+      await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    } else if (supabase) {
+      await supabase.from('categories').delete().eq('id', id);
+    }
     await revalidateHeaderData();
     fetchAll();
   };

@@ -3,6 +3,7 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import type { ReviewRow } from './ReviewCardEditor';
 
 const supabase = getSupabaseBrowser();
@@ -48,9 +49,18 @@ export function useReviews() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    if (!supabase) { setRows([]); setLoading(false); return; }
-    const { data } = await supabase.from('review_cards').select('*').order('sort_order');
-    setRows((data ?? []).map((r: Record<string, unknown>) => ({
+    let raw: Record<string, unknown>[] = [];
+    if (USE_RDS_FROM_BROWSER) {
+      const res = await fetch('/api/admin/review-cards', { cache: 'no-store' });
+      if (res.ok) {
+        const { rows } = await res.json() as { rows: Record<string, unknown>[] };
+        raw = rows ?? [];
+      }
+    } else if (supabase) {
+      const { data } = await supabase.from('review_cards').select('*').order('sort_order');
+      raw = data ?? [];
+    }
+    setRows(raw.map(r => ({
       id: r.id as string,
       image_url: (r.image_url as string) ?? '',
       title: (r.title as string) ?? '',
@@ -119,7 +129,6 @@ export function useReviews() {
   }
 
   async function save(i: number) {
-    if (!supabase) { toast.show('Supabase가 없습니다.', 'error'); return; }
     const r = rows[i];
     setSaving(r.id ?? `new-${i}`);
     const payload = {
@@ -129,17 +138,44 @@ export function useReviews() {
       link_url: r.link_url || null,
       sort_order: r.sort_order,
       is_active: r.is_active,
-      updated_at: new Date().toISOString(),
     };
-    const res = r.id
-      ? await supabase.from('review_cards').update(payload).eq('id', r.id).select().single()
-      : await supabase.from('review_cards').insert(payload).select().single();
-    setSaving(null);
-    if (res.error) { toast.show(`저장 실패: ${res.error.message}`, 'error'); return; }
-    if (res.data) update(i, { id: (res.data as { id: string }).id });
-    setSavedId(res.data ? (res.data as { id: string }).id : null);
-    setTimeout(() => setSavedId(null), 2000);
-    revalidateHomepageData('reviews');
+    try {
+      let returnedId: string | null = null;
+      if (USE_RDS_FROM_BROWSER) {
+        const url = r.id
+          ? `/api/admin/review-cards?id=${encodeURIComponent(r.id)}`
+          : '/api/admin/review-cards';
+        const res = await fetch(url, {
+          method: r.id ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        if (!r.id) {
+          const { row } = await res.json() as { row: { id: string } | null };
+          returnedId = row?.id ?? null;
+        } else {
+          returnedId = r.id;
+        }
+      } else {
+        if (!supabase) { toast.show('Supabase가 없습니다.', 'error'); setSaving(null); return; }
+        const supaPayload = { ...payload, updated_at: new Date().toISOString() };
+        const res = r.id
+          ? await supabase.from('review_cards').update(supaPayload).eq('id', r.id).select().single()
+          : await supabase.from('review_cards').insert(supaPayload).select().single();
+        if (res.error) throw res.error;
+        returnedId = res.data ? (res.data as { id: string }).id : null;
+      }
+      if (returnedId && !r.id) update(i, { id: returnedId });
+      setSavedId(returnedId);
+      setTimeout(() => setSavedId(null), 2000);
+      revalidateHomepageData('reviews');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '저장 실패';
+      toast.show(`저장 실패: ${msg}`, 'error');
+    } finally {
+      setSaving(null);
+    }
   }
 
   async function remove(i: number) {
@@ -150,10 +186,15 @@ export function useReviews() {
     // card doesn't silently vanish from the UI.
     const snapshot = rows;
     setRows(prev => prev.filter((_, idx) => idx !== i));
-    if (r.id && supabase) {
+    if (r.id) {
       try {
-        const { error } = await supabase.from('review_cards').delete().eq('id', r.id);
-        if (error) throw error;
+        if (USE_RDS_FROM_BROWSER) {
+          const res = await fetch(`/api/admin/review-cards?id=${encodeURIComponent(r.id)}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error(`API ${res.status}`);
+        } else if (supabase) {
+          const { error } = await supabase.from('review_cards').delete().eq('id', r.id);
+          if (error) throw error;
+        }
         revalidateHomepageData('reviews');
       } catch (err) {
         console.warn('[admin/reviews] 삭제 실패:', err);
@@ -173,11 +214,26 @@ export function useReviews() {
       next[j] = { ...b, sort_order: a.sort_order };
       return next;
     });
-    if (supabase && a.id && b.id) {
-      await Promise.all([
-        supabase.from('review_cards').update({ sort_order: b.sort_order }).eq('id', a.id),
-        supabase.from('review_cards').update({ sort_order: a.sort_order }).eq('id', b.id),
-      ]);
+    if (a.id && b.id) {
+      if (USE_RDS_FROM_BROWSER) {
+        await Promise.all([
+          fetch(`/api/admin/review-cards?id=${encodeURIComponent(a.id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sort_order: b.sort_order }),
+          }),
+          fetch(`/api/admin/review-cards?id=${encodeURIComponent(b.id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sort_order: a.sort_order }),
+          }),
+        ]);
+      } else if (supabase) {
+        await Promise.all([
+          supabase.from('review_cards').update({ sort_order: b.sort_order }).eq('id', a.id),
+          supabase.from('review_cards').update({ sort_order: a.sort_order }).eq('id', b.id),
+        ]);
+      }
       // Tag eviction so the storefront's unstable_cache wrapper drops
       // the cached order immediately — was staling for up to 60s before.
       revalidateHomepageData('reviews');
