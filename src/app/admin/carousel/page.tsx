@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 
 const supabase = getSupabaseBrowser();
 import type { CarouselSlide } from '@/lib/api/carousel';
@@ -36,13 +37,20 @@ export default function CarouselAdminPage() {
   async function fetchAll() {
     setIsLoading(true);
     try {
-      if (!supabase) throw new Error('클라이언트 없음');
-      const { data, error } = await supabase
-        .from('carousel_slides')
-        .select('*')
-        .order('sort_order', { ascending: true });
-      if (error) throw error;
-      setSlides(data || []);
+      if (USE_RDS_FROM_BROWSER) {
+        const res = await fetch('/api/admin/carousel-slides', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const { rows } = await res.json() as { rows: CarouselSlide[] };
+        setSlides(rows);
+      } else {
+        if (!supabase) throw new Error('클라이언트 없음');
+        const { data, error } = await supabase
+          .from('carousel_slides')
+          .select('*')
+          .order('sort_order', { ascending: true });
+        if (error) throw error;
+        setSlides(data || []);
+      }
     } catch {
       setSlides([]);
     } finally {
@@ -77,17 +85,33 @@ export default function CarouselAdminPage() {
     const ok = await confirm({ message: '이 슬라이드를 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
     setSlides(prev => prev.filter(s => s.id !== id));
-    if (supabase) {
-      await supabase.from('carousel_slides').delete().eq('id', id);
+    try {
+      if (USE_RDS_FROM_BROWSER) {
+        await fetch(`/api/admin/carousel-slides?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      } else if (supabase) {
+        await supabase.from('carousel_slides').delete().eq('id', id);
+      }
       revalidateHomepageData('carousel');
+    } catch (err) {
+      console.error('[admin/carousel] delete failed:', err);
     }
   }
 
   async function handleToggle(id: string, current: boolean) {
     setSlides(prev => prev.map(s => (s.id === id ? { ...s, is_active: !current } : s)));
-    if (supabase) {
-      await supabase.from('carousel_slides').update({ is_active: !current }).eq('id', id);
+    try {
+      if (USE_RDS_FROM_BROWSER) {
+        await fetch(`/api/admin/carousel-slides?id=${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_active: !current }),
+        });
+      } else if (supabase) {
+        await supabase.from('carousel_slides').update({ is_active: !current }).eq('id', id);
+      }
       revalidateHomepageData('carousel');
+    } catch (err) {
+      console.error('[admin/carousel] toggle failed:', err);
     }
   }
 
@@ -99,13 +123,22 @@ export default function CarouselAdminPage() {
     // will resync from the server.
     const renumbered = next.map((s, i) => ({ ...s, sort_order: (i + 1) * 10 }));
     setSlides(renumbered);
-    if (!supabase) return;
     try {
-      await Promise.all(
-        renumbered.map(s =>
-          supabase.from('carousel_slides').update({ sort_order: s.sort_order }).eq('id', s.id),
-        ),
-      );
+      if (USE_RDS_FROM_BROWSER) {
+        await Promise.all(renumbered.map(s =>
+          fetch(`/api/admin/carousel-slides?id=${encodeURIComponent(s.id)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sort_order: s.sort_order }),
+          }),
+        ));
+      } else if (supabase) {
+        await Promise.all(
+          renumbered.map(s =>
+            supabase.from('carousel_slides').update({ sort_order: s.sort_order }).eq('id', s.id),
+          ),
+        );
+      }
       revalidateHomepageData('carousel');
     } catch (err) {
       console.error('[admin/carousel] reorder persist failed:', err);
