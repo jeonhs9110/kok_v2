@@ -3,6 +3,7 @@ import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
+import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import {
   MAX_FILE_SIZE,
   emptyForm,
@@ -130,16 +131,28 @@ export function useSlideForm(
         }
       }
       const payload = buildSlidePayload(formData, finalImageUrl, finalMobileImageUrl);
-      if (!supabase) throw new Error('클라이언트 없음');
-      if (editingId) {
-        const { error } = await supabase
-          .from('carousel_slides')
-          .update(payload)
-          .eq('id', editingId);
-        if (error) throw error;
+      if (USE_RDS_FROM_BROWSER) {
+        const url = editingId
+          ? `/api/admin/carousel-slides?id=${encodeURIComponent(editingId)}`
+          : '/api/admin/carousel-slides';
+        const res = await fetch(url, {
+          method: editingId ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
       } else {
-        const { error } = await supabase.from('carousel_slides').insert([payload]);
-        if (error) throw error;
+        if (!supabase) throw new Error('클라이언트 없음');
+        if (editingId) {
+          const { error } = await supabase
+            .from('carousel_slides')
+            .update(payload)
+            .eq('id', editingId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('carousel_slides').insert([payload]);
+          if (error) throw error;
+        }
       }
       revalidateHomepageData('carousel');
       onSaved();

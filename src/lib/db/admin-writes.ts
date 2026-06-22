@@ -2,6 +2,109 @@
 import { getPgPool } from './pool';
 import type { CommentRow, PostRow, ProductRow } from './types';
 
+// ─── generic helpers ─────────────────────────────────────────────
+// Used by the per-resource admin routes once the route has validated
+// the table name + filtered the payload against a fixed allow-list.
+// NEVER pass arbitrary user input as `table` / `columns` — they go
+// straight into SQL.
+
+type PgParam = { placeholder: string; value: unknown };
+
+function paramOf(value: unknown, index: number): PgParam {
+  if (value === null || value === undefined) {
+    return { placeholder: `$${index}`, value: null };
+  }
+  if (Array.isArray(value)) {
+    // text[] columns — pg-node encodes JS arrays natively.
+    return { placeholder: `$${index}`, value };
+  }
+  if (typeof value === 'object') {
+    // jsonb columns — stringify + explicit cast so pg parses it back.
+    return { placeholder: `$${index}::jsonb`, value: JSON.stringify(value) };
+  }
+  return { placeholder: `$${index}`, value };
+}
+
+function quoteIdent(ident: string): string {
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(ident)) {
+    throw new Error(`[admin-writes] unsafe identifier: ${ident}`);
+  }
+  return `"${ident}"`;
+}
+
+/**
+ * INSERT a row built from a key→value map. `defaults` get merged into
+ * the payload at INSERT time (typically `{ is_active: true }`); they
+ * are skipped on UPDATE.
+ */
+export async function genericInsertInPg(
+  table: string,
+  payload: Record<string, unknown>,
+  defaults: Record<string, unknown> = {},
+): Promise<Record<string, unknown> | null> {
+  const merged = { ...defaults, ...payload };
+  const keys = Object.keys(merged);
+  if (keys.length === 0) throw new Error('[admin-writes] insert with no columns');
+  const params = keys.map((k, i) => paramOf(merged[k], i + 1));
+  const cols = keys.map(quoteIdent).join(', ');
+  const placeholders = params.map(p => p.placeholder).join(', ');
+  const values = params.map(p => p.value);
+  const sql = `INSERT INTO public.${quoteIdent(table)} (${cols}) VALUES (${placeholders}) RETURNING *`;
+  const pool = getPgPool();
+  const { rows } = await pool.query(sql, values);
+  return (rows[0] as Record<string, unknown> | undefined) ?? null;
+}
+
+export async function genericUpdateInPg(
+  table: string,
+  id: string,
+  payload: Record<string, unknown>,
+): Promise<boolean> {
+  const keys = Object.keys(payload);
+  if (keys.length === 0) return true; // no-op
+  const params = keys.map((k, i) => paramOf(payload[k], i + 2)); // $1 reserved for id
+  const sets = keys.map((k, i) => `${quoteIdent(k)} = ${params[i].placeholder}`).join(', ');
+  const values = [id, ...params.map(p => p.value)];
+  const sql = `UPDATE public.${quoteIdent(table)} SET ${sets} WHERE id = $1`;
+  const pool = getPgPool();
+  const { rowCount } = await pool.query(sql, values);
+  return (rowCount ?? 0) > 0;
+}
+
+export async function genericDeleteInPg(table: string, id: string): Promise<boolean> {
+  const pool = getPgPool();
+  const { rowCount } = await pool.query(
+    `DELETE FROM public.${quoteIdent(table)} WHERE id = $1`,
+    [id],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function genericSetActiveInPg(
+  table: string,
+  id: string,
+  isActive: boolean,
+): Promise<boolean> {
+  const pool = getPgPool();
+  const { rowCount } = await pool.query(
+    `UPDATE public.${quoteIdent(table)} SET is_active = $2 WHERE id = $1`,
+    [id, isActive],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function genericListInPg(
+  table: string,
+  orderBy: string = 'created_at',
+  direction: 'ASC' | 'DESC' = 'DESC',
+): Promise<Record<string, unknown>[]> {
+  const pool = getPgPool();
+  const { rows } = await pool.query(
+    `SELECT * FROM public.${quoteIdent(table)} ORDER BY ${quoteIdent(orderBy)} ${direction}`,
+  );
+  return rows as Record<string, unknown>[];
+}
+
 /**
  * Phase C2 — pg-backed write helpers for server-callable Supabase
  * mutations.
