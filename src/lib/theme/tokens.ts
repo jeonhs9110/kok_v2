@@ -74,6 +74,17 @@ export interface ThemeTokens {
    */
   header_logo_height: string;
   /**
+   * Optional cap on the logo's horizontal width. CSS length (e.g.
+   * "200px") or empty for "no constraint" (current default). Added
+   * 2026-06-24 — when the operator increased logo height the wider
+   * logo image was pushing the nav menu to the right because the
+   * default `width: auto` honored the natural aspect ratio. Setting
+   * this cap clamps width independently of height; `object-fit:
+   * contain` makes the image scale down inside the box if its
+   * natural aspect would exceed the cap.
+   */
+  header_logo_max_width: string;
+  /**
    * SubHero banner subtitle font size — the line above the big title
    * inside SubHeroBanner.tsx. Bosses asked at 2026-06-10 to bump the
    * default and add a global knob; this token feeds the
@@ -160,6 +171,10 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   // admins can still pin any preset (32/40/48/56) or any pixel value
   // 20–80 from /admin/logo. Saved rows keep their override.
   header_logo_height: '56px',
+  // Empty default = no width constraint (current behavior). Operators
+  // who hit "logo pushes nav right when bigger" pick a cap (120/160/
+  // 200/240 presets or a custom px).
+  header_logo_max_width: '',
   // 18px default — bosses said the sub-header read too small at the
   // 2026-06-10 meeting. Bumped from the pre-token 14/16px Tailwind
   // text-sm/md:text-base pair so a fresh install lands at 18px both
@@ -217,6 +232,7 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     header_menu_font_size: partial.header_menu_font_size || DEFAULT_THEME_TOKENS.header_menu_font_size,
     header_submenu_font_size: partial.header_submenu_font_size || DEFAULT_THEME_TOKENS.header_submenu_font_size,
     header_logo_height: partial.header_logo_height || DEFAULT_THEME_TOKENS.header_logo_height,
+    header_logo_max_width: partial.header_logo_max_width ?? '',
     subhero_subtitle_size: partial.subhero_subtitle_size || DEFAULT_THEME_TOKENS.subhero_subtitle_size,
     product_section_title_size: partial.product_section_title_size || DEFAULT_THEME_TOKENS.product_section_title_size,
     product_name_size: partial.product_name_size || DEFAULT_THEME_TOKENS.product_name_size,
@@ -260,6 +276,10 @@ export function tokensToCss(t: ThemeTokens): string {
   // "none" so the carousel stays full-width on every viewport. Setting
   // a value makes .kokkok-hero-region pick up the cap.
   if (t.hero_max_width) lines.push(`--hero-max-width: ${t.hero_max_width};`);
+  // Empty header_logo_max_width -> no var emission -> CSS falls through
+  // to `max-width: none` so the logo's natural width is unconstrained
+  // (pre-2026-06-24 behavior). Setting a value clamps the logo width.
+  if (t.header_logo_max_width) lines.push(`--header-logo-max-width: ${t.header_logo_max_width};`);
   if (t.font_body) lines.push(`--font-body: ${t.font_body};`);
   if (t.font_display) lines.push(`--font-display: ${t.font_display};`);
   if (t.font_header) lines.push(`--font-header: ${t.font_header};`);
