@@ -50,11 +50,55 @@ function hashIp(ip: string): string {
 
 const INSERT_TIMEOUT_MS = 5000;
 
+/**
+ * Coarse-grained device classification from the User-Agent. Three
+ * buckets is enough to answer "how does mobile compare to desktop?"
+ * — the question Korean DTC operators actually ask. Apple-tablet
+ * lookup is explicit because iPadOS UA mimics macOS Safari and would
+ * otherwise fall to desktop. Order matters: tablet check before
+ * mobile so an iPad doesn't classify as mobile.
+ */
+function parseDeviceType(ua: string | null): 'mobile' | 'tablet' | 'desktop' {
+  if (!ua) return 'desktop';
+  if (/iPad|Tablet|PlayBook|Silk(?!.*Mobile)/i.test(ua)) return 'tablet';
+  if (/Mobile|iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry|Opera Mini/i.test(ua)) return 'mobile';
+  return 'desktop';
+}
+
+/**
+ * Pull utm_source / utm_medium / utm_campaign from the landing URL's
+ * search string (PageTracker sends window.location.search). Truncated
+ * to 200 chars per field — long enough for any sane campaign tag,
+ * short enough that a malformed query can't bloat the row.
+ */
+function extractUtm(search: string | null | undefined): {
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+} {
+  if (!search) return { utm_source: null, utm_medium: null, utm_campaign: null };
+  let params: URLSearchParams;
+  try {
+    params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
+  } catch {
+    return { utm_source: null, utm_medium: null, utm_campaign: null };
+  }
+  const pick = (k: string) => {
+    const v = params.get(k);
+    return v && v.trim().length > 0 ? v.trim().slice(0, 200) : null;
+  };
+  return {
+    utm_source: pick('utm_source'),
+    utm_medium: pick('utm_medium'),
+    utm_campaign: pick('utm_campaign'),
+  };
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!supabase) return NextResponse.json({ ok: false }, { status: 500 });
 
-    const { path, referrer } = await req.json();
+    const { path, referrer, search } = await req.json();
 
     // Country resolution priority:
     //   1. x-vercel-ip-country header  — works on Vercel (preview/dev)
@@ -83,6 +127,13 @@ export async function POST(req: NextRequest) {
     const traffic_source = categorizeReferrer(referrer);
     const search_keyword = extractSearchKeyword(referrer, traffic_source);
 
+    // Migration 46 (2026-06-24): mobile / desktop split + UTM tags.
+    // ~80% of Korean DTC is mobile so the device split is non-optional
+    // for the CEO view. UTM is what makes paid-vs-organic measurable;
+    // without it both buckets collapse onto the same referrer host.
+    const device_type = parseDeviceType(req.headers.get('user-agent'));
+    const { utm_source, utm_medium, utm_campaign } = extractUtm(search);
+
     // 5s timeout — a stalled Supabase would otherwise block this route
     // indefinitely and starve EC2 worker threads. The insert is
     // best-effort analytics; dropping a row when the DB is slow is
@@ -94,6 +145,10 @@ export async function POST(req: NextRequest) {
       ip_hash,
       traffic_source,
       search_keyword,
+      device_type,
+      utm_source,
+      utm_medium,
+      utm_campaign,
     }]);
 
     await Promise.race([

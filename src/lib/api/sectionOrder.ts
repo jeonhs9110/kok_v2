@@ -14,6 +14,7 @@ export type CoreSectionKey =
   | 'carousel'
   | 'promo-banners'
   | 'products'
+  | 'top-viewed'
   | 'shorts'
   | 'sub-hero'
   | 'instagram'
@@ -32,6 +33,7 @@ export const DEFAULT_ORDER: CoreSectionKey[] = [
   'carousel',
   'promo-banners',
   'products',
+  'top-viewed',
   'shorts',
   'sub-hero',
   'instagram',
