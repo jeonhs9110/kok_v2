@@ -36,7 +36,7 @@ interface Props {
  */
 export default function AdminTopBar({ title, previewUrl, onOpenDrawer, onOpenSearch }: Props) {
   return (
-    <header className="h-12 bg-white border-b border-[#e5e7eb] flex items-center px-3 sm:px-4 gap-2 sticky top-0 z-30">
+    <header className="kokkok-no-print h-12 bg-white border-b border-[#e5e7eb] flex items-center px-3 sm:px-4 gap-2 sticky top-0 z-30">
       <button
         type="button"
         className="md:hidden text-[#6b7280] hover:text-[#1f2937] hover:bg-[#f3f4f6] p-1 rounded transition-colors"

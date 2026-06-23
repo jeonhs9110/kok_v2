@@ -8,6 +8,7 @@ import HeroSlider from '@/components/HeroSlider';
 import ProductGrid, { type GridProduct } from '@/components/ProductGrid';
 import PromoBannersSection from '@/components/PromoBannersSection';
 import ShortsFeedSection, { ShortsFeedSkeleton } from '@/components/sections/ShortsFeedSection';
+import TopViewedSection from '@/components/sections/TopViewedSection';
 import SubHeroSection, { SubHeroSkeleton } from '@/components/sections/SubHeroSection';
 import InstagramFeedSection, { InstagramFeedSkeleton } from '@/components/sections/InstagramFeedSection';
 import ReviewsSection, { ReviewsSkeleton } from '@/components/sections/ReviewsSection';
@@ -142,6 +143,13 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
         </div>
         <ProductGrid products={bestSellerProducts} canPurchase={isKorea} displayConfig={bestSellerDisplay} />
       </section>
+    ),
+    'top-viewed': (
+      <SectionErrorBoundary label="TopViewed">
+        <Suspense fallback={null}>
+          <TopViewedSection lang={lang} canPurchase={isKorea} />
+        </Suspense>
+      </SectionErrorBoundary>
     ),
     'shorts': (
       <SectionErrorBoundary label="ShortsFeed">

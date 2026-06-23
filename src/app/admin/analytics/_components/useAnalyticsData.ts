@@ -38,6 +38,8 @@ const supabase = getSupabaseBrowser();
 const SESSION_GAP_MS = 30 * 60 * 1000;
 const RAW_LIMIT = 20000;
 
+export type DeviceType = 'mobile' | 'tablet' | 'desktop';
+
 export interface Session {
   ipHash: string;
   startMs: number;
@@ -48,6 +50,27 @@ export interface Session {
   searchKeyword: string | null;
   /** True if any page in this session was a product detail (/products/X). */
   viewedProduct: boolean;
+  deviceType: DeviceType;
+  utmSource: string | null;
+  utmMedium: string | null;
+  utmCampaign: string | null;
+}
+
+export interface DeviceRow {
+  device: DeviceType;
+  label: string;
+  sessions: number;
+  share: number;
+  engagementRate: number;
+  productViewRate: number;
+}
+
+export interface UtmRow {
+  source: string;
+  medium: string | null;
+  campaign: string | null;
+  sessions: number;
+  productViewRate: number;
 }
 
 export interface ChannelRow {
@@ -95,12 +118,21 @@ export interface AnalyticsData {
   channels: ChannelRow[];
   keywords: KeywordRow[];
   landingPages: LandingPageRow[];
+  devices: DeviceRow[];
+  utmCampaigns: UtmRow[];
   heatmap: Heatmap;
   /** Peak hour-of-day across the range (0-23 KST). */
   peakHour: number | null;
   /** Peak day-of-week (0=Sun..6=Sat). */
   peakDow: number | null;
   truncated: boolean;
+  /** Counts in the immediately-prior same-length window for trend %. */
+  prior: {
+    sessions: number;
+    engagedSessions: number;
+    bounceRate: number;
+    avgPagesPerSession: number;
+  };
 }
 
 export const EMPTY: AnalyticsData = {
@@ -116,10 +148,13 @@ export const EMPTY: AnalyticsData = {
   channels: [],
   keywords: [],
   landingPages: [],
+  devices: [],
+  utmCampaigns: [],
   heatmap: Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0)),
   peakHour: null,
   peakDow: null,
   truncated: false,
+  prior: { sessions: 0, engagedSessions: 0, bounceRate: 0, avgPagesPerSession: 0 },
 };
 
 interface RawRow {
@@ -129,6 +164,20 @@ interface RawRow {
   search_keyword: string | null;
   created_at: string | null;
   ip_hash: string | null;
+  device_type: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+}
+
+const DEVICE_LABEL: Record<DeviceType, string> = {
+  mobile: '모바일',
+  tablet: '태블릿',
+  desktop: '데스크탑',
+};
+
+function isDeviceType(v: string | null): v is DeviceType {
+  return v === 'mobile' || v === 'tablet' || v === 'desktop';
 }
 
 /**
@@ -159,6 +208,7 @@ function sessionize(rows: RawRow[]): { sessions: Session[]; skipped: number } {
       if (!current || t - current.endMs > SESSION_GAP_MS) {
         if (current) sessions.push(current);
         const src = (row.traffic_source as TrafficSource | null) ?? categorizeReferrer(row.referrer);
+        const dev = isDeviceType(row.device_type) ? row.device_type : 'desktop';
         current = {
           ipHash,
           startMs: t,
@@ -168,6 +218,10 @@ function sessionize(rows: RawRow[]): { sessions: Session[]; skipped: number } {
           landingPath: path,
           searchKeyword: row.search_keyword,
           viewedProduct: isProductDetail,
+          deviceType: dev,
+          utmSource: row.utm_source,
+          utmMedium: row.utm_medium,
+          utmCampaign: row.utm_campaign,
         };
       } else {
         current.endMs = t;
@@ -203,12 +257,26 @@ export function useAnalyticsData() {
     try {
       if (!supabase) throw new Error('No client');
 
-      const [analyticsRange, productsAll] = await Promise.all([
+      const rangeMs = new Date(forRange.end).getTime() - new Date(forRange.start).getTime();
+      const priorStart = new Date(new Date(forRange.start).getTime() - rangeMs).toISOString();
+      const priorEnd = forRange.start;
+
+      const [analyticsRange, analyticsPrior, productsAll] = await Promise.all([
         supabase
           .from('analytics')
-          .select('path, referrer, traffic_source, search_keyword, created_at, ip_hash')
+          .select('path, referrer, traffic_source, search_keyword, created_at, ip_hash, device_type, utm_source, utm_medium, utm_campaign')
           .gte('created_at', forRange.start)
           .lt('created_at', forRange.end)
+          .order('created_at', { ascending: false })
+          .limit(RAW_LIMIT),
+        // Prior window — only need ip_hash + path + created_at to derive
+        // session count, engaged %, bounce % for the trend deltas. We
+        // skip the heavy referrer/keyword columns to keep the fetch lean.
+        supabase
+          .from('analytics')
+          .select('path, created_at, ip_hash')
+          .gte('created_at', priorStart)
+          .lt('created_at', priorEnd)
           .order('created_at', { ascending: false })
           .limit(RAW_LIMIT),
         supabase.from('products').select('id, name'),
@@ -302,6 +370,76 @@ export function useAnalyticsData() {
         }))
         .sort((a, b) => b.sessions - a.sessions);
 
+      // Device split — mobile / tablet / desktop. The CEO question
+      // ("how many are mobile?") needs a top-level breakdown, plus
+      // engagement and product-view rates so the operator can see
+      // whether the new mobile carousel is actually moving the
+      // mobile-specific funnel.
+      const deviceMap = new Map<DeviceType, { sessions: number; engaged: number; product: number }>();
+      for (const s of sessions) {
+        const e = deviceMap.get(s.deviceType) ?? { sessions: 0, engaged: 0, product: 0 };
+        e.sessions++;
+        if (s.pageCount > 1) e.engaged++;
+        if (s.viewedProduct) e.product++;
+        deviceMap.set(s.deviceType, e);
+      }
+      const devices: DeviceRow[] = (['mobile', 'desktop', 'tablet'] as DeviceType[])
+        .map(device => {
+          const v = deviceMap.get(device) ?? { sessions: 0, engaged: 0, product: 0 };
+          return {
+            device,
+            label: DEVICE_LABEL[device],
+            sessions: v.sessions,
+            share: totalSessions ? v.sessions / totalSessions : 0,
+            engagementRate: v.sessions ? v.engaged / v.sessions : 0,
+            productViewRate: v.sessions ? v.product / v.sessions : 0,
+          };
+        });
+
+      // UTM campaign mix — only sessions whose landing URL carried a
+      // utm_source tag. Empty when nothing's tagged; surfaces 어 organic
+      // vs paid (or "campaign A" vs "campaign B") quality side by side
+      // once the marketing team starts running tagged links.
+      const utmMap = new Map<string, { source: string; medium: string | null; campaign: string | null; sessions: number; product: number }>();
+      for (const s of sessions) {
+        if (!s.utmSource) continue;
+        const key = `${s.utmSource}::${s.utmMedium ?? ''}::${s.utmCampaign ?? ''}`;
+        const e = utmMap.get(key) ?? {
+          source: s.utmSource,
+          medium: s.utmMedium,
+          campaign: s.utmCampaign,
+          sessions: 0,
+          product: 0,
+        };
+        e.sessions++;
+        if (s.viewedProduct) e.product++;
+        utmMap.set(key, e);
+      }
+      const utmCampaigns: UtmRow[] = Array.from(utmMap.values())
+        .map(u => ({
+          source: u.source,
+          medium: u.medium,
+          campaign: u.campaign,
+          sessions: u.sessions,
+          productViewRate: u.sessions ? u.product / u.sessions : 0,
+        }))
+        .sort((a, b) => b.sessions - a.sessions);
+
+      // Prior same-length window — just enough fields to compute trend
+      // deltas on the four KPI-strip metrics. We sessionize the prior
+      // rows the same way and read out the four numbers we need.
+      const priorRows = (analyticsPrior.data ?? []) as RawRow[];
+      const { sessions: priorSessions } = sessionize(priorRows);
+      const priorTotal = priorSessions.length;
+      const priorEngaged = priorSessions.filter(s => s.pageCount > 1).length;
+      const priorPages = priorSessions.reduce((s, x) => s + x.pageCount, 0);
+      const prior = {
+        sessions: priorTotal,
+        engagedSessions: priorEngaged,
+        bounceRate: priorTotal ? 1 - priorEngaged / priorTotal : 0,
+        avgPagesPerSession: priorTotal ? priorPages / priorTotal : 0,
+      };
+
       // Hour-of-day × day-of-week heatmap. Hours are in browser-local
       // time, which is KST for the operator — matches when they'd post
       // on Instagram or run a campaign.
@@ -336,10 +474,13 @@ export function useAnalyticsData() {
         channels,
         keywords,
         landingPages,
+        devices,
+        utmCampaigns,
         heatmap,
         peakHour,
         peakDow,
         truncated,
+        prior,
       });
     } catch (err) {
       console.error('[analytics] fetchAll failed:', err);

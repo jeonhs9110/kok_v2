@@ -1,0 +1,96 @@
+/*
+ * Print stylesheet for /admin/analytics — turns the live page into a
+ * CEO-ready report when the operator hits "PDF로 저장 / 인쇄".
+ *
+ * Strategy:
+ *   1. Hide everything that's UI chrome (sidebar, top bar, refresh
+ *      button, date range chips, the export button itself) using the
+ *      .kokkok-no-print escape hatch — both shared admin layout
+ *      elements and components carry that class.
+ *   2. Reveal a print-only report header (.kokkok-print-only) with
+ *      brand, report title, range, and timestamp.
+ *   3. Force light backgrounds + black text — the print preview
+ *      otherwise inherits the admin's near-white panels and dark
+ *      headings, which print as muddy grey on a CEO's office laser.
+ *   4. Encourage clean page breaks at the section level so a panel
+ *      doesn't split awkwardly across two pages.
+ */
+
+@media print {
+  /* Hide all admin chrome. The shared layout marks its sidebar / top
+     bar / overlays with kokkok-no-print; this is the global escape
+     hatch components can opt into. */
+  .kokkok-no-print,
+  [data-no-print],
+  nav,
+  aside,
+  header[role='banner'] {
+    display: none !important;
+  }
+
+  /* Print-only blocks are hidden during normal rendering and shown
+     here. The report header lives in this class. */
+  .kokkok-print-only {
+    display: block !important;
+  }
+
+  /* Layout: no sidebar, no padding wrappers, full width. */
+  body,
+  main,
+  .kokkok-print-canvas {
+    background: #ffffff !important;
+    color: #111111 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  /* Force every Cafe24 panel to a printable card. Removes the dark
+     borders / shadows that print as grey blocks. */
+  .kokkok-print-canvas section,
+  .kokkok-print-canvas [class*='Panel'],
+  .kokkok-print-canvas .bg-white {
+    background: #ffffff !important;
+    border: 1px solid #d4d4d4 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Each top-level grid row gets a soft page-break suggestion so
+     panels don't tear awkwardly. */
+  .kokkok-print-canvas > * {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-bottom: 12px;
+  }
+
+  /* Most importantly: a major section gets a clean break before it.
+     The page.tsx adds .kokkok-print-section on the rows we want to
+     start fresh — first major panel after KPIs, the heatmap, etc. */
+  .kokkok-print-section {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* Tame the colored accent stripes + lucide icons — they print fine
+     in color when the CEO's printer is color, and degrade gracefully
+     on B&W. force-color-adjust keeps gradients/borders intact. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Page margins — A4 looks reasonable in 12mm; matches the default
+     Korean A4 print layout. */
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+}
+
+/* OUTSIDE the @media print block: hide the print-only header during
+   normal rendering so it never appears on the live dashboard. */
+.kokkok-print-only {
+  display: none;
+}
