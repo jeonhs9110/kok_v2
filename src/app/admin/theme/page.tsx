@@ -101,6 +101,27 @@ export default function ThemePage() {
                   비워두면 본문 폰트(또는 브랜드 기본값)를 따릅니다.
                 </p>
               </Section>
+
+              <Section title="Google Analytics 4">
+                <label className="block">
+                  <span className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
+                    측정 ID
+                  </span>
+                  <input
+                    type="text"
+                    value={t.tokens.ga_measurement_id}
+                    onChange={e => t.setTokens(prev => ({ ...prev, ga_measurement_id: e.target.value.trim() }))}
+                    placeholder="G-XXXXXXXXXX"
+                    className="mt-1 w-full px-3 py-2 text-sm rounded border border-[#e5e7eb] focus:outline-none focus:border-[#3b82f6] font-mono"
+                  />
+                </label>
+                <p className="text-[10px] text-[#9ca3af] mt-2 leading-relaxed">
+                  GA4 속성의 측정 ID(<code className="font-mono">G-</code>로 시작)를 입력하면 스토어
+                  방문이 Google Analytics에 함께 기록됩니다. 비워두면 GA가 로드되지 않습니다.
+                  GA4 enhanced measurement가 자동으로 페이지 이동을 추적하므로 별도 설정이
+                  필요 없습니다.
+                </p>
+              </Section>
             </>
           )}
         </div>

@@ -142,6 +142,18 @@ export interface ThemeTokens {
    * row read bigger".
    */
   home_product_image_ratio: string;
+  /**
+   * Google Analytics 4 measurement ID (e.g. "G-XXXXXXXXXX"). When set,
+   * [lang]/layout.tsx injects the gtag.js script so storefront visits
+   * land in GA4 alongside the in-house analytics. Empty = no GA script
+   * loaded (default, current behavior).
+   *
+   * Stored as a theme token because /admin/theme is the existing
+   * "site-wide setting" page and adding a separate admin route just
+   * for one field is overkill. Semantically it's not a "theme" thing
+   * but reuses the save flow + same JSONB row for free.
+   */
+  ga_measurement_id: string;
 }
 
 export const DEFAULT_THEME_TOKENS: ThemeTokens = {
@@ -204,6 +216,9 @@ export const DEFAULT_THEME_TOKENS: ThemeTokens = {
   // Default 5/6 matches the storefront's existing Tailwind
   // aspect-[5/6] so existing installs paint identically.
   home_product_image_ratio: '5/6',
+  // Empty = no GA script loaded. Operator pastes G-XXXXXXXXXX from
+  // their GA4 property settings on /admin/theme.
+  ga_measurement_id: '',
 };
 
 export function parseThemeTokens(raw: unknown): ThemeTokens {
@@ -243,6 +258,7 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
     hero_height_tablet: partial.hero_height_tablet || DEFAULT_THEME_TOKENS.hero_height_tablet,
     hero_height_desktop: partial.hero_height_desktop || DEFAULT_THEME_TOKENS.hero_height_desktop,
     hero_max_width: partial.hero_max_width ?? '',
+    ga_measurement_id: partial.ga_measurement_id ?? '',
   };
 }
 
