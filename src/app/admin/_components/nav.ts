@@ -33,6 +33,11 @@ export type NavItem = {
 export const NAV_ITEMS: NavItem[] = [
   { name: '홈',                href: '/admin',              icon: LayoutDashboard },
   { name: '상품',              href: '/admin/products',     icon: Package },
+  // Per boss 2026-06-22: 메뉴 관리 moves up between 상품 and 카테고리
+  // so the storefront-content controls (products → menus → categories)
+  // sit together, instead of being buried at the bottom under the
+  // settings/legal block.
+  { name: '메뉴 관리',         href: '/admin/menus',        icon: MenuSquare },
   { name: '카테고리',          href: '/admin/categories',   icon: Tag },
   { name: '고객',              href: '/admin/users',        icon: Users },
   { name: '게시판',            href: '/admin/posts',        icon: FileText },
@@ -42,7 +47,6 @@ export const NAV_ITEMS: NavItem[] = [
   { name: '회원가입 정책',     href: '/admin/registration', icon: UserPlus },
   { name: '결제 시스템',       href: '/admin/payments',     icon: CreditCard },
   { name: '법적 사항',         href: '/admin/legal',        icon: Scale },
-  { name: '메뉴 관리',         href: '/admin/menus',        icon: MenuSquare },
 ];
 
 // Back-compat shim so any remaining import of NAV_SECTIONS keeps working.
