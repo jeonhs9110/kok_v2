@@ -36,6 +36,11 @@ export interface CarouselSlide {
   subtitle_bold?: boolean | null;
   subtitle_italic?: boolean | null;
   subtitle_underline?: boolean | null;
+  // Migration 44 (2026-06-22): per-element text shadow intensity. NULL
+  // = no shadow. 0-100 maps to (depth/6)px blur + (depth/100) alpha.
+  badge_shadow_depth?: number | null;
+  title_shadow_depth?: number | null;
+  subtitle_shadow_depth?: number | null;
   text_position?: string | null;
   // Migration 27: separate anchor for the mobile breakpoint.
   text_position_mobile?: string | null;

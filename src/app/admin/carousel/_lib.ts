@@ -52,6 +52,14 @@ export interface SlideFormData {
   subtitle_bold: boolean;
   subtitle_italic: boolean;
   subtitle_underline: boolean;
+  // Migration 44 (2026-06-22): per-element text shadow. NULL means the
+  // element renders without text-shadow (legacy default). 0-100 is the
+  // intensity dial the admin sets via the slider — the storefront maps
+  // it to (depth/6)px blur + (depth/100) alpha so the curve feels
+  // perceptually linear from "barely a wisp" to "heavy contrast".
+  badge_shadow_depth: number | null;
+  title_shadow_depth: number | null;
+  subtitle_shadow_depth: number | null;
   // Legacy 9-cell columns (migrations 25/27/29). Kept for backward
   // safety until the next minor sweep — every consumer now reads the
   // _anchor pairs below and only falls back to these when an old row
@@ -95,6 +103,9 @@ export const emptyForm: SlideFormData = {
   badge_bold: false,    badge_italic: false,    badge_underline: false,
   title_bold: true,     title_italic: false,    title_underline: false,
   subtitle_bold: false, subtitle_italic: false, subtitle_underline: false,
+  badge_shadow_depth: null,
+  title_shadow_depth: null,
+  subtitle_shadow_depth: null,
   text_position: 'mc',
   text_position_mobile: 'mc',
   image_position: 'mc',
@@ -143,6 +154,9 @@ export function formFromSlide(s: CarouselSlide): SlideFormData {
     subtitle_bold:     s.subtitle_bold     ?? false,
     subtitle_italic:   s.subtitle_italic   ?? false,
     subtitle_underline: s.subtitle_underline ?? false,
+    badge_shadow_depth:    (s as { badge_shadow_depth?: number | null }).badge_shadow_depth ?? null,
+    title_shadow_depth:    (s as { title_shadow_depth?: number | null }).title_shadow_depth ?? null,
+    subtitle_shadow_depth: (s as { subtitle_shadow_depth?: number | null }).subtitle_shadow_depth ?? null,
     text_position:         (s.text_position as SlideFormData['text_position']) ?? 'mc',
     text_position_mobile:  (s.text_position_mobile as SlideFormData['text_position_mobile']) ?? 'mc',
     image_position:        (s.image_position as SlideFormData['image_position']) ?? 'mc',
@@ -195,6 +209,9 @@ export function buildSlidePayload(
     subtitle_bold: formData.subtitle_bold,
     subtitle_italic: formData.subtitle_italic,
     subtitle_underline: formData.subtitle_underline,
+    badge_shadow_depth: formData.badge_shadow_depth,
+    title_shadow_depth: formData.title_shadow_depth,
+    subtitle_shadow_depth: formData.subtitle_shadow_depth,
     // Legacy 9-cell keys (kept in sync as a backward-compat rollback safety
     // until the next minor sweep can drop the old columns).
     text_position: formData.text_position,

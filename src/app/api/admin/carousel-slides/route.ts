@@ -20,6 +20,7 @@ const route = makeAdminTableRoute({
     'badge_bold', 'badge_italic', 'badge_underline',
     'title_bold', 'title_italic', 'title_underline',
     'subtitle_bold', 'subtitle_italic', 'subtitle_underline',
+    'badge_shadow_depth', 'title_shadow_depth', 'subtitle_shadow_depth',
     'text_position', 'text_position_mobile',
     'image_position', 'image_position_mobile',
     'text_anchor', 'text_anchor_mobile',

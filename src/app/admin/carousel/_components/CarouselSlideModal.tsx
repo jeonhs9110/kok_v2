@@ -1,14 +1,13 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { SUPPORTED_LANGS, LANG_LABELS } from '@/lib/i18n/types';
 import { type SlideFormData } from '../_lib';
 import { useModalA11y } from '@/hooks/useModalA11y';
 import CarouselSlidePreview from './CarouselSlidePreview';
 import SlideDisplayModePicker from './SlideDisplayModePicker';
-import SlideTextEditor from './SlideTextEditor';
-import SlideColorPicker from './SlideColorPicker';
-import SlideFontSizeOffsets from './SlideFontSizeOffsets';
-import SlideTypographyAndPosition from './SlideTypographyAndPosition';
+import SlideElementGroup from './SlideElementGroup';
+import SlidePositionSection from './SlidePositionSection';
 import SlideImagesSection from './SlideImagesSection';
 import { useSlideLivePreview } from './useSlideLivePreview';
 import { useSlideForm } from './useSlideForm';
@@ -108,26 +107,100 @@ export default function CarouselSlideModal({
                 }}
               />
 
-              <SlideTextEditor
+              {/* Per boss 2026-06-22: refactored from property-grouped
+                  sections (all colors together, all font sizes together,
+                  etc.) to element-grouped sections (each of 뱃지/제목/
+                  부제목 carries its own text + font + color + shadow).
+                  Position pickers stay below as a slide-level concern. */}
+
+              {/* Language tab strip — used by every element below. */}
+              <div className="flex gap-1">
+                {SUPPORTED_LANGS.map(l => {
+                  const isActive = f.activeLang === l;
+                  const hasContent = f.formData.badge[l] || f.formData.title[l];
+                  return (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => f.setActiveLang(l)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded transition-colors ${
+                        isActive
+                          ? 'bg-[#1f2937] text-white'
+                          : 'bg-[#f3f4f6] text-[#6b7280] hover:bg-[#e5e7eb]'
+                      }`}
+                    >
+                      {LANG_LABELS[l]}
+                      {hasContent && (
+                        <span className="ml-1 w-1.5 h-1.5 bg-[#22c55e] rounded-full inline-block" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Slide-level background color (fallback when no image fills
+                  the frame). Kept up here near the image controls because
+                  it's a slide-level decision, not per-element. */}
+              <div className="space-y-1 pt-3 border-t border-[#e5e7eb]">
+                <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
+                  슬라이드 배경색
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={f.formData.bg_color}
+                    onChange={e => f.setFormData(prev => ({ ...prev, bg_color: e.target.value }))}
+                    className="w-14 h-10 rounded border border-[#d1d5db] cursor-pointer p-0 kokkok-keep-border"
+                  />
+                  <input
+                    type="text"
+                    value={f.formData.bg_color}
+                    onChange={e => f.setFormData(prev => ({ ...prev, bg_color: e.target.value }))}
+                    className="flex-1 rounded px-3 py-2 text-sm font-mono"
+                  />
+                </div>
+              </div>
+
+              <SlideElementGroup
+                element="badge"
                 formData={f.formData}
                 activeLang={f.activeLang}
-                onChangeLang={f.setActiveLang}
                 onUpdateField={f.updateField}
-                onUpdateLink={url => f.setFormData(prev => ({ ...prev, link_url: url }))}
+                onPatch={patch => f.setFormData(prev => ({ ...prev, ...patch }))}
               />
-
-              <SlideColorPicker
-                formData={f.formData}
-                onChange={(key, value) => f.setFormData(prev => ({ ...prev, [key]: value }))}
-              />
-
-              <SlideFontSizeOffsets
+              <SlideElementGroup
+                element="title"
                 formData={f.formData}
                 activeLang={f.activeLang}
-                onChange={(key, value) => f.setFormData(prev => ({ ...prev, [key]: value }))}
+                onUpdateField={f.updateField}
+                onPatch={patch => f.setFormData(prev => ({ ...prev, ...patch }))}
+              />
+              <SlideElementGroup
+                element="subtitle"
+                formData={f.formData}
+                activeLang={f.activeLang}
+                onUpdateField={f.updateField}
+                onPatch={patch => f.setFormData(prev => ({ ...prev, ...patch }))}
               />
 
-              <SlideTypographyAndPosition
+              {/* Click-link URL — slide-level, separate from element groups. */}
+              <div className="space-y-1 pt-3 border-t border-[#e5e7eb]">
+                <label className="text-[11px] font-semibold tracking-wider text-[#6b7280] uppercase">
+                  클릭 링크 URL (선택)
+                </label>
+                <input
+                  type="text"
+                  value={f.formData.link_url}
+                  onChange={e => f.setFormData(prev => ({ ...prev, link_url: e.target.value }))}
+                  placeholder="예: /kr/products 또는 https://example.com"
+                  className="w-full rounded px-3 py-2 text-sm"
+                />
+                <p className="text-[10px] text-[#9ca3af]">
+                  입력하면 슬라이드 클릭 시 해당 링크로 이동합니다. 비워두면 클릭 비활성.
+                </p>
+              </div>
+
+              <SlidePositionSection
                 formData={f.formData}
                 previewUrl={f.previewUrl}
                 onChange={patch => f.setFormData(prev => ({ ...prev, ...patch }))}
