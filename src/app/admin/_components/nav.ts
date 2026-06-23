@@ -1,7 +1,7 @@
 import {
   Users, Package, LayoutDashboard, Tag, MenuSquare,
   MessageCircle, UserPlus, CreditCard,
-  Scale, Globe, FileText,
+  Scale, Globe, FileText, LineChart,
   Home as HomeIcon,
 } from 'lucide-react';
 
@@ -32,6 +32,11 @@ export type NavItem = {
 // homepage dashboard").
 export const NAV_ITEMS: NavItem[] = [
   { name: '홈',                href: '/admin',              icon: LayoutDashboard },
+  // 마케팅 관점의 분석 페이지 — 세션 / 채널 / 키워드 / 랜딩 / 시간대.
+  // /admin 은 운영 현황 (재고, 가입자, 위시리스트) 중심이고,
+  // /admin/analytics 는 "어디서 들어왔고 무엇을 했나"에 답하는
+  // 분석가 전용 뷰. 2026-06-24 추가.
+  { name: '분석',              href: '/admin/analytics',    icon: LineChart, isNew: true },
   { name: '상품',              href: '/admin/products',     icon: Package },
   // Per boss 2026-06-22: 메뉴 관리 moves up between 상품 and 카테고리
   // so the storefront-content controls (products → menus → categories)
@@ -57,6 +62,7 @@ export const NAV_SECTIONS: NavSection[] = [{ title: null, items: NAV_ITEMS }];
 
 export const PAGE_TITLE: Record<string, string> = {
   '/admin': '대시보드 개요',
+  '/admin/analytics': '마케팅 분석',
   '/admin/homepage': '홈페이지 빌더',
   '/admin/top-stripe': '상단 띠배너',
   '/admin/users': '사용자 관리',
