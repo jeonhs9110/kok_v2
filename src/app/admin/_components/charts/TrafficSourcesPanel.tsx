@@ -2,38 +2,48 @@
 
 import { Compass } from 'lucide-react';
 import { Panel, EmptyState } from '@/components/admin/CafeWidgets';
-import type { TrafficSource } from '../useDashboardData';
+import type { TrafficSource } from '@/lib/analytics/referrer';
 
 /**
  * 유입 경로 (Traffic Source) panel — Cafe24 analytics parity. Shows
- * how visitors arrived: 구글 / 네이버 / 인스타그램 / 카카오 / 직접 / 기타.
- * Categorization happens upstream in useDashboardData via the
- * `referrer` column the /api/track route already writes.
+ * how visitors arrived, broken down into the 12 buckets the shared
+ * categorizeReferrer() recognizes: Google / Naver / Daum / Bing /
+ * Yahoo / DuckDuckGo / Instagram / Facebook / Kakao / Twitter /
+ * Direct / Other. Categorization happens upstream in useDashboardData
+ * (server-stored bucket for fresh rows, referrer fallback for legacy).
  *
  * Each bar is normalized to the leading source so smaller channels
  * remain readable when one dominates (typical: 직접 + 네이버 carry most
  * traffic in the Korean market early on).
  */
 const SOURCE_COLOR: Record<TrafficSource, string> = {
-  google:    '#4285f4',
-  naver:     '#03c75a',
-  instagram: '#e4405f',
-  kakao:     '#fee500',
-  direct:    '#6b7280',
-  other:     '#9ca3af',
+  google:     '#4285f4',
+  naver:      '#03c75a',
+  daum:       '#0096ff',
+  bing:       '#008373',
+  yahoo:      '#6001d2',
+  duckduckgo: '#de5833',
+  instagram:  '#e4405f',
+  facebook:   '#1877f2',
+  kakao:      '#fee500',
+  twitter:    '#000000',
+  direct:     '#6b7280',
+  other:      '#9ca3af',
 };
 
 export default function TrafficSourcesPanel({
   sources,
+  subtitle = '선택한 기간',
 }: {
   sources: { source: TrafficSource; label: string; count: number }[];
+  subtitle?: string;
 }) {
   const nonZero = sources.filter(s => s.count > 0);
   const max = nonZero[0]?.count || 1;
   const total = nonZero.reduce((s, x) => s + x.count, 0);
 
   return (
-    <Panel title="유입 경로" subtitle="전체 누적" icon={Compass}>
+    <Panel title="유입 경로" subtitle={subtitle} icon={Compass}>
       {nonZero.length === 0 ? (
         <EmptyState label="아직 유입 데이터가 없습니다" />
       ) : (

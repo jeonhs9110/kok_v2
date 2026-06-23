@@ -10,3 +10,4 @@ export { default as CountryBreakdownPanel } from './charts/CountryBreakdownPanel
 export { default as WishlistRanksPanel } from './charts/WishlistRanksPanel';
 export { default as ProductClicksTable } from './charts/ProductClicksTable';
 export { default as TrafficSourcesPanel } from './charts/TrafficSourcesPanel';
+export { default as SearchKeywordsPanel } from './charts/SearchKeywordsPanel';
