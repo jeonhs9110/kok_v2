@@ -115,6 +115,37 @@ export function useProductForm(
     return () => { cancelled = true; };
   }, [editing, editingProduct]);
 
+  // Auto-populate empty SEO fields from the basic-info fields. Runs
+  // whenever name / summary / ingredient changes; only fills SEO fields
+  // that are still empty so the operator's explicit edits are never
+  // clobbered. (Per boss 2026-06-24: SEO tab should show defaults
+  // derived from basic info, editable, then save.)
+  //
+  //   브라우저 타이틀   →  "<상품명> — KOKKOK GARDEN"
+  //   메타 Author       →  "KOKKOK GARDEN"  (brand-level fixed)
+  //   메타 Description  →  한 줄 요약
+  //   메타 Keywords     →  성분 태그 (already comma-separated)
+  //   이미지 Alt        →  상품명
+  //
+  // Side-effect: if the operator clears a field AND then changes name/
+  // summary/ingredient, the field re-fills. That doubles as a "reset
+  // to default" gesture. Operators who want a permanently-empty SEO
+  // field can change it to a space or any other character.
+  useEffect(() => {
+    setFormData(prev => {
+      const next = { ...prev };
+      const name = prev.name.trim();
+      const summary = prev.summary.trim();
+      const ingredient = prev.ingredient.trim();
+      if (!next.seoTitle && name) next.seoTitle = `${name} — KOKKOK GARDEN`;
+      if (!next.seoAuthor) next.seoAuthor = 'KOKKOK GARDEN';
+      if (!next.seoDescription && summary) next.seoDescription = summary;
+      if (!next.seoKeywords && ingredient) next.seoKeywords = ingredient;
+      if (!next.seoImageAlt && name) next.seoImageAlt = name;
+      return next;
+    });
+  }, [formData.name, formData.summary, formData.ingredient]);
+
   const patch = (p: Partial<FormState>) => setFormData(prev => ({ ...prev, ...p }));
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
