@@ -14,6 +14,7 @@ import { getThemeTokens } from '@/lib/theme/getThemeTokens';
 import { getTopStripe } from '@/lib/api/topStripe';
 import TopStripeBanner from '@/components/TopStripeBanner';
 import { tokensToCss } from '@/lib/theme/tokens';
+import Script from 'next/script';
 
 export async function generateMetadata() {
   const headersList = await headers();
@@ -67,6 +68,27 @@ export default async function LangLayout({
             ~200-300ms on cold connections. */}
         <link rel="preconnect" href="https://auxfxdttbhhnmnutbemn.supabase.co" />
         <link rel="dns-prefetch" href="https://auxfxdttbhhnmnutbemn.supabase.co" />
+        {/* Google Analytics 4 — loaded only when the operator has
+            pasted a measurement ID in /admin/theme. Enhanced
+            measurement (the GA4 default) handles SPA route changes
+            via the History API, so we don't need a manual page_view
+            on Next.js navigation. afterInteractive defers loading
+            past hydration so it doesn't compete with the critical
+            path. */}
+        {themeTokens.ga_measurement_id && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${themeTokens.ga_measurement_id}`}
+              strategy="afterInteractive"
+            />
+            <Script id="kokkok-ga-init" strategy="afterInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${themeTokens.ga_measurement_id}');`}
+            </Script>
+          </>
+        )}
         <style id="kokkok-theme-tokens" dangerouslySetInnerHTML={{ __html: tokensToCss(themeTokens) }} />
         <script
           dangerouslySetInnerHTML={{
