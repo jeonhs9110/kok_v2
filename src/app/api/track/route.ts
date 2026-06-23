@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import geoip from 'geoip-country';
+import { categorizeReferrer, extractSearchKeyword } from '@/lib/analytics/referrer';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -75,6 +76,13 @@ export async function POST(req: NextRequest) {
 
     const ip_hash = ip ? hashIp(ip) : null;
 
+    // Migration 45 (2026-06-24): categorize at write time so the
+    // dashboard can group/filter without re-parsing every row. Both
+    // columns are nullable — the dashboard still falls back to the
+    // raw `referrer` text for pre-migration rows.
+    const traffic_source = categorizeReferrer(referrer);
+    const search_keyword = extractSearchKeyword(referrer, traffic_source);
+
     // 5s timeout — a stalled Supabase would otherwise block this route
     // indefinitely and starve EC2 worker threads. The insert is
     // best-effort analytics; dropping a row when the DB is slow is
@@ -84,6 +92,8 @@ export async function POST(req: NextRequest) {
       path: path || '/',
       referrer: referrer || null,
       ip_hash,
+      traffic_source,
+      search_keyword,
     }]);
 
     await Promise.race([
