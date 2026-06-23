@@ -144,6 +144,13 @@ input[type="button"]:not(.kokkok-keep-font) {
    ────────────────────────────────────────────────────────── */
 .kokkok-header-logo {
   height: var(--header-logo-height, 40px);
+  /* When --header-logo-max-width is unset, falls through to `none` so
+     the logo keeps its natural aspect-ratio width (pre-2026-06-24
+     behavior). When set via /admin/logo, the logo width is clamped so
+     a taller logo doesn't push the nav menu rightward. `object-fit:
+     contain` makes the image scale down inside the box if its natural
+     aspect would exceed the cap. */
+  max-width: var(--header-logo-max-width, none);
   width: auto;
   object-fit: contain;
 }
