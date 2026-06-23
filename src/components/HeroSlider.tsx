@@ -11,6 +11,24 @@ import type { CarouselSlide } from '@/lib/api/carousel';
 import { fontFamilyForKey, anchorToObjectPosition, anchorTextStyle, resolveAnchor } from '@/lib/typography/options';
 
 
+/**
+ * Migration 44 (2026-06-22): per-element text shadow.
+ *
+ * Maps the operator's 0-100 depth slider value to a CSS text-shadow
+ * declaration. NULL → empty string so React drops the property and the
+ * pre-migration look is preserved byte-for-byte.
+ *
+ * Depth split: (depth/6)px blur is roughly 0-16px (perceptually linear
+ * from "wisp" to "soft"), and alpha = depth/100 gives a 0-1 opacity
+ * ramp. The 2px Y offset bakes in a baseline drop so even depth=20 is
+ * legible against a busy background.
+ */
+function textShadowCss(depth: number | null | undefined): string {
+  if (depth === null || depth === undefined) return '';
+  const d = Math.max(0, Math.min(100, depth));
+  return `0 2px ${d / 6}px rgba(0, 0, 0, ${d / 100})`;
+}
+
 interface HeroSliderProps {
   lang?: Lang;
   slides?: CarouselSlide[];
@@ -97,6 +115,12 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
       subtitleBold: s.subtitle_bold ?? false,
       subtitleItalic: s.subtitle_italic ?? false,
       subtitleUnderline: s.subtitle_underline ?? false,
+      // Migration 44 (2026-06-22): per-element text shadow. NULL =
+      // legacy "no shadow" — render code emits no text-shadow CSS so
+      // pre-migration rows match exactly. 0-100 maps below.
+      badgeShadow: textShadowCss(s.badge_shadow_depth),
+      titleShadow: textShadowCss(s.title_shadow_depth),
+      subtitleShadow: textShadowCss(s.subtitle_shadow_depth),
       // Migration 30: continuous text anchors. Resolved with the
       // legacy 9-cell key as a fallback so any row that hasn't been
       // re-saved through the new picker still renders correctly.
@@ -270,6 +294,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                             fontWeight: slide.badgeBold ? 700 : 600,
                             fontStyle: slide.badgeItalic ? 'italic' : 'normal',
                             textDecoration: slide.badgeUnderline ? 'underline' : 'none',
+                            textShadow: slide.badgeShadow || undefined,
                             ...(slide.badgeSizeOffset !== 0 && { ['--badge-fs' as string]: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
                           } as React.CSSProperties}
                         >
@@ -291,6 +316,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                             fontWeight: slide.titleBold === false ? 400 : 700,
                             fontStyle: slide.titleItalic ? 'italic' : 'normal',
                             textDecoration: slide.titleUnderline ? 'underline' : 'none',
+                            textShadow: slide.titleShadow || undefined,
                             ...(slide.titleSizeOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${slide.titleSizeOffset}px)` }),
                           } as React.CSSProperties}
                         >
@@ -306,6 +332,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                             fontWeight: slide.subtitleBold ? 700 : 400,
                             fontStyle: slide.subtitleItalic ? 'italic' : 'normal',
                             textDecoration: slide.subtitleUnderline ? 'underline' : 'none',
+                            textShadow: slide.subtitleShadow || undefined,
                             ...(slide.subtitleSizeOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
                           } as React.CSSProperties}
                         >
@@ -326,6 +353,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                               fontWeight: slide.badgeBold ? 700 : 600,
                               fontStyle: slide.badgeItalic ? 'italic' : 'normal',
                               textDecoration: slide.badgeUnderline ? 'underline' : 'none',
+                              textShadow: slide.badgeShadow || undefined,
                               ...(slide.badgeSizeOffset !== 0 && { ['--badge-fs' as string]: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
                             } as React.CSSProperties}
                           >
@@ -341,6 +369,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                               fontWeight: slide.titleBold === false ? 400 : 700,
                               fontStyle: slide.titleItalic ? 'italic' : 'normal',
                               textDecoration: slide.titleUnderline ? 'underline' : 'none',
+                              textShadow: slide.titleShadow || undefined,
                               ...(slide.titleSizeOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${slide.titleSizeOffset}px)` }),
                             } as React.CSSProperties}
                           >
@@ -356,6 +385,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                               fontWeight: slide.subtitleBold ? 700 : 400,
                               fontStyle: slide.subtitleItalic ? 'italic' : 'normal',
                               textDecoration: slide.subtitleUnderline ? 'underline' : 'none',
+                              textShadow: slide.subtitleShadow || undefined,
                               ...(slide.subtitleSizeOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
                             } as React.CSSProperties}
                           >
@@ -427,6 +457,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                           fontWeight: slide.badgeBold ? 700 : 600,
                           fontStyle: slide.badgeItalic ? 'italic' : 'normal',
                           textDecoration: slide.badgeUnderline ? 'underline' : 'none',
+                          textShadow: slide.badgeShadow || undefined,
                           ...(slide.badgeSizeOffset !== 0 && { ['--badge-fs' as string]: `calc(0.75rem + ${slide.badgeSizeOffset}px)` }),
                         } as React.CSSProperties}
                       >
@@ -446,6 +477,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         fontWeight: slide.titleBold === false ? 400 : 700,
                         fontStyle: slide.titleItalic ? 'italic' : 'normal',
                         textDecoration: slide.titleUnderline ? 'underline' : 'none',
+                        textShadow: slide.titleShadow || undefined,
                         ...(slide.titleSizeOffset !== 0 && { ['--title-fs' as string]: `calc(3rem + ${slide.titleSizeOffset}px)` }),
                       } as React.CSSProperties}
                     >
@@ -460,6 +492,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                           fontWeight: slide.subtitleBold ? 700 : 400,
                           fontStyle: slide.subtitleItalic ? 'italic' : 'normal',
                           textDecoration: slide.subtitleUnderline ? 'underline' : 'none',
+                          textShadow: slide.subtitleShadow || undefined,
                           ...(slide.subtitleSizeOffset !== 0 && { ['--subtitle-fs' as string]: `calc(1rem + ${slide.subtitleSizeOffset}px)` }),
                         } as React.CSSProperties}
                       >

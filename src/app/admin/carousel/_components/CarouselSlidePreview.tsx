@@ -46,23 +46,34 @@ export default function CarouselSlidePreview({ form, lang, previewImageUrl, prev
   // styles (corner clicks pin to the corner instead of translating off-screen).
   const textAnchor = isMobileView ? form.text_anchor_mobile : form.text_anchor;
   const textWrapperStyle = anchorTextStyle(textAnchor);
+  // Migration 44: depth → text-shadow CSS. NULL = no shadow (legacy).
+  // Same formula as HeroSlider so the admin preview matches the live
+  // storefront exactly.
+  const shadowFor = (depth: number | null | undefined): string | undefined => {
+    if (depth === null || depth === undefined) return undefined;
+    const d = Math.max(0, Math.min(100, depth));
+    return `0 2px ${d / 6}px rgba(0, 0, 0, ${d / 100})`;
+  };
   const badgeStyle: React.CSSProperties = {
     fontFamily: fontFamilyForKey(form.badge_font_family),
     fontWeight: form.badge_bold ? 700 : 500,
     fontStyle: form.badge_italic ? 'italic' : 'normal',
     textDecoration: form.badge_underline ? 'underline' : 'none',
+    textShadow: shadowFor(form.badge_shadow_depth),
   };
   const titleStyle: React.CSSProperties = {
     fontFamily: fontFamilyForKey(form.title_font_family),
     fontWeight: form.title_bold ? 800 : 400,
     fontStyle: form.title_italic ? 'italic' : 'normal',
     textDecoration: form.title_underline ? 'underline' : 'none',
+    textShadow: shadowFor(form.title_shadow_depth),
   };
   const subtitleStyle: React.CSSProperties = {
     fontFamily: fontFamilyForKey(form.subtitle_font_family),
     fontWeight: form.subtitle_bold ? 700 : 400,
     fontStyle: form.subtitle_italic ? 'italic' : 'normal',
     textDecoration: form.subtitle_underline ? 'underline' : 'none',
+    textShadow: shadowFor(form.subtitle_shadow_depth),
   };
 
   // Image focal point (continuous via migration 30 anchor).
