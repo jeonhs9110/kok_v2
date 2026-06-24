@@ -111,13 +111,49 @@ jobs:
 
           echo "✓ Published: s3://${S3_BUCKET}/latest.tar.gz (commit ${SHA_SHORT}, ${ARTIFACT_SIZE})"
 
+      # ──────────────────────────────────────────────────────────────
+      # Phase 1 of the GitHub → Bitbucket migration: ALSO build a
+      # Docker image and push to ECR. The tarball path above keeps
+      # working for the live EC2 deploy — Phase 4 switches the EC2
+      # user_data to docker run, at which point we delete the tarball
+      # steps. For now both run in parallel so the docker image is
+      # validated against real CI without touching prod.
+      # ──────────────────────────────────────────────────────────────
+
+      - name: Set up Docker buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: ecr-login
+
+      - name: Build & push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          # arm64 only for now (matches t4g.small). Phase 5 swap to
+          # t3a.small flips this to linux/amd64 — single-line change.
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ steps.ecr-login.outputs.registry }}/kokkok-app:master-${{ github.sha }}
+            ${{ steps.ecr-login.outputs.registry }}/kokkok-app:latest
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Summary
         run: |
           {
-            echo "### Artifact published"
+            echo "### Artifact + Image published"
             echo "- **commit**: \`${GITHUB_SHA::7}\`"
-            echo "- **size**: ${ARTIFACT_SIZE}"
-            echo "- **url**: \`s3://${S3_BUCKET}/latest.tar.gz\`"
+            echo "- **tarball size**: ${ARTIFACT_SIZE}"
+            echo "- **tarball**: \`s3://${S3_BUCKET}/latest.tar.gz\`"
+            echo "- **image**: \`${{ steps.ecr-login.outputs.registry }}/kokkok-app:master-${GITHUB_SHA::7}\`"
             echo ""
-            echo "**Next:** run \`terraform apply -replace=aws_instance.app\` to roll out."
+            echo "**Next:** run \`terraform apply -replace=aws_instance.app\` to roll out (tarball path)."
+            echo "Phase 4 will flip EC2 to pull the docker image instead."
           } >> "$GITHUB_STEP_SUMMARY"
