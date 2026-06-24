@@ -21,20 +21,19 @@ import type { DateRange } from '../../_components/useDashboardData';
  * register call runs at module load.
  */
 
+// Pretendard OTF via jsDelivr — chosen over WOFF2 because fontkit (the
+// font-parsing layer underneath @react-pdf/renderer) doesn't reliably
+// decode brotli-compressed WOFF2 in the browser; the v1 of this report
+// loaded the .subset.woff2 build and crashed PDF generation at click
+// time. OTF passes through fontkit's parser natively.
+const PRETENDARD_REGULAR = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/Pretendard-Regular.otf';
+const PRETENDARD_BOLD = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/Pretendard-Bold.otf';
+
 Font.register({
-  family: 'NotoSansKR',
+  family: 'Pretendard',
   fonts: [
-    {
-      // jsDelivr-hosted Naver / Google Noto Sans KR. TTF picks up cleaner
-      // than woff2 inside react-pdf (the pdfkit backend can't unwrap WOFF2
-      // tables).
-      src: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2-subset/Pretendard-Regular.subset.woff2',
-      fontWeight: 400,
-    },
-    {
-      src: 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/woff2-subset/Pretendard-Bold.subset.woff2',
-      fontWeight: 700,
-    },
+    { src: PRETENDARD_REGULAR, fontWeight: 400 },
+    { src: PRETENDARD_BOLD, fontWeight: 700 },
   ],
 });
 
@@ -61,7 +60,7 @@ const styles = StyleSheet.create({
     paddingTop: 36,
     paddingBottom: 44,
     paddingHorizontal: 36,
-    fontFamily: 'NotoSansKR',
+    fontFamily: 'Pretendard',
     fontSize: 9,
     color: COLOR.ink,
     backgroundColor: '#ffffff',
@@ -71,7 +70,7 @@ const styles = StyleSheet.create({
     paddingTop: 80,
     paddingHorizontal: 56,
     paddingBottom: 56,
-    fontFamily: 'NotoSansKR',
+    fontFamily: 'Pretendard',
     color: COLOR.ink,
     backgroundColor: '#ffffff',
   },
@@ -351,11 +350,16 @@ function conversionColor(rate: number): string {
 function heatCellColor(value: number, max: number): string {
   if (value === 0) return '#f3f4f6';
   const intensity = value / max;
-  // 0.15 → 1.0 alpha mapped to a translucent blue. Hex string gen so
-  // react-pdf's color parser is happy (it doesn't accept rgba in all
-  // versions).
-  const alpha = Math.round((0.15 + intensity * 0.85) * 255);
-  return `#3b82f6${alpha.toString(16).padStart(2, '0')}`;
+  // Pre-blend translucent #3b82f6 against a white background so we
+  // emit a fully opaque hex color — older fontkit versions inside
+  // @react-pdf/renderer choke on rgba() at the color parser. Linear
+  // blend: out = bg*(1-a) + fg*a, with bg=255 (white) for each channel.
+  const a = 0.15 + intensity * 0.85;
+  const r = Math.round(255 * (1 - a) + 0x3b * a);
+  const g = Math.round(255 * (1 - a) + 0x82 * a);
+  const b = Math.round(255 * (1 - a) + 0xf6 * a);
+  const hex = (n: number) => n.toString(16).padStart(2, '0');
+  return `#${hex(r)}${hex(g)}${hex(b)}`;
 }
 
 /**

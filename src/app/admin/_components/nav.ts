@@ -36,7 +36,7 @@ export const NAV_ITEMS: NavItem[] = [
   // /admin 은 운영 현황 (재고, 가입자, 위시리스트) 중심이고,
   // /admin/analytics 는 "어디서 들어왔고 무엇을 했나"에 답하는
   // 분석가 전용 뷰. 2026-06-24 추가.
-  { name: '분석',              href: '/admin/analytics',    icon: LineChart, isNew: true },
+  { name: '분석',              href: '/admin/analytics',    icon: LineChart },
   { name: '상품',              href: '/admin/products',     icon: Package },
   // Per boss 2026-06-22: 메뉴 관리 moves up between 상품 and 카테고리
   // so the storefront-content controls (products → menus → categories)

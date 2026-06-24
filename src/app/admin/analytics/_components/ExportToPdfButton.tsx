@@ -57,7 +57,8 @@ export default function ExportToPdfButton({
       setTimeout(() => URL.revokeObjectURL(url), 4000);
     } catch (err) {
       console.error('[analytics] PDF generation failed:', err);
-      alert('PDF 생성에 실패했습니다. 다시 시도해주세요.');
+      const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      alert(`PDF 생성에 실패했습니다.\n\n${detail}\n\n네트워크가 폰트 파일을 차단하고 있을 수 있습니다. 브라우저 콘솔(F12)에서 상세 오류를 확인할 수 있습니다.`);
     } finally {
       setBusy(false);
     }
@@ -78,7 +79,7 @@ export default function ExportToPdfButton({
       ) : (
         <>
           <FileDown className="w-3.5 h-3.5" />
-          CEO 리포트 PDF 다운로드
+          PDF 다운로드
         </>
       )}
     </button>
