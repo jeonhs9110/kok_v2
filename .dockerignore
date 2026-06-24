@@ -1,0 +1,54 @@
+# Files NOT to send to the docker daemon. Keeps the build context
+# small so `docker build` doesn't spend seconds streaming irrelevant
+# bytes, and so the final image doesn't accidentally ship sensitive
+# files (.env, aws-credentials/, etc.).
+
+# Local artefacts
+.next
+out
+build
+node_modules
+.turbo
+coverage
+.vscode
+.idea
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI / IaC (built into the image only if we explicitly COPY)
+.github
+infrastructure
+
+# Tests + tooling
+tests
+e2e
+playwright-report
+test-results
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Docs + project meta
+docs
+*.md
+RUNBOOKS.md
+
+# Secrets / untracked siblings (defense-in-depth even though .gitignore
+# already excludes these from git)
+.env
+.env.*
+!.env.example
+aws-credentials
+supabase/.temp
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
