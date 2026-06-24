@@ -51,6 +51,16 @@ export function useSlideLivePreview(
         subtitle_bold: formData.subtitle_bold,
         subtitle_italic: formData.subtitle_italic,
         subtitle_underline: formData.subtitle_underline,
+        // Migration 44: per-element text shadow depth. Was missing from
+        // this broadcast — the modal-side preview reflected the slider
+        // immediately but the homepage-builder's central iframe didn't,
+        // so the operator toggled the checkbox + moved the slider with
+        // no visible effect on the live preview. Adding the three
+        // fields fixes that asymmetry; the storefront HeroSlider already
+        // maps depth → CSS via textShadowCss(s.*_shadow_depth).
+        badge_shadow_depth: formData.badge_shadow_depth,
+        title_shadow_depth: formData.title_shadow_depth,
+        subtitle_shadow_depth: formData.subtitle_shadow_depth,
         text_position: formData.text_position,
         text_position_mobile: formData.text_position_mobile,
         image_position: formData.image_position,
