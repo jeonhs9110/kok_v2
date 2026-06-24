@@ -37,15 +37,14 @@ pipelines:
     main:
       - step:
           name: Build & push Docker image to ECR
-          runs-on:
-            - self.hosted
-            - linux.arm64
-          # If self-hosted ARM runners aren't available in the workspace,
-          # we'll need to fall back to Bitbucket Cloud's standard x86_64
-          # runner and either cross-build via buildx or accept that the
-          # runner-cached image is x86_64 (will be relevant in Phase 5
-          # when we move to t3a.small anyway). For now, keep ARM so the
-          # image matches the t4g.small in prod.
+          # Bitbucket Cloud's default runner (linux/amd64). Neofect's
+          # workspace doesn't have self-hosted ARM runners, so the
+          # earlier `runs-on: [self.hosted, linux.arm64]` failed at
+          # selector-resolve time. The image built here is amd64; the
+          # live EC2 today is arm64 (t4g.small) so this image WON'T be
+          # used by prod yet — Phase 4/5 deploy lands the amd64 image on
+          # the t3a.small switch. Meanwhile GH Actions still builds the
+          # arm64 image driving the live tarball deploy in parallel.
           services:
             - docker
           caches:
