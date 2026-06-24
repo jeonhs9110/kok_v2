@@ -111,7 +111,7 @@ export default function AnalyticsPage() {
 
       <div className="flex items-center justify-between pt-4 border-t border-[#e5e7eb]">
         <span className="text-[11px] text-[#9ca3af]">
-          CEO 리포트 PDF — 표지 + 핵심 지표 + 채널/기기/검색어/캠페인/랜딩/시간대 (4페이지)
+          분석 리포트 PDF — 표지 + 핵심 지표 + 채널/기기/검색어/캠페인/랜딩/시간대 (4페이지)
         </span>
         <ExportToPdfButton data={data} range={range} />
       </div>
