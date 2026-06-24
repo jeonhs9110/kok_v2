@@ -21,13 +21,19 @@ import type { DateRange } from '../../_components/useDashboardData';
  * register call runs at module load.
  */
 
-// Pretendard OTF via jsDelivr — chosen over WOFF2 because fontkit (the
-// font-parsing layer underneath @react-pdf/renderer) doesn't reliably
-// decode brotli-compressed WOFF2 in the browser; the v1 of this report
-// loaded the .subset.woff2 build and crashed PDF generation at click
-// time. OTF passes through fontkit's parser natively.
-const PRETENDARD_REGULAR = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/Pretendard-Regular.otf';
-const PRETENDARD_BOLD = 'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/Pretendard-Bold.otf';
+// Pretendard OTF bundled locally under /public/fonts. We previously
+// tried jsDelivr-hosted versions (both WOFF2 subset and OTF static)
+// but every CDN path either 404'd or hit a brotli decode issue inside
+// fontkit at pdf().toBlob() time. Bundling eliminates the runtime CDN
+// dependency entirely — same-origin, cached after the first hit, can't
+// 404. The font URL must be absolute at render time so react-pdf's
+// fetcher resolves it correctly under any base path.
+const PRETENDARD_REGULAR = typeof window !== 'undefined'
+  ? new URL('/fonts/Pretendard-Regular.otf', window.location.origin).toString()
+  : '/fonts/Pretendard-Regular.otf';
+const PRETENDARD_BOLD = typeof window !== 'undefined'
+  ? new URL('/fonts/Pretendard-Bold.otf', window.location.origin).toString()
+  : '/fonts/Pretendard-Bold.otf';
 
 Font.register({
   family: 'Pretendard',
@@ -347,6 +353,154 @@ function conversionColor(rate: number): string {
   return COLOR.muted;
 }
 
+/**
+ * Auto-derive 4-6 natural-language insight bullets from the data. Each
+ * bullet answers a question a CEO actually asks ("how did we grow?
+ * who's our customer? what's broken?") and is grounded in numbers
+ * from the dataset — no template language without a backing metric.
+ */
+function deriveInsights(data: AnalyticsData): string[] {
+  const out: string[] = [];
+  if (data.sessions === 0) return ['선택한 기간에 분석할 세션이 없습니다.'];
+
+  // 1. Volume + trend
+  const sessTrend = pctDelta(data.sessions, data.prior.sessions);
+  if (sessTrend !== null) {
+    const verb = sessTrend > 0 ? '증가' : sessTrend < 0 ? '감소' : '동일';
+    out.push(
+      `총 세션 ${data.sessions.toLocaleString()}회. 이전 동일 기간 대비 ${Math.abs(sessTrend)}% ${verb}.`,
+    );
+  } else {
+    out.push(`총 세션 ${data.sessions.toLocaleString()}회.`);
+  }
+
+  // 2. Top channel
+  const top = data.channels[0];
+  if (top) {
+    const share = data.sessions ? top.sessions / data.sessions : 0;
+    out.push(
+      `주된 유입 채널은 ${top.label} — ${top.sessions.toLocaleString()}회 (전체의 ${pct(share)}), 참여율 ${pct(top.engagementRate)}.`,
+    );
+  }
+
+  // 3. Device dominance
+  const sortedDevices = [...data.devices].filter(d => d.sessions > 0).sort((a, b) => b.sessions - a.sessions);
+  if (sortedDevices.length > 0) {
+    const dominant = sortedDevices[0];
+    const isDominantStrong = dominant.share >= 0.6;
+    if (isDominantStrong) {
+      out.push(
+        `${dominant.label} 사용자가 전체의 ${pct(dominant.share)}로 압도적입니다. ${dominant.label === '모바일' ? '모바일 UX 최적화가 핵심입니다.' : '모바일 유입 캠페인 검토가 필요합니다.'}`,
+      );
+    } else if (sortedDevices.length >= 2) {
+      const second = sortedDevices[1];
+      out.push(
+        `${dominant.label} ${pct(dominant.share)} vs ${second.label} ${pct(second.share)} — 양쪽 모두 신경 써야 합니다.`,
+      );
+    }
+  }
+
+  // 4. Engagement quality
+  const bounceDelta = Math.round((data.bounceRate - data.prior.bounceRate) * 100);
+  if (data.bounceRate >= 0.7) {
+    out.push(
+      `이탈률 ${pct(data.bounceRate)}는 위험 수준입니다. 랜딩 페이지 카피와 첫 화면 CTA 점검을 권장합니다.`,
+    );
+  } else if (bounceDelta !== 0 && data.prior.sessions > 0) {
+    const direction = bounceDelta < 0 ? '개선' : '악화';
+    out.push(
+      `이탈률 ${pct(data.bounceRate)}, 이전 기간 대비 ${Math.abs(bounceDelta)} 포인트 ${direction}.`,
+    );
+  } else {
+    out.push(`이탈률 ${pct(data.bounceRate)}, 참여율 ${pct(data.engagedSessions / data.sessions)}.`);
+  }
+
+  // 5. Peak time
+  if (data.peakDow !== null && data.peakHour !== null) {
+    out.push(
+      `유입 피크는 ${DAY_LABELS[data.peakDow]}요일 ${data.peakHour}시. SNS 포스팅·이메일 발송을 이 시간대에 맞춰 보세요.`,
+    );
+  }
+
+  // 6. Top keyword (only if any)
+  const topKw = data.keywords[0];
+  if (topKw) {
+    out.push(
+      `상위 검색어: "${topKw.keyword}" (${topKw.sourceLabel}, ${topKw.sessions}회) — 관련 콘텐츠/SEO 강화 여지가 있습니다.`,
+    );
+  }
+
+  return out;
+}
+
+/**
+ * Auto-derive actionable recommendations from the data. These are
+ * advisory — the CEO can read them and decide what to act on. Each
+ * recommendation is grounded in a specific metric crossing a
+ * threshold; no generic "best practices" without data backing.
+ */
+function deriveRecommendations(data: AnalyticsData): { title: string; detail: string }[] {
+  const recs: { title: string; detail: string }[] = [];
+  if (data.sessions === 0) return [];
+
+  // Bounce rate on top landing
+  const worstLanding = data.landingPages.find(p => p.sessions >= 3 && p.bounceRate >= 0.7);
+  if (worstLanding) {
+    recs.push({
+      title: `${worstLanding.label} 이탈 개선`,
+      detail: `${worstLanding.label} (${worstLanding.path}) 이탈률이 ${pct(worstLanding.bounceRate)}로 ${worstLanding.sessions.toLocaleString()}회 중 대부분이 첫 페이지만 보고 나갔습니다. 첫 화면 카피·이미지·CTA를 우선 점검하세요.`,
+    });
+  }
+
+  // UTM empty
+  if (data.utmCampaigns.length === 0) {
+    recs.push({
+      title: '광고 링크 UTM 태깅 시작',
+      detail: '아직 utm_source 태그가 붙은 유입이 없습니다. 네이버/구글/메타 광고를 돌릴 예정이라면 광고 링크에 ?utm_source=…&utm_medium=…&utm_campaign=… 를 붙여야 광고 효과를 분리해 측정할 수 있습니다.',
+    });
+  }
+
+  // Mobile dominance — UX investment
+  const mobile = data.devices.find(d => d.device === 'mobile');
+  if (mobile && mobile.share >= 0.7) {
+    recs.push({
+      title: '모바일 UX 우선 투자',
+      detail: `모바일 사용자가 전체의 ${pct(mobile.share)}로 절대 다수입니다. 디자인·QA·성능 최적화 예산을 모바일 기준으로 우선 배정하시기를 권합니다.`,
+    });
+  }
+
+  // Channel concentration
+  if (data.channels.length >= 2) {
+    const top = data.channels[0];
+    const topShare = data.sessions ? top.sessions / data.sessions : 0;
+    if (topShare >= 0.7) {
+      recs.push({
+        title: '유입 다양화 검토',
+        detail: `${top.label} 한 채널이 전체 ${pct(topShare)}를 차지합니다. 해당 채널 의존도가 높아 알고리즘 변경이나 정책 변동에 취약합니다. 보조 채널(인스타·카카오·SEO 등) 발굴이 필요합니다.`,
+      });
+    }
+  }
+
+  // Peak time → action
+  if (data.peakDow !== null && data.peakHour !== null) {
+    recs.push({
+      title: '피크 시간대 활용',
+      detail: `${DAY_LABELS[data.peakDow]}요일 ${data.peakHour}시 전후가 유입 피크입니다. 이 시간대에 맞춰 인스타그램 포스트, 카카오 알림톡, 신상품 공개를 배치하면 노출 대비 클릭률을 끌어올릴 수 있습니다.`,
+    });
+  }
+
+  // Product view rate by channel (paid acquisition quality)
+  const lowQuality = data.channels.find(c => c.sessions >= 5 && c.productViewRate < 0.1);
+  if (lowQuality) {
+    recs.push({
+      title: `${lowQuality.label} 유입 품질 점검`,
+      detail: `${lowQuality.label}에서 ${lowQuality.sessions.toLocaleString()}회 유입이 있지만 상품 페이지 도달율이 ${pct(lowQuality.productViewRate)}로 낮습니다. 랜딩 페이지 메시지와 광고 카피의 매칭이 안 되어 있을 가능성이 있습니다.`,
+    });
+  }
+
+  return recs.slice(0, 5); // cap at 5 — anything longer dilutes priority
+}
+
 function heatCellColor(value: number, max: number): string {
   if (value === 0) return '#f3f4f6';
   const intensity = value / max;
@@ -443,6 +597,14 @@ export default function AnalyticsReportPdf({
   const topUtm = data.utmCampaigns.slice(0, 10);
   const activeDevices = data.devices.filter(d => d.sessions > 0);
 
+  // Auto-derived narrative content.
+  const insights = deriveInsights(data);
+  const recommendations = deriveRecommendations(data);
+
+  // Sessions trend sparkline — last 30 day buckets, normalized.
+  const sparkBars = data.sessionsByDay.slice(-30);
+  const sparkMax = Math.max(1, ...sparkBars.map(b => b.sessions));
+
   return (
     <Document
       title={`KOKKOK GARDEN — 마케팅 분석 리포트 (${range.label})`}
@@ -473,9 +635,19 @@ export default function AnalyticsReportPdf({
           </View>
         </View>
 
-        <View style={[styles.insightBlock, { marginTop: 48 }]}>
-          <Text style={styles.insightLabel}>요약</Text>
+        <View style={[styles.insightBlock, { marginTop: 36 }]}>
+          <Text style={styles.insightLabel}>핵심 요약</Text>
           <Text style={styles.insightText}>{executiveSentence(data)}</Text>
+        </View>
+
+        <View style={styles.insightBlock}>
+          <Text style={styles.insightLabel}>주요 인사이트</Text>
+          {insights.map((line, i) => (
+            <View key={i} style={{ flexDirection: 'row', marginTop: i === 0 ? 0 : 4 }}>
+              <Text style={[styles.insightText, { width: 12 }]}>•</Text>
+              <Text style={[styles.insightText, { flex: 1 }]}>{line}</Text>
+            </View>
+          ))}
         </View>
 
         <View style={styles.insightBlock}>
@@ -518,6 +690,36 @@ export default function AnalyticsReportPdf({
             </View>
           </View>
         </View>
+
+        {sparkBars.length > 0 && (
+          <View style={styles.sectionBlock}>
+            <SectionHeading title="세션 추이" subtitle={`최근 ${sparkBars.length}일`} />
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 56, gap: 2, marginTop: 4 }}>
+              {sparkBars.map(b => {
+                const h = Math.max(2, Math.round((b.sessions / sparkMax) * 100));
+                return (
+                  <View
+                    key={b.date}
+                    style={{
+                      flex: 1,
+                      height: `${h}%`,
+                      backgroundColor: COLOR.accent,
+                      borderRadius: 1,
+                    }}
+                  />
+                );
+              })}
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+              <Text style={{ fontSize: 7, color: COLOR.faint }}>
+                {sparkBars[0]?.date.slice(5)}
+              </Text>
+              <Text style={{ fontSize: 7, color: COLOR.faint }}>
+                {sparkBars[sparkBars.length - 1]?.date.slice(5)}
+              </Text>
+            </View>
+          </View>
+        )}
 
         <View style={styles.sectionBlock}>
           <SectionHeading
@@ -802,6 +1004,83 @@ export default function AnalyticsReportPdf({
         </View>
 
         <Footer pageLabel="4 · 페이지 & 시간대" generatedAt={generatedAt} />
+      </Page>
+
+      {/* ===== Page 5: Recommendations ===== */}
+      <Page size="A4" style={styles.page}>
+        <View style={styles.sectionBlock}>
+          <SectionHeading
+            title="다음 단계 — 추천 액션"
+            subtitle="데이터에서 자동 도출한 우선순위 액션 (자문용)"
+          />
+          {recommendations.length === 0 ? (
+            <Text style={[styles.tdMuted, { paddingVertical: 20, textAlign: 'center' }]}>
+              현재 지표에서 즉시 권장할 액션이 없습니다. 다음 보고 주기에 다시
+              확인해주세요.
+            </Text>
+          ) : (
+            recommendations.map((r, i) => (
+              <View
+                key={i}
+                style={{
+                  borderLeftWidth: 3,
+                  borderLeftColor: COLOR.accent,
+                  backgroundColor: COLOR.panelBg,
+                  paddingVertical: 10,
+                  paddingHorizontal: 12,
+                  marginBottom: 8,
+                  borderRadius: 4,
+                }}
+              >
+                <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      color: COLOR.muted,
+                      width: 22,
+                    }}
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: 700, color: COLOR.ink, flex: 1 }}>
+                    {r.title}
+                  </Text>
+                </View>
+                <Text
+                  style={{
+                    fontSize: 9,
+                    color: COLOR.ink,
+                    lineHeight: 1.5,
+                    paddingLeft: 22,
+                  }}
+                >
+                  {r.detail}
+                </Text>
+              </View>
+            ))
+          )}
+        </View>
+
+        <View style={styles.sectionBlock}>
+          <SectionHeading title="이 리포트에 대해" />
+          <Text style={{ fontSize: 9, color: COLOR.muted, lineHeight: 1.6 }}>
+            본 리포트는 KOKKOK GARDEN 자체 분석 시스템에서 생성된 자동 보고서입니다.
+            모든 지표는 {data.sessions.toLocaleString()}회의 세션(페이지뷰{' '}
+            {data.pageviews.toLocaleString()}건)을 기반으로 합니다. 동일 방문자의 30분
+            무활동을 기준으로 세션을 구분했으며, 첫 페이지의 referrer / utm_source /
+            user-agent에서 채널·캠페인·기기 분류를 도출했습니다. 추천 액션은 데이터
+            기준이며, 실제 의사 결정은 비즈니스 맥락과 함께 검토해주세요.
+            {data.pageviewsWithoutIpHash > 0 && (
+              <>
+                {'\n\n'}참고: 구버전 로그 {data.pageviewsWithoutIpHash.toLocaleString()}건은
+                방문자 식별 데이터가 없어 세션 분석에서 제외되었습니다.
+              </>
+            )}
+          </Text>
+        </View>
+
+        <Footer pageLabel="5 · 추천 액션" generatedAt={generatedAt} />
       </Page>
     </Document>
   );
