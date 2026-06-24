@@ -99,6 +99,22 @@ export interface LandingPageRow {
   productViewRate: number;
 }
 
+/**
+ * A single end-to-end entry "story": how exactly did N visitors get
+ * to this landing path? Joins channel + (optional) keyword +
+ * landing in one row so the PDF can show "네이버 검색 '콕콕가든' →
+ * /kr (홈)" instead of three disconnected tables.
+ */
+export interface EntryPathRow {
+  source: TrafficSource;
+  sourceLabel: string;
+  keyword: string | null;
+  landingPath: string;
+  landingLabel: string;
+  sessions: number;
+  bounceRate: number;
+}
+
 /** 7 × 24 heatmap. heatmap[day][hour] = session-start count. */
 export type Heatmap = number[][];
 
@@ -118,6 +134,7 @@ export interface AnalyticsData {
   channels: ChannelRow[];
   keywords: KeywordRow[];
   landingPages: LandingPageRow[];
+  entryPaths: EntryPathRow[];
   devices: DeviceRow[];
   utmCampaigns: UtmRow[];
   heatmap: Heatmap;
@@ -148,6 +165,7 @@ export const EMPTY: AnalyticsData = {
   channels: [],
   keywords: [],
   landingPages: [],
+  entryPaths: [],
   devices: [],
   utmCampaigns: [],
   heatmap: Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0)),
@@ -370,6 +388,34 @@ export function useAnalyticsData() {
         }))
         .sort((a, b) => b.sessions - a.sessions);
 
+      // Entry-path detail — join channel + (optional) keyword +
+      // landing into a single bucket so the report can show the actual
+      // "story" of how visitors arrived ("네이버 검색 '콕콕가든' → 홈
+      // 5명") instead of three disconnected tables. Keyword is only
+      // included for search sources where we actually have it.
+      const entryMap = new Map<string, { source: TrafficSource; keyword: string | null; landingPath: string; sessions: number; bounces: number }>();
+      for (const s of sessions) {
+        const kw = SEARCH_SOURCES.has(s.trafficSource) && s.searchKeyword && s.searchKeyword !== '(not provided)'
+          ? s.searchKeyword
+          : null;
+        const key = `${s.trafficSource}::${kw ?? ''}::${s.landingPath}`;
+        const e = entryMap.get(key) ?? { source: s.trafficSource, keyword: kw, landingPath: s.landingPath, sessions: 0, bounces: 0 };
+        e.sessions++;
+        if (s.pageCount === 1) e.bounces++;
+        entryMap.set(key, e);
+      }
+      const entryPaths: EntryPathRow[] = Array.from(entryMap.values())
+        .map(e => ({
+          source: e.source,
+          sourceLabel: TRAFFIC_SOURCE_LABEL[e.source],
+          keyword: e.keyword,
+          landingPath: e.landingPath,
+          landingLabel: labelForPath(e.landingPath, productNames),
+          sessions: e.sessions,
+          bounceRate: e.sessions ? e.bounces / e.sessions : 0,
+        }))
+        .sort((a, b) => b.sessions - a.sessions);
+
       // Device split — mobile / tablet / desktop. The CEO question
       // ("how many are mobile?") needs a top-level breakdown, plus
       // engagement and product-view rates so the operator can see
@@ -474,6 +520,7 @@ export function useAnalyticsData() {
         channels,
         keywords,
         landingPages,
+        entryPaths,
         devices,
         utmCampaigns,
         heatmap,
