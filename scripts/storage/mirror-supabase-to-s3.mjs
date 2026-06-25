@@ -27,7 +27,6 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { Readable } from 'node:stream';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -75,7 +74,7 @@ async function* listBucketRecursive(bucket, prefix = '', depth = 0) {
   }
 }
 
-async function s3ObjectMatches(key, size, _etag) {
+async function s3ObjectMatches(key, size) {
   try {
     const head = await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: key }));
     // Supabase eTag isn't the same algorithm as S3 ETag (different
@@ -90,7 +89,7 @@ async function s3ObjectMatches(key, size, _etag) {
   }
 }
 
-async function copyOne({ bucket, key, size, mime, etag }) {
+async function copyOne({ bucket, key, size, mime }) {
   // The bucket prefix becomes part of the S3 key, so admin/products on
   // S3 lives under `product-images/products/...` — same hierarchy as
   // Supabase. Storefront URLs that include `/storage/v1/object/public/
@@ -98,7 +97,7 @@ async function copyOne({ bucket, key, size, mime, etag }) {
   // the CloudFront origin to keep working.
   const s3Key = `${bucket}/${key}`;
 
-  if (await s3ObjectMatches(s3Key, size, etag)) {
+  if (await s3ObjectMatches(s3Key, size)) {
     stats.skipped++;
     return;
   }
