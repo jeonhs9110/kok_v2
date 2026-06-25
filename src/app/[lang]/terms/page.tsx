@@ -9,6 +9,22 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
+async function fetchLegal(slug: string): Promise<{ title_kr: string | null; title_en: string | null; content_kr: string | null; content_en: string | null } | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getLegalPageFromPg } = await import('@/lib/db/storefront-reads');
+      const row = await getLegalPageFromPg(slug);
+      return row ? { title_kr: row.title_kr, title_en: row.title_en, content_kr: row.content_kr, content_en: row.content_en } : null;
+    } catch (err) {
+      console.error(`[legal/${slug}] pg fetch failed:`, err);
+      return null;
+    }
+  }
+  if (!supabase) return null;
+  const { data } = await supabase.from('legal_pages').select('*').eq('slug', slug).eq('is_published', true).single();
+  return data ?? null;
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
   const { lang } = await params;
   const isKr = lang === 'kr';
@@ -29,9 +45,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 
 export default async function TermsPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
-  if (!supabase) notFound();
-
-  const { data } = await supabase.from('legal_pages').select('*').eq('slug', 'terms').eq('is_published', true).single();
+  const data = await fetchLegal('terms');
   if (!data) notFound();
 
   const title = lang === 'kr' ? data.title_kr : data.title_en;

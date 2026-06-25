@@ -5,6 +5,7 @@ import type {
   HomepageBannerRow, ShortsRow, ShortsConfigRow, InstagramConfigRow,
   InstagramPostRow, PromoBannerRow, SubHeroBannerRow, CategoryRow,
   CommentRow, PostRow,
+  BusinessInfoRow, LegalPageRow, ProductReviewRow,
 } from './types';
 
 /**
@@ -258,6 +259,74 @@ export async function getCommentsByPostFromPg(postId: string): Promise<CommentRo
       WHERE post_id = $1
       ORDER BY created_at ASC`,
     [postId],
+  );
+  return rows;
+}
+
+// ─── business_info (footer) ───────────────────────────────────────
+export async function getBusinessInfoFromPg(): Promise<BusinessInfoRow | null> {
+  const pool = getPgPool();
+  const { rows } = await pool.query<BusinessInfoRow>(
+    `SELECT * FROM public.business_info LIMIT 1`,
+  );
+  return rows[0] ?? null;
+}
+
+// ─── legal_pages (terms / privacy) ────────────────────────────────
+export async function getLegalPageFromPg(slug: string): Promise<LegalPageRow | null> {
+  const pool = getPgPool();
+  const { rows } = await pool.query<LegalPageRow>(
+    `SELECT * FROM public.legal_pages
+      WHERE slug = $1 AND is_published = true
+      LIMIT 1`,
+    [slug],
+  );
+  return rows[0] ?? null;
+}
+
+// ─── sitemap data (products / menus / pages / posts) ──────────────
+// Sitemap pulls minimal columns from four tables in parallel. Returns
+// arrays even on partial failure — sitemap.ts logs which category dropped
+// out, mirroring the prior Supabase fan-out behavior.
+export interface SitemapData {
+  products: Array<{ id: string; created_at: string }>;
+  menus: Array<{ id: string; slug: string; sort_order: number }>;
+  pages: Array<{ slug: string; created_at: string }>;
+  posts: Array<{ id: string; menu_id: string; updated_at: string }>;
+}
+
+export async function getSitemapDataFromPg(): Promise<SitemapData> {
+  const pool = getPgPool();
+  const [products, menus, pages, posts] = await Promise.all([
+    pool.query<{ id: string; created_at: string }>(
+      `SELECT id, created_at FROM public.products WHERE is_active = true`,
+    ),
+    pool.query<{ id: string; slug: string; sort_order: number }>(
+      `SELECT id, slug, sort_order FROM public.menus WHERE is_published = true`,
+    ),
+    pool.query<{ slug: string; created_at: string }>(
+      `SELECT slug, created_at FROM public.pages WHERE is_published = true`,
+    ),
+    pool.query<{ id: string; menu_id: string; updated_at: string }>(
+      `SELECT id, menu_id, updated_at FROM public.posts WHERE is_published = true`,
+    ),
+  ]);
+  return {
+    products: products.rows,
+    menus: menus.rows,
+    pages: pages.rows,
+    posts: posts.rows,
+  };
+}
+
+// ─── product_reviews (read) ──────────────────────────────────────
+export async function getProductReviewsFromPg(productId: string): Promise<ProductReviewRow[]> {
+  const pool = getPgPool();
+  const { rows } = await pool.query<ProductReviewRow>(
+    `SELECT * FROM public.product_reviews
+      WHERE product_id = $1 AND is_published = true
+      ORDER BY created_at DESC`,
+    [productId],
   );
   return rows;
 }

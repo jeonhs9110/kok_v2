@@ -247,3 +247,57 @@ export interface CommentRow {
   is_admin_comment: boolean;
   created_at: string;
 }
+
+export interface BusinessInfoRow {
+  id: string;
+  company_name_kr: string | null;
+  company_name_en: string | null;
+  ceo_name: string | null;
+  business_reg_number: string | null;
+  mail_order_number: string | null;
+  address_kr: string | null;
+  address_en: string | null;
+  phone: string | null;
+  email: string | null;
+  bank_name: string | null;
+  bank_account: string | null;
+  bank_holder: string | null;
+  instagram_url: string | null;
+  youtube_url: string | null;
+  cs_hours_kr: string | null;
+  cs_hours_en: string | null;
+  cs_lunch_kr: string | null;
+  cs_lunch_en: string | null;
+  cs_holiday_kr: string | null;
+  cs_holiday_en: string | null;
+  hidden_fields: string[] | null;
+}
+
+export interface LegalPageRow {
+  id: string;
+  slug: string;
+  title_kr: string | null;
+  title_en: string | null;
+  content_kr: string | null;
+  content_en: string | null;
+  is_published: boolean;
+  created_at: string;
+}
+
+export interface PageRow {
+  id: string;
+  slug: string;
+  is_published: boolean;
+  created_at: string;
+}
+
+export interface ProductReviewRow {
+  id: string;
+  product_id: string;
+  author_name: string;
+  rating: number;
+  title: string | null;
+  content: string;
+  is_published: boolean;
+  created_at: string;
+}
