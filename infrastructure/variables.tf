@@ -170,6 +170,18 @@ variable "use_s3_storage" {
   default     = true
 }
 
+# ---- Auth cutover (Supabase Auth → Cognito) ----
+# When true, sign-in / sign-up / forgot-password / reset-password forms
+# route through /api/auth/cognito/* instead of supabase.auth.* directly.
+# Pairs with server-side requireAdmin() which already dispatches by the
+# same flag (process.env.USE_COGNITO === 'true'). Flip both at the same
+# time as the artifact bakes NEXT_PUBLIC_USE_COGNITO at build time.
+variable "use_cognito" {
+  description = "If true, auth UI + server gate use AWS Cognito instead of Supabase Auth."
+  type        = bool
+  default     = true
+}
+
 # ---- Monitoring ----
 variable "alerts_email" {
   description = "Email address to receive CloudWatch alarm notifications. AWS sends a one-click confirmation link to this address on first apply — alarms fire silently until that link is clicked."

@@ -50,6 +50,12 @@ locals {
     NEXT_PUBLIC_S3_STORAGE_BUCKET=${aws_s3_bucket.media.id}
     NEXT_PUBLIC_S3_PUBLIC_CDN_URL=${var.media_public_cdn_url}
     NEXT_PUBLIC_USE_S3=${var.use_s3_storage}
+    USE_COGNITO=${var.use_cognito}
+    NEXT_PUBLIC_USE_COGNITO=${var.use_cognito}
+    COGNITO_USER_POOL_ID=${aws_cognito_user_pool.main.id}
+    COGNITO_CLIENT_ID=${aws_cognito_user_pool_client.web.id}
+    NEXT_PUBLIC_COGNITO_USER_POOL_ID=${aws_cognito_user_pool.main.id}
+    NEXT_PUBLIC_COGNITO_CLIENT_ID=${aws_cognito_user_pool_client.web.id}
     ENVEOF
 
     # ---- RDS cutover: fetch DATABASE_URL when use_rds=true ----
