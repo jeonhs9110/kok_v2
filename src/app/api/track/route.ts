@@ -96,7 +96,11 @@ function extractUtm(search: string | null | undefined): {
 
 export async function POST(req: NextRequest) {
   try {
-    if (!supabase) return NextResponse.json({ ok: false }, { status: 500 });
+    // RDS path doesn't need a supabase client; only block if BOTH paths
+    // would have no destination.
+    if (process.env.USE_RDS !== 'true' && !supabase) {
+      return NextResponse.json({ ok: false }, { status: 500 });
+    }
 
     const { path, referrer, search } = await req.json();
 
@@ -134,11 +138,7 @@ export async function POST(req: NextRequest) {
     const device_type = parseDeviceType(req.headers.get('user-agent'));
     const { utm_source, utm_medium, utm_campaign } = extractUtm(search);
 
-    // 5s timeout — a stalled Supabase would otherwise block this route
-    // indefinitely and starve EC2 worker threads. The insert is
-    // best-effort analytics; dropping a row when the DB is slow is
-    // strictly better than backing up the request queue.
-    const insert = supabase.from('analytics').insert([{
+    const payload = {
       country,
       path: path || '/',
       referrer: referrer || null,
@@ -149,7 +149,21 @@ export async function POST(req: NextRequest) {
       utm_source,
       utm_medium,
       utm_campaign,
-    }]);
+    };
+
+    // 5s timeout — a stalled DB would otherwise block this route
+    // indefinitely and starve EC2 worker threads. The insert is
+    // best-effort analytics; dropping a row when the DB is slow is
+    // strictly better than backing up the request queue.
+    const insert = (async () => {
+      if (process.env.USE_RDS === 'true') {
+        const { insertAnalyticsEventInPg } = await import('@/lib/db/admin-writes');
+        await insertAnalyticsEventInPg(payload);
+        return;
+      }
+      const { error } = await supabase!.from('analytics').insert([payload]);
+      if (error) throw error;
+    })();
 
     await Promise.race([
       insert,

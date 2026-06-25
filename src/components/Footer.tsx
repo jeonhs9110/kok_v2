@@ -50,11 +50,9 @@ interface BusinessInfo {
   hidden_fields?: string[] | null;
 }
 
-// Public anon client for the cached fetch. We can't use `getSupabaseServer()`
-// inside `unstable_cache` because the cached function runs in a neutral
-// context (the cache is shared across requests), where `cookies()` isn't
-// available. Footer data is publicly readable via the anon role anyway —
-// no need for a session-bound client.
+// Public anon client kept only for the Supabase fallback path when
+// USE_RDS != 'true'. The RDS path goes through the dispatcher in
+// getCachedBusinessInfo below and never touches this client.
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const publicClient =
@@ -66,6 +64,16 @@ const publicClient =
 
 const getCachedBusinessInfo = unstable_cache(
   async (): Promise<BusinessInfo | null> => {
+    if (process.env.USE_RDS === 'true') {
+      try {
+        const { getBusinessInfoFromPg } = await import('@/lib/db/storefront-reads');
+        const row = await getBusinessInfoFromPg();
+        return (row as unknown as BusinessInfo | null) ?? null;
+      } catch (err) {
+        console.error('[Footer] business_info pg fetch failed:', err);
+        return null;
+      }
+    }
     if (!publicClient) {
       console.error('[Footer] Supabase env missing — business_info unavailable');
       return null;

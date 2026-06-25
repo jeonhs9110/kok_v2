@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { Star, Loader2, MessageCircle } from 'lucide-react';
-import { supabase } from '@/lib/supabase/client-singleton';
 
 interface ProductReview {
   id: string;
@@ -79,21 +78,24 @@ export default function ProductReviewSection({ productId, lang }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true);
-    if (!supabase) { setReviews([]); setLoading(false); return; }
-    const { data } = await supabase
-      .from('product_reviews')
-      .select('*')
-      .eq('product_id', productId)
-      .eq('is_published', true)
-      .order('created_at', { ascending: false });
-    setReviews(data ?? []);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/products/${productId}/reviews`, { cache: 'no-store' });
+      if (!res.ok) {
+        setReviews([]);
+        return;
+      }
+      const json = (await res.json()) as { reviews?: ProductReview[] };
+      setReviews(json.reviews ?? []);
+    } catch {
+      setReviews([]);
+    } finally {
+      setLoading(false);
+    }
   }, [productId]);
 
   // One-shot fetch on mount + when productId changes. No external-store
   // subscription source here; the explicit refetch on form submit keeps the
   // list fresh.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const submit = async (e: React.FormEvent) => {
@@ -102,24 +104,29 @@ export default function ProductReviewSection({ productId, lang }: Props) {
       setFeedback({ kind: 'error', text: lb.required });
       return;
     }
-    if (!supabase) return;
     setSubmitting(true);
-    const { error } = await supabase.from('product_reviews').insert({
-      product_id: productId,
-      author_name: form.author_name.trim(),
-      rating: form.rating,
-      title: form.title.trim() || null,
-      content: form.content.trim(),
-    });
-    setSubmitting(false);
-    if (error) {
-      setFeedback({ kind: 'error', text: lb.failed });
-      return;
+    try {
+      const res = await fetch(`/api/products/${productId}/reviews`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          author_name: form.author_name.trim(),
+          rating: form.rating,
+          title: form.title.trim() || null,
+          content: form.content.trim(),
+        }),
+      });
+      if (!res.ok) {
+        setFeedback({ kind: 'error', text: lb.failed });
+        return;
+      }
+      setFeedback({ kind: 'success', text: lb.submitted });
+      setForm({ author_name: '', rating: 5, title: '', content: '' });
+      setShowForm(false);
+      load();
+    } finally {
+      setSubmitting(false);
     }
-    setFeedback({ kind: 'success', text: lb.submitted });
-    setForm({ author_name: '', rating: 5, title: '', content: '' });
-    setShowForm(false);
-    load();
   };
 
   const avgRating = reviews.length === 0 ? 0

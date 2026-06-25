@@ -370,3 +370,49 @@ export async function deleteProductInPg(productId: string): Promise<boolean> {
   );
   return (rowCount ?? 0) > 0;
 }
+
+// ─── product_reviews (customer submit) ───────────────────────────
+export async function insertProductReviewInPg(input: {
+  product_id: string;
+  author_name: string;
+  rating: number;
+  title: string | null;
+  content: string;
+}): Promise<boolean> {
+  const pool = getPgPool();
+  const { rowCount } = await pool.query(
+    `INSERT INTO public.product_reviews
+       (product_id, author_name, rating, title, content)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [input.product_id, input.author_name, input.rating, input.title, input.content],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+// ─── analytics (page view track) ─────────────────────────────────
+export async function insertAnalyticsEventInPg(input: {
+  country: string | null;
+  path: string;
+  referrer: string | null;
+  ip_hash: string | null;
+  traffic_source: string | null;
+  search_keyword: string | null;
+  device_type: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+}): Promise<boolean> {
+  const pool = getPgPool();
+  const { rowCount } = await pool.query(
+    `INSERT INTO public.analytics
+       (country, path, referrer, ip_hash, traffic_source, search_keyword,
+        device_type, utm_source, utm_medium, utm_campaign)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [
+      input.country, input.path, input.referrer, input.ip_hash,
+      input.traffic_source, input.search_keyword, input.device_type,
+      input.utm_source, input.utm_medium, input.utm_campaign,
+    ],
+  );
+  return (rowCount ?? 0) > 0;
+}
