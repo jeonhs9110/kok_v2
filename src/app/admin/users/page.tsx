@@ -6,8 +6,14 @@ import { StatCard, StatStrip, PageHeader, EmptyState, LoadingState } from '@/com
 import UsersTable from './_components/UsersTable';
 import { useUsers } from './_components/useUsers';
 
+function sourceLabel(source: string | null, suffix: string): string {
+  if (source === 'rds') return `RDS 연결됨${suffix}`;
+  if (source === 'supabase') return `Supabase 연결됨${suffix}`;
+  return 'DB 미연결';
+}
+
 export default function UsersAdminPage() {
-  const { users, isLoading, isLive, toggleRole, deleteUser } = useUsers();
+  const { users, isLoading, isLive, source, toggleRole, deleteUser } = useUsers();
   const [search, setSearch] = useState('');
 
   const filtered = search
@@ -34,7 +40,7 @@ export default function UsersAdminPage() {
   return (
     <div className="space-y-5">
       <StatStrip>
-        <StatCard accent="#3b82f6" label="총 회원" value={stats.total} icon={UsersIcon} isLoading={isLoading} subLabel={isLive ? 'Supabase 연결됨' : 'DB 미연결'} />
+        <StatCard accent="#3b82f6" label="총 회원" value={stats.total} icon={UsersIcon} isLoading={isLoading} subLabel={sourceLabel(source, '')} />
         <StatCard accent="#22c55e" label="최근 7일 신규" value={stats.recent} icon={UsersIcon} isLoading={isLoading} subLabel="가입 추세" />
         <StatCard accent="#8b5cf6" label="관리자" value={stats.admins} icon={ShieldCheck} isLoading={isLoading} subLabel={`전체 ${stats.total}명 중`} />
         <StatCard accent="#f59e0b" label="일반 사용자" value={stats.total - stats.admins} icon={UsersIcon} isLoading={isLoading} subLabel="role = user" />
@@ -42,7 +48,7 @@ export default function UsersAdminPage() {
 
       <PageHeader
         title="사용자 계정"
-        description={isLive ? `Supabase 연결됨 · 총 ${users.length}명` : 'DB 미연결'}
+        description={isLive ? `${sourceLabel(source, '')} · 총 ${users.length}명` : 'DB 미연결'}
         actions={
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />

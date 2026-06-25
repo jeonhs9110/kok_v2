@@ -319,6 +319,25 @@ export async function getSitemapDataFromPg(): Promise<SitemapData> {
   };
 }
 
+// ─── users (admin list) ───────────────────────────────────────────
+export interface AdminUserRow {
+  id: string;
+  email: string;
+  role: 'admin' | 'user';
+  is_verified: boolean;
+  created_at: string;
+}
+
+export async function getAllUsersFromPg(): Promise<AdminUserRow[]> {
+  const pool = getPgPool();
+  const { rows } = await pool.query<AdminUserRow>(
+    `SELECT id, email, role, is_verified, created_at
+       FROM public.users
+      ORDER BY created_at DESC`,
+  );
+  return rows;
+}
+
 // ─── product_reviews (read) ──────────────────────────────────────
 export async function getProductReviewsFromPg(productId: string): Promise<ProductReviewRow[]> {
   const pool = getPgPool();

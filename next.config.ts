@@ -139,7 +139,26 @@ const nextConfig: NextConfig = {
     // grids + thumbnails don't bloat the cache.
     qualities: [75, 90, 95],
     remotePatterns: [
-      // Supabase Storage
+      // CloudFront /media/* — successor to Supabase Storage. Images live
+      // in the kokkok-media S3 bucket and serve through the main
+      // distribution. The src URL written into the DB is the public
+      // CloudFront URL on our own host (same origin as the site), so
+      // next/image still hits the Next.js optimizer at /_next/image and
+      // the optimizer fetches the original from CloudFront.
+      {
+        protocol: 'https',
+        hostname: 'www.kokkokgarden.com',
+        pathname: '/media/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'kokkokgarden.com',
+        pathname: '/media/**',
+      },
+      // Supabase Storage — kept until Supabase Pro is fully cancelled.
+      // Any DB row that still references a legacy supabase.co URL will
+      // continue to render through the optimizer until the URL is
+      // rewritten via the same script used in PR #279.
       {
         protocol: 'https',
         hostname: '*.supabase.co',
