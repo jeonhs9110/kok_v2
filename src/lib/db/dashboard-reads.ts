@@ -61,8 +61,13 @@ export async function getDashboardRawFromPg(
     usersPrev,
     wishAll,
   ] = await Promise.all([
+    // created_at is cast to text so the aggregation code can call
+    // .slice() on it — pg's default mapping returns Date objects which
+    // would crash the dispatcher.
     pool.query<DashboardRangeRow>(
-      `SELECT country, path, referrer, traffic_source, search_keyword, created_at, ip_hash
+      `SELECT country, path, referrer, traffic_source, search_keyword,
+              to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+              ip_hash
          FROM public.analytics
         WHERE created_at >= $1 AND created_at < $2
         ORDER BY created_at DESC
@@ -93,7 +98,9 @@ export async function getDashboardRawFromPg(
       [prevStart, prevEnd],
     ),
     pool.query<DashboardWishlistRow>(
-      `SELECT product_id, created_at FROM public.wishlist`,
+      `SELECT product_id,
+              to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at
+         FROM public.wishlist`,
     ),
   ]);
 
