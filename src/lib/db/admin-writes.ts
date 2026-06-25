@@ -371,6 +371,25 @@ export async function deleteProductInPg(productId: string): Promise<boolean> {
   return (rowCount ?? 0) > 0;
 }
 
+// ─── users (admin role + delete) ─────────────────────────────────
+export async function setUserRoleInPg(userId: string, role: 'admin' | 'user'): Promise<boolean> {
+  const pool = getPgPool();
+  const { rowCount } = await pool.query(
+    `UPDATE public.users SET role = $2 WHERE id = $1`,
+    [userId, role],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+export async function deleteUserInPg(userId: string): Promise<boolean> {
+  const pool = getPgPool();
+  const { rowCount } = await pool.query(
+    `DELETE FROM public.users WHERE id = $1`,
+    [userId],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 // ─── product_reviews (customer submit) ───────────────────────────
 export async function insertProductReviewInPg(input: {
   product_id: string;

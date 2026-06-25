@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useToast } from '@/components/admin/Toast';
-
-const supabase = getSupabaseBrowser();
 
 export interface UserRow {
   id: string;
@@ -13,32 +10,31 @@ export interface UserRow {
   created_at: string;
 }
 
+type Source = 'rds' | 'supabase' | 'rds_error' | 'supabase_error' | 'supabase_missing' | null;
+
 /**
- * State + DB handlers for /admin/users. Owns the users list, isLive flag
- * (drives the "Supabase 연결됨" sub-label), role toggle + delete handlers.
- * Phase 4 RLS on `users` is admin-only — see migration 20.
+ * State + handlers for /admin/users. Fetches from /api/admin/users which
+ * dispatches to RDS when USE_RDS=true and falls back to Supabase. The
+ * sub-label on the page reads from the `source` field so the UI shows
+ * which backing store is live.
  */
 export function useUsers() {
   const confirm = useConfirm();
   const toast = useToast();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLive, setIsLive] = useState(false);
+  const [source, setSource] = useState<Source>(null);
 
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
-      if (!supabase) throw new Error('No client');
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setUsers(data ?? []);
-      setIsLive(true);
+      const res = await fetch('/api/admin/users', { cache: 'no-store' });
+      const json = (await res.json()) as { users?: UserRow[]; source?: Source };
+      setUsers(json.users ?? []);
+      setSource(json.source ?? null);
     } catch {
       setUsers([]);
-      setIsLive(false);
+      setSource(null);
     } finally {
       setIsLoading(false);
     }
@@ -47,14 +43,16 @@ export function useUsers() {
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
   const toggleRole = async (user: UserRow) => {
-    const newRole = user.role === 'admin' ? 'user' : 'admin';
-    // Optimistic — flip locally first, roll back if DB write fails.
+    const newRole: 'admin' | 'user' = user.role === 'admin' ? 'user' : 'admin';
     const snapshot = users;
     setUsers(prev => prev.map(u => u.id === user.id ? { ...u, role: newRole } : u));
     try {
-      if (!supabase) throw new Error('No client');
-      const { error } = await supabase.from('users').update({ role: newRole }).eq('id', user.id);
-      if (error) throw error;
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      });
+      if (!res.ok) throw new Error('http_' + res.status);
     } catch (err) {
       console.warn('권한 변경 실패:', err);
       setUsers(snapshot);
@@ -68,9 +66,8 @@ export function useUsers() {
     const snapshot = users;
     setUsers(prev => prev.filter(u => u.id !== id));
     try {
-      if (!supabase) throw new Error('No client');
-      const { error } = await supabase.from('users').delete().eq('id', id);
-      if (error) throw error;
+      const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('http_' + res.status);
     } catch (err) {
       console.warn('삭제 실패:', err);
       setUsers(snapshot);
@@ -78,5 +75,12 @@ export function useUsers() {
     }
   };
 
-  return { users, isLoading, isLive, toggleRole, deleteUser };
+  return {
+    users,
+    isLoading,
+    isLive: source === 'rds' || source === 'supabase',
+    source,
+    toggleRole,
+    deleteUser,
+  };
 }
