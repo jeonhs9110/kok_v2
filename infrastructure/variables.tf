@@ -148,6 +148,28 @@ variable "use_rds" {
   default     = false
 }
 
+# ---- Media storage (S3 + CloudFront) ----
+# kokkok-media S3 bucket holds user-uploaded media (carousel slides,
+# product images, logos, etc.) — see infrastructure/s3-media.tf. The
+# storefront serves it via the CloudFront /media/* behavior (see
+# cloudfront.tf), so the public URL is the site's own host.
+variable "media_public_cdn_url" {
+  description = "Base URL admin uploads use as the public read URL for new objects. Path-prefixed CloudFront behavior, same host as the site."
+  type        = string
+  default     = "https://www.kokkokgarden.com/media"
+}
+
+# Flips admin uploads from Supabase Storage to S3. Read at build time
+# (NEXT_PUBLIC_*) AND at runtime by src/lib/admin/uploadFile.ts. Both
+# must agree: the artifact build and the EC2 env. Set true once the
+# URL backfill has run AND the artifact has been rebuilt with this
+# value baked in, otherwise admin uploads still target Supabase.
+variable "use_s3_storage" {
+  description = "If true, admin uploads use S3+CloudFront instead of Supabase Storage. Build-time AND runtime gate."
+  type        = bool
+  default     = true
+}
+
 # ---- Monitoring ----
 variable "alerts_email" {
   description = "Email address to receive CloudWatch alarm notifications. AWS sends a one-click confirmation link to this address on first apply — alarms fire silently until that link is clicked."

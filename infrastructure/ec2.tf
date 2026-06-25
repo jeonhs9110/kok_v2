@@ -45,6 +45,11 @@ locals {
     OPENAI_API_KEY=${var.openai_api_key}
     ANALYTICS_IP_SALT=${var.analytics_ip_salt}
     USE_RDS=${var.use_rds}
+    S3_STORAGE_BUCKET=${aws_s3_bucket.media.id}
+    S3_PUBLIC_CDN_URL=${var.media_public_cdn_url}
+    NEXT_PUBLIC_S3_STORAGE_BUCKET=${aws_s3_bucket.media.id}
+    NEXT_PUBLIC_S3_PUBLIC_CDN_URL=${var.media_public_cdn_url}
+    NEXT_PUBLIC_USE_S3=${var.use_s3_storage}
     ENVEOF
 
     # ---- RDS cutover: fetch DATABASE_URL when use_rds=true ----

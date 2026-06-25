@@ -65,6 +65,13 @@ jobs:
           # Secrets and variables → Actions → New repository secret.
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # Media storage cutover — Supabase Storage → S3 + CloudFront.
+          # The bucket name and CDN URL are NOT secrets (the bucket is
+          # private at S3, public via CloudFront with this URL prefix),
+          # so they live as plain values rather than repo secrets.
+          NEXT_PUBLIC_S3_STORAGE_BUCKET: kokkok-media
+          NEXT_PUBLIC_S3_PUBLIC_CDN_URL: https://www.kokkokgarden.com/media
+          NEXT_PUBLIC_USE_S3: 'true'
         run: npm run build
 
       - name: Package artifact
