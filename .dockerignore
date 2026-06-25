@@ -7,6 +7,15 @@
 .next
 out
 build
+# The tarball-publishing step in the build-publish-artifact workflow
+# materializes the standalone server output into ./deploy/. That step
+# runs BEFORE the Docker image build in the same job, so without this
+# entry Docker's `COPY . .` would slurp the entire standalone tree
+# back into the build context. Inside the container, tsc's `**/*.ts`
+# glob then hits the bundled-source copies (which can't resolve their
+# original relative imports) and fails the build with errors like
+# "Cannot find module './types'" against ./deploy/src/lib/db/...
+deploy
 node_modules
 .turbo
 coverage
