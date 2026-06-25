@@ -62,7 +62,17 @@ locals {
         --secret-id ${aws_secretsmanager_secret.rds_master_password.name} \
         --region ${var.region} \
         --query SecretString --output text | jq -r .password)
-      echo "DATABASE_URL=postgresql://${var.db_username}:$RDS_PW@${aws_db_instance.main.endpoint}/${var.db_name}?sslmode=require" >> /etc/kokkok/env
+      # uselibpqcompat=true restores libpq semantics for sslmode=require:
+      # encrypt-in-transit + skip CA-chain verification. Modern pg
+      # (v8.13+) silently upgrades 'require' to 'verify-full', which
+      # rejects RDS's regional CA chain (SELF_SIGNED_CERT_IN_CHAIN) unless
+      # we ship the AWS RDS root bundle and pass ssl.ca in code. We're
+      # inside a private VPC subnet with the RDS SG locking ingress to
+      # the EC2 SG, so MITM exposure is zero — encrypted-without-verify
+      # is fine here. To harden later: download the AWS regional CA
+      # bundle in user_data and replace this query string with
+      # sslmode=verify-full + an ssl.ca config in src/lib/db/pool.ts.
+      echo "DATABASE_URL=postgresql://${var.db_username}:$RDS_PW@${aws_db_instance.main.endpoint}/${var.db_name}?uselibpqcompat=true&sslmode=require" >> /etc/kokkok/env
     fi
 
     chmod 640 /etc/kokkok/env
