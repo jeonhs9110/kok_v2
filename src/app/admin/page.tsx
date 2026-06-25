@@ -26,7 +26,8 @@ import { useDashboardData } from './_components/useDashboardData';
  * top-right is left for traffic-source + search-keyword analysis.
  */
 export default function AdminDashboard() {
-  const { data, isLoading, range, setRange, presets, fetchAll } = useDashboardData();
+  const { data, isLoading, range, setRange, presets, fetchAll, source } = useDashboardData();
+  const sourceLabel = source === 'rds' ? 'RDS 연결됨' : source === 'supabase' ? 'Supabase 연결됨' : 'DB 미연결';
 
   function trend(curr: number, prev: number): number | null {
     if (prev === 0) return curr > 0 ? 100 : null;
@@ -60,7 +61,7 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-1.5">
             <span className={`w-1.5 h-1.5 rounded-full ${data.isLive ? 'bg-[#22c55e]' : 'bg-[#f59e0b]'}`} />
             <span className="text-[11px] font-semibold text-[#6b7280]">
-              {data.isLive ? 'Supabase 연결됨' : 'DB 미연결'}
+              {sourceLabel}
             </span>
           </div>
           <span className="text-[11px] text-[#9ca3af]">·</span>

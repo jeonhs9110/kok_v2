@@ -1,0 +1,111 @@
+// See src/lib/db/pool.ts for why 'server-only' is intentionally absent.
+import { getPgPool } from './pool';
+
+/**
+ * Pg helpers for the /admin dashboard. Mirrors the 9 parallel supabase
+ * queries in useDashboardData.ts so the dispatcher in /api/admin/dashboard
+ * can pick the pg path when USE_RDS=true.
+ */
+
+export interface DashboardRangeRow {
+  country: string | null;
+  path: string | null;
+  referrer: string | null;
+  traffic_source: string | null;
+  search_keyword: string | null;
+  created_at: string;
+  ip_hash: string | null;
+}
+
+export interface DashboardProductRow {
+  id: string;
+  name: string;
+  is_active: boolean;
+  images: string[] | null;
+}
+
+export interface DashboardWishlistRow {
+  product_id: string;
+  created_at: string;
+}
+
+export interface DashboardRawData {
+  analyticsRange: DashboardRangeRow[];
+  analyticsTotal: number;
+  analyticsPrevCount: number;
+  productsAll: DashboardProductRow[];
+  productsActive: number;
+  usersAll: number;
+  usersCurr: number;
+  usersPrev: number;
+  wishAll: DashboardWishlistRow[];
+}
+
+const RAW_LIMIT = 20000;
+
+export async function getDashboardRawFromPg(
+  rangeStart: string,
+  rangeEnd: string,
+  prevStart: string,
+  prevEnd: string,
+): Promise<DashboardRawData> {
+  const pool = getPgPool();
+  const [
+    analyticsRange,
+    analyticsTotal,
+    analyticsPrevCount,
+    productsAll,
+    productsActive,
+    usersAll,
+    usersCurr,
+    usersPrev,
+    wishAll,
+  ] = await Promise.all([
+    pool.query<DashboardRangeRow>(
+      `SELECT country, path, referrer, traffic_source, search_keyword, created_at, ip_hash
+         FROM public.analytics
+        WHERE created_at >= $1 AND created_at < $2
+        ORDER BY created_at DESC
+        LIMIT $3`,
+      [rangeStart, rangeEnd, RAW_LIMIT],
+    ),
+    pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.analytics`),
+    pool.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM public.analytics
+        WHERE created_at >= $1 AND created_at < $2`,
+      [prevStart, prevEnd],
+    ),
+    pool.query<DashboardProductRow>(
+      `SELECT id, name, is_active, images FROM public.products`,
+    ),
+    pool.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM public.products WHERE is_active = true`,
+    ),
+    pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.users`),
+    pool.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM public.users
+        WHERE created_at >= $1 AND created_at < $2`,
+      [rangeStart, rangeEnd],
+    ),
+    pool.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM public.users
+        WHERE created_at >= $1 AND created_at < $2`,
+      [prevStart, prevEnd],
+    ),
+    pool.query<DashboardWishlistRow>(
+      `SELECT product_id, created_at FROM public.wishlist`,
+    ),
+  ]);
+
+  return {
+    analyticsRange: analyticsRange.rows,
+    analyticsTotal: Number(analyticsTotal.rows[0]?.n ?? 0),
+    analyticsPrevCount: Number(analyticsPrevCount.rows[0]?.n ?? 0),
+    productsAll: productsAll.rows,
+    productsActive: Number(productsActive.rows[0]?.n ?? 0),
+    usersAll: Number(usersAll.rows[0]?.n ?? 0),
+    usersCurr: Number(usersCurr.rows[0]?.n ?? 0),
+    usersPrev: Number(usersPrev.rows[0]?.n ?? 0),
+    wishAll: wishAll.rows,
+  };
+}
