@@ -44,7 +44,27 @@ locals {
     NEXT_PUBLIC_SUPABASE_ANON_KEY=${var.next_public_supabase_anon_key}
     OPENAI_API_KEY=${var.openai_api_key}
     ANALYTICS_IP_SALT=${var.analytics_ip_salt}
+    USE_RDS=${var.use_rds}
     ENVEOF
+
+    # ---- RDS cutover: fetch DATABASE_URL when use_rds=true ----
+    # When the cutover toggle is flipped, the EC2 role
+    # (kokkok-ec2-role + kokkok-ec2-secrets policy) lets us retrieve the
+    # RDS password from Secrets Manager at boot. The JSON shape stored in
+    # the secret is {"username": "...", "password": "..."} so jq the
+    # password field, then assemble the DATABASE_URL with sslmode=require
+    # (TLS is on by default on RDS Postgres 16). The dispatcher in
+    # src/lib/db/pool.ts checks USE_RDS === "true" AND a present
+    # DATABASE_URL — both must land for the cutover to take effect.
+    if [ "${var.use_rds}" = "true" ]; then
+      dnf install -y --setopt=install_weak_deps=False jq awscli2 || true
+      RDS_PW=$(aws secretsmanager get-secret-value \
+        --secret-id ${aws_secretsmanager_secret.rds_master_password.name} \
+        --region ${var.region} \
+        --query SecretString --output text | jq -r .password)
+      echo "DATABASE_URL=postgresql://${var.db_username}:$RDS_PW@${aws_db_instance.main.endpoint}/${var.db_name}?sslmode=require" >> /etc/kokkok/env
+    fi
+
     chmod 640 /etc/kokkok/env
     chown root:ec2-user /etc/kokkok/env
 
@@ -131,8 +151,18 @@ resource "aws_instance" "app" {
   subnet_id                   = aws_subnet.public[0].id
   vpc_security_group_ids      = [aws_security_group.ec2.id]
   associate_public_ip_address = true
-  # iam_instance_profile attached manually by Dynamic Solution (jeonhs9110 lacks iam:PassRole)
-  user_data                   = local.user_data
+  # Attach the kokkok-ec2-role instance profile so the EC2 can read
+  # Secrets Manager (RDS password fetch in user_data) + ECR (future
+  # docker image pulls) + S3 + SSM. The role was provisioned manually
+  # by Dynamic Solution (kokkok-ec2-role + kokkok-ec2-secrets +
+  # kokkok-ec2-s3 policies). iam:PassRole on that role was granted to
+  # jeonhs9110 on 2026-06-24, so terraform can now attach it during
+  # replace operations — previously this line was a comment because
+  # the IAM grant was pending. Same name for the instance profile and
+  # role is the AWS auto-created convention when the role is built in
+  # the console.
+  iam_instance_profile = "kokkok-ec2-role"
+  user_data            = local.user_data
 
   root_block_device {
     volume_type = "gp3"
