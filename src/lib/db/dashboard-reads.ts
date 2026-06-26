@@ -43,6 +43,71 @@ export interface DashboardRawData {
 
 const RAW_LIMIT = 20000;
 
+// ─── /admin/analytics raw rows ────────────────────────────────────
+export interface AnalyticsRawRow {
+  path: string | null;
+  referrer: string | null;
+  traffic_source: string | null;
+  search_keyword: string | null;
+  created_at: string;
+  ip_hash: string | null;
+  device_type: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+}
+
+export interface AnalyticsPriorRow {
+  path: string | null;
+  created_at: string;
+  ip_hash: string | null;
+}
+
+export interface AnalyticsRawData {
+  analyticsRange: AnalyticsRawRow[];
+  analyticsPrior: AnalyticsPriorRow[];
+  productsAll: Array<{ id: string; name: string }>;
+}
+
+export async function getAnalyticsRawFromPg(
+  rangeStart: string,
+  rangeEnd: string,
+  priorStart: string,
+  priorEnd: string,
+): Promise<AnalyticsRawData> {
+  const pool = getPgPool();
+  const [analyticsRange, analyticsPrior, productsAll] = await Promise.all([
+    pool.query<AnalyticsRawRow>(
+      `SELECT path, referrer, traffic_source, search_keyword,
+              to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+              ip_hash, device_type, utm_source, utm_medium, utm_campaign
+         FROM public.analytics
+        WHERE created_at >= $1 AND created_at < $2
+        ORDER BY created_at DESC
+        LIMIT $3`,
+      [rangeStart, rangeEnd, RAW_LIMIT],
+    ),
+    pool.query<AnalyticsPriorRow>(
+      `SELECT path,
+              to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+              ip_hash
+         FROM public.analytics
+        WHERE created_at >= $1 AND created_at < $2
+        ORDER BY created_at DESC
+        LIMIT $3`,
+      [priorStart, priorEnd, RAW_LIMIT],
+    ),
+    pool.query<{ id: string; name: string }>(
+      `SELECT id, name FROM public.products`,
+    ),
+  ]);
+  return {
+    analyticsRange: analyticsRange.rows,
+    analyticsPrior: analyticsPrior.rows,
+    productsAll: productsAll.rows,
+  };
+}
+
 export async function getDashboardRawFromPg(
   rangeStart: string,
   rangeEnd: string,
