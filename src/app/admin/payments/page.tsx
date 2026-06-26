@@ -2,12 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CreditCard } from 'lucide-react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import PaymentProviderCard, { type PaymentProvider } from './_components/PaymentProviderCard';
-
-// Session-aware client. Phase 2 RLS lockdown on `payment_providers_config`
-// is admin-only (rows hold provider API keys).
-const supabase = getSupabaseBrowser();
 
 export default function PaymentsAdminPage() {
   const [providers, setProviders] = useState<PaymentProvider[]>([]);
@@ -17,10 +12,12 @@ export default function PaymentsAdminPage() {
   const [expandedProvider, setExpandedProvider] = useState<string | null>(null);
 
   async function loadProviders() {
-    if (!supabase) { setLoading(false); return; }
     try {
-      const { data } = await supabase.from('payment_providers_config').select('*').order('id');
-      if (data) setProviders(data);
+      const res = await fetch('/api/admin/crud/payment_providers_config?orderBy=id&direction=ASC', { cache: 'no-store' });
+      if (res.ok) {
+        const j = (await res.json()) as { rows?: PaymentProvider[] };
+        if (j.rows) setProviders(j.rows);
+      }
     } catch { /* table may not exist */ }
     setLoading(false);
   }
@@ -34,14 +31,20 @@ export default function PaymentsAdminPage() {
   }
 
   async function saveProvider(p: PaymentProvider) {
-    if (!supabase) return;
     setSaving(p.provider);
-    await supabase.from('payment_providers_config').update({
-      is_enabled: p.is_enabled,
-      api_key: p.api_key,
-      secret_key: p.secret_key,
-      merchant_id: p.merchant_id,
-    }).eq('id', p.id);
+    await fetch('/api/admin/crud/payment_providers_config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: p.id,
+        patch: {
+          is_enabled: p.is_enabled,
+          api_key: p.api_key,
+          secret_key: p.secret_key,
+          merchant_id: p.merchant_id,
+        },
+      }),
+    });
     setSaved(p.provider);
     setTimeout(() => setSaved(null), 2000);
     setSaving(null);
