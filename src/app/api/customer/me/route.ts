@@ -15,5 +15,30 @@ import { requireCustomer } from '@/lib/auth/requireCustomer';
 export async function GET() {
   const auth = await requireCustomer();
   if (auth instanceof Response) return auth;
-  return NextResponse.json({ userId: auth.userId, email: auth.email ?? null });
+
+  // Tell the client which role buckets the caller is in so the UI can
+  // hide privileged controls. The actual access checks happen
+  // server-side on each mutating route — this is display-only.
+  let isAdmin = false;
+  let isSuperAdmin = false;
+  if (process.env.USE_COGNITO === 'true') {
+    try {
+      const { cookies } = await import('next/headers');
+      const jar = await cookies();
+      const token = jar.get('cognito_id_token')?.value;
+      if (token) {
+        const { verifyCognitoIdToken, isAdminFromCognito, isSuperAdminFromCognito } = await import('@/lib/auth/cognito');
+        const claims = await verifyCognitoIdToken(token);
+        isAdmin = isAdminFromCognito(claims);
+        isSuperAdmin = isSuperAdminFromCognito(claims);
+      }
+    } catch { /* leave false */ }
+  }
+
+  return NextResponse.json({
+    userId: auth.userId,
+    email: auth.email ?? null,
+    isAdmin,
+    isSuperAdmin,
+  });
 }
