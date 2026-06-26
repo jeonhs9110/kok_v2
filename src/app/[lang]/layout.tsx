@@ -62,12 +62,10 @@ export default async function LangLayout({
             up on the next request — no cache invalidation needed.
             The postMessage listener below lets the /admin/theme
             editor iframe push live updates without a reload. */}
-        {/* Preconnect to Supabase storage — every hero / product /
-            promo image is served from the same origin, so dropping
-            DNS + TCP + TLS off the first image's critical path saves
-            ~200-300ms on cold connections. */}
-        <link rel="preconnect" href="https://auxfxdttbhhnmnutbemn.supabase.co" />
-        <link rel="dns-prefetch" href="https://auxfxdttbhhnmnutbemn.supabase.co" />
+        {/* Supabase preconnect hints were removed 2026-06-26 as part of
+            the cutover to RDS + S3/CloudFront + Cognito. Hero / product /
+            promo images now serve from www.kokkokgarden.com/media/* via
+            CloudFront — same origin as the page, so no preconnect helps. */}
         {/* Google Analytics 4 — loaded only when the operator has
             pasted a measurement ID in /admin/theme. Enhanced
             measurement (the GA4 default) handles SPA route changes

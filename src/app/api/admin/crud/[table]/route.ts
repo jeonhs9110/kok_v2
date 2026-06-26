@@ -41,6 +41,7 @@ const ALLOWED_TABLES = new Set<string>([
   'shorts_config',
   'site_backgrounds',
   'product_ingredient_tags',
+  'homepage_banners',
 ]);
 
 const SAFE_IDENT = /^[a-z_][a-z0-9_]*$/i;
