@@ -1,8 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
-
-const supabase = getSupabaseBrowser();
 
 export interface LegalPage {
   id: number;
@@ -50,9 +47,10 @@ const EMPTY_BIZ: BusinessInfo = {
 };
 
 /**
- * State + handlers for /admin/legal. Owns the legal pages list, business
- * info row, save markers keyed by slug/'biz', and the per-row update
- * helpers. Same admin-JWT pattern as the rest of post-#187 admin.
+ * State + handlers for /admin/legal. Reads/writes go through the
+ * generic admin-CRUD route (/api/admin/crud/legal_pages and
+ * /api/admin/crud/business_info), which dispatches to RDS via the
+ * standard USE_RDS flag.
  */
 export function useLegal() {
   const [pages, setPages] = useState<LegalPage[]>([]);
@@ -62,18 +60,19 @@ export function useLegal() {
   const [saved, setSaved] = useState<string | null>(null);
 
   async function load() {
-    if (!supabase) { setLoading(false); return; }
     try {
       const [pagesRes, bizRes] = await Promise.all([
-        supabase.from('legal_pages').select('*').order('id'),
-        supabase.from('business_info').select('*').maybeSingle(),
+        fetch('/api/admin/crud/legal_pages?orderBy=id&direction=ASC', { cache: 'no-store' }),
+        fetch('/api/admin/crud/business_info?orderBy=id&direction=ASC', { cache: 'no-store' }),
       ]);
-      if (pagesRes.error) console.error('약관 페이지 로드 실패:', pagesRes.error);
-      if (bizRes.error) console.error('사업자 정보 로드 실패:', bizRes.error);
-      if (pagesRes.data) setPages(pagesRes.data);
-      if (bizRes.data) {
-        const d = bizRes.data as BusinessInfo;
-        setBiz({ ...d, hidden_fields: d.hidden_fields ?? [] });
+      if (pagesRes.ok) {
+        const j = (await pagesRes.json()) as { rows?: LegalPage[] };
+        setPages(j.rows ?? []);
+      }
+      if (bizRes.ok) {
+        const j = (await bizRes.json()) as { rows?: BusinessInfo[] };
+        const row = (j.rows ?? [])[0];
+        if (row) setBiz({ ...row, hidden_fields: row.hidden_fields ?? [] });
       }
     } catch (err) {
       console.error('법적 페이지 관리자 로드 실패:', err);
@@ -85,15 +84,19 @@ export function useLegal() {
   useEffect(() => { load(); }, []);
 
   async function savePage(p: LegalPage) {
-    if (!supabase) return;
     setSaving(p.slug);
-    await supabase.from('legal_pages').update({
-      title_kr: p.title_kr, title_en: p.title_en,
-      content_kr: p.content_kr, content_en: p.content_en,
-      is_published: p.is_published,
-    }).eq('id', p.id);
-    // Audit 2026-06-21: footer + /terms + /privacy weren't refreshing
-    // until the 60s ISR TTL expired.
+    await fetch('/api/admin/crud/legal_pages', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: p.id,
+        patch: {
+          title_kr: p.title_kr, title_en: p.title_en,
+          content_kr: p.content_kr, content_en: p.content_en,
+          is_published: p.is_published,
+        },
+      }),
+    });
     await revalidateHeaderData();
     setSaved(p.slug);
     setTimeout(() => setSaved(null), 2000);
@@ -101,9 +104,21 @@ export function useLegal() {
   }
 
   async function saveBiz() {
-    if (!supabase) return;
     setSaving('biz');
-    await supabase.from('business_info').upsert({ id: 1, ...biz });
+    // business_info is a singleton (id=1). PATCH the existing row; if
+    // missing, fall through to insert.
+    const patchRes = await fetch('/api/admin/crud/business_info', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 1, patch: biz }),
+    });
+    if (!patchRes.ok) {
+      await fetch('/api/admin/crud/business_info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 1, ...biz }),
+      });
+    }
     await revalidateHeaderData();
     setSaved('biz');
     setTimeout(() => setSaved(null), 2000);

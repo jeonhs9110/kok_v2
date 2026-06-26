@@ -3,13 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Pencil, Trash2, FileText, BookOpen, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader, EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 import { useConfirm } from '@/components/admin/ConfirmModal';
-
-// Session-aware client. Phase 3 RLS lockdown on `posts` requires admin
-// JWT for cross-author updates/deletes — see migration 19.
-const supabase = getSupabaseBrowser();
 import type { Post, Menu } from '@/lib/api/menus';
 
 type PostWithMenu = Post & { menu_title: string; menu_slug: string };
@@ -24,23 +19,26 @@ export default function AllPostsAdminPage() {
 
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
-    if (!supabase) { setIsLoading(false); return; }
-    const [{ data: menuData }, { data: postsData }] = await Promise.all([
-      supabase.from('menus').select('*').order('sort_order', { ascending: true }),
-      supabase.from('posts').select('*').order('created_at', { ascending: false }),
-    ]);
-    const menuList = (menuData ?? []) as Menu[];
-    setMenus(menuList);
-    const menuMap = new Map(menuList.map(m => [m.id, m]));
-    setPosts((postsData ?? []).map((p: Post) => {
-      const m = menuMap.get(p.menu_id);
-      return {
-        ...p,
-        menu_title: m?.title?.kr || m?.title?.en || '(메뉴 없음)',
-        menu_slug: m?.slug || '',
-      };
-    }));
-    setIsLoading(false);
+    try {
+      const [menusRes, postsRes] = await Promise.all([
+        fetch('/api/admin/crud/menus?orderBy=sort_order&direction=ASC', { cache: 'no-store' }),
+        fetch('/api/admin/crud/posts?orderBy=created_at&direction=DESC', { cache: 'no-store' }),
+      ]);
+      const menuList: Menu[] = menusRes.ok ? ((await menusRes.json()) as { rows?: Menu[] }).rows ?? [] : [];
+      const postsList: Post[] = postsRes.ok ? ((await postsRes.json()) as { rows?: Post[] }).rows ?? [] : [];
+      setMenus(menuList);
+      const menuMap = new Map(menuList.map(m => [m.id, m]));
+      setPosts(postsList.map(p => {
+        const m = menuMap.get(p.menu_id);
+        return {
+          ...p,
+          menu_title: m?.title?.kr || m?.title?.en || '(메뉴 없음)',
+          menu_slug: m?.slug || '',
+        };
+      }));
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   // One-shot fetch on mount. The lint rule wants an external-store
@@ -52,8 +50,7 @@ export default function AllPostsAdminPage() {
   const handleDelete = async (id: string) => {
     const ok = await confirm({ message: '이 게시글을 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    if (!supabase) return;
-    await supabase.from('posts').delete().eq('id', id);
+    await fetch(`/api/admin/crud/posts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     fetchAll();
   };
 
