@@ -54,6 +54,22 @@ resource "aws_cognito_user_pool" "main" {
   tags = { Name = "${var.project_name}-users" }
 }
 
+# Super-admins — top of the role hierarchy. Owns role management +
+# customer deletion + audit-log access. Bootstrap manually after the
+# first terraform apply that creates the group:
+#   aws cognito-idp admin-add-user-to-group \
+#     --user-pool-id ${aws_cognito_user_pool.main.id} \
+#     --username <owner-email> \
+#     --group-name super_admins
+# At handoff, super_admins stays with the account owner while regular
+# admins go to Dynamic Solution's daily operator.
+resource "aws_cognito_user_group" "super_admins" {
+  name         = "super_admins"
+  user_pool_id = aws_cognito_user_pool.main.id
+  description  = "Site super-administrators (master key)"
+  precedence   = 0
+}
+
 # Group for admin users (lets the app gate /admin via group membership)
 resource "aws_cognito_user_group" "admins" {
   name         = "admins"
@@ -74,10 +90,10 @@ resource "aws_cognito_user_pool_client" "web" {
   name         = "${var.project_name}-web"
   user_pool_id = aws_cognito_user_pool.main.id
 
-  generate_secret              = false
-  refresh_token_validity       = 30
-  access_token_validity        = 1
-  id_token_validity            = 1
+  generate_secret        = false
+  refresh_token_validity = 30
+  access_token_validity  = 1
+  id_token_validity      = 1
   token_validity_units {
     refresh_token = "days"
     access_token  = "hours"

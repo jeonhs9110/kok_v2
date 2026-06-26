@@ -15,6 +15,18 @@ function sourceLabel(source: string | null, suffix: string): string {
 export default function UsersAdminPage() {
   const { users, isLoading, isLive, source, toggleRole, deleteUser } = useUsers();
   const [search, setSearch] = useState('');
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch('/api/customer/me', { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = (await r.json()) as { isSuperAdmin?: boolean };
+        setIsSuperAdmin(!!j.isSuperAdmin);
+      } catch { /* leave false */ }
+    })();
+  }, []);
 
   const filtered = search
     ? users.filter(u => u.email.toLowerCase().includes(search.toLowerCase()))
@@ -70,7 +82,7 @@ export default function UsersAdminPage() {
           ) : filtered.length === 0 ? (
             <EmptyState label={search ? '검색 결과가 없습니다' : '등록된 사용자가 없습니다'} />
           ) : (
-            <UsersTable users={filtered} onToggleRole={toggleRole} onDelete={deleteUser} />
+            <UsersTable users={filtered} onToggleRole={toggleRole} onDelete={deleteUser} canMutate={isSuperAdmin} />
           )}
         </div>
       </div>

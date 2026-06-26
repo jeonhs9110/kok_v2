@@ -30,6 +30,41 @@ export async function requireAdmin(): Promise<NextResponse | null> {
   return await requireAdminSupabase();
 }
 
+/**
+ * Reusable gate for super-admin-only API routes (role mutation,
+ * customer deletion, audit-log read, etc.). Returns null on pass,
+ * a 401/403 NextResponse otherwise.
+ *
+ * Only Cognito-backed pools carry the super-admin group; the legacy
+ * Supabase fallback path treats role='admin' as the highest privilege
+ * (no super-admin concept) and returns 403 to keep the privilege
+ * boundary honest in case the cutover is rolled back.
+ */
+export async function requireSuperAdmin(): Promise<NextResponse | null> {
+  if (process.env.USE_COGNITO !== 'true') {
+    return NextResponse.json({ error: 'super_admin requires cognito' }, { status: 403 });
+  }
+  try {
+    const jar = await cookies();
+    const idToken = jar.get('cognito_id_token')?.value;
+    if (!idToken) {
+      return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+    }
+    const { verifyCognitoIdToken, isSuperAdminFromCognito } = await import('./cognito');
+    const claims = await verifyCognitoIdToken(idToken);
+    if (!claims) {
+      return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+    }
+    if (!isSuperAdminFromCognito(claims)) {
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
+    return null;
+  } catch (err) {
+    console.error('[requireSuperAdmin] unexpected error:', err);
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+  }
+}
+
 async function requireAdminCognito(): Promise<NextResponse | null> {
   try {
     const jar = await cookies();

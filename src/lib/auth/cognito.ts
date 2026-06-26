@@ -80,7 +80,21 @@ export function isAdminFromCognito(claims: CognitoIdClaims | null): boolean {
   if (!claims) return false;
   const groups = claims['cognito:groups'];
   if (!Array.isArray(groups)) return false;
-  return groups.includes('admins');
+  return groups.includes('admins') || groups.includes('super_admins');
+}
+
+/**
+ * Super-admin = master key. Above regular admins. Owns user-role
+ * mutations, customer deletion, audit-log access, and other "must not
+ * be delegated to the daily operator" surfaces. The owner stays in
+ * this group at handoff; Dynamic Solution's operator gets `admins`
+ * only.
+ */
+export function isSuperAdminFromCognito(claims: CognitoIdClaims | null): boolean {
+  if (!claims) return false;
+  const groups = claims['cognito:groups'];
+  if (!Array.isArray(groups)) return false;
+  return groups.includes('super_admins');
 }
 
 export type { CognitoIdClaims };

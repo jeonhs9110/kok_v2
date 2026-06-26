@@ -127,6 +127,25 @@ export default async function Footer({ lang }: { lang: Lang }) {
   const addressLabel   = isKr ? '주소' : 'Address';
   const emailLabel     = isKr ? '이메일' : 'Email';
   const holderLabel    = isKr ? '예금주' : 'Account Holder';
+  const pocLabel       = isKr ? '개인정보보호책임자' : 'Privacy Officer';
+
+  // 전자상거래법 §13 + PIPA §31 require an always-visible business
+  // registration number, mail-order number, and privacy officer in the
+  // footer. When the operator hasn't populated business_info yet, show
+  // a single notice that surfaces the gap rather than silently rendering
+  // blank — operators sometimes forget to fill the row in until the KFTC
+  // does a compliance audit.
+  const hasAnyBusinessInfo = !!(
+    biz?.company_name_kr ||
+    biz?.business_reg_number ||
+    biz?.mail_order_number ||
+    biz?.ceo_name
+  );
+  // Use the type-via-cast escape hatch: the privacy officer fields live
+  // on the seed schema but aren't in the Footer's narrow BusinessInfo
+  // interface yet. Read them defensively.
+  const officerName = (biz as unknown as { privacy_officer_name?: string } | null | undefined)?.privacy_officer_name ?? '';
+  const officerEmail = (biz as unknown as { privacy_officer_email?: string } | null | undefined)?.privacy_officer_email ?? '';
 
   return (
     <footer className="bg-white border-t border-neutral-200 py-16 text-brand-ink" data-builder-section="footer">
@@ -149,6 +168,19 @@ export default async function Footer({ lang }: { lang: Lang }) {
               {showCompany && biz?.mail_order_number && <p>{mailOrderLabel}: {biz.mail_order_number}</p>}
               {showAddress && address && <p>{addressLabel}: {address}</p>}
               {showEmail && biz?.email && <p>{emailLabel}: {biz.email}</p>}
+              {/* Privacy officer disclosure — PIPA §31 requires this on
+                  every page, not just the privacy policy. */}
+              {(officerName || officerEmail) && (
+                <p>{pocLabel}: {[officerName, officerEmail].filter(Boolean).join(' / ')}</p>
+              )}
+              {/* If business_info is fully empty, surface a single
+                  visible notice so operators don't ship a footer that
+                  silently violates 전자상거래법 §13. */}
+              {!hasAnyBusinessInfo && isKr && (
+                <p className="text-amber-700 bg-amber-50 px-2 py-1 rounded text-[11px]">
+                  ⚠ 사업자 정보가 등록되지 않았습니다. 관리자 → 법적 페이지에서 입력해주세요.
+                </p>
+              )}
               <p className="mt-4 pt-4 border-t border-neutral-100">© {BRAND} All Rights Reserved.</p>
             </div>
             <div className="flex space-x-4 mt-6 text-[12px] font-semibold flex-wrap gap-y-2">
