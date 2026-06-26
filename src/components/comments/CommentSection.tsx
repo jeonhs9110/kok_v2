@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { MessageCircle } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import CommentForm from './CommentForm';
 import CommentItem from './CommentItem';
 import type { Comment } from '@/lib/api/menus';
@@ -23,14 +22,19 @@ export default function CommentSection({ postId, lang }: CommentSectionProps) {
   const l = lb[lang] ?? lb['en'];
 
   const fetchComments = useCallback(async () => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('comments')
-      .select('*')
-      .eq('post_id', postId)
-      .order('created_at', { ascending: true });
-    setComments(data || []);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/customer/comments?postId=${encodeURIComponent(postId)}`, { cache: 'no-store' });
+      if (!res.ok) {
+        setComments([]);
+        return;
+      }
+      const json = (await res.json()) as { comments?: Comment[] };
+      setComments(json.comments ?? []);
+    } catch {
+      setComments([]);
+    } finally {
+      setLoading(false);
+    }
   }, [postId]);
 
   // One-shot fetch on mount + when postId changes. No external-store

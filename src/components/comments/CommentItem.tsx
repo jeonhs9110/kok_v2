@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react';
 import { MessageSquare, Trash2 } from 'lucide-react';
 import CommentForm from './CommentForm';
 import type { Comment } from '@/lib/api/menus';
-import { createClient } from '@/lib/supabase/client';
 
 interface CommentItemProps {
   comment: Comment;
@@ -33,9 +32,11 @@ export default function CommentItem({ comment, replies, lang, postId, onRefresh,
     if (!confirm(l.confirmDelete)) return;
     setDeleting(true);
     try {
-      const supabase = createClient();
-      await supabase.from('comments').delete().eq('id', comment.id);
-      onRefresh();
+      // Admins delete any comment via /api/admin/comments; the
+      // customer-owned delete route requires author match. Since this
+      // delete button only renders for admins, hit the admin route.
+      const res = await fetch(`/api/admin/comments/${comment.id}`, { method: 'DELETE' });
+      if (res.ok) onRefresh();
     } finally {
       setDeleting(false);
     }

@@ -1,0 +1,139 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { requireCustomer } from '@/lib/auth/requireCustomer';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+/**
+ * GET /api/customer/wishlist[?details=1]
+ *   default → { productIds: string[] }
+ *   details → { productIds, items: [{wishlistId, productId, name, image, price}] }
+ *
+ * The detail variant joins wishlist + products so the MyPage "위시리스트" tab
+ * can render names/images/prices without a second round trip.
+ */
+export async function GET(req: Request) {
+  const auth = await requireCustomer();
+  if (auth instanceof NextResponse) return auth;
+
+  const wantDetails = new URL(req.url).searchParams.get('details') === '1';
+
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getPgPool } = await import('@/lib/db/pool');
+      const pool = getPgPool();
+      if (wantDetails) {
+        const { rows } = await pool.query<{
+          wishlist_id: string; product_id: string; name: string; images: string[] | null; price: string;
+        }>(
+          `SELECT w.id AS wishlist_id, w.product_id, p.name, p.images, p.price::text
+             FROM public.wishlist w
+             LEFT JOIN public.products p ON p.id = w.product_id
+            WHERE w.user_id = $1
+            ORDER BY w.created_at DESC`,
+          [auth.userId],
+        );
+        return NextResponse.json({
+          productIds: rows.map(r => r.product_id),
+          items: rows.map(r => ({
+            wishlistId: r.wishlist_id,
+            productId: r.product_id,
+            name: r.name ?? '',
+            image: (r.images ?? [])[0] ?? '',
+            price: Number(r.price ?? 0),
+          })),
+        });
+      }
+      const { rows } = await pool.query<{ product_id: string }>(
+        `SELECT product_id FROM public.wishlist WHERE user_id = $1`,
+        [auth.userId],
+      );
+      return NextResponse.json({ productIds: rows.map(r => r.product_id) });
+    } catch (err) {
+      console.error('[customer/wishlist] pg list failed:', err);
+      return NextResponse.json({ productIds: [], items: [] }, { status: 500 });
+    }
+  }
+
+  if (!supabase) return NextResponse.json({ productIds: [], items: [] }, { status: 500 });
+  if (wantDetails) {
+    const { data } = await supabase
+      .from('wishlist')
+      .select('id, product_id, products(name, images, price)')
+      .eq('user_id', auth.userId)
+      .order('created_at', { ascending: false });
+    type Row = { id: string; product_id: string; products: { name: string; images: string[]; price: number | string } | null };
+    const rows = (data ?? []) as unknown as Row[];
+    return NextResponse.json({
+      productIds: rows.map(r => r.product_id),
+      items: rows.map(r => ({
+        wishlistId: r.id,
+        productId: r.product_id,
+        name: r.products?.name ?? '',
+        image: r.products?.images?.[0] ?? '',
+        price: Number(r.products?.price ?? 0),
+      })),
+    });
+  }
+  const { data } = await supabase.from('wishlist').select('product_id').eq('user_id', auth.userId);
+  return NextResponse.json({ productIds: (data ?? []).map(d => d.product_id) });
+}
+
+/**
+ * POST /api/customer/wishlist { productId }
+ * Toggles wishlist membership for the signed-in customer.
+ * Returns { wishlisted: true|false }.
+ */
+export async function POST(req: Request) {
+  const auth = await requireCustomer();
+  if (auth instanceof NextResponse) return auth;
+
+  let body: unknown;
+  try { body = await req.json(); } catch { return NextResponse.json({ ok: false }, { status: 400 }); }
+  const { productId } = body as { productId?: string };
+  if (!productId || typeof productId !== 'string') {
+    return NextResponse.json({ ok: false, error: 'productId required' }, { status: 400 });
+  }
+
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getPgPool } = await import('@/lib/db/pool');
+      const pool = getPgPool();
+      const exists = await pool.query<{ exists: boolean }>(
+        `SELECT EXISTS(SELECT 1 FROM public.wishlist WHERE user_id = $1 AND product_id = $2) AS exists`,
+        [auth.userId, productId],
+      );
+      if (exists.rows[0]?.exists) {
+        await pool.query(
+          `DELETE FROM public.wishlist WHERE user_id = $1 AND product_id = $2`,
+          [auth.userId, productId],
+        );
+        return NextResponse.json({ wishlisted: false });
+      }
+      await pool.query(
+        `INSERT INTO public.wishlist (user_id, product_id) VALUES ($1, $2)`,
+        [auth.userId, productId],
+      );
+      return NextResponse.json({ wishlisted: true });
+    } catch (err) {
+      console.error('[customer/wishlist] pg toggle failed:', err);
+      return NextResponse.json({ ok: false }, { status: 500 });
+    }
+  }
+
+  if (!supabase) return NextResponse.json({ ok: false }, { status: 500 });
+  const { data: existing } = await supabase
+    .from('wishlist')
+    .select('product_id')
+    .eq('user_id', auth.userId)
+    .eq('product_id', productId)
+    .maybeSingle();
+  if (existing) {
+    await supabase.from('wishlist').delete().eq('user_id', auth.userId).eq('product_id', productId);
+    return NextResponse.json({ wishlisted: false });
+  }
+  await supabase.from('wishlist').insert([{ user_id: auth.userId, product_id: productId }]);
+  return NextResponse.json({ wishlisted: true });
+}
