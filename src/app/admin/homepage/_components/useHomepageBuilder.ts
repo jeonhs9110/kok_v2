@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { isBannerKey } from '@/lib/api/sectionOrder';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
 import { useHomepageSections, type HomepageBanner } from './useHomepageSections';
 import { useHomepageData } from './useHomepageData';
-
-const supabase = getSupabaseBrowser();
 
 const CORE_REORDERABLE = new Set([
   'carousel', 'promo-banners', 'products', 'shorts', 'sub-hero', 'instagram', 'reviews',
@@ -102,18 +99,13 @@ export function useHomepageBuilder() {
   const isReorderable = (k: string) => CORE_REORDERABLE.has(k) || isBannerKey(k);
 
   async function saveSectionOrder(next: string[]) {
-    if (!supabase) return;
     try {
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert(
-          { key: 'homepage_section_order', value: JSON.stringify(next), updated_at: new Date().toISOString() },
-          { onConflict: 'key' },
-        );
-      if (error) throw error;
-      // Tag eviction so the storefront's unstable_cache wrapper drops the
-      // cached order immediately. Was staling for up to 60s before — audit
-      // 2026-06-19 HIGH finding.
+      const res = await fetch('/api/admin/site-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: [{ key: 'homepage_section_order', value: JSON.stringify(next) }] }),
+      });
+      if (!res.ok) throw new Error('http_' + res.status);
       revalidateHomepageData('homepage_section_order');
     } catch (err) {
       console.error('[admin/homepage] section order save failed:', err);
@@ -154,21 +146,23 @@ export function useHomepageBuilder() {
   }, []);
 
   const handleAddBanner = useCallback(async () => {
-    if (!supabase) return;
     try {
-      const { data, error } = await supabase
-        .from('homepage_banners')
-        .insert({
+      const res = await fetch('/api/admin/crud/homepage_banners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           text: { kr: '' },
           bg_color: '#1f2937',
           text_color: '#ffffff',
           is_active: true,
-        })
-        .select('id,text,bg_color,text_color,is_active')
-        .single();
-      if (error || !data) throw error || new Error('insert returned no row');
+        }),
+      });
+      if (!res.ok) throw new Error('http_' + res.status);
+      const json = (await res.json()) as { row?: HomepageBanner };
+      const data = json.row;
+      if (!data) throw new Error('insert returned no row');
       const newKey = `banner:${data.id}`;
-      setBanners(prev => [...prev, data as HomepageBanner]);
+      setBanners(prev => [...prev, data]);
       // Insert new key right before the first homepage section (carousel)
       // so it lands at the top of the page body but below global chrome.
       // Operator can drag from there.
@@ -197,12 +191,13 @@ export function useHomepageBuilder() {
     // Banner edits change the section card's display text + visibility
     // hint. Re-fetch on close so the rail shows the new state instead
     // of the stale snapshot from mount.
-    if (wasEditingBanner && supabase) {
+    if (wasEditingBanner) {
       (async () => {
-        const { data } = await supabase!
-          .from('homepage_banners')
-          .select('id,text,bg_color,text_color,is_active');
-        if (data) setBanners(data as HomepageBanner[]);
+        const res = await fetch('/api/admin/crud/homepage_banners', { cache: 'no-store' });
+        if (res.ok) {
+          const j = (await res.json()) as { rows?: HomepageBanner[] };
+          if (j.rows) setBanners(j.rows);
+        }
       })().catch(err => console.error('[admin/homepage] banner refresh failed:', err));
     }
   }, [editingKey, setBanners]);
