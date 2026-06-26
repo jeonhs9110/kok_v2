@@ -4,14 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { Plus, Pencil, Trash2, X, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
-
-// Session-aware client. Phase 3 RLS lockdown on `posts` requires admin
-// JWT for cross-author updates/deletes — see migration 19.
-const supabase = getSupabaseBrowser();
 import type { Post, Menu } from '@/lib/api/menus';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
@@ -28,12 +23,23 @@ export default function PostsAdminPage() {
 
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
-    if (!supabase) return;
-    const { data: menuData } = await supabase.from('menus').select('*').eq('id', menuId).maybeSingle();
-    if (menuData) setMenu(menuData);
-    const { data: postsData } = await supabase.from('posts').select('*').eq('menu_id', menuId).order('created_at', { ascending: false });
-    setPosts(postsData ?? []);
-    setIsLoading(false);
+    try {
+      const [menusRes, postsRes] = await Promise.all([
+        fetch(`/api/admin/crud/menus?filter=${encodeURIComponent(`id:${menuId}`)}`, { cache: 'no-store' }),
+        fetch(`/api/admin/crud/posts?orderBy=created_at&direction=DESC&filter=${encodeURIComponent(`menu_id:${menuId}`)}`, { cache: 'no-store' }),
+      ]);
+      if (menusRes.ok) {
+        const j = (await menusRes.json()) as { rows?: Menu[] };
+        const row = (j.rows ?? [])[0];
+        if (row) setMenu(row);
+      }
+      if (postsRes.ok) {
+        const j = (await postsRes.json()) as { rows?: Post[] };
+        setPosts(j.rows ?? []);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }, [menuId]);
 
   // One-shot fetch on mount + when menuId changes. The lint rule wants an
@@ -55,16 +61,21 @@ export default function PostsAdminPage() {
   };
 
   const handleSave = async () => {
-    if (!supabase || !form.title.trim()) return;
-    const payload = { ...form, menu_id: menuId, is_admin_post: true, is_published: true, updated_at: new Date().toISOString() };
+    if (!form.title.trim()) return;
+    const payload = { ...form, menu_id: menuId, is_admin_post: true, is_published: true };
     try {
-      if (editingId) {
-        await supabase.from('posts').update(payload).eq('id', editingId);
-      } else {
-        await supabase.from('posts').insert(payload);
-      }
-      // Menu pages render the post list server-side; bust the same memo
-      // the menus admin invalidates so the new post shows immediately.
+      const res = editingId
+        ? await fetch('/api/admin/crud/posts', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: editingId, patch: payload }),
+          })
+        : await fetch('/api/admin/crud/posts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+      if (!res.ok) throw new Error('http_' + res.status);
       await revalidateHeaderData();
       resetForm();
       fetchAll();
@@ -74,8 +85,7 @@ export default function PostsAdminPage() {
   const handleDelete = async (id: string) => {
     const ok = await confirm({ message: '이 게시글을 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    if (!supabase) return;
-    await supabase.from('posts').delete().eq('id', id);
+    await fetch(`/api/admin/crud/posts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     await revalidateHeaderData();
     fetchAll();
   };

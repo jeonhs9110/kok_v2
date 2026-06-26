@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { SUPPORTED_LANGS } from '@/lib/i18n/types';
 import type { PageBlock } from '@/lib/pages/blocks';
 import type { Page } from './PagesListTable';
 import type { PageEditorFormData } from './PageEditorModal';
-
-const supabase = getSupabaseBrowser();
 
 type LangMap = Record<string, string>;
 type BlocksMap = Record<string, PageBlock[]>;
@@ -49,13 +46,10 @@ export function usePages() {
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     try {
-      if (!supabase) throw new Error('No client');
-      const { data, error } = await supabase
-        .from('pages')
-        .select('*')
-        .order('nav_order', { ascending: true });
-      if (error) throw error;
-      setPages((data ?? []).map(d => ({
+      const res = await fetch('/api/admin/crud/pages?orderBy=nav_order&direction=ASC', { cache: 'no-store' });
+      if (!res.ok) throw new Error('http_' + res.status);
+      const json = (await res.json()) as { rows?: Page[] };
+      setPages((json.rows ?? []).map(d => ({
         ...d,
         title: typeof d.title === 'string' ? { kr: d.title } : (d.title || { kr: '' }),
         content: typeof d.content === 'string' ? { kr: d.content } : (d.content || { kr: '' }),
@@ -107,10 +101,6 @@ export function usePages() {
     setIsSubmitting(true);
 
     try {
-      if (!supabase) throw new Error('No client');
-
-      // Clean empty-lang entries — keeps JSON small + makes the "has
-      // content for lang X" badges accurate.
       const cleanTitles: LangMap = {};
       const cleanContents: LangMap = {};
       const cleanBlocks: BlocksMap = {};
@@ -128,16 +118,20 @@ export function usePages() {
         is_published: formData.is_published,
         show_in_nav: formData.show_in_nav,
         nav_order: formData.nav_order,
-        updated_at: new Date().toISOString(),
       };
 
-      if (editingId) {
-        const { error } = await supabase.from('pages').update(payload).eq('id', editingId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('pages').insert([payload]);
-        if (error) throw error;
-      }
+      const res = editingId
+        ? await fetch('/api/admin/crud/pages', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: editingId, patch: payload }),
+          })
+        : await fetch('/api/admin/crud/pages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+      if (!res.ok) throw new Error('http_' + res.status);
 
       await fetchAll();
       resetModal();
@@ -153,8 +147,7 @@ export function usePages() {
     const ok = await confirm({ message: '이 페이지를 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
     try {
-      if (!supabase) throw new Error('No client');
-      await supabase.from('pages').delete().eq('id', id);
+      await fetch(`/api/admin/crud/pages?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       setPages(prev => prev.filter(p => p.id !== id));
     } catch {
       console.warn('삭제 실패');
@@ -163,8 +156,11 @@ export function usePages() {
 
   const togglePublish = async (page: Page) => {
     try {
-      if (!supabase) throw new Error('No client');
-      await supabase.from('pages').update({ is_published: !page.is_published }).eq('id', page.id);
+      await fetch('/api/admin/crud/pages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: page.id, patch: { is_published: !page.is_published } }),
+      });
       setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_published: !p.is_published } : p));
     } catch {
       console.warn('상태 변경 실패');

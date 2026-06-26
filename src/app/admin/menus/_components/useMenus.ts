@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
 import type { Menu } from '@/lib/api/menus';
 import type { Lang } from '@/lib/i18n/types';
 import type { MenuFormData } from './MenuModal';
-
-const supabase = getSupabaseBrowser();
 
 const emptyForm: MenuFormData = {
   slug: '', parent_id: '', page_type: 'page', board_write_role: 'admin',
@@ -17,10 +14,9 @@ const emptyForm: MenuFormData = {
 const PROTECTED_SLUGS = ['support'];
 
 /**
- * State + handlers for /admin/menus. Owns the menus list, modal state,
- * activeLang for the multi-lang content tabs, and the save/delete flow
- * that evicts the header cache (revalidateHeaderData) so renames/reorders
- * appear on the storefront without waiting on the 60s TTL.
+ * State + handlers for /admin/menus. Reads + writes go through
+ * /api/admin/crud/menus (dispatcher-gated). Header cache is evicted on
+ * write so storefront nav reflects the change without the 60s TTL.
  */
 export function useMenus() {
   const toast = useToast();
@@ -35,14 +31,10 @@ export function useMenus() {
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
     try {
-      if (!supabase) return;
-      const { data, error } = await supabase
-        .from('menus')
-        .select('*')
-        .order('sort_order', { ascending: true })
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      setMenus(data ?? []);
+      const res = await fetch('/api/admin/crud/menus?orderBy=sort_order&direction=ASC', { cache: 'no-store' });
+      if (!res.ok) throw new Error('http_' + res.status);
+      const json = (await res.json()) as { rows?: Menu[] };
+      setMenus(json.rows ?? []);
     } catch {
       setMenus([]);
     } finally {
@@ -80,7 +72,7 @@ export function useMenus() {
   };
 
   const handleSave = async () => {
-    if (!supabase || !form.slug.trim() || !form.title.kr?.trim()) return;
+    if (!form.slug.trim() || !form.title.kr?.trim()) return;
     const payload = {
       slug: form.slug.trim(),
       parent_id: form.parent_id || null,
@@ -93,16 +85,18 @@ export function useMenus() {
       content: form.page_type === 'page' ? form.content : {},
     };
     try {
-      if (editingId) {
-        const { error } = await supabase.from('menus').update(payload).eq('id', editingId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('menus').insert(payload);
-        if (error) throw error;
-      }
-      // Evict the process-local header memo so the next page load picks
-      // up the renamed/reordered/newly-published menu in the nav and
-      // (for page_type:page rows) shows fresh content without the 60s TTL.
+      const res = editingId
+        ? await fetch('/api/admin/crud/menus', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: editingId, patch: payload }),
+          })
+        : await fetch('/api/admin/crud/menus', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+      if (!res.ok) throw new Error('http_' + res.status);
       await revalidateHeaderData();
       setModalOpen(false);
       fetchAll();
@@ -120,8 +114,7 @@ export function useMenus() {
     const msg = hasChildren ? '이 메뉴와 모든 서브메뉴가 삭제됩니다. 계속하시겠습니까?' : '이 메뉴를 삭제하시겠습니까?';
     const ok = await confirm({ message: msg, tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    if (!supabase) return;
-    await supabase.from('menus').delete().eq('id', id);
+    await fetch(`/api/admin/crud/menus?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     await revalidateHeaderData();
     fetchAll();
   };
