@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import {
   DEFAULT_THEME_TOKENS,
   parseThemeTokens,
@@ -12,7 +11,21 @@ import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useToast } from '@/components/admin/Toast';
 import { revalidateHeaderData, revalidateHomepageData } from '@/lib/cache/invalidate';
 
-const supabase = getSupabaseBrowser();
+async function readSetting(key: string): Promise<unknown> {
+  const res = await fetch(`/api/admin/site-settings?keys=${encodeURIComponent(key)}`, { cache: 'no-store' });
+  if (!res.ok) return null;
+  const json = (await res.json()) as { values?: Record<string, unknown> };
+  return json.values?.[key] ?? null;
+}
+
+async function writeSetting(key: string, value: string): Promise<void> {
+  const res = await fetch('/api/admin/site-settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: [{ key, value }] }),
+  });
+  if (!res.ok) throw new Error('site-settings upsert failed');
+}
 
 /**
  * State + handlers for /admin/theme. Owns the working tokens + the saved
@@ -35,13 +48,8 @@ export function useTheme() {
   const fetchTokens = useCallback(async () => {
     setIsLoading(true);
     try {
-      if (!supabase) throw new Error('no client');
-      const { data } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', 'theme_tokens')
-        .maybeSingle();
-      const parsed = parseThemeTokens(data?.value);
+      const raw = await readSetting('theme_tokens');
+      const parsed = parseThemeTokens(raw);
       setTokens(parsed);
       setSavedTokens(parsed);
     } catch (err) {
@@ -85,36 +93,24 @@ export function useTheme() {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!supabase) return;
     setIsSaving(true);
     try {
-      // Merge-on-save: refetch DB row before writing back. /admin/best-seller-display
-      // owns a subset of theme_tokens; a naive full-state upsert here would clobber
-      // any change made over there in parallel.
-      const { data: latest } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', 'theme_tokens')
-        .maybeSingle();
-      const latestTokens = parseThemeTokens(latest?.value);
+      // Merge-on-save: refetch the latest row before writing back.
+      // /admin/best-seller-display owns a subset of theme_tokens; a
+      // naive full-state upsert here would clobber any change made
+      // over there in parallel.
+      const latestRaw = await readSetting('theme_tokens');
+      const latestTokens = parseThemeTokens(latestRaw);
       const merged: ThemeTokens = {
         ...latestTokens,
         ...tokens,
-        // BEST SELLER subset owned by /admin/best-seller-display; pin to
-        // DB value so this save can't undo changes made there.
         product_section_title_size: latestTokens.product_section_title_size,
         product_name_size: latestTokens.product_name_size,
         home_product_summary_size: latestTokens.home_product_summary_size,
         product_price_size: latestTokens.product_price_size,
         home_product_image_ratio: latestTokens.home_product_image_ratio,
       };
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert(
-          { key: 'theme_tokens', value: JSON.stringify(merged), updated_at: new Date().toISOString() },
-          { onConflict: 'key' },
-        );
-      if (error) throw error;
+      await writeSetting('theme_tokens', JSON.stringify(merged));
       setSavedTokens(merged);
       setTokens(merged);
       setSavedFlash(true);
