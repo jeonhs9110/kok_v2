@@ -1,17 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import RegistrationFieldsSection from './_components/RegistrationFieldsSection';
 import SocialProvidersSection from './_components/SocialProvidersSection';
 import IdentityVerificationSection from './_components/IdentityVerificationSection';
 import CustomerDataSection from './_components/CustomerDataSection';
 import type { RegField, AuthProvider, VerificationConfig, CustomerProfile } from './_components/types';
-
-// Session-aware client (was the bare anon client). The Phase 1 RLS
-// lockdown requires the admin's JWT to ride along on every write so
-// is_admin() can pass — see migration 00000000000017.
-const supabase = getSupabaseBrowser();
 
 export default function RegistrationAdminPage() {
   const [fields, setFields] = useState<RegField[]>([]);
@@ -42,30 +36,45 @@ export default function RegistrationAdminPage() {
   }
 
   async function loadAll() {
-    if (!supabase) { setLoading(false); return; }
     try {
       const [regRes, authRes, verRes, custRes] = await Promise.all([
-        supabase.from('registration_config').select('*').single(),
-        supabase.from('auth_providers_config').select('*').order('id'),
-        supabase.from('identity_verification_config').select('*').single(),
-        supabase.from('customer_profiles').select('*').order('created_at', { ascending: false }).limit(50),
+        fetch('/api/admin/crud/registration_config?orderBy=id&direction=ASC', { cache: 'no-store' }),
+        fetch('/api/admin/crud/auth_providers_config?orderBy=id&direction=ASC', { cache: 'no-store' }),
+        fetch('/api/admin/crud/identity_verification_config?orderBy=id&direction=ASC', { cache: 'no-store' }),
+        // customer_profiles isn't in the generic CRUD allow-list (PII). Use the existing admin-users
+        // route plus the customer-profile read endpoint when this page actually needs it. For now,
+        // leave the list empty until /api/admin/customer-profiles is wired (separate handoff item).
+        Promise.resolve(null),
       ]);
-      if (regRes.data) {
-        setFields(regRes.data.fields || []);
-        setMarketingConsent(regRes.data.require_marketing_consent ?? true);
-        setPrivacyConsent(regRes.data.require_privacy_consent ?? true);
+      if (regRes.ok) {
+        const j = (await regRes.json()) as { rows?: { fields?: RegField[]; require_marketing_consent?: boolean; require_privacy_consent?: boolean }[] };
+        const reg = (j.rows ?? [])[0];
+        if (reg) {
+          setFields(reg.fields ?? []);
+          setMarketingConsent(reg.require_marketing_consent ?? true);
+          setPrivacyConsent(reg.require_privacy_consent ?? true);
+        }
       }
-      if (authRes.data) setAuthProviders(authRes.data);
-      if (verRes.data) setVerification({
-        is_enabled: verRes.data.is_enabled ?? false,
-        provider: verRes.data.provider ?? 'nice',
-        api_key: verRes.data.api_key ?? '',
-        secret_key: verRes.data.secret_key ?? '',
-        merchant_id: verRes.data.merchant_id ?? '',
-        help_url: verRes.data.help_url ?? '',
-        description_kr: verRes.data.description_kr ?? '',
-      });
-      if (custRes.data) setCustomers(custRes.data);
+      if (authRes.ok) {
+        const j = (await authRes.json()) as { rows?: AuthProvider[] };
+        if (j.rows) setAuthProviders(j.rows);
+      }
+      if (verRes.ok) {
+        const j = (await verRes.json()) as { rows?: Partial<VerificationConfig>[] };
+        const ver = (j.rows ?? [])[0];
+        if (ver) setVerification({
+          is_enabled: ver.is_enabled ?? false,
+          provider: ver.provider ?? 'nice',
+          api_key: ver.api_key ?? '',
+          secret_key: ver.secret_key ?? '',
+          merchant_id: ver.merchant_id ?? '',
+          help_url: ver.help_url ?? '',
+          description_kr: ver.description_kr ?? '',
+        });
+      }
+      // custRes intentionally null — see comment in Promise.all above.
+      void custRes;
+      setCustomers([]);
     } catch { /* tables may not exist */ }
     setLoading(false);
   }
@@ -73,11 +82,25 @@ export default function RegistrationAdminPage() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadAll(); }, []);
 
+  async function upsertConfig(table: string, body: Record<string, unknown>): Promise<void> {
+    const patchRes = await fetch(`/api/admin/crud/${table}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: 1, patch: body }),
+    });
+    if (!patchRes.ok) {
+      await fetch(`/api/admin/crud/${table}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: 1, ...body }),
+      });
+    }
+  }
+
   async function saveFields() {
-    if (!supabase) return;
     setSaving('fields');
-    await supabase.from('registration_config').upsert({
-      id: 1, fields, require_marketing_consent: marketingConsent, require_privacy_consent: privacyConsent,
+    await upsertConfig('registration_config', {
+      fields, require_marketing_consent: marketingConsent, require_privacy_consent: privacyConsent,
     });
     setSaved('fields');
     scheduleSavedClear();
@@ -85,24 +108,23 @@ export default function RegistrationAdminPage() {
   }
 
   async function saveProvider(p: AuthProvider) {
-    if (!supabase) return;
     setSaving(`provider-${p.provider}`);
-    await supabase.from('auth_providers_config').update({
-      is_enabled: p.is_enabled,
-      client_id: p.client_id,
-      client_secret: p.client_secret,
-    }).eq('id', p.id);
+    await fetch('/api/admin/crud/auth_providers_config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: p.id,
+        patch: { is_enabled: p.is_enabled, client_id: p.client_id, client_secret: p.client_secret },
+      }),
+    });
     setSaved(`provider-${p.provider}`);
     scheduleSavedClear();
     setSaving(null);
   }
 
   async function saveVerification() {
-    if (!supabase) return;
     setSaving('verification');
-    await supabase.from('identity_verification_config').upsert({
-      id: 1, ...verification,
-    });
+    await upsertConfig('identity_verification_config', { ...verification });
     setSaved('verification');
     scheduleSavedClear();
     setSaving(null);
