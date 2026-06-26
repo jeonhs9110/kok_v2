@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Save } from 'lucide-react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
 import { PageHeader, LoadingState } from '@/components/admin/CafeWidgets';
@@ -19,8 +18,6 @@ import {
   tokensToCss,
   type ThemeTokens,
 } from '@/lib/theme/tokens';
-
-const supabase = getSupabaseBrowser();
 
 const PRODUCT_FONT_DEFAULTS: ProductFontTokens = {
   product_section_title_size: DEFAULT_THEME_TOKENS.product_section_title_size,
@@ -49,57 +46,58 @@ export default function BestSellerDisplayAdminPage() {
   const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
-    if (!supabase) { setLoading(false); return; }
     (async () => {
-      const [bsdRes, themeRes] = await Promise.all([
-        supabase.from('site_settings').select('value').eq('key', 'best_seller_display').maybeSingle(),
-        supabase.from('site_settings').select('value').eq('key', 'theme_tokens').maybeSingle(),
-      ]);
-      if (bsdRes.data?.value) {
-        try {
-          const parsed = typeof bsdRes.data.value === 'string' ? JSON.parse(bsdRes.data.value) : bsdRes.data.value;
-          if (parsed && typeof parsed === 'object') {
-            const next: BestSellerDisplay = {
-              card_scale: typeof parsed.card_scale === 'number' ? parsed.card_scale : DEFAULT_BEST_SELLER_DISPLAY.card_scale,
-              gap_x: typeof parsed.gap_x === 'number' ? parsed.gap_x : DEFAULT_BEST_SELLER_DISPLAY.gap_x,
-              gap_y: typeof parsed.gap_y === 'number' ? parsed.gap_y : DEFAULT_BEST_SELLER_DISPLAY.gap_y,
-            };
-            setData(next); setSaved(next);
+      try {
+        const res = await fetch('/api/admin/site-settings?keys=best_seller_display,theme_tokens', { cache: 'no-store' });
+        if (res.ok) {
+          const json = (await res.json()) as { values?: Record<string, unknown> };
+          const bsdRaw = json.values?.best_seller_display;
+          if (bsdRaw) {
+            try {
+              const parsed = typeof bsdRaw === 'string' ? JSON.parse(bsdRaw) : bsdRaw;
+              if (parsed && typeof parsed === 'object') {
+                const next: BestSellerDisplay = {
+                  card_scale: typeof (parsed as { card_scale?: number }).card_scale === 'number' ? (parsed as { card_scale: number }).card_scale : DEFAULT_BEST_SELLER_DISPLAY.card_scale,
+                  gap_x: typeof (parsed as { gap_x?: number }).gap_x === 'number' ? (parsed as { gap_x: number }).gap_x : DEFAULT_BEST_SELLER_DISPLAY.gap_x,
+                  gap_y: typeof (parsed as { gap_y?: number }).gap_y === 'number' ? (parsed as { gap_y: number }).gap_y : DEFAULT_BEST_SELLER_DISPLAY.gap_y,
+                };
+                setData(next); setSaved(next);
+              }
+            } catch { /* keep defaults */ }
           }
-        } catch { /* keep defaults */ }
+          const themeRaw = json.values?.theme_tokens;
+          const tokens = parseThemeTokens(typeof themeRaw === 'string' ? safeJson(themeRaw) : themeRaw);
+          setFullTokens(tokens);
+          const f: ProductFontTokens = {
+            product_section_title_size: tokens.product_section_title_size,
+            product_name_size: tokens.product_name_size,
+            home_product_summary_size: tokens.home_product_summary_size,
+            product_price_size: tokens.product_price_size,
+            home_product_image_ratio: tokens.home_product_image_ratio,
+          };
+          setFonts(f); setSavedFonts(f);
+        }
+      } finally {
+        setLoading(false);
       }
-      const themeRaw = themeRes.data?.value;
-      const tokens = parseThemeTokens(typeof themeRaw === 'string' ? safeJson(themeRaw) : themeRaw);
-      setFullTokens(tokens);
-      const f: ProductFontTokens = {
-        product_section_title_size: tokens.product_section_title_size,
-        product_name_size: tokens.product_name_size,
-        home_product_summary_size: tokens.home_product_summary_size,
-        product_price_size: tokens.product_price_size,
-        home_product_image_ratio: tokens.home_product_image_ratio,
-      };
-      setFonts(f); setSavedFonts(f);
-      setLoading(false);
-    })().catch(() => setLoading(false));
+    })();
   }, []);
 
   async function handleSave() {
-    if (!supabase) return;
     setSaving(true);
     try {
       const mergedTokens: ThemeTokens = { ...fullTokens, ...fonts };
-      const [bsdErr, themeErr] = await Promise.all([
-        supabase.from('site_settings').upsert(
-          { key: 'best_seller_display', value: JSON.stringify(data), updated_at: new Date().toISOString() },
-          { onConflict: 'key' },
-        ).then(r => r.error),
-        supabase.from('site_settings').upsert(
-          { key: 'theme_tokens', value: JSON.stringify(mergedTokens), updated_at: new Date().toISOString() },
-          { onConflict: 'key' },
-        ).then(r => r.error),
-      ]);
-      if (bsdErr) throw bsdErr;
-      if (themeErr) throw themeErr;
+      const res = await fetch('/api/admin/site-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: [
+            { key: 'best_seller_display', value: JSON.stringify(data) },
+            { key: 'theme_tokens', value: JSON.stringify(mergedTokens) },
+          ],
+        }),
+      });
+      if (!res.ok) throw new Error('http_' + res.status);
       revalidateHomepageData('best_seller_display');
       setSaved(data);
       setSavedFonts(fonts);

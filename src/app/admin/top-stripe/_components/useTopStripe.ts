@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
 import { useIsDirty } from '@/hooks/useIsDirty';
-
-const supabase = getSupabaseBrowser();
 
 export interface TopStripe {
   is_active: boolean;
@@ -23,10 +20,10 @@ const DEFAULT: TopStripe = {
 };
 
 /**
- * State + load/save handlers for /admin/top-stripe. The stripe data
+ * State + load/save handlers for /admin/top-stripe. Reads + writes go
+ * through /api/admin/site-settings (dispatcher-gated). The stripe data
  * lives as a singleton site_settings row keyed 'top_stripe' with a JSON
- * value; this hook handles the load → setData/setSaved pair and the
- * upsert-on-save with cache eviction.
+ * value.
  */
 export function useTopStripe() {
   const toast = useToast();
@@ -37,41 +34,38 @@ export function useTopStripe() {
   const [savedFlash, setSavedFlash] = useState(false);
 
   useEffect(() => {
-    if (!supabase) { setLoading(false); return; }
     (async () => {
-      const { data: row } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', 'top_stripe')
-        .maybeSingle();
-      if (row?.value) {
-        try {
-          const parsed = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
-          const merged = { ...DEFAULT, ...parsed };
-          setData(merged);
-          setSaved(merged);
-        } catch { /* keep defaults */ }
+      try {
+        const res = await fetch('/api/admin/site-settings?keys=top_stripe', { cache: 'no-store' });
+        if (res.ok) {
+          const json = (await res.json()) as { values?: Record<string, unknown> };
+          const raw = json.values?.top_stripe;
+          if (raw) {
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            const merged = { ...DEFAULT, ...(parsed as Partial<TopStripe>) };
+            setData(merged);
+            setSaved(merged);
+          }
+        }
+      } catch (err) {
+        console.error('[admin/top-stripe] load failed:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    })().catch(err => {
-      console.error('[admin/top-stripe] load failed:', err);
-      setLoading(false);
-    });
+    })();
   }, []);
 
   const isDirty = useIsDirty(data, saved);
 
   async function handleSave() {
-    if (!supabase) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert(
-          { key: 'top_stripe', value: JSON.stringify(data), updated_at: new Date().toISOString() },
-          { onConflict: 'key' },
-        );
-      if (error) throw error;
+      const res = await fetch('/api/admin/site-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: [{ key: 'top_stripe', value: JSON.stringify(data) }] }),
+      });
+      if (!res.ok) throw new Error('http_' + res.status);
       setSaved(data);
       revalidateHomepageData('top_stripe');
       setSavedFlash(true);
