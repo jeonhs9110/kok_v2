@@ -79,6 +79,12 @@ jobs:
           NEXT_PUBLIC_USE_COGNITO: 'true'
           NEXT_PUBLIC_COGNITO_USER_POOL_ID: ap-northeast-2_dTjn9KBWW
           NEXT_PUBLIC_COGNITO_CLIENT_ID: 2vvthi7mr3mtti62tlmch01nfu
+          # Admin browser-side dispatcher. Activates the
+          # USE_RDS_FROM_BROWSER branches in /admin/products,
+          # /admin/categories, /admin/carousel, etc. (12 hooks total
+          # already wired). Must be inlined at build time — server-side
+          # USE_RDS=true on EC2 covers the server path.
+          NEXT_PUBLIC_USE_RDS: 'true'
         run: npm run build
 
       - name: Package artifact

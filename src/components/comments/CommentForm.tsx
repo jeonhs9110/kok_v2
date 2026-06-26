@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 interface CommentFormProps {
   postId: string;
@@ -26,16 +25,23 @@ export default function CommentForm({ postId, parentId, lang, onSubmitted, onCan
     if (!authorName.trim() || !content.trim()) return;
     setSubmitting(true);
     try {
-      const supabase = createClient();
       const isAdmin = typeof document !== 'undefined' && document.cookie.includes('kokkok_admin_auth=true');
-      const { error } = await supabase.from('comments').insert({
-        post_id: postId,
-        parent_id: parentId || null,
-        author_name: authorName.trim(),
-        content: content.trim(),
-        is_admin_comment: isAdmin,
+      // Admin "notice"-style comments (is_admin_comment=true) only
+      // possible via the admin route; everyone else uses the customer
+      // route which forces is_admin_comment=false.
+      const endpoint = isAdmin ? '/api/admin/comments' : '/api/customer/comments';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          post_id: postId,
+          parent_id: parentId || null,
+          author_name: authorName.trim(),
+          content: content.trim(),
+          ...(isAdmin ? { is_admin_comment: true } : {}),
+        }),
       });
-      if (!error) {
+      if (res.ok) {
         setAuthorName('');
         setContent('');
         onSubmitted();

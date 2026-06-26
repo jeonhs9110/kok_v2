@@ -5,13 +5,14 @@ import { useSearchParams } from 'next/navigation';
 import { User, Package, Heart, LogOut, Save, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 
-// Session-aware client. The Phase 1 RLS lockdown on customer_profiles
-// requires `auth.uid() = id` to match for self-read/write — that only
-// works when the user's JWT is attached, which the bare anon client
-// doesn't do.
-const supabase = getSupabaseBrowser();
+/**
+ * Customer "my page". Reads + writes go through the dispatcher API
+ * routes (/api/customer/me, /api/customer/profile, /api/customer/wishlist),
+ * which use requireCustomer() (Cognito ID-token cookie) for auth and
+ * USE_RDS=true to route through RDS. No direct Supabase access from the
+ * browser.
+ */
 
 const L: Record<string, {
   title: string; profile: string; orders: string; wishlist: string;
@@ -53,13 +54,13 @@ function isValidTab(v: string | null): v is MyPageTab {
   return v === 'profile' || v === 'orders' || v === 'wishlist';
 }
 
+const EMPTY_PROFILE: CustomerProfile = {
+  name: '', phone: '', gender: '', birthday: '', country: '', skin_type: '', marketing_consent: false,
+};
+
 export default function MyPage({ lang }: { lang: string }) {
   const t = L[lang] ?? L['en'];
   const isKr = lang === 'kr';
-  // Deep-link support — Header's "주문조회" link points at
-  // `/${lang}/mypage?tab=orders` instead of a dedicated /orders route
-  // (which 404'd before the 2026-06-10 audit). Falls back to profile
-  // when the param is missing or unrecognized.
   const searchParams = useSearchParams();
   const initialTab: MyPageTab = isValidTab(searchParams?.get('tab') ?? null)
     ? (searchParams!.get('tab') as MyPageTab)
@@ -67,10 +68,9 @@ export default function MyPage({ lang }: { lang: string }) {
   const [tab, setTab] = useState<MyPageTab>(initialTab);
   const [userEmail, setUserEmail] = useState('');
   const [userCreated, setUserCreated] = useState('');
-  const [userId, setUserId] = useState('');
-  const [profile, setProfile] = useState<CustomerProfile>({ name: '', phone: '', gender: '', birthday: '', country: '', skin_type: '', marketing_consent: false });
+  const [profile, setProfile] = useState<CustomerProfile>(EMPTY_PROFILE);
   const [editMode, setEditMode] = useState(false);
-  const [editForm, setEditForm] = useState<CustomerProfile>(profile);
+  const [editForm, setEditForm] = useState<CustomerProfile>(EMPTY_PROFILE);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
   const [wishlist, setWishlist] = useState<WishItem[]>([]);
@@ -79,81 +79,74 @@ export default function MyPage({ lang }: { lang: string }) {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      if (!supabase) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUserEmail(user.email ?? '');
-        setUserCreated(new Date(user.created_at).toLocaleDateString('ko-KR'));
-        setUserId(user.id);
-
-        // Fetch customer profile (maybeSingle so a brand-new user with no
-        // customer_profiles row doesn't throw — they just see empty fields)
-        const { data: profileData } = await supabase
-          .from('customer_profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (profileData) {
-          const p = {
-            name: profileData.name || '',
-            phone: profileData.phone || '',
-            gender: profileData.gender || '',
-            birthday: profileData.birthday || '',
-            country: profileData.country || '',
-            skin_type: profileData.skin_type || '',
-            marketing_consent: profileData.marketing_consent || false,
+      const [meRes, profileRes, wishRes] = await Promise.all([
+        fetch('/api/customer/me', { cache: 'no-store' }),
+        fetch('/api/customer/profile', { cache: 'no-store' }),
+        fetch('/api/customer/wishlist?details=1', { cache: 'no-store' }),
+      ]);
+      if (meRes.ok) {
+        const me = (await meRes.json()) as { email: string | null };
+        setUserEmail(me.email ?? '');
+      }
+      if (profileRes.ok) {
+        const json = (await profileRes.json()) as {
+          profile: Partial<CustomerProfile & { email: string; created_at: string }> | null;
+        };
+        if (json.profile) {
+          const p: CustomerProfile = {
+            name: json.profile.name ?? '',
+            phone: json.profile.phone ?? '',
+            gender: json.profile.gender ?? '',
+            birthday: json.profile.birthday ?? '',
+            country: json.profile.country ?? '',
+            skin_type: json.profile.skin_type ?? '',
+            marketing_consent: !!json.profile.marketing_consent,
           };
           setProfile(p);
           setEditForm(p);
+          if (json.profile.email && !userEmail) setUserEmail(json.profile.email);
+          if (json.profile.created_at) setUserCreated(new Date(json.profile.created_at).toLocaleDateString('ko-KR'));
         }
-
-        // Fetch wishlist
-        const { data: wishes } = await supabase
-          .from('wishlist')
-          .select('id, product_id, products(name, images, price)')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (wishes) {
-          type WishRow = {
-            id: string;
-            product_id: string;
-            products: { name: string; images: string[]; price: number | string } | null;
-          };
-          setWishlist((wishes as unknown as WishRow[]).map(w => ({
-            id: w.id,
-            product_id: w.product_id,
-            product_name: w.products?.name ?? '',
-            product_image: w.products?.images?.[0] ?? '',
-            product_price: Number(w.products?.price ?? 0),
-          })));
-        }
+      }
+      if (wishRes.ok) {
+        const json = (await wishRes.json()) as {
+          items?: Array<{ wishlistId: string; productId: string; name: string; image: string; price: number }>;
+        };
+        setWishlist((json.items ?? []).map(it => ({
+          id: it.wishlistId,
+          product_id: it.productId,
+          product_name: it.name,
+          product_image: it.image,
+          product_price: it.price,
+        })));
       }
     } catch {
       console.warn('마이페이지 데이터 로딩 실패');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userEmail]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleSaveProfile = async () => {
-    if (!supabase || !userId) return;
     setSaving(true);
     try {
-      await supabase.from('customer_profiles').upsert({
-        id: userId,
-        email: userEmail,
-        name: editForm.name || null,
-        phone: editForm.phone || null,
-        gender: editForm.gender || null,
-        birthday: editForm.birthday || null,
-        country: editForm.country || null,
-        skin_type: editForm.skin_type || null,
-        marketing_consent: editForm.marketing_consent,
+      const res = await fetch('/api/customer/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.name || null,
+          phone: editForm.phone || null,
+          gender: editForm.gender || null,
+          birthday: editForm.birthday || null,
+          country: editForm.country || null,
+          skin_type: editForm.skin_type || null,
+          marketing_consent: editForm.marketing_consent,
+          email: userEmail,
+        }),
       });
+      if (!res.ok) throw new Error('http_' + res.status);
       setProfile(editForm);
       setEditMode(false);
       setSavedMsg(true);
@@ -165,15 +158,25 @@ export default function MyPage({ lang }: { lang: string }) {
   };
 
   const removeWish = async (id: string) => {
-    if (!supabase) return;
-    await supabase.from('wishlist').delete().eq('id', id);
-    setWishlist(prev => prev.filter(w => w.id !== id));
+    try {
+      const res = await fetch(`/api/customer/wishlist/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('http_' + res.status);
+      setWishlist(prev => prev.filter(w => w.id !== id));
+    } catch {
+      // leave the row visible if the delete failed
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Cognito sign-out clears the cognito_id_token cookie server-side.
+      // Falls through silently in the supabase fallback path (sign-out
+      // there used to be supabase.auth.signOut() but we no longer have
+      // an active supabase client; nothing to clear).
+      await fetch('/api/auth/cognito/sign-out', { method: 'POST' });
+    } catch { /* ignore */ }
     document.cookie = "kokkok_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    supabase?.auth.signOut();
     window.location.href = `/${lang}`;
   };
 
@@ -187,17 +190,10 @@ export default function MyPage({ lang }: { lang: string }) {
     if (!confirm(doubleConfirm)) return;
 
     try {
-      if (!supabase || !userId) return;
-      // Delete customer profile
-      await supabase.from('customer_profiles').delete().eq('id', userId);
-      // Delete wishlist
-      await supabase.from('wishlist').delete().eq('user_id', userId);
-      // Sign out
-      document.cookie = "kokkok_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      await supabase.auth.signOut();
+      const res = await fetch('/api/customer/profile', { method: 'DELETE' });
+      if (!res.ok) throw new Error('http_' + res.status);
+      await handleLogout();
       alert(isKr ? '계정이 삭제되었습니다.' : 'Your account has been deleted.');
-      window.location.href = `/${lang}`;
     } catch {
       alert(isKr ? '계정 삭제 실패. 고객센터에 문의해주세요.' : 'Account deletion failed. Please contact support.');
     }
@@ -232,11 +228,9 @@ export default function MyPage({ lang }: { lang: string }) {
         <div className="py-20 text-center text-neutral-400 text-sm font-bold tracking-widest">Loading...</div>
       ) : (
         <>
-          {/* ═══ Profile Tab ═══ */}
           {tab === 'profile' && (
             <div className="space-y-6">
               {!editMode ? (
-                /* ── View Mode ── */
                 <>
                   <div className="bg-neutral-50 rounded-xl p-6">
                     <ProfileRow label={t.email} value={userEmail} />
@@ -271,7 +265,6 @@ export default function MyPage({ lang }: { lang: string }) {
                   </div>
                 </>
               ) : (
-                /* ── Edit Mode ── */
                 <div className="bg-neutral-50 rounded-xl p-6 space-y-4">
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.email}</label>
@@ -324,7 +317,6 @@ export default function MyPage({ lang }: { lang: string }) {
             </div>
           )}
 
-          {/* ═══ Orders Tab ═══ */}
           {tab === 'orders' && (
             <div className="py-16 text-center">
               <Package className="w-12 h-12 mx-auto mb-4 text-neutral-200" />
@@ -333,7 +325,6 @@ export default function MyPage({ lang }: { lang: string }) {
             </div>
           )}
 
-          {/* ═══ Wishlist Tab ═══ */}
           {tab === 'wishlist' && (
             <>
               {wishlist.length === 0 ? (

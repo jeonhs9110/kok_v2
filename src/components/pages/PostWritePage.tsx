@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronRight, LogIn } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { useI18n } from '@/lib/i18n/context';
 import RichEditor from '@/components/admin/RichEditor';
 
@@ -15,6 +14,14 @@ interface Props {
   postId?: string;
 }
 
+/**
+ * Community-board post compose / edit page. All DB access goes through
+ * /api/customer/me + /api/customer/posts/* (dispatch to RDS via
+ * USE_RDS=true). The `kokkok_admin_auth` cookie still unlocks the
+ * "pin as notice" + cross-author edit affordances on the client; the
+ * actual server-side guard is the requireAdmin() / requireCustomer()
+ * check on the matching admin/customer routes.
+ */
 export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: Props) {
   const { lang } = useI18n();
   const router = useRouter();
@@ -27,47 +34,50 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
   const [submitting, setSubmitting] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
-  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const init = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
+    (async () => {
       const adminCookie = document.cookie.includes('kokkok_admin_auth=true');
       setIsAdmin(adminCookie);
 
-      if (!user) {
-        // Fallback: check mock admin cookie
-        const hasAuth = document.cookie.includes('kokkok_auth=true');
-        if (hasAuth) {
+      let signedIn = false;
+      try {
+        const meRes = await fetch('/api/customer/me', { cache: 'no-store' });
+        if (meRes.ok) {
+          const me = (await meRes.json()) as { userId: string; email: string | null };
+          signedIn = true;
+          setAuthorName(me.email?.split('@')[0] ?? '사용자');
+        }
+      } catch { /* ignore */ }
+
+      if (!signedIn) {
+        const hasMockAuth = document.cookie.includes('kokkok_auth=true');
+        if (hasMockAuth) {
           setAuthState('authenticated');
           setAuthorName('관리자');
-          setUserId(null);
         } else {
           setAuthState('unauthenticated');
           return;
         }
       } else {
         setAuthState('authenticated');
-        setUserId(user.id);
-        // Get display name from users table or use email
-        const { data: profile } = await supabase.from('users').select('email').eq('id', user.id).single();
-        setAuthorName(profile?.email?.split('@')[0] || user.email?.split('@')[0] || '사용자');
       }
 
-      // Load existing post for edit mode
       if (postId) {
-        const { data: post } = await supabase.from('posts').select('*').eq('id', postId).single();
-        if (post) {
-          setTitle(post.title);
-          setContent(post.content || '');
-          setAuthorName(post.author_name);
-          setIsNotice(post.is_admin_post);
-        }
+        try {
+          const res = await fetch(`/api/customer/posts/${postId}/detail`, { cache: 'no-store' });
+          if (res.ok) {
+            const json = (await res.json()) as { post: { title: string; content: string | null; author_name: string; is_admin_post: boolean } | null };
+            if (json.post) {
+              setTitle(json.post.title);
+              setContent(json.post.content ?? '');
+              setAuthorName(json.post.author_name);
+              setIsNotice(json.post.is_admin_post);
+            }
+          }
+        } catch { /* ignore */ }
       }
-    };
-    init();
+    })();
   }, [postId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,31 +85,35 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
     if (!title.trim()) return;
     setSubmitting(true);
     try {
-      const supabase = createClient();
-
       if (isEdit && postId) {
-        const { error } = await supabase.from('posts')
-          .update({
+        // Admin can pin/unpin via the admin route; regular owners use
+        // the customer route which doesn't accept the is_admin_post flag.
+        const endpoint = isAdmin ? `/api/admin/posts/${postId}` : `/api/customer/posts/${postId}`;
+        const res = await fetch(endpoint, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             title: title.trim(),
             content: content.trim(),
-            is_admin_post: isAdmin ? isNotice : undefined,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', postId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('posts').insert({
-          menu_id: menuId,
-          title: title.trim(),
-          content: content.trim(),
-          author_name: authorName.trim(),
-          author_id: userId,
-          is_admin_post: isAdmin && isNotice,
-          is_published: true,
+            ...(isAdmin ? { is_admin_post: isNotice } : {}),
+          }),
         });
-        if (error) throw error;
+        if (!res.ok) throw new Error('http_' + res.status);
+      } else {
+        const endpoint = isAdmin ? '/api/admin/posts' : '/api/customer/posts';
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            menu_id: menuId,
+            title: title.trim(),
+            content: content.trim(),
+            author_name: authorName.trim(),
+            ...(isAdmin ? { is_admin_post: isNotice } : {}),
+          }),
+        });
+        if (!res.ok) throw new Error('http_' + res.status);
       }
-
       router.push(`/${lang}/menus/${menuSlug}`);
     } catch {
       alert(lang === 'kr' ? '게시글 저장에 실패했습니다.' : 'Failed to save.');

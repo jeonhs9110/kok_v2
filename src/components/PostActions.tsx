@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Trash2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 
 interface PostActionsProps {
   postId: string;
@@ -12,6 +11,13 @@ interface PostActionsProps {
   lang: string;
 }
 
+/**
+ * Edit / delete buttons on a community-board post detail page. Talks to
+ * /api/customer/me to learn the signed-in user, /api/customer/posts/[id]
+ * to delete; an admin route (separate) handles cross-user delete via
+ * /api/admin/posts/[id]. Cookie `kokkok_admin_auth=true` still toggles
+ * the admin path locally for the operator preview view.
+ */
 export default function PostActions({ postId, authorId, slug, lang }: PostActionsProps) {
   const router = useRouter();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -22,12 +28,14 @@ export default function PostActions({ postId, authorId, slug, lang }: PostAction
   []);
 
   useEffect(() => {
-    const getUser = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) setCurrentUserId(user.id);
-    };
-    getUser();
+    (async () => {
+      try {
+        const res = await fetch('/api/customer/me', { cache: 'no-store' });
+        if (!res.ok) return;
+        const json = (await res.json()) as { userId: string };
+        setCurrentUserId(json.userId);
+      } catch { /* ignore */ }
+    })();
   }, []);
 
   const isOwner = currentUserId && authorId && currentUserId === authorId;
@@ -41,9 +49,9 @@ export default function PostActions({ postId, authorId, slug, lang }: PostAction
     if (!confirm(msg)) return;
     setDeleting(true);
     try {
-      const supabase = createClient();
-      const { error } = await supabase.from('posts').delete().eq('id', postId);
-      if (error) throw error;
+      const endpoint = isOwner ? `/api/customer/posts/${postId}` : `/api/admin/posts/${postId}`;
+      const res = await fetch(endpoint, { method: 'DELETE' });
+      if (!res.ok) throw new Error('http_' + res.status);
       router.push(`/${lang}/menus/${slug}`);
     } catch {
       alert(lang === 'kr' ? '삭제에 실패했습니다.' : 'Failed to delete.');
