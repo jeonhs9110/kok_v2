@@ -5,6 +5,7 @@ import {
   GlobalSignOutCommand,
   SignUpCommand,
   ConfirmSignUpCommand,
+  ResendConfirmationCodeCommand,
   ForgotPasswordCommand,
   ConfirmForgotPasswordCommand,
   type AuthenticationResultType,
@@ -145,6 +146,24 @@ export async function confirmSignUpWithCognito(
   } catch (err) {
     console.error('[auth/cognito-server] confirmSignUp failed:', err);
     return false;
+  }
+}
+
+export async function resendConfirmationCodeWithCognito(email: string): Promise<boolean> {
+  try {
+    const { clientId } = getEnv();
+    const cmd = new ResendConfirmationCodeCommand({
+      ClientId: clientId,
+      Username: email,
+    });
+    await getClient().send(cmd);
+    return true;
+  } catch (err) {
+    console.error('[auth/cognito-server] resendConfirmationCode failed:', err);
+    // Same enumeration-resistance reasoning as forgotPassword — return
+    // true regardless of UserNotFound so the UI can't probe whether an
+    // email is registered.
+    return true;
   }
 }
 

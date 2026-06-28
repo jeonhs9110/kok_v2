@@ -12,8 +12,13 @@
 # At ~250MB/image × 10 = ~2.5GB stored × $0.10/GB/mo = ~$0.25/mo.
 
 resource "aws_ecr_repository" "app" {
-  name                 = "kokkok-app"
-  image_tag_mutability = "IMMUTABLE"
+  name = "kokkok-app"
+  # MUTABLE so CI can re-push :latest on each successful master build.
+  # Versioned rollback still works via the master-<sha> tags retained by
+  # the lifecycle policy below — :latest is the rolling pointer, not the
+  # canonical archive. IMMUTABLE was blocking CI rollbacks when the same
+  # SHA needed to be re-pushed after a transient failure.
+  image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
