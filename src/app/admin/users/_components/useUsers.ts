@@ -59,11 +59,21 @@ export function useUsers() {
         // the operator can run from their own credentials to finish the
         // mirror. Copy to clipboard for one-click paste into a terminal.
         const w = json.cognitoWarning;
-        try { await navigator.clipboard.writeText(w.cli); } catch { /* clipboard may not be available */ }
-        toast.show(
-          `${w.message}\n\n다음 명령어가 클립보드에 복사되었습니다:\n${w.cli}`,
-          'warning',
-        );
+        // Track whether the copy actually succeeded — the previous silent
+        // catch always claimed "복사되었습니다" even on HTTP/iframe origins
+        // where navigator.clipboard is blocked. That fooled the operator
+        // into pasting nothing into their terminal.
+        let copied = false;
+        try {
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(w.cli);
+            copied = true;
+          }
+        } catch { /* clipboard may not be available */ }
+        const suffix = copied
+          ? `\n\n다음 명령어가 클립보드에 복사되었습니다:\n${w.cli}`
+          : `\n\n아래 명령어를 직접 복사해 터미널에서 실행하세요:\n${w.cli}`;
+        toast.show(`${w.message}${suffix}`, 'warning');
       }
     } catch (err) {
       console.warn('권한 변경 실패:', err);
@@ -83,11 +93,21 @@ export function useUsers() {
       const json = (await res.json()) as { ok: boolean; cognitoWarning?: { message: string; cli: string } | null };
       if (json.cognitoWarning) {
         const w = json.cognitoWarning;
-        try { await navigator.clipboard.writeText(w.cli); } catch { /* clipboard may not be available */ }
-        toast.show(
-          `${w.message}\n\n다음 명령어가 클립보드에 복사되었습니다:\n${w.cli}`,
-          'warning',
-        );
+        // Track whether the copy actually succeeded — the previous silent
+        // catch always claimed "복사되었습니다" even on HTTP/iframe origins
+        // where navigator.clipboard is blocked. That fooled the operator
+        // into pasting nothing into their terminal.
+        let copied = false;
+        try {
+          if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(w.cli);
+            copied = true;
+          }
+        } catch { /* clipboard may not be available */ }
+        const suffix = copied
+          ? `\n\n다음 명령어가 클립보드에 복사되었습니다:\n${w.cli}`
+          : `\n\n아래 명령어를 직접 복사해 터미널에서 실행하세요:\n${w.cli}`;
+        toast.show(`${w.message}${suffix}`, 'warning');
       }
     } catch (err) {
       console.warn('삭제 실패:', err);

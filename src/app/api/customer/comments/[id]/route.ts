@@ -19,7 +19,12 @@ export async function DELETE(_req: Request, { params }: Ctx) {
   if (auth instanceof NextResponse) return auth;
   const { id } = await params;
   if (!id) return NextResponse.json({ ok: false }, { status: 400 });
-  const guard = auth.email ?? '';
+  // Refuse the delete unless we have a non-empty email to match on. Without
+  // this guard, `auth.email ?? ''` would match every legacy comment whose
+  // author_name happens to be empty — letting a signed-in user delete
+  // arbitrary comments that nobody owns.
+  if (!auth.email) return NextResponse.json({ ok: false, error: 'no_identity' }, { status: 403 });
+  const guard = auth.email;
 
   if (process.env.USE_RDS === 'true') {
     try {

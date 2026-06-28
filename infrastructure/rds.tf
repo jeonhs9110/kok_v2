@@ -17,8 +17,12 @@
 #   - SSL/TLS enforced via parameter group (rds.force_ssl = 1).
 #
 # Backups:
-#   7-day retention. Free under the t4g.micro tier (backup ≤ DB size).
-#   Manual snapshots can be triggered before risky migrations.
+#   30-day retention. The t4g.micro free tier covers backup storage up
+#   to the size of the DB; current DB <2 GiB so 30 days is still free.
+#   The bump from 7 → 30 buys recovery headroom for silent data-corruption
+#   bugs that take >1 week to notice (e.g., a migration that drops the
+#   wrong column on a low-traffic table).
+#   Manual snapshots can still be triggered before risky migrations.
 
 resource "aws_db_subnet_group" "main" {
   name        = "${var.project_name}-db-subnet"
@@ -90,37 +94,37 @@ resource "random_password" "rds_master" {
 }
 
 resource "aws_db_instance" "main" {
-  identifier             = "${var.project_name}-postgres"
-  engine                 = "postgres"
+  identifier = "${var.project_name}-postgres"
+  engine     = "postgres"
   # 16.14 is the latest Postgres 16 minor in ap-northeast-2 as of
   # 2026-06-22. Initial apply targeted 16.4 — that point release has
   # since been retired from the region's RDS catalog.
-  engine_version         = "16.14"
-  instance_class         = "db.t4g.micro"
-  allocated_storage      = var.db_allocated_storage_gb
-  max_allocated_storage  = var.db_max_allocated_storage_gb
-  storage_type           = "gp3"
-  storage_encrypted      = true
+  engine_version        = "16.14"
+  instance_class        = "db.t4g.micro"
+  allocated_storage     = var.db_allocated_storage_gb
+  max_allocated_storage = var.db_max_allocated_storage_gb
+  storage_type          = "gp3"
+  storage_encrypted     = true
 
-  db_name                = var.db_name
-  username               = var.db_username
-  password               = random_password.rds_master.result
-  port                   = 5432
+  db_name  = var.db_name
+  username = var.db_username
+  password = random_password.rds_master.result
+  port     = 5432
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.rds.id]
   publicly_accessible    = false
 
-  parameter_group_name   = aws_db_parameter_group.main.name
+  parameter_group_name = aws_db_parameter_group.main.name
 
-  backup_retention_period = 7
+  backup_retention_period = 30
   backup_window           = "16:00-17:00" # 01:00-02:00 KST, low-traffic
   maintenance_window      = "Sun:17:00-Sun:18:00"
 
   # Deletion protection ON in prod. To actually delete: flip to false,
   # apply, then run terraform destroy in a second apply.
-  deletion_protection      = true
-  skip_final_snapshot      = false
+  deletion_protection       = true
+  skip_final_snapshot       = false
   final_snapshot_identifier = "${var.project_name}-postgres-final-${formatdate("YYYYMMDD", timestamp())}"
 
   # Performance Insights on the t4g.micro is included in the free tier
@@ -143,6 +147,11 @@ resource "aws_db_instance" "main" {
       # every plan would force a no-op replace. Pin to apply-time value.
       final_snapshot_identifier,
     ]
+    # A replace of the RDS instance destroys the database, even with a
+    # final snapshot. prevent_destroy stops Terraform from carrying out
+    # the destroy step; intentional replaces require commenting this
+    # out + apply in two steps.
+    prevent_destroy = true
   }
 }
 

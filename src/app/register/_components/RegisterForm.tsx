@@ -102,6 +102,8 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
   // 'form' → 'code' → 'success'. Supabase flow skips 'code'.
   const [step, setStep] = useState<'form' | 'code'>('form');
   const [confirmCode, setConfirmCode] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendNotice, setResendNotice] = useState('');
 
   const t = L[lang];
 
@@ -277,13 +279,16 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         setSuccess(true);
         return;
       }
-      // Step 4: Persist the customer_profiles row.
+      // Step 4: Persist the customer_profiles row. Surface a failure
+      // explicitly — without this check, a 500 here leaves the user with a
+      // valid Cognito identity but no profile row, which silently breaks
+      // every downstream "fetch my profile" call.
       const standardKeys = ['email', 'password', 'password_confirm', 'name', 'phone', 'gender', 'birthday', 'age_range', 'country', 'skin_type'];
       const customFields: Record<string, string> = {};
       for (const [k, v] of Object.entries(formData)) {
         if (!standardKeys.includes(k) && v) customFields[k] = v;
       }
-      await fetch('/api/auth/cognito/complete-registration', {
+      const completeRes = await fetch('/api/auth/cognito/complete-registration', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -298,11 +303,45 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
           custom_fields: Object.keys(customFields).length > 0 ? customFields : undefined,
         }),
       });
+      if (!completeRes.ok) {
+        setError(lang === 'kr'
+          ? '계정은 생성됐지만 프로필 저장에 실패했습니다. 로그인 후 마이페이지에서 정보를 다시 입력해주세요.'
+          : 'Account created but profile save failed. Please complete your profile from My Page after signing in.');
+        // Still show success so the user can move to login; the missing
+        // profile row will surface on /me and they can fill it in there.
+      }
       setSuccess(true);
     } catch {
       setError(t.failMsg);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (resendCooldown > 0) return;
+    setError('');
+    setResendNotice('');
+    try {
+      const res = await fetch('/api/auth/cognito/resend-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email?.trim() }),
+      });
+      if (!res.ok) {
+        setError(lang === 'kr' ? '인증번호 재전송에 실패했습니다.' : 'Failed to resend the code.');
+        return;
+      }
+      setResendNotice(lang === 'kr' ? '새 인증번호를 이메일로 보냈습니다.' : 'A new verification code has been sent.');
+      setResendCooldown(30);
+      const tick = setInterval(() => {
+        setResendCooldown(prev => {
+          if (prev <= 1) { clearInterval(tick); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch {
+      setError(lang === 'kr' ? '인증번호 재전송에 실패했습니다.' : 'Failed to resend the code.');
     }
   };
 
@@ -362,6 +401,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
             className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-brand-ink placeholder:text-gray-400 tracking-widest text-center"
           />
           {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
+          {resendNotice && <p className="text-green-600 text-xs font-semibold text-center">{resendNotice}</p>}
           <button
             type="submit"
             disabled={isLoading}
@@ -370,6 +410,16 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
             {isLoading
               ? (lang === 'kr' ? '인증 중...' : 'VERIFYING...')
               : (lang === 'kr' ? '인증 완료' : 'CONFIRM')}
+          </button>
+          <button
+            type="button"
+            onClick={handleResendCode}
+            disabled={resendCooldown > 0}
+            className="w-full text-xs text-gray-500 hover:text-black transition-colors underline underline-offset-4 disabled:no-underline disabled:opacity-50"
+          >
+            {resendCooldown > 0
+              ? (lang === 'kr' ? `${resendCooldown}초 후 재전송 가능` : `Resend in ${resendCooldown}s`)
+              : (lang === 'kr' ? '인증번호 다시 받기' : 'Resend verification code')}
           </button>
         </form>
       </div>

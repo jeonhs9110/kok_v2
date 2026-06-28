@@ -56,7 +56,21 @@ resource "aws_cognito_user_pool" "main" {
     email_sending_account = "COGNITO_DEFAULT"
   }
 
+  # Deletion protection on the user pool. A fat-fingered `terraform destroy`
+  # would otherwise wipe every account, group membership, and password
+  # hash with no way to recover. Flip to "INACTIVE" + apply before any
+  # intentional destroy.
+  deletion_protection = "ACTIVE"
+
   tags = { Name = "${var.project_name}-users" }
+
+  lifecycle {
+    # User pools are effectively immutable once production traffic lands —
+    # accidentally replacing one invalidates every signed-in session and
+    # forces every customer to re-register. Make Terraform refuse the
+    # destroy step of a replace.
+    prevent_destroy = true
+  }
 }
 
 # Super-admins — top of the role hierarchy. Owns role management +

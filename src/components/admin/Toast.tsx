@@ -90,7 +90,7 @@ function ToastChip({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
       className={`pointer-events-auto flex items-center gap-2 px-3 py-2.5 rounded shadow-md border border-[#e5e7eb] animate-in fade-in slide-in-from-right-4 duration-200 ${p.bg} ${p.border}`}
     >
       {p.icon}
-      <span className={`text-[12px] font-medium ${p.text} flex-1`}>{item.message}</span>
+      <span className={`text-[12px] font-medium ${p.text} flex-1 whitespace-pre-wrap break-words`}>{item.message}</span>
       <button
         type="button"
         onClick={onDismiss}

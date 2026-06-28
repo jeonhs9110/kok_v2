@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requireSuperAdmin } from '@/lib/auth/requireAdmin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -10,13 +10,13 @@ interface Ctx { params: Promise<{ id: string }> }
 
 /**
  * GET /api/admin/users/[id]/details
- * Admin view of a single customer: account row + profile + wishlist
- * (with product names/prices) + posts authored + recent orders.
- * Dispatches to RDS via USE_RDS. Admin-only — regular admins can view;
- * mutations on the user (role / delete) are super-admin only.
+ * Customer detail view: account row + profile (PII) + wishlist + posts +
+ * orders. Super-admin only — a regular admin operator should not be able
+ * to read another customer's birthday / phone / order history. Mutations
+ * on the user (role flip, delete) were already super-admin gated.
  */
 export async function GET(_req: Request, { params }: Ctx) {
-  const denied = await requireAdmin();
+  const denied = await requireSuperAdmin();
   if (denied) return denied;
   const { id } = await params;
   if (!id) return NextResponse.json({ ok: false }, { status: 400 });
