@@ -1,10 +1,11 @@
 'use client';
 
-import { UserPlus } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { UserPlus, Check, X } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { USE_COGNITO_FROM_BROWSER } from '@/lib/auth/clientFlags';
+import { checkPasswordPolicy } from '@/lib/auth/passwordPolicy';
 import type { Lang } from '@/lib/i18n/types';
 
 const supabase = getSupabaseBrowser();
@@ -35,35 +36,48 @@ interface RegConfig {
 
 const L: Record<Lang, {
   title: string; subtitle: string; register: string; creating: string;
-  login: string; failMsg: string; successTitle: string; successMsg: string; backToLogin: string;
+  login: string; failMsg: string; emailExistsMsg: string; weakPasswordMsg: string;
+  successTitle: string; successMsg: string; backToLogin: string;
   privacyConsent: string; marketingConsent: string; required: string; optional: string;
-  orSocialLogin: string; minChars: string; agreeAll: string;
+  orSocialLogin: string; agreeAll: string;
+  passwordConfirmLabel: string; passwordConfirmPlaceholder: string;
+  passwordsDontMatch: string; passwordPolicyHeader: string;
 }> = {
   kr: {
     title: '회원가입', subtitle: '콕콕가든 계정을 만드세요.',
     register: '회원가입', creating: '생성 중...',
     login: '이미 계정이 있으신가요? 로그인', failMsg: '회원가입에 실패했습니다.',
+    emailExistsMsg: '이미 가입된 이메일입니다. 로그인하시거나 비밀번호 찾기를 이용하세요.',
+    weakPasswordMsg: '비밀번호가 보안 조건을 만족하지 않습니다.',
     successTitle: '가입 완료', successMsg: '계정이 생성되었습니다. 이제 로그인할 수 있습니다.',
     backToLogin: '로그인하기',
     privacyConsent: '(필수) 개인정보 처리방침에 동의합니다.',
     marketingConsent: '(선택) 마케팅 정보 수신에 동의합니다.',
     required: '필수', optional: '선택',
     orSocialLogin: '또는 소셜 계정으로 가입',
-    minChars: '비밀번호는 8자 이상이어야 합니다.',
     agreeAll: '전체 동의',
+    passwordConfirmLabel: '비밀번호 확인',
+    passwordConfirmPlaceholder: '비밀번호를 한 번 더 입력하세요',
+    passwordsDontMatch: '비밀번호가 일치하지 않습니다.',
+    passwordPolicyHeader: '비밀번호 조건',
   },
   en: {
     title: 'Create Account', subtitle: 'Register for Kokkok Garden.',
     register: 'REGISTER', creating: 'CREATING...',
     login: 'Already have an account? Sign in', failMsg: 'Registration failed. Please try again.',
+    emailExistsMsg: 'This email is already registered. Please sign in or reset your password.',
+    weakPasswordMsg: 'Password does not meet the security requirements.',
     successTitle: 'Account Created', successMsg: 'Your account has been created. You can now log in.',
     backToLogin: 'GO TO LOGIN',
     privacyConsent: '(Required) I agree to the Privacy Policy.',
     marketingConsent: '(Optional) I agree to receive marketing communications.',
     required: 'Required', optional: 'Optional',
     orSocialLogin: 'or sign up with',
-    minChars: 'Password must be at least 8 characters.',
     agreeAll: 'Agree to all',
+    passwordConfirmLabel: 'Confirm Password',
+    passwordConfirmPlaceholder: 'Re-enter your password',
+    passwordsDontMatch: 'Passwords do not match.',
+    passwordPolicyHeader: 'Password requirements',
   },
 };
 
@@ -132,11 +146,17 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
       }
     }
 
-    // Align register with reset (which already required 8). Previously 6
-    // here, 8 in reset — a user registering at 7 chars then resetting was
-    // forced to pick a fresh longer password. Same min everywhere now.
-    if ((formData.password?.length || 0) < 8) {
-      setError(t.minChars);
+    // Strength + confirm match — mirrors infrastructure/cognito.tf's
+    // password_policy so the client can fail fast instead of waiting on
+    // Cognito's generic "InvalidPasswordException".
+    const policy = checkPasswordPolicy(formData.password ?? '');
+    if (!policy.allValid) {
+      setError(t.weakPasswordMsg);
+      setIsLoading(false);
+      return;
+    }
+    if ((formData.password ?? '') !== (formData.password_confirm ?? '')) {
+      setError(t.passwordsDontMatch);
       setIsLoading(false);
       return;
     }
@@ -162,9 +182,16 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          setError(body.error === 'weak_password'
-            ? t.minChars
-            : t.failMsg);
+          // Map the server-side Cognito error name to a friendlier
+          // Korean/English message. Default falls back to t.failMsg.
+          const code = String(body.error ?? '');
+          if (code === 'weak_password' || /InvalidPassword/i.test(code)) {
+            setError(t.weakPasswordMsg);
+          } else if (/UsernameExists|UserExists|already.*exist/i.test(code)) {
+            setError(t.emailExistsMsg);
+          } else {
+            setError(t.failMsg);
+          }
           return;
         }
         setStep('code');
@@ -193,7 +220,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
           auth_provider: 'email',
         };
 
-        const standardKeys = ['email', 'password', 'name', 'phone', 'gender', 'birthday', 'age_range', 'country', 'skin_type'];
+        const standardKeys = ['email', 'password', 'password_confirm', 'name', 'phone', 'gender', 'birthday', 'age_range', 'country', 'skin_type'];
         const customFields: Record<string, string> = {};
         for (const [k, v] of Object.entries(formData)) {
           if (!standardKeys.includes(k) && v) customFields[k] = v;
@@ -251,7 +278,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         return;
       }
       // Step 4: Persist the customer_profiles row.
-      const standardKeys = ['email', 'password', 'name', 'phone', 'gender', 'birthday', 'age_range', 'country', 'skin_type'];
+      const standardKeys = ['email', 'password', 'password_confirm', 'name', 'phone', 'gender', 'birthday', 'age_range', 'country', 'skin_type'];
       const customFields: Record<string, string> = {};
       for (const [k, v] of Object.entries(formData)) {
         if (!standardKeys.includes(k) && v) customFields[k] = v;
@@ -394,6 +421,15 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
             const options = lang === 'kr' ? f.options_kr : f.options_en;
 
             if (f.type === 'select' && options) {
+              // Personal-info selects (skin type especially) get an
+              // explicit "Prefer not to say" option appended unless the
+              // admin already added it. Avoids forcing users to lie or
+              // skip a required field.
+              const sensitiveSelectKeys = ['skin_type', 'gender'];
+              const isSensitive = sensitiveSelectKeys.includes(f.key);
+              const optOutLabel = lang === 'kr' ? '잘 모름 / 답하지 않음' : 'Prefer not to say';
+              const hasOptOutAlready = options.some(o => /모름|모르|prefer|not to say|unknown/i.test(o));
+              const renderedOptions = isSensitive && !hasOptOutAlready ? [...options, optOutLabel] : options;
               return (
                 <div key={f.key}>
                   <label className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 mb-1">
@@ -407,11 +443,13 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
                     className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-brand-ink outline-none focus:border-black transition"
                   >
                     <option value="">{lang === 'kr' ? '선택해주세요' : 'Select...'}</option>
-                    {options.map(o => <option key={o} value={o}>{o}</option>)}
+                    {renderedOptions.map(o => <option key={o} value={o}>{o}</option>)}
                   </select>
                 </div>
               );
             }
+
+            const isPassword = f.type === 'password' && f.key === 'password';
 
             return (
               <div key={f.key}>
@@ -425,8 +463,30 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
                   onChange={e => setFormData(p => ({ ...p, [f.key]: e.target.value }))}
                   required={f.required}
                   placeholder={label}
+                  autoComplete={isPassword ? 'new-password' : undefined}
                   className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-brand-ink placeholder:text-gray-400 outline-none focus:border-black transition"
                 />
+                {isPassword && (
+                  <>
+                    <PasswordChecklist value={formData.password ?? ''} lang={lang} header={t.passwordPolicyHeader} />
+                    <label className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 mt-3 mb-1">
+                      {t.passwordConfirmLabel}<span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={formData.password_confirm ?? ''}
+                      onChange={e => setFormData(p => ({ ...p, password_confirm: e.target.value }))}
+                      required
+                      placeholder={t.passwordConfirmPlaceholder}
+                      autoComplete="new-password"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-brand-ink placeholder:text-gray-400 outline-none focus:border-black transition"
+                    />
+                    {(formData.password_confirm?.length ?? 0) > 0
+                      && formData.password_confirm !== formData.password && (
+                      <p className="text-[11px] text-red-500 mt-1">{t.passwordsDontMatch}</p>
+                    )}
+                  </>
+                )}
               </div>
             );
           })
@@ -472,6 +532,39 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
           {t.login}
         </Link>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Live checklist showing which password requirements the user has met.
+ * Renders as a small ticked / un-ticked grid under the password input.
+ * The keys here mirror checkPasswordPolicy() in src/lib/auth/passwordPolicy.ts
+ * and the server-side policy in infrastructure/cognito.tf.
+ */
+function PasswordChecklist({ value, lang, header }: { value: string; lang: Lang; header: string }) {
+  const result = useMemo(() => checkPasswordPolicy(value), [value]);
+  if (value.length === 0) {
+    // Don't surface the checklist until the user starts typing; otherwise
+    // every blank-page state shows a wall of red ✗ icons that read as an
+    // error before the user has done anything wrong.
+    return null;
+  }
+  return (
+    <div className="mt-2 mb-1 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+      <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{header}</p>
+      <ul className="space-y-0.5">
+        {result.checks.map(c => (
+          <li key={c.key} className="flex items-center gap-1.5 text-[11px]">
+            {c.ok ? (
+              <Check className="w-3 h-3 text-green-600" />
+            ) : (
+              <X className="w-3 h-3 text-gray-300" />
+            )}
+            <span className={c.ok ? 'text-green-700' : 'text-gray-500'}>{c.label[lang]}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

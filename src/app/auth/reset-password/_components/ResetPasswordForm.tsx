@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock } from 'lucide-react';
+import { Lock, Check, X } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { USE_COGNITO_FROM_BROWSER } from '@/lib/auth/clientFlags';
+import { checkPasswordPolicy } from '@/lib/auth/passwordPolicy';
 
 /**
  * Password reset form.
@@ -42,8 +43,9 @@ export default function ResetPasswordForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 8) {
-      setError('비밀번호는 최소 8자 이상이어야 합니다.');
+    const policy = checkPasswordPolicy(password);
+    if (!policy.allValid) {
+      setError('비밀번호가 보안 조건을 만족하지 않습니다.');
       return;
     }
     if (password !== confirm) {
@@ -157,12 +159,13 @@ export default function ResetPasswordForm() {
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="새 비밀번호 (8자 이상)"
+              placeholder="새 비밀번호"
               autoComplete="new-password"
               required
               minLength={8}
               className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-brand-ink placeholder:text-gray-400"
             />
+            <ResetPasswordChecklist value={password} />
             <input
               type="password"
               value={confirm}
@@ -173,6 +176,9 @@ export default function ResetPasswordForm() {
               minLength={8}
               className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-brand-ink placeholder:text-gray-400"
             />
+            {confirm.length > 0 && confirm !== password && (
+              <p className="text-[11px] text-red-500">비밀번호가 일치하지 않습니다.</p>
+            )}
           </div>
 
           {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
@@ -186,6 +192,24 @@ export default function ResetPasswordForm() {
           </button>
         </form>
       )}
+    </div>
+  );
+}
+
+function ResetPasswordChecklist({ value }: { value: string }) {
+  const result = useMemo(() => checkPasswordPolicy(value), [value]);
+  if (value.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+      <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">비밀번호 조건</p>
+      <ul className="space-y-0.5">
+        {result.checks.map(c => (
+          <li key={c.key} className="flex items-center gap-1.5 text-[11px]">
+            {c.ok ? <Check className="w-3 h-3 text-green-600" /> : <X className="w-3 h-3 text-gray-300" />}
+            <span className={c.ok ? 'text-green-700' : 'text-gray-500'}>{c.label.kr}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

@@ -46,8 +46,10 @@ interface WishItem {
 
 const GENDER_OPTIONS_KR = ['남성', '여성', '기타', '선택안함'];
 const GENDER_OPTIONS_EN = ['Male', 'Female', 'Other', 'Prefer not to say'];
-const SKIN_OPTIONS_KR = ['건성', '지성', '복합성', '민감성', '중성'];
-const SKIN_OPTIONS_EN = ['Dry', 'Oily', 'Combination', 'Sensitive', 'Normal'];
+// 잘 모름 / Prefer not to say is the explicit "no answer" choice so users
+// aren't forced to pick a skin type they're unsure about.
+const SKIN_OPTIONS_KR = ['건성', '지성', '복합성', '민감성', '중성', '잘 모름 / 답하지 않음'];
+const SKIN_OPTIONS_EN = ['Dry', 'Oily', 'Combination', 'Sensitive', 'Normal', 'Prefer not to say'];
 
 type MyPageTab = 'profile' | 'orders' | 'wishlist';
 function isValidTab(v: string | null): v is MyPageTab {
