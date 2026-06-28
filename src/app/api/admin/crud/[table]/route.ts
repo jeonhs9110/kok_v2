@@ -64,9 +64,14 @@ export async function GET(req: Request, { params }: Ctx) {
   if (!allowedTable(table)) return NextResponse.json({ rows: [] }, { status: 404 });
 
   const url = new URL(req.url);
-  const orderByRaw = url.searchParams.get('orderBy') ?? 'created_at';
+  // Default to `id` because every allow-listed table has it. Some
+  // singleton config tables (legal_pages, chatbot_config) carry only
+  // `updated_at` and would 500 on a bare GET if the default were
+  // `created_at`. Callers that explicitly need created_at / sort_order
+  // / nav_order pass it via ?orderBy=.
+  const orderByRaw = url.searchParams.get('orderBy') ?? 'id';
   const directionRaw = (url.searchParams.get('direction') ?? 'DESC').toUpperCase();
-  const orderBy = SAFE_IDENT.test(orderByRaw) ? orderByRaw : 'created_at';
+  const orderBy = SAFE_IDENT.test(orderByRaw) ? orderByRaw : 'id';
   const direction: 'ASC' | 'DESC' = directionRaw === 'ASC' ? 'ASC' : 'DESC';
   const filterRaw = url.searchParams.get('filter') ?? '';
   const filter: { col: string; val: string } | null = (() => {
