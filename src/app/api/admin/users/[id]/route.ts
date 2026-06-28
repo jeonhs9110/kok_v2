@@ -54,16 +54,34 @@ export async function PATCH(req: Request, { params }: RouteContext) {
     try {
       const { setUserRoleInPg } = await import('@/lib/db/admin-writes');
       const ok = await setUserRoleInPg(id, role);
-      // Mirror the role change into Cognito group membership. Best-effort:
-      // if Cognito errors we still persist the RDS row — the gate at sign
-      // in checks Cognito groups so the operator will notice on next login
-      // and can re-run.
+      // Mirror the role change into Cognito group membership. The gate at
+      // sign-in checks the JWT claim, not the RDS row, so a failed mirror
+      // means the user can't actually reach /admin even though the
+      // database says they're admin. Surface the failure so the operator
+      // sees it instead of having to debug a 403 later.
+      let cognitoWarning: { message: string; cli: string } | null = null;
       if (email && process.env.USE_COGNITO === 'true') {
-        const { addUserToGroup, removeUserFromGroup } = await import('@/lib/auth/cognito-admin');
-        if (role === 'admin') await addUserToGroup(email, 'admins');
-        else await removeUserFromGroup(email, 'admins');
+        try {
+          const { addUserToGroup, removeUserFromGroup } = await import('@/lib/auth/cognito-admin');
+          const cognitoOk = role === 'admin'
+            ? await addUserToGroup(email, 'admins')
+            : await removeUserFromGroup(email, 'admins');
+          if (!cognitoOk) {
+            const verb = role === 'admin' ? 'admin-add-user-to-group' : 'admin-remove-user-from-group';
+            cognitoWarning = {
+              message: `RDS 권한은 변경되었지만 Cognito 그룹 동기화에 실패했습니다. 이 사용자는 다음 로그인 시 /admin에 접근할 수 없습니다.`,
+              cli: `aws cognito-idp ${verb} --user-pool-id ${process.env.COGNITO_USER_POOL_ID ?? ''} --username "${email}" --group-name admins --region ${process.env.AWS_REGION ?? 'ap-northeast-2'}`,
+            };
+          }
+        } catch (err) {
+          console.error('[admin/users] cognito group sync threw:', err);
+          cognitoWarning = {
+            message: 'Cognito 그룹 동기화 중 오류가 발생했습니다.',
+            cli: '',
+          };
+        }
       }
-      return NextResponse.json({ ok });
+      return NextResponse.json({ ok, cognitoWarning });
     } catch (err) {
       console.error('[admin/users] pg role update failed:', err);
       return NextResponse.json({ ok: false }, { status: 500 });
