@@ -53,6 +53,18 @@ export function useUsers() {
         body: JSON.stringify({ role: newRole }),
       });
       if (!res.ok) throw new Error('http_' + res.status);
+      const json = (await res.json()) as { ok: boolean; cognitoWarning?: { message: string; cli: string } | null };
+      if (json.cognitoWarning) {
+        // Privilege boundary didn't fully apply — surface the exact CLI
+        // the operator can run from their own credentials to finish the
+        // mirror. Copy to clipboard for one-click paste into a terminal.
+        const w = json.cognitoWarning;
+        try { await navigator.clipboard.writeText(w.cli); } catch { /* clipboard may not be available */ }
+        toast.show(
+          `${w.message}\n\n다음 명령어가 클립보드에 복사되었습니다:\n${w.cli}`,
+          'warning',
+        );
+      }
     } catch (err) {
       console.warn('권한 변경 실패:', err);
       setUsers(snapshot);

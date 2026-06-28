@@ -87,26 +87,49 @@ export async function PATCH(req: Request) {
 
 /**
  * DELETE /api/customer/profile — customer-initiated account deletion.
- * Removes the profile row. Does NOT delete the auth record (Cognito
- * account survives) — operator removes via /admin/users.
+ * Removes the profile row AND the auth identity. Cognito cleanup is
+ * best-effort: if it fails (IAM not granted on the EC2 role yet) the
+ * profile row still goes and the operator can finish the Cognito side
+ * via /admin/users. The customer's email is freed up for re-register
+ * only after the Cognito identity is gone.
  */
 export async function DELETE() {
   const auth = await requireCustomer();
   if (auth instanceof NextResponse) return auth;
 
+  let dbOk = false;
   if (process.env.USE_RDS === 'true') {
     try {
       const { getPgPool } = await import('@/lib/db/pool');
       const pool = getPgPool();
       await pool.query(`DELETE FROM public.customer_profiles WHERE id = $1`, [auth.userId]);
-      return NextResponse.json({ ok: true });
+      await pool.query(`DELETE FROM public.wishlist WHERE user_id = $1`, [auth.userId]).catch(() => {});
+      await pool.query(`DELETE FROM public.users WHERE id = $1`, [auth.userId]).catch(() => {});
+      dbOk = true;
     } catch (err) {
       console.error('[customer/profile] pg delete failed:', err);
       return NextResponse.json({ ok: false }, { status: 500 });
     }
+  } else if (supabase) {
+    await supabase.from('customer_profiles').delete().eq('id', auth.userId);
+    await supabase.from('wishlist').delete().eq('user_id', auth.userId);
+    dbOk = true;
   }
 
-  if (!supabase) return NextResponse.json({ ok: false }, { status: 500 });
-  await supabase.from('customer_profiles').delete().eq('id', auth.userId);
-  return NextResponse.json({ ok: true });
+  // Best-effort Cognito cleanup. Currently fails AccessDenied because the
+  // EC2 role doesn't have cognito-idp:AdminDeleteUser; a pending
+  // operations ticket with 권대영 will grant it. Until then, the operator
+  // can finish via aws cognito-idp admin-delete-user from their own
+  // credentials.
+  let cognitoCleared = false;
+  if (auth.email && process.env.USE_COGNITO === 'true') {
+    try {
+      const { deleteCognitoUserByEmail } = await import('@/lib/auth/cognito-admin');
+      cognitoCleared = await deleteCognitoUserByEmail(auth.email);
+    } catch (err) {
+      console.error('[customer/profile] cognito cleanup failed (non-fatal):', err);
+    }
+  }
+
+  return NextResponse.json({ ok: dbOk, cognitoCleared });
 }
