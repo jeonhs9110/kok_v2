@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Shield, ShieldOff, Trash2 } from 'lucide-react';
 import { StatusDot, TableShell, TableHeaderRow } from '@/components/admin/CafeWidgets';
+import { formatKstDate } from '@/lib/formatKstDate';
 import type { UserRow } from './useUsers';
 
 interface Props {
@@ -60,7 +61,7 @@ export default function UsersTable({ users, onToggleRole, onDelete, canMutate }:
             </td>
             <td className="px-4 py-2 text-[11.5px] text-[#6b7280] tabular-nums">
               <Link href={`/admin/users/${user.id}`} className="block">
-                {new Date(user.created_at).toLocaleDateString('ko-KR')}
+                {formatKstDate(user.created_at)}
               </Link>
             </td>
             <td className="px-4 py-2 text-right">

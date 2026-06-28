@@ -75,7 +75,15 @@ export default function CategoriesAdminPage() {
   };
 
   const handleSave = async () => {
-    if (!form.slug.trim() || !form.name.kr?.trim()) return;
+    if (!form.slug.trim() || !form.name.kr?.trim()) {
+      toast.show(
+        !form.slug.trim()
+          ? 'slug(주소)를 입력해주세요.'
+          : '한국어 카테고리명을 입력해주세요.',
+        'warning',
+      );
+      return;
+    }
     const payload = {
       slug: form.slug.trim(),
       parent_id: form.parent_id || null,
@@ -111,6 +119,7 @@ export default function CategoriesAdminPage() {
       await revalidateHeaderData();
       setModalOpen(false);
       fetchAll();
+      toast.show(editingId ? '카테고리가 수정되었습니다.' : '카테고리가 추가되었습니다.', 'success');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : '저장 실패';
       toast.show(msg, 'error');
@@ -123,13 +132,17 @@ export default function CategoriesAdminPage() {
       : '이 카테고리를 삭제하시겠습니까?';
     const ok = await confirm({ message: msg, tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
+    let deleted = true;
     if (USE_RDS_FROM_BROWSER) {
-      await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      deleted = res.ok;
     } else if (supabase) {
-      await supabase.from('categories').delete().eq('id', id);
+      const { error } = await supabase.from('categories').delete().eq('id', id);
+      deleted = !error;
     }
     await revalidateHeaderData();
     fetchAll();
+    toast.show(deleted ? '카테고리가 삭제되었습니다.' : '삭제에 실패했습니다.', deleted ? 'success' : 'error');
   };
 
   const subCount = categories.filter(c => c.parent_id).length;

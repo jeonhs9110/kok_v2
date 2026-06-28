@@ -2,6 +2,7 @@
 
 import { UserPlus } from 'lucide-react';
 import SectionHeader from './SectionHeader';
+import { formatKstDate } from '@/lib/formatKstDate';
 import type { CustomerProfile } from './types';
 
 interface Props {
@@ -45,7 +46,7 @@ export default function CustomerDataSection({ customers, openSection, onSetOpenS
                       <td className="py-2 px-2 text-gray-600 text-xs">{c.country || '—'}</td>
                       <td className="py-2 px-2 text-gray-600 text-xs">{c.skin_type || '—'}</td>
                       <td className="py-2 px-2">{c.marketing_consent ? <span className="text-[#16a34a] text-xs">✓</span> : <span className="text-[#d1d5db] text-xs">—</span>}</td>
-                      <td className="py-2 px-2 text-[#9ca3af] text-xs">{new Date(c.created_at).toLocaleDateString('ko-KR')}</td>
+                      <td className="py-2 px-2 text-[#9ca3af] text-xs">{formatKstDate(c.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>

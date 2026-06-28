@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Mail, Calendar, Shield, Phone, MapPin, Cake, Globe, Sparkles, MessageCircle, Heart, Package, FileText } from 'lucide-react';
 import { PageHeader, LoadingState, EmptyState } from '@/components/admin/CafeWidgets';
+import { formatKstDate } from '@/lib/formatKstDate';
 
 interface UserRow {
   id: string;
@@ -230,15 +231,6 @@ function Section({ title, icon: Icon, children }: { title: string; icon: React.C
       {children}
     </div>
   );
-}
-
-// Render timestamps in Asia/Seoul explicitly. Otherwise toLocaleDateString
-// uses the operator's browser timezone, so a sale closed at 11pm KST shows
-// up as the previous day for anyone viewing from outside Korea (or from a
-// laptop with the wrong tz). The (KST) suffix makes the timezone visible
-// at a glance.
-function formatKstDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) + ' KST';
 }
 
 function Field({ label, icon: Icon, children }: { label: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
