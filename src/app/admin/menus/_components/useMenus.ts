@@ -72,7 +72,17 @@ export function useMenus() {
   };
 
   const handleSave = async () => {
-    if (!form.slug.trim() || !form.title.kr?.trim()) return;
+    if (!form.slug.trim() || !form.title.kr?.trim()) {
+      // Silently returning here hid the cause — operator clicks 저장,
+      // nothing happens, no idea why. Spell it out.
+      toast.show(
+        !form.slug.trim()
+          ? 'slug(주소)를 입력해주세요.'
+          : '한국어 제목을 입력해주세요.',
+        'warning',
+      );
+      return;
+    }
     const payload = {
       slug: form.slug.trim(),
       parent_id: form.parent_id || null,
@@ -100,6 +110,7 @@ export function useMenus() {
       await revalidateHeaderData();
       setModalOpen(false);
       fetchAll();
+      toast.show(editingId ? '메뉴가 수정되었습니다.' : '메뉴가 추가되었습니다.', 'success');
     } catch (err: unknown) {
       toast.show(err instanceof Error ? err.message : '저장 실패', 'error');
     }
@@ -114,9 +125,10 @@ export function useMenus() {
     const msg = hasChildren ? '이 메뉴와 모든 서브메뉴가 삭제됩니다. 계속하시겠습니까?' : '이 메뉴를 삭제하시겠습니까?';
     const ok = await confirm({ message: msg, tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    await fetch(`/api/admin/crud/menus?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const res = await fetch(`/api/admin/crud/menus?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     await revalidateHeaderData();
     fetchAll();
+    toast.show(res.ok ? '메뉴가 삭제되었습니다.' : '메뉴 삭제에 실패했습니다.', res.ok ? 'success' : 'error');
   };
 
   return {

@@ -123,6 +123,7 @@ export default function AssetLibraryPage() {
       }
       setAssets(prev => prev.filter(x => !(x.bucket === a.bucket && x.key === a.key)));
       if (selected?.bucket === a.bucket && selected?.key === a.key) setSelected(null);
+      toast.show('파일이 삭제되었습니다.', 'success');
     } catch (err) {
       console.error('[admin/assets] delete failed:', err);
       toast.show(err instanceof Error ? err.message : '삭제 실패', 'error');

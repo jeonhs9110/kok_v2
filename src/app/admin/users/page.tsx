@@ -60,7 +60,13 @@ export default function UsersAdminPage() {
 
       <PageHeader
         title="사용자 계정"
-        description={isLive ? `${sourceLabel(source, '')} · 총 ${users.length}명` : 'DB 미연결'}
+        description={
+          isLive
+            ? search.trim()
+              ? `${sourceLabel(source, '')} · 검색 결과 ${filtered.length}건 / 총 ${users.length}명`
+              : `${sourceLabel(source, '')} · 총 ${users.length}명`
+            : 'DB 미연결'
+        }
         actions={
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />

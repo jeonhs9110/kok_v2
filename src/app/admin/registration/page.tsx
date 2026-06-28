@@ -6,6 +6,8 @@ import SocialProvidersSection from './_components/SocialProvidersSection';
 import IdentityVerificationSection from './_components/IdentityVerificationSection';
 import CustomerDataSection from './_components/CustomerDataSection';
 import type { RegField, AuthProvider, VerificationConfig, CustomerProfile } from './_components/types';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { useIsDirty } from '@/hooks/useIsDirty';
 
 export default function RegistrationAdminPage() {
   const [fields, setFields] = useState<RegField[]>([]);
@@ -17,11 +19,31 @@ export default function RegistrationAdminPage() {
   const [customers, setCustomers] = useState<CustomerProfile[]>([]);
   const [marketingConsent, setMarketingConsent] = useState(true);
   const [privacyConsent, setPrivacyConsent] = useState(true);
+  // Snapshots of the saved state per section. `isDirty` is true if any
+  // current section state diverges from its snapshot — drives the
+  // "leave without saving?" prompt. Snapshots get refreshed after each
+  // successful save so subsequent edits track from the new baseline.
+  const [savedFields, setSavedFields] = useState<{ fields: RegField[]; marketing: boolean; privacy: boolean }>({
+    fields: [], marketing: true, privacy: true,
+  });
+  const [savedProviders, setSavedProviders] = useState<AuthProvider[]>([]);
+  const [savedVerification, setSavedVerification] = useState<VerificationConfig>({
+    is_enabled: false, provider: 'nice', api_key: '', secret_key: '', merchant_id: '',
+    help_url: 'https://www.niceapi.co.kr/', description_kr: '',
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
   const [openSection, setOpenSection] = useState<string>('fields');
   const [newField, setNewField] = useState({ key: '', label_kr: '', label_en: '', type: 'text' });
+
+  const fieldsDirty = useIsDirty(
+    { fields, marketing: marketingConsent, privacy: privacyConsent },
+    savedFields,
+  );
+  const providersDirty = useIsDirty(authProviders, savedProviders);
+  const verificationDirty = useIsDirty(verification, savedVerification);
+  useUnsavedChanges(fieldsDirty || providersDirty || verificationDirty);
   // saved-flash timers — three setTimeout sites (fields / provider /
   // verification saves) previously leaked timers if the operator
   // navigated away mid-flash. Tracked in this ref + cleared on unmount.
@@ -50,27 +72,38 @@ export default function RegistrationAdminPage() {
         const j = (await regRes.json()) as { rows?: { fields?: RegField[]; require_marketing_consent?: boolean; require_privacy_consent?: boolean }[] };
         const reg = (j.rows ?? [])[0];
         if (reg) {
-          setFields(reg.fields ?? []);
-          setMarketingConsent(reg.require_marketing_consent ?? true);
-          setPrivacyConsent(reg.require_privacy_consent ?? true);
+          const loadedFields = reg.fields ?? [];
+          const loadedMarketing = reg.require_marketing_consent ?? true;
+          const loadedPrivacy = reg.require_privacy_consent ?? true;
+          setFields(loadedFields);
+          setMarketingConsent(loadedMarketing);
+          setPrivacyConsent(loadedPrivacy);
+          setSavedFields({ fields: loadedFields, marketing: loadedMarketing, privacy: loadedPrivacy });
         }
       }
       if (authRes.ok) {
         const j = (await authRes.json()) as { rows?: AuthProvider[] };
-        if (j.rows) setAuthProviders(j.rows);
+        if (j.rows) {
+          setAuthProviders(j.rows);
+          setSavedProviders(j.rows);
+        }
       }
       if (verRes.ok) {
         const j = (await verRes.json()) as { rows?: Partial<VerificationConfig>[] };
         const ver = (j.rows ?? [])[0];
-        if (ver) setVerification({
-          is_enabled: ver.is_enabled ?? false,
-          provider: ver.provider ?? 'nice',
-          api_key: ver.api_key ?? '',
-          secret_key: ver.secret_key ?? '',
-          merchant_id: ver.merchant_id ?? '',
-          help_url: ver.help_url ?? '',
-          description_kr: ver.description_kr ?? '',
-        });
+        if (ver) {
+          const loadedVer = {
+            is_enabled: ver.is_enabled ?? false,
+            provider: ver.provider ?? 'nice',
+            api_key: ver.api_key ?? '',
+            secret_key: ver.secret_key ?? '',
+            merchant_id: ver.merchant_id ?? '',
+            help_url: ver.help_url ?? '',
+            description_kr: ver.description_kr ?? '',
+          };
+          setVerification(loadedVer);
+          setSavedVerification(loadedVer);
+        }
       }
       // custRes intentionally null — see comment in Promise.all above.
       void custRes;
@@ -102,6 +135,7 @@ export default function RegistrationAdminPage() {
     await upsertConfig('registration_config', {
       fields, require_marketing_consent: marketingConsent, require_privacy_consent: privacyConsent,
     });
+    setSavedFields({ fields, marketing: marketingConsent, privacy: privacyConsent });
     setSaved('fields');
     scheduleSavedClear();
     setSaving(null);
@@ -117,6 +151,7 @@ export default function RegistrationAdminPage() {
         patch: { is_enabled: p.is_enabled, client_id: p.client_id, client_secret: p.client_secret },
       }),
     });
+    setSavedProviders(authProviders);
     setSaved(`provider-${p.provider}`);
     scheduleSavedClear();
     setSaving(null);
@@ -125,6 +160,7 @@ export default function RegistrationAdminPage() {
   async function saveVerification() {
     setSaving('verification');
     await upsertConfig('identity_verification_config', { ...verification });
+    setSavedVerification(verification);
     setSaved('verification');
     scheduleSavedClear();
     setSaving(null);
