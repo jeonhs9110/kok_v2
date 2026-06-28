@@ -118,7 +118,7 @@ export default function UserDetailPage() {
           </Field>
           <Field label="이메일" icon={Mail}>{user.email}</Field>
           <Field label="가입일" icon={Calendar}>
-            {new Date(user.created_at).toLocaleDateString('ko-KR')}
+            {formatKstDate(user.created_at)}
           </Field>
           <Field label="이메일 인증" icon={Mail}>
             <span className={user.is_verified ? 'text-[#22c55e]' : 'text-[#f59e0b]'}>
@@ -163,7 +163,7 @@ export default function UserDetailPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] font-semibold text-[#1f2937] truncate">{w.product_name ?? w.product_id}</p>
                   <p className="text-[11px] text-[#9ca3af]">
-                    {w.price ? `${Number(w.price).toLocaleString()}원` : '—'} · 추가일 {new Date(w.created_at).toLocaleDateString('ko-KR')}
+                    {w.price ? `${Number(w.price).toLocaleString()}원` : '—'} · 추가일 {formatKstDate(w.created_at)}
                   </p>
                 </div>
               </li>
@@ -185,7 +185,7 @@ export default function UserDetailPage() {
                   <span className="text-[13px] text-[#1f2937] truncate">{p.title}</span>
                 </div>
                 <span className="text-[11px] text-[#9ca3af] flex-shrink-0">
-                  {new Date(p.created_at).toLocaleDateString('ko-KR')}
+                  {formatKstDate(p.created_at)}
                 </span>
               </li>
             ))}
@@ -209,7 +209,7 @@ export default function UserDetailPage() {
                   <span className="text-[11px] px-2 py-0.5 bg-neutral-100 rounded text-[#6b7280]">{o.status}</span>
                 </div>
                 <span className="text-[11px] text-[#9ca3af] flex-shrink-0">
-                  {new Date(o.created_at).toLocaleDateString('ko-KR')}
+                  {formatKstDate(o.created_at)}
                 </span>
               </li>
             ))}
@@ -230,6 +230,15 @@ function Section({ title, icon: Icon, children }: { title: string; icon: React.C
       {children}
     </div>
   );
+}
+
+// Render timestamps in Asia/Seoul explicitly. Otherwise toLocaleDateString
+// uses the operator's browser timezone, so a sale closed at 11pm KST shows
+// up as the previous day for anyone viewing from outside Korea (or from a
+// laptop with the wrong tz). The (KST) suffix makes the timezone visible
+// at a glance.
+function formatKstDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }) + ' KST';
 }
 
 function Field({ label, icon: Icon, children }: { label: string; icon: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
