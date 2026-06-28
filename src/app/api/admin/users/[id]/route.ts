@@ -143,14 +143,26 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
     dbOk = true;
   }
 
+  let cognitoWarning: { message: string; cli: string } | null = null;
   if (email && process.env.USE_COGNITO === 'true') {
     try {
       const { deleteCognitoUserByEmail } = await import('@/lib/auth/cognito-admin');
-      await deleteCognitoUserByEmail(email);
+      const cognitoOk = await deleteCognitoUserByEmail(email);
+      if (!cognitoOk) {
+        cognitoWarning = {
+          message:
+            'RDS 행은 삭제됐지만 Cognito 계정 삭제에 실패했습니다. 이 이메일로 다시 회원가입을 시도하면 "이미 존재하는 사용자" 오류가 납니다.',
+          cli: `aws cognito-idp admin-delete-user --user-pool-id ${process.env.COGNITO_USER_POOL_ID ?? ''} --username "${email}" --region ${process.env.AWS_REGION ?? 'ap-northeast-2'}`,
+        };
+      }
     } catch (err) {
       console.error('[admin/users] cognito delete failed (non-fatal):', err);
+      cognitoWarning = {
+        message: 'Cognito 계정 삭제 중 오류가 발생했습니다.',
+        cli: '',
+      };
     }
   }
 
-  return NextResponse.json({ ok: dbOk });
+  return NextResponse.json({ ok: dbOk, cognitoWarning });
 }

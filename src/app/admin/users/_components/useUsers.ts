@@ -80,6 +80,15 @@ export function useUsers() {
     try {
       const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('http_' + res.status);
+      const json = (await res.json()) as { ok: boolean; cognitoWarning?: { message: string; cli: string } | null };
+      if (json.cognitoWarning) {
+        const w = json.cognitoWarning;
+        try { await navigator.clipboard.writeText(w.cli); } catch { /* clipboard may not be available */ }
+        toast.show(
+          `${w.message}\n\n다음 명령어가 클립보드에 복사되었습니다:\n${w.cli}`,
+          'warning',
+        );
+      }
     } catch (err) {
       console.warn('삭제 실패:', err);
       setUsers(snapshot);

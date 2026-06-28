@@ -4,12 +4,17 @@ resource "aws_cognito_user_pool" "main" {
   username_attributes      = ["email"]
   auto_verified_attributes = ["email"]
 
+  # 8 chars, mixed case, number, symbol. Mirrors the frontend
+  # validator in src/lib/auth/passwordPolicy.ts so the server-side
+  # rejection message and the inline checklist agree. Existing accounts
+  # keep their current passwords — Cognito only enforces this for new
+  # passwords (sign-up, ForgotPassword reset, AdminSetUserPassword).
   password_policy {
     minimum_length    = 8
     require_lowercase = true
     require_numbers   = true
-    require_symbols   = false
-    require_uppercase = false
+    require_symbols   = true
+    require_uppercase = true
   }
 
   account_recovery_setting {
