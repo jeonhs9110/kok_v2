@@ -203,9 +203,17 @@ export function useShorts() {
       if (USE_RDS_FROM_BROWSER) {
         const res = await fetch('/api/admin/products', { cache: 'no-store' });
         if (!res.ok) return;
-        const { rows } = await res.json() as { rows: Array<{ id: string; name: string }> };
-        // Sort client-side by name (RDS list returns by created_at).
+        // /api/admin/products GET returns the full row set (admin view —
+        // includes inactive). The pre-RDS Supabase query filtered with
+        // `.eq('is_active', true)` so the "link product" dropdown only
+        // surfaced shoppable products. Without that filter (introduced
+        // by PR #314 — admin sweep r6), inactive/discontinued products
+        // would show up in the dropdown and an operator could link a
+        // short to a product the storefront won't render. Filter client-
+        // side to restore the original behavior.
+        const { rows } = await res.json() as { rows: Array<{ id: string; name: string; is_active: boolean }> };
         const sorted = (rows ?? [])
+          .filter(r => r.is_active)
           .map(r => ({ id: r.id, name: r.name }))
           .sort((a, b) => a.name.localeCompare(b.name));
         setProducts(sorted);

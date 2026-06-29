@@ -4,7 +4,7 @@ import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useIsDirty } from '@/hooks/useIsDirty';
 import { getSiteSetting, setSiteSetting } from '@/lib/api/site-settings';
-import { revalidateHeaderData } from '@/lib/cache/invalidate';
+import { revalidateHeaderData, revalidateHomepageData } from '@/lib/cache/invalidate';
 import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import {
   DEFAULT_THEME_TOKENS,
@@ -121,19 +121,42 @@ export function useLogo() {
   // reads from RDS, so every "Save" was landing in the dead silo while
   // the public site kept rendering the cutover-day snapshot. Operator
   // saw a "saved" toast that meant nothing.
+  //
+  // Hardened 2026-06-29 (post-PR-#314 review):
+  //   - Merge-on-save: refetch the latest theme_tokens row before writing
+  //     so a parallel edit from /admin/theme or /admin/best-seller-display
+  //     in another tab doesn't get clobbered. This is the same pattern
+  //     useTheme.handleSave uses (it's the canonical theme-tokens editor).
+  //     Without it, an operator who opens /admin/logo, switches tabs to
+  //     /admin/theme to tweak a color and saves, then comes back to
+  //     /admin/logo and saves there, would lose the color change.
+  //   - Evict the storefront 'theme_tokens' ISR cache tag too. The prior
+  //     code only called revalidateHeaderData(), which clears the in-
+  //     process header memo. getThemeTokens.ts wraps with unstable_cache
+  //     tagged 'theme_tokens'; without the tag eviction the storefront
+  //     keeps rendering the old palette for up to 60s after save.
   const handleTokensSave = async () => {
     setTokensSaving(true);
     try {
+      const latestRes = await fetch('/api/admin/site-settings?keys=theme_tokens', { cache: 'no-store' });
+      let latestTokens: ThemeTokens = DEFAULT_THEME_TOKENS;
+      if (latestRes.ok) {
+        const json = (await latestRes.json()) as { values?: Record<string, unknown> };
+        latestTokens = parseThemeTokens(json.values?.theme_tokens);
+      }
+      const merged: ThemeTokens = { ...latestTokens, ...tokens };
       const res = await fetch('/api/admin/site-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: [{ key: 'theme_tokens', value: JSON.stringify(tokens) }] }),
+        body: JSON.stringify({ items: [{ key: 'theme_tokens', value: JSON.stringify(merged) }] }),
       });
       if (!res.ok) throw new Error(`API ${res.status}`);
-      setSavedTokens(tokens);
-      // Token changes affect the header (logo height + font sizes).
-      // Audit 2026-06-21: storefront was stale for up to 60s before.
-      await revalidateHeaderData();
+      setTokens(merged);
+      setSavedTokens(merged);
+      await Promise.all([
+        revalidateHeaderData(),
+        revalidateHomepageData('theme_tokens'),
+      ]);
     } catch (err) {
       console.error('[admin/logo] tokens save failed:', err);
       toast.show(err instanceof Error ? err.message : '저장 실패', 'error');
