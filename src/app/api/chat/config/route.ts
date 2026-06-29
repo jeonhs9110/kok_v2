@@ -25,8 +25,44 @@ const DEFAULT: ChatbotConfig = {
 // row changes maybe once per quarter, so a 60s unstable_cache + 60s
 // CDN max-age is appropriate. updateTag('chatbot_config') on admin save
 // (follow-up) will evict immediately.
+//
+// 2026-06-29: added USE_RDS dispatcher. Pre-fix this read hit Supabase
+// unconditionally, so every chatbot config edit landing in RDS post-
+// cutover was invisible to the storefront. The chatbot's show_global /
+// show_domestic toggles AND the greeting text have been frozen at the
+// 2026-06-27 snapshot for 3 days. Worse, if the cached row's toggles
+// were false at cutover, the chatbot has been invisible on the
+// storefront regardless of what the operator has tried to flip in
+// admin.
 const fetchConfig = unstable_cache(
   async (): Promise<ChatbotConfig | null> => {
+    if (process.env.USE_RDS === 'true') {
+      try {
+        const { getPgPool } = await import('@/lib/db/pool');
+        const pool = getPgPool();
+        const { rows } = await pool.query<{
+          show_global: boolean | null;
+          show_domestic: boolean | null;
+          greeting_en: string | null;
+          greeting_kr: string | null;
+        }>(
+          `SELECT show_global, show_domestic, greeting_en, greeting_kr
+             FROM public.chatbot_config
+             LIMIT 1`,
+        );
+        const row = rows[0];
+        if (!row) return DEFAULT;
+        return {
+          show_global: row.show_global ?? false,
+          show_domestic: row.show_domestic ?? false,
+          greeting_en: row.greeting_en ?? '',
+          greeting_kr: row.greeting_kr ?? '',
+        };
+      } catch (err) {
+        console.error('[chat/config] RDS fetch failed:', err);
+        return null;
+      }
+    }
     if (!supabase) return null;
     try {
       const { data, error } = await supabase
@@ -55,7 +91,9 @@ const fetchConfig = unstable_cache(
 // failure returns 503 + null body so the client component can hide the
 // chatbot entirely and the operator sees a real 5xx in CloudWatch.
 export async function GET() {
-  if (!supabase) {
+  // Allow the RDS path through even when the Supabase client isn't
+  // configured — under USE_RDS=true the legacy supabase var is unused.
+  if (process.env.USE_RDS !== 'true' && !supabase) {
     console.error('[chat/config] Supabase client not configured');
     return NextResponse.json({ error: 'supabase-unavailable' }, { status: 503 });
   }
