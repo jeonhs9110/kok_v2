@@ -7,9 +7,46 @@ import { createClient } from '@supabase/supabase-js';
 // now-removed `site_settings.contact_*` keys. Keeping a single source of
 // truth means the Footer (which already reads business_info) and this page
 // can never display different phone numbers / addresses.
+//
+// 2026-06-29: dispatched via USE_RDS. Previously hit Supabase
+// unconditionally — after the 2026-06-27 decommission, the page silently
+// rendered the empty-state ("정보가 아직 등록되지 않았습니다") to every
+// visitor instead of the operator's actual CS hours / phone / email /
+// address. CS-blocking customer-facing bug.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+async function fetchBusinessInfo(): Promise<BusinessInfoRow | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getBusinessInfoFromPg } = await import('@/lib/db/storefront-reads');
+      const row = await getBusinessInfoFromPg();
+      if (!row) return null;
+      return {
+        phone: row.phone ?? null,
+        email: row.email ?? null,
+        address_kr: row.address_kr ?? null,
+        address_en: row.address_en ?? null,
+        cs_hours_kr: row.cs_hours_kr ?? null,
+        cs_hours_en: row.cs_hours_en ?? null,
+        cs_lunch_kr: row.cs_lunch_kr ?? null,
+        cs_lunch_en: row.cs_lunch_en ?? null,
+        cs_holiday_kr: row.cs_holiday_kr ?? null,
+        cs_holiday_en: row.cs_holiday_en ?? null,
+      };
+    } catch (err) {
+      console.error('[contact] business_info RDS read failed:', err);
+      return null;
+    }
+  }
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from('business_info')
+    .select('phone, email, address_kr, address_en, cs_hours_kr, cs_hours_en, cs_lunch_kr, cs_lunch_en, cs_holiday_kr, cs_holiday_en')
+    .maybeSingle();
+  return (data as BusinessInfoRow | null) ?? null;
+}
 
 const LABELS: Record<string, {
   title: string; subtitle: string; home: string; contact: string;
@@ -110,14 +147,7 @@ export default async function ContactPage({ params }: { params: Promise<{ lang: 
   const { lang } = await params;
   const lb = LABELS[lang] ?? LABELS['en'];
 
-  let biz: BusinessInfoRow | null = null;
-  if (supabase) {
-    const { data } = await supabase
-      .from('business_info')
-      .select('phone, email, address_kr, address_en, cs_hours_kr, cs_hours_en, cs_lunch_kr, cs_lunch_en, cs_holiday_kr, cs_holiday_en')
-      .maybeSingle();
-    biz = (data as BusinessInfoRow | null) ?? null;
-  }
+  const biz = await fetchBusinessInfo();
 
   const isKr = lang === 'kr';
   const address = (isKr ? biz?.address_kr : biz?.address_en) || biz?.address_kr || '';

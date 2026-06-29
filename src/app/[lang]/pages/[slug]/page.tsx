@@ -6,6 +6,44 @@ import type { Metadata } from 'next';
 import PageBlocks from '@/components/PageBlocks';
 import type { PageBlock } from '@/lib/pages/blocks';
 
+interface CmsPageRow {
+  title: unknown;
+  content: unknown;
+  blocks?: unknown;
+}
+
+// 2026-06-29: dispatched via USE_RDS. Pre-fix this page hit Supabase
+// unconditionally — after the 2026-06-27 decommission, every admin-built
+// CMS page (operator's "About", "FAQ", custom landing pages, etc.) was
+// 404-ing for every customer. Big surface-area break that the operator
+// likely didn't notice because the routes silently notFound() instead
+// of erroring.
+async function fetchCmsPage(slug: string, full: boolean): Promise<CmsPageRow | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getPgPool } = await import('@/lib/db/pool');
+      const pool = getPgPool();
+      const cols = full ? '*' : 'title, content';
+      const { rows } = await pool.query<CmsPageRow>(
+        `SELECT ${cols} FROM public.pages WHERE slug = $1 AND is_published = true LIMIT 1`,
+        [slug],
+      );
+      return rows[0] ?? null;
+    } catch (err) {
+      console.error(`[cms-page/${slug}] RDS read failed:`, err);
+      return null;
+    }
+  }
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from('pages')
+    .select(full ? '*' : 'title, content')
+    .eq('slug', slug)
+    .eq('is_published', true)
+    .single();
+  return (data as CmsPageRow | null) ?? null;
+}
+
 function pickLangString(map: unknown, lang: string): string {
   if (!map || typeof map !== 'object') return '';
   const m = map as Record<string, unknown>;
@@ -19,15 +57,7 @@ export async function generateMetadata({
   params: Promise<{ lang: string; slug: string }>;
 }): Promise<Metadata> {
   const { lang, slug } = await params;
-  if (!supabase) {
-    return { title: 'KOKKOK GARDEN', robots: { index: false, follow: true } };
-  }
-  const { data: page } = await supabase
-    .from('pages')
-    .select('title, content')
-    .eq('slug', slug)
-    .eq('is_published', true)
-    .single();
+  const page = await fetchCmsPage(slug, false);
   if (!page) {
     return { title: '페이지를 찾을 수 없습니다 · KOKKOK GARDEN', robots: { index: false, follow: true } };
   }
@@ -86,23 +116,16 @@ function pickBlocks(
 
 export default async function CmsPage({ params }: { params: Promise<{ lang: string; slug: string }> }) {
   const { lang, slug } = await params;
-
-  if (!supabase) notFound();
-
-  const { data: page } = await supabase
-    .from('pages')
-    .select('*')
-    .eq('slug', slug)
-    .eq('is_published', true)
-    .single();
-
+  const page = await fetchCmsPage(slug, true);
   if (!page) notFound();
 
-  const title = page.title?.[lang] || page.title?.kr || page.title?.en || '';
+  const titleMap = (page.title ?? {}) as Record<string, string>;
+  const contentMap = (page.content ?? {}) as Record<string, string>;
+  const title = titleMap[lang] || titleMap.kr || titleMap.en || '';
   const blocks = pickBlocks(page.blocks, lang);
   // Fallback to the legacy rich-text content when no blocks are saved
   // (pages built before the page-builder migrate over lazily).
-  const content = page.content?.[lang] || page.content?.kr || page.content?.en || '';
+  const content = contentMap[lang] || contentMap.kr || contentMap.en || '';
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 bg-white">

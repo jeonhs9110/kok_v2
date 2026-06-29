@@ -6,7 +6,6 @@ import { Search, ShoppingBag, User, Menu, X, Globe } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
 import LanguagePicker from '@/components/LanguagePicker';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase/client-singleton';
 import { USE_COGNITO_FROM_BROWSER } from '@/lib/auth/clientFlags';
 import type { CategoryWithChildren } from '@/lib/api/categories';
 import type { MenuWithChildren } from '@/lib/api/menus';
@@ -81,18 +80,25 @@ export default function Header({
     return () => window.removeEventListener('scroll', onScroll);
   }, [isHomepage]);
 
-  // Auth state — re-evaluates on mount AND on supabase auth events so the
-  // header swaps Sign-in ↔ Logout immediately after login, without a reload.
+  // Auth state — read from the non-httpOnly mirror cookies set by the
+  // sign-in / sign-out routes. The Supabase auth-state subscription used
+  // to live here too, but post-Cognito-cutover the callback never fires
+  // (no active Supabase auth client) and the subscribe call dragged
+  // the dead Supabase singleton into every storefront bundle for no
+  // payoff. Cookie refresh on every navigation is enough — full-page
+  // reloads happen on sign-in (`window.location.href = ...`) and
+  // sign-out (`window.location.href = ...`), so the cookies the
+  // header reads are always fresh on the next mount.
+  //
+  // The eslint-disable matches every other post-hydration cookie read
+  // in the codebase — setState-in-effect is required here to keep
+  // SSR/client HTML aligned (server renders with isLoggedIn=false
+  // initial state, client effect updates after mount).
   useEffect(() => {
-    const refresh = () => {
-      if (typeof document === 'undefined') return;
-      setIsLoggedIn(document.cookie.includes('kokkok_auth=true'));
-      setIsAdmin(document.cookie.includes('kokkok_admin_auth=true'));
-    };
-    refresh();
-    if (!supabase) return;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => refresh());
-    return () => subscription.unsubscribe();
+    if (typeof document === 'undefined') return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsLoggedIn(document.cookie.includes('kokkok_auth=true'));
+    setIsAdmin(document.cookie.includes('kokkok_admin_auth=true'));
   }, []);
 
   // Nav menus / mega-categories / logo are SSR'd by [lang]/layout.tsx via
