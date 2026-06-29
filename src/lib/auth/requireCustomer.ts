@@ -49,6 +49,11 @@ async function requireCustomerCognito(): Promise<CustomerAuth | NextResponse> {
 async function requireCustomerSupabase(): Promise<CustomerAuth | NextResponse> {
   try {
     const supabase = await getSupabaseServer();
+    if (!supabase) {
+      // Supabase env unset (post-cutoff dev) — every Supabase-backed
+      // auth path is dead. Treat as unauthenticated.
+      return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
@@ -80,6 +85,7 @@ export async function requireCustomerOptional(): Promise<CustomerAuth | null> {
       return { userId: claims.sub, email: claims.email };
     }
     const supabase = await getSupabaseServer();
+    if (!supabase) return null;
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
     return { userId: user.id, email: user.email };

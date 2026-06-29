@@ -73,6 +73,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }
 
   const supabase = await getSupabaseServer();
+  if (!supabase) {
+    // 2026-06-29 — Supabase cutoff. /auth/callback only fires when a
+    // visitor clicks a stale Supabase password-reset email link AFTER
+    // the cutover. The Cognito flow uses /api/auth/cognito/reset-password
+    // (code-based, no link), so nothing legitimate reaches this branch
+    // anymore. Treat as link-expired and bounce to /login.
+    const loginUrl = new URL('/login', origin);
+    loginUrl.searchParams.set('error', 'link-expired');
+    return NextResponse.redirect(loginUrl);
+  }
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
   if (exchangeError) {

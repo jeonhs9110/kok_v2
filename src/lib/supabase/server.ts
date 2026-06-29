@@ -32,13 +32,20 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-function assertPublicEnv(): { url: string; anonKey: string } {
-  if (!url || !anonKey) {
-    throw new Error(
-      '[supabase/server] NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY ' +
-        'is not set. Configure these in your environment / GitHub Actions secrets.'
-    );
-  }
+/**
+ * 2026-06-29 — Supabase-cutoff hardening: when env is missing, return
+ * `null` instead of throwing so callers can decide whether to fall
+ * through gracefully. Only /auth/callback (Supabase password-reset email
+ * link landing pad) reaches getSupabaseServer() in the cutover state —
+ * everything else routes through USE_COGNITO branches in
+ * requireCustomer/requireAdmin. callback handles null below by
+ * redirecting to /login with a link-expired error, which is exactly the
+ * right UX for a stale Supabase email link landing after the cutoff.
+ */
+export const hasSupabaseEnv = !!(url && anonKey);
+
+function assertPublicEnv(): { url: string; anonKey: string } | null {
+  if (!url || !anonKey) return null;
   return { url, anonKey };
 }
 
@@ -46,9 +53,13 @@ function assertPublicEnv(): { url: string; anonKey: string } {
  * Request-scoped Supabase client wired to the visitor's session cookies.
  * Must be called inside a request context (Server Component, Route Handler,
  * Server Action) because it awaits Next.js's async `cookies()` API.
+ *
+ * Returns `null` (instead of throwing) when Supabase env is missing — see
+ * the hasSupabaseEnv doc above. Callers must check.
  */
-export async function getSupabaseServer(): Promise<SupabaseClient> {
+export async function getSupabaseServer(): Promise<SupabaseClient | null> {
   const env = assertPublicEnv();
+  if (!env) return null;
   const cookieStore = await cookies();
 
   return createServerClient(env.url, env.anonKey, {
@@ -75,16 +86,13 @@ export async function getSupabaseServer(): Promise<SupabaseClient> {
 /**
  * Service-role client. Bypasses RLS — use sparingly and only on the server.
  * Returns a non-cookie-bearing client; no user session is attached.
+ *
+ * Returns `null` instead of throwing when env is missing — same pattern
+ * as getSupabaseServer above. Caller must check.
  */
-export function getSupabaseAdmin(): SupabaseClient {
+export function getSupabaseAdmin(): SupabaseClient | null {
   const env = assertPublicEnv();
-  if (!serviceKey) {
-    throw new Error(
-      '[supabase/server] SUPABASE_SERVICE_ROLE_KEY is not set. This client ' +
-        'bypasses RLS and must only be used in trusted server contexts. ' +
-        'Never prefix this secret with NEXT_PUBLIC_.'
-    );
-  }
+  if (!env || !serviceKey) return null;
   return createServiceClient(env.url, serviceKey, {
     auth: {
       persistSession: false,
