@@ -7,6 +7,16 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 interface ChatbotConfig {
+  // 2026-06-29: added is_enabled to the surface shape. /admin/chatbot
+  // exposes a separate "사용" toggle from show_global/show_domestic,
+  // and /api/chat (the message endpoint) already gates on
+  // config.is_enabled with a 503. But this widget-config route never
+  // returned is_enabled, so the AIChatbot widget kept rendering even
+  // when the operator turned the chatbot off — customer clicks the
+  // bubble, opens the panel, types a question, and gets "Chat service
+  // is currently disabled." back from the chat endpoint. Now the
+  // widget can hide itself entirely.
+  is_enabled: boolean;
   show_global: boolean;
   show_domestic: boolean;
   greeting_en: string;
@@ -14,6 +24,7 @@ interface ChatbotConfig {
 }
 
 const DEFAULT: ChatbotConfig = {
+  is_enabled: false,
   show_global: false,
   show_domestic: false,
   greeting_en: '',
@@ -41,18 +52,20 @@ const fetchConfig = unstable_cache(
         const { getPgPool } = await import('@/lib/db/pool');
         const pool = getPgPool();
         const { rows } = await pool.query<{
+          is_enabled: boolean | null;
           show_global: boolean | null;
           show_domestic: boolean | null;
           greeting_en: string | null;
           greeting_kr: string | null;
         }>(
-          `SELECT show_global, show_domestic, greeting_en, greeting_kr
+          `SELECT is_enabled, show_global, show_domestic, greeting_en, greeting_kr
              FROM public.chatbot_config
              LIMIT 1`,
         );
         const row = rows[0];
         if (!row) return DEFAULT;
         return {
+          is_enabled: row.is_enabled ?? true,
           show_global: row.show_global ?? false,
           show_domestic: row.show_domestic ?? false,
           greeting_en: row.greeting_en ?? '',
@@ -67,10 +80,11 @@ const fetchConfig = unstable_cache(
     try {
       const { data, error } = await supabase
         .from('chatbot_config')
-        .select('show_global, show_domestic, greeting_en, greeting_kr')
+        .select('is_enabled, show_global, show_domestic, greeting_en, greeting_kr')
         .single();
       if (error || !data) return DEFAULT;
       return {
+        is_enabled: data.is_enabled ?? true,
         show_global: data.show_global ?? false,
         show_domestic: data.show_domestic ?? false,
         greeting_en: data.greeting_en ?? '',

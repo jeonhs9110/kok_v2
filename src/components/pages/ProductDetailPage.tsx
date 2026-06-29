@@ -31,7 +31,15 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
     getProducts(),
     getAllCategories(),
   ]);
-  const productData = allProducts.find(p => p.id === id);
+  // 2026-06-29: filter out inactive products. getProducts() returns the
+  // full catalog (including is_active=false rows) so admin-side views
+  // can list them; the storefront detail page was using the same source
+  // without filtering, meaning admin's "비공개" toggle didn't actually
+  // hide the page. A customer with a bookmarked / shared / cached URL
+  // could still load the detail page for a discontinued product and
+  // try to add it to cart. /products list page already filters this
+  // way; bringing the detail page to parity.
+  const productData = allProducts.find(p => p.id === id && p.is_active);
 
   if (!productData) {
     return (

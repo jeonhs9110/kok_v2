@@ -13,7 +13,13 @@ import { getProducts } from '@/lib/api/products';
 export async function generateMetadata({ params }: { params: Promise<{ lang: string; id: string }> }): Promise<Metadata> {
   const { lang, id } = await params;
   const products = await getProducts();
-  const product = products.find(p => p.id === id);
+  // Mirror the page-body filter: an inactive product is "gone" for the
+  // storefront, including its OG metadata. Without this Google etc.
+  // keep the rich snippet (price/availability) alive after admin marks
+  // a product is_active=false — a customer clicking a SERP result lands
+  // on the not-found body but the search result still advertises the
+  // product as in-stock until the next crawl.
+  const product = products.find(p => p.id === id && p.is_active);
   if (!product) {
     return {
       title: '상품을 찾을 수 없습니다 · KOKKOK GARDEN',
@@ -74,8 +80,10 @@ export default async function ProductDetailRoute({ params }: { params: Promise<{
   // JSON-LD Product schema — drives Google's rich snippets (price chip +
   // availability chip + image in SERP). Without this the listing shows
   // only the title + meta description even when the product page is rich.
+  // Skip inactive products here too so SERP rich-snippet data doesn't
+  // outlive the operator's "비공개" toggle.
   const products = await getProducts();
-  const product = products.find(p => p.id === id);
+  const product = products.find(p => p.id === id && p.is_active);
   const ld = product
     ? {
         '@context': 'https://schema.org',
