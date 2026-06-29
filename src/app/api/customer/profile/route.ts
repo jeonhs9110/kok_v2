@@ -75,12 +75,37 @@ export async function PATCH(req: Request) {
       const placeholders = cols.map((_, i) => `$${i + 2}`).join(', ');
       const sets = cols.map((c, i) => `${c} = $${i + 2}`).join(', ');
       const values = cols.map(c => fields[c]);
-      await pool.query(
-        `INSERT INTO public.customer_profiles (id, ${cols.join(', ')})
-           VALUES ($1, ${placeholders})
-           ON CONFLICT (id) DO UPDATE SET ${sets}`,
-        [auth.userId, ...values],
-      );
+      // 2026-06-29 (PR #318 follow-up): self-heal public.users in case
+      // complete-registration was never called or failed (network blip,
+      // double-back during the form, etc). PR #318 fixed the canonical
+      // path; this is the defense-in-depth for the customer who has a
+      // valid Cognito identity + maybe a stale customer_profiles row
+      // but no users row, and is now editing their profile from MyPage.
+      // Without this, the admin /admin/users list still wouldn't see
+      // them even after they actively used the site.
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        await client.query(
+          `INSERT INTO public.users (id, email, role, is_verified, created_at)
+             VALUES ($1, $2, 'user', true, NOW())
+             ON CONFLICT (id) DO UPDATE
+               SET email = COALESCE(EXCLUDED.email, public.users.email)`,
+          [auth.userId, auth.email ?? null],
+        );
+        await client.query(
+          `INSERT INTO public.customer_profiles (id, ${cols.join(', ')})
+             VALUES ($1, ${placeholders})
+             ON CONFLICT (id) DO UPDATE SET ${sets}`,
+          [auth.userId, ...values],
+        );
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
+        throw err;
+      } finally {
+        client.release();
+      }
       return NextResponse.json({ ok: true });
     } catch (err) {
       console.error('[customer/profile] pg upsert failed:', err);
