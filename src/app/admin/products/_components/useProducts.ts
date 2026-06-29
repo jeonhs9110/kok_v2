@@ -101,18 +101,35 @@ export function useProducts() {
     }
   }, []);
 
+  // 2026-06-29: dispatched via /api/admin/categories — pre-fix this
+  // call hit Supabase unconditionally. Categories added/renamed in
+  // /admin/categories after cutover land in RDS, but the product
+  // editor's "카테고리" + "하위 카테고리" dropdowns kept showing the
+  // 2026-06-27 snapshot. The generic route returns ALL categories;
+  // filter is_active client-side to match the previous behavior.
   const fetchCategories = useCallback(async () => {
-    if (!supabase) return;
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('is_active', true)
-      .order('sort_order');
-    if (error) {
-      console.error('[admin/products] 카테고리 로드 실패:', error);
-      return;
+    try {
+      if (USE_RDS_FROM_BROWSER) {
+        const res = await fetch('/api/admin/categories', { cache: 'no-store' });
+        if (!res.ok) return;
+        const { rows } = await res.json() as { rows: Category[] };
+        setCategories(rows.filter(c => c.is_active));
+        return;
+      }
+      if (!supabase) return;
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (error) {
+        console.error('[admin/products] 카테고리 로드 실패:', error);
+        return;
+      }
+      if (data) setCategories(data);
+    } catch (err) {
+      console.error('[admin/products] 카테고리 로드 실패:', err);
     }
-    if (data) setCategories(data);
   }, []);
 
   useEffect(() => {
