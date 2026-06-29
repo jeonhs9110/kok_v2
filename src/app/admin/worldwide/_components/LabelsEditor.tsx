@@ -2,9 +2,6 @@
 
 import { useState } from 'react';
 import { Save, ChevronDown, ChevronUp, Globe } from 'lucide-react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
-
-const supabase = getSupabaseBrowser();
 import { SUPPORTED_LANGS, type WorldwideLang } from '@/lib/worldwide/defaults';
 import { useToast } from '@/components/admin/Toast';
 import {
@@ -30,24 +27,37 @@ export default function LabelsEditor({ initialLabels }: Props) {
   }
 
   async function saveLabel(row: LabelRow) {
-    if (!supabase) {
-      toast.show('Supabase가 설정되지 않았습니다. 환경변수를 확인하세요.', 'error');
-      return;
-    }
     setSavingKey(row.label_key);
-    const { error } = await supabase.from('worldwide_labels').upsert({
+    const payload = {
       label_key: row.label_key,
-      kr: row.kr,
-      en: row.en,
-      cn: row.cn,
-      jp: row.jp,
-      vn: row.vn,
-      th: row.th,
-      updated_at: new Date().toISOString(),
-    });
+      kr: row.kr, en: row.en, cn: row.cn, jp: row.jp, vn: row.vn, th: row.th,
+    };
+    // PATCH first (existing row); fall through to POST if the row doesn't
+    // exist yet. The CRUD route uses label_key as the upsert key for
+    // worldwide_labels — same pattern as other singleton-ish tables.
+    let ok = false;
+    try {
+      const patchRes = await fetch('/api/admin/crud/worldwide_labels', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: row.label_key, patch: payload }),
+      });
+      if (patchRes.ok) {
+        ok = true;
+      } else {
+        const postRes = await fetch('/api/admin/crud/worldwide_labels', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        ok = postRes.ok;
+      }
+    } catch (err) {
+      console.error('[admin/worldwide] saveLabel failed:', err);
+    }
     setSavingKey(null);
-    if (error) {
-      toast.show(`저장 실패: ${error.message}`, 'error');
+    if (!ok) {
+      toast.show('저장에 실패했습니다.', 'error');
       return;
     }
     setSavedKey(row.label_key);

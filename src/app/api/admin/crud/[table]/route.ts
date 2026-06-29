@@ -42,6 +42,12 @@ const ALLOWED_TABLES = new Set<string>([
   'site_backgrounds',
   'product_ingredient_tags',
   'homepage_banners',
+  // Added 2026-06-29 — /admin/worldwide was talking directly to Supabase
+  // for both reads + writes, so it broke silently after the 2026-06-27
+  // Supabase decommission. Routing through the generic CRUD dispatcher
+  // gives it the same USE_RDS path as every other admin page.
+  'worldwide_retailers',
+  'worldwide_labels',
 ]);
 
 const SAFE_IDENT = /^[a-z_][a-z0-9_]*$/i;
