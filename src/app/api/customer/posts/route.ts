@@ -24,8 +24,12 @@ export async function POST(req: Request) {
   };
 
   if (!menu_id || typeof menu_id !== 'string') return NextResponse.json({ ok: false, error: 'menu_id required' }, { status: 400 });
-  if (!title || typeof title !== 'string' || title.length === 0 || title.length > MAX_TITLE) return NextResponse.json({ ok: false, error: 'invalid title' }, { status: 400 });
-  if (!content || typeof content !== 'string' || content.length === 0 || content.length > MAX_CONTENT) return NextResponse.json({ ok: false, error: 'invalid content' }, { status: 400 });
+  // Reject whitespace-only too — the prior check would accept '   ' as
+  // a "title" and insert a row that renders as a blank line in the
+  // board list. Same for content. Mirrors the validateProductPayload
+  // pattern in /api/admin/products.
+  if (!title || typeof title !== 'string' || title.trim().length === 0 || title.length > MAX_TITLE) return NextResponse.json({ ok: false, error: 'invalid title' }, { status: 400 });
+  if (!content || typeof content !== 'string' || content.trim().length === 0 || content.length > MAX_CONTENT) return NextResponse.json({ ok: false, error: 'invalid content' }, { status: 400 });
   const name = (typeof author_name === 'string' ? author_name : auth.email ?? 'anonymous').slice(0, 80);
 
   if (process.env.USE_RDS === 'true') {

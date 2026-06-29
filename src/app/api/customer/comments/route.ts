@@ -48,7 +48,9 @@ export async function POST(req: Request) {
   };
 
   if (!post_id) return NextResponse.json({ ok: false, error: 'post_id required' }, { status: 400 });
-  if (!content || typeof content !== 'string' || content.length === 0 || content.length > MAX_CONTENT) {
+  // Reject whitespace-only — '   ' previously slipped past the length
+  // check and inserted a blank comment row.
+  if (!content || typeof content !== 'string' || content.trim().length === 0 || content.length > MAX_CONTENT) {
     return NextResponse.json({ ok: false, error: 'invalid content' }, { status: 400 });
   }
   const name = (typeof author_name === 'string' && author_name.trim().length > 0 ? author_name.trim() : auth.email ?? 'anonymous').slice(0, 80);
