@@ -58,6 +58,29 @@ export function useShorts() {
     fetchBg();
   }, []);
 
+  // After products[] arrives, patch productName onto any shorts that came
+  // back from the generic admin route without it. Pre-cutover the
+  // Supabase `select('...products(name)')` join did this server-side;
+  // the RDS list endpoint is per-table so the resolution happens here.
+  // Falls through cheaply when nothing changes.
+  useEffect(() => {
+    if (products.length === 0) return;
+    const nameById = new Map(products.map(p => [p.id, p.name]));
+    setShorts(prev => {
+      let mutated = false;
+      const next = prev.map(s => {
+        if (!s.productId) return s;
+        const resolved = nameById.get(s.productId) ?? s.productName;
+        if (resolved !== s.productName) {
+          mutated = true;
+          return { ...s, productName: resolved };
+        }
+        return s;
+      });
+      return mutated ? next : prev;
+    });
+  }, [products]);
+
   async function fetchBg() {
     let data: Record<string, unknown> | null = null;
     if (USE_RDS_FROM_BROWSER) {
@@ -168,34 +191,86 @@ export function useShorts() {
     setSavingBg(false);
   }
 
+  // 2026-06-29: both reads dispatched via /api/admin/* — pre-fix they
+  // hit Supabase unconditionally, so /admin/shorts has been showing the
+  // frozen 2026-06-27 list (no shorts added since cutover appeared, no
+  // products added since populated the link dropdown). Adds via the
+  // POST already write to RDS, but the next reload pulled the old
+  // Supabase rows back into the UI — operator sees their saves vanish
+  // even though the storefront actually renders them.
   async function fetchProducts() {
-    if (!supabase) return;
-    const { data } = await supabase.from('products').select('id, name').eq('is_active', true).order('name');
-    if (data) setProducts(data);
+    try {
+      if (USE_RDS_FROM_BROWSER) {
+        const res = await fetch('/api/admin/products', { cache: 'no-store' });
+        if (!res.ok) return;
+        const { rows } = await res.json() as { rows: Array<{ id: string; name: string }> };
+        // Sort client-side by name (RDS list returns by created_at).
+        const sorted = (rows ?? [])
+          .map(r => ({ id: r.id, name: r.name }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setProducts(sorted);
+        return;
+      }
+      if (!supabase) return;
+      const { data } = await supabase.from('products').select('id, name').eq('is_active', true).order('name');
+      if (data) setProducts(data);
+    } catch (err) {
+      console.error('[admin/shorts] product list fetch failed:', err);
+    }
   }
 
   async function fetchShorts() {
     try {
-      if (!supabase) throw new Error('Supabase 클라이언트 없음');
-      const { data, error } = await supabase
-        .from('shorts')
-        .select('id, youtube_id, product_id, created_at, products(name)')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
       type ShortsRow = {
         id: string;
         youtube_id: string;
         product_id: string | null;
         created_at: string;
-        products: { name: string } | null;
+        products?: { name: string } | null;
       };
-      setShorts(((data ?? []) as unknown as ShortsRow[]).map(d => ({
-        id: d.id,
-        youtubeId: d.youtube_id,
-        productId: d.product_id || null,
-        productName: d.products?.name || null,
-        addedAt: new Date(d.created_at).toISOString().split('T')[0],
-      })));
+      let rows: ShortsRow[] = [];
+      if (USE_RDS_FROM_BROWSER) {
+        // The generic RDS list endpoint doesn't join — product names get
+        // resolved client-side from the `products` state (loaded in
+        // parallel by fetchProducts). For the brief race window before
+        // products lands we set productName to null and a re-render
+        // patches it in once setProducts fires.
+        const res = await fetch('/api/admin/shorts', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const body = await res.json() as { rows: ShortsRow[] };
+        rows = body.rows ?? [];
+      } else {
+        if (!supabase) throw new Error('Supabase 클라이언트 없음');
+        const { data, error } = await supabase
+          .from('shorts')
+          .select('id, youtube_id, product_id, created_at, products(name)')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        rows = (data ?? []) as unknown as ShortsRow[];
+      }
+      setShorts(prev => {
+        // Build a name map from both the freshly-set products list and
+        // the joined .products field (when present in the Supabase path).
+        // Keeping the prev productName as a final fallback handles the
+        // race where products[] arrives after this call but the row's
+        // productId hasn't changed.
+        const nameById = new Map<string, string>();
+        for (const p of products) nameById.set(p.id, p.name);
+        const prevById = new Map(prev.map(s => [s.id, s.productName]));
+        return rows.map(d => {
+          const productName = d.products?.name
+            ?? (d.product_id ? nameById.get(d.product_id) : null)
+            ?? prevById.get(d.id)
+            ?? null;
+          return {
+            id: d.id,
+            youtubeId: d.youtube_id,
+            productId: d.product_id || null,
+            productName,
+            addedAt: new Date(d.created_at).toISOString().split('T')[0],
+          };
+        });
+      });
     } catch (err) {
       // Previously fell back to 4 hardcoded demo YouTube IDs which masked
       // real DB failures. Now surface the failure to the operator instead.

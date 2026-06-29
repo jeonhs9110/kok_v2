@@ -56,16 +56,23 @@ export function useLogo() {
     onIframeReload: reloadIframe,
   });
 
+  // 2026-06-29: replaced direct Supabase read with /api/admin/site-settings
+  // which dispatches via USE_RDS server-side. Pre-fix this hook hit
+  // Supabase unconditionally — the admin theme editor has been LOADING
+  // the frozen 2026-06-27 snapshot since cutover, so when the operator
+  // opens /admin/logo to tweak colors they see stale values, not what
+  // the storefront actually rendered last edit.
   const loadTokens = useCallback(async () => {
-    if (!supabase) return;
-    const { data } = await supabase
-      .from('site_settings')
-      .select('value')
-      .eq('key', 'theme_tokens')
-      .maybeSingle();
-    const parsed = parseThemeTokens(data?.value);
-    setTokens(parsed);
-    setSavedTokens(parsed);
+    try {
+      const res = await fetch('/api/admin/site-settings?keys=theme_tokens', { cache: 'no-store' });
+      if (!res.ok) return;
+      const { values } = await res.json() as { values: Record<string, unknown> };
+      const parsed = parseThemeTokens(values.theme_tokens);
+      setTokens(parsed);
+      setSavedTokens(parsed);
+    } catch (err) {
+      console.error('[admin/logo] tokens load failed:', err);
+    }
   }, []);
 
   useEffect(() => {
@@ -108,17 +115,21 @@ export function useLogo() {
 
   const tokensDirty = useIsDirty(tokens, savedTokens);
 
+  // 2026-06-29: replaced direct Supabase upsert with /api/admin/site-settings
+  // POST which dispatches via USE_RDS. Pre-fix this hook wrote tokens
+  // straight to Supabase — after cutover the storefront's getThemeTokens()
+  // reads from RDS, so every "Save" was landing in the dead silo while
+  // the public site kept rendering the cutover-day snapshot. Operator
+  // saw a "saved" toast that meant nothing.
   const handleTokensSave = async () => {
-    if (!supabase) return;
     setTokensSaving(true);
     try {
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert(
-          { key: 'theme_tokens', value: JSON.stringify(tokens), updated_at: new Date().toISOString() },
-          { onConflict: 'key' },
-        );
-      if (error) throw error;
+      const res = await fetch('/api/admin/site-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: [{ key: 'theme_tokens', value: JSON.stringify(tokens) }] }),
+      });
+      if (!res.ok) throw new Error(`API ${res.status}`);
       setSavedTokens(tokens);
       // Token changes affect the header (logo height + font sizes).
       // Audit 2026-06-21: storefront was stale for up to 60s before.
