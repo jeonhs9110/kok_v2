@@ -3,9 +3,19 @@ import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 /**
  * instagram_config is a singleton row. Same shape as shorts-config.
+ *
+ * 2026-06-29: added `rss_feed_url`. useInstagram.saveConfig sends
+ * `{ handle, description, rss_feed_url }` — the `rss_feed_url` was
+ * silently dropped by this allow-list, so every time the operator
+ * pasted a new RSS feed URL and clicked Save, the column stayed at
+ * the old value (or NULL). Then clicking "Instagram 새로고침" called
+ * /api/instagram/refresh which reads the same column → "RSS feed URL
+ * is not configured" error or a refresh against the wrong feed.
+ *
+ * Direct user complaint: operator sets the URL, can't refresh posts.
  */
 const ALLOWED = [
-  'handle', 'description',
+  'handle', 'description', 'rss_feed_url',
   'bg_type', 'bg_color', 'bg_media_url', 'bg_media_type',
   'header_font_size', 'header_text_color', 'header_bg_color',
 ] as const;
