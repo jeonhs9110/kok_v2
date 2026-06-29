@@ -26,7 +26,13 @@ export type HomepageTag =
   // customers saw the old palette for nearly a minute after an
   // operator-driven theme change. Now part of the tag union so save
   // handlers can evict properly.
-  | 'theme_tokens';
+  | 'theme_tokens'
+  // Added 2026-06-29 (homepage builder audit). /admin/top-viewed save
+  // tags the top_viewed config + the analytics-driven product list
+  // cache so the operator's new window/count takes effect immediately
+  // instead of waiting on the 5-minute analytics revalidate.
+  | 'top_viewed_config'
+  | 'analytics';
 
 export async function revalidateHomepageData(tag: HomepageTag): Promise<void> {
   updateTag(tag);
