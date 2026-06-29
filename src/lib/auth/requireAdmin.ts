@@ -90,6 +90,11 @@ async function requireAdminCognito(): Promise<NextResponse | null> {
 async function requireAdminSupabase(): Promise<NextResponse | null> {
   try {
     const supabase = await getSupabaseServer();
+    if (!supabase) {
+      // Supabase env unset — refuse admin access via this branch. Prod
+      // uses requireAdminCognito anyway (USE_COGNITO=true).
+      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
