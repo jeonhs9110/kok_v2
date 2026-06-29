@@ -7,6 +7,8 @@ import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { USE_COGNITO_FROM_BROWSER } from '@/lib/auth/clientFlags';
 import { checkPasswordPolicy } from '@/lib/auth/passwordPolicy';
 import { safeUrl } from '@/lib/url/safeUrl';
+import CountryPicker from '@/components/CountryPicker';
+import { DEFAULT_COUNTRY, findCountry, findCountryByDial } from '@/lib/geo/countries';
 import type { Lang } from '@/lib/i18n/types';
 
 const supabase = getSupabaseBrowser();
@@ -493,6 +495,72 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
           enabledFields.map(f => {
             const label = lang === 'kr' ? f.label_kr : f.label_en;
             const options = lang === 'kr' ? f.options_kr : f.options_en;
+
+            // Phone: international dial-code picker + national number.
+            // Stored format in formData.phone: "+82 10-1234-5678".
+            // First chunk after `+` parses back to the picker's dial code.
+            if (f.key === 'phone' && f.type === 'tel') {
+              const raw = formData.phone || '';
+              const match = raw.match(/^\+(\d{1,4})\s*(.*)$/);
+              const dialCode = match?.[1] ?? DEFAULT_COUNTRY.dialCode;
+              const national = match?.[2] ?? raw;
+              const selectedCountry = findCountryByDial(dialCode) ?? DEFAULT_COUNTRY;
+              return (
+                <div key={f.key}>
+                  <label className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 mb-1">
+                    {label}
+                    {f.required ? <span className="text-red-400">*</span> : <span className="text-gray-300">({t.optional})</span>}
+                  </label>
+                  <div className="flex gap-2">
+                    <CountryPicker
+                      mode="dial"
+                      lang={lang}
+                      value={selectedCountry.code}
+                      onChange={c => {
+                        setFormData(p => ({ ...p, phone: `+${c.dialCode} ${national}` }));
+                      }}
+                      ariaLabel={lang === 'kr' ? '국가 번호' : 'Country code'}
+                      className="w-32 flex-shrink-0"
+                    />
+                    <input
+                      type="tel"
+                      value={national}
+                      onChange={e => {
+                        // Strip everything except digits, space, and dash so a paste of
+                        // "+82-10-1234" doesn't double the dial prefix.
+                        const cleaned = e.target.value.replace(/[^\d\s-]/g, '');
+                        setFormData(p => ({ ...p, phone: `+${selectedCountry.dialCode} ${cleaned}` }));
+                      }}
+                      required={f.required}
+                      placeholder={lang === 'kr' ? '10-1234-5678' : '10-1234-5678'}
+                      autoComplete="tel-national"
+                      className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-brand-ink placeholder:text-gray-400 outline-none focus:border-black transition"
+                    />
+                  </div>
+                </div>
+              );
+            }
+
+            // Country: full ISO-3166 picker. Stored value is the
+            // lowercase alpha-2 code; display layers look it up via
+            // findCountry() and render the localized name.
+            if (f.key === 'country' && f.type === 'text') {
+              const current = findCountry(formData.country) ?? DEFAULT_COUNTRY;
+              return (
+                <div key={f.key}>
+                  <label className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 mb-1">
+                    {label}
+                    {f.required ? <span className="text-red-400">*</span> : <span className="text-gray-300">({t.optional})</span>}
+                  </label>
+                  <CountryPicker
+                    mode="country"
+                    lang={lang}
+                    value={current.code}
+                    onChange={c => setFormData(p => ({ ...p, country: c.code }))}
+                  />
+                </div>
+              );
+            }
 
             if (f.type === 'select' && options) {
               // Personal-info selects (skin type especially) get an

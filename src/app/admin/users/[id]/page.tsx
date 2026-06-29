@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { ArrowLeft, Mail, Calendar, Shield, Phone, Cake, Globe, Sparkles, MessageCircle, Heart, Package, FileText } from 'lucide-react';
 import { PageHeader, LoadingState, EmptyState } from '@/components/admin/CafeWidgets';
 import { formatKstDate } from '@/lib/formatKstDate';
+import { findCountry } from '@/lib/geo/countries';
 
 interface UserRow {
   id: string;
@@ -137,7 +138,10 @@ export default function UserDetailPage() {
             <Field label="전화" icon={Phone}>{profile.phone || '—'}</Field>
             <Field label="성별" icon={Sparkles}>{profile.gender || '—'}</Field>
             <Field label="생년월일" icon={Cake}>{profile.birthday || '—'}</Field>
-            <Field label="국가" icon={Globe}>{profile.country || '—'}</Field>
+            <Field label="국가" icon={Globe}>{(() => {
+              const c = findCountry(profile.country);
+              return c ? `${c.nameKr} (${c.nameEn})` : (profile.country || '—');
+            })()}</Field>
             <Field label="피부 타입" icon={Sparkles}>{profile.skin_type || '—'}</Field>
             <Field label="마케팅 동의" icon={Mail}>
               {profile.marketing_consent ? '✓' : '—'}

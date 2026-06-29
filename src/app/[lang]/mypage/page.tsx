@@ -8,5 +8,6 @@ export const metadata: Metadata = {
 
 export default async function MyPageRoute({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
-  return <MyPage lang={lang} />;
+  const normalized: 'kr' | 'en' = lang === 'kr' ? 'kr' : 'en';
+  return <MyPage lang={normalized} />;
 }

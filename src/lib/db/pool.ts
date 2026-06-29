@@ -6,7 +6,19 @@
 // client-side. Webpack's resolve.fallback (next.config.ts) stubs the
 // Node-only modules pg pulls in (tls, net, fs, ...) so the unreachable
 // client chunk compiles cleanly.
-import { Pool, type PoolConfig } from 'pg';
+import { Pool, types as pgTypes, type PoolConfig } from 'pg';
+
+// node-postgres parses Postgres DATE (OID 1082) into a JS Date object
+// by default. When that Date crosses NextResponse.json(), it serializes
+// to a full ISO timestamp like "1990-01-15T00:00:00.000Z" — every
+// customer who picks a birthday in /register or /my-page then sees a
+// timezone-tagged blob instead of the date they entered. Override the
+// parser to return the raw 'YYYY-MM-DD' string so the wire format
+// matches what the admin form, the admin user detail, and the customer
+// profile renderer all already expect. TIMESTAMP / TIMESTAMPTZ (1114 /
+// 1184) stay on the default Date conversion because the dashboard's
+// `formatKstDate()` helper depends on it.
+pgTypes.setTypeParser(1082, (val: string) => val);
 
 /**
  * Singleton Postgres connection pool for the RDS backend.
