@@ -50,10 +50,42 @@ resource "aws_cognito_user_pool" "main" {
     allow_admin_create_user_only = false
   }
 
-  # SES integration deferred — Cognito ships ~50 emails/day from default sender,
-  # enough for initial smoke testing. Production will wire SES once verified.
+  # Conditional SES wiring. While use_ses_for_cognito is false
+  # (default), Cognito falls back to its built-in sender — used for
+  # smoke testing until DNS is verified and SES production access is
+  # granted. When true, Cognito signs every outbound email with our
+  # DKIM key and From: noreply@kokkokgarden.com so Gmail/Outlook
+  # accept it instead of routing to spam.
   email_configuration {
-    email_sending_account = "COGNITO_DEFAULT"
+    email_sending_account  = var.use_ses_for_cognito ? "DEVELOPER" : "COGNITO_DEFAULT"
+    from_email_address     = var.use_ses_for_cognito ? "KOKKOK GARDEN <noreply@${var.domain_name}>" : null
+    source_arn             = var.use_ses_for_cognito ? aws_ses_domain_identity.kokkokgarden.arn : null
+    reply_to_email_address = var.use_ses_for_cognito ? "support@${var.domain_name}" : null
+  }
+
+  # KOKKOK-branded verification email. Replaces the generic
+  #   "Your verification code is {####}"
+  # default. Bilingual (Korean primary + English secondary) matches the
+  # storefront language toggle.
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+    email_subject        = "[KOKKOK GARDEN] 이메일 인증 / Verify your email"
+    email_message        = <<-EOT
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width:560px; margin:0 auto; padding:24px;">
+        <h2 style="font-weight:800; letter-spacing:0.04em; color:#1f2937; margin:0 0 8px;">KOKKOK GARDEN</h2>
+        <p style="color:#6b7280; font-size:13px; margin:0 0 24px;">콕콕가든 회원가입 인증</p>
+        <p style="color:#1f2937; font-size:15px; line-height:1.6;">아래 6자리 코드를 회원가입 화면에 입력해주세요.</p>
+        <p style="color:#1f2937; font-size:15px; line-height:1.6; margin-bottom:24px;">Enter the 6-digit code below on the signup screen to verify your email.</p>
+        <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:24px; text-align:center; margin:8px 0 24px;">
+          <p style="color:#9ca3af; font-size:11px; letter-spacing:0.2em; margin:0 0 8px;">VERIFICATION CODE</p>
+          <p style="font-size:32px; letter-spacing:0.3em; font-weight:800; color:#1f2937; margin:0;">{####}</p>
+        </div>
+        <p style="color:#9ca3af; font-size:12px; line-height:1.6;">이 코드는 24시간 동안 유효합니다. 본인이 요청하지 않은 경우 이 메일을 무시하셔도 됩니다.</p>
+        <p style="color:#9ca3af; font-size:12px; line-height:1.6;">This code is valid for 24 hours. If you did not request this, you can safely ignore this email.</p>
+        <hr style="border:0; border-top:1px solid #e5e7eb; margin:24px 0;">
+        <p style="color:#9ca3af; font-size:11px;">KOKKOK GARDEN · https://www.kokkokgarden.com</p>
+      </div>
+    EOT
   }
 
   # Deletion protection on the user pool. A fat-fingered `terraform destroy`
