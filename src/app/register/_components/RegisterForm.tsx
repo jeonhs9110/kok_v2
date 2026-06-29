@@ -107,24 +107,39 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
 
   const t = L[lang];
 
+  // 2026-06-29: replaced direct Supabase reads with /api/auth/register-config
+  // which dispatches via USE_RDS server-side. Pre-fix this loaded
+  // registration_config + auth_providers_config DIRECTLY from Supabase,
+  // so every operator change to required fields / social providers
+  // since the 2026-06-27 cutover was invisible to the storefront register
+  // form. Customers got the frozen 2026-06-27 field list.
   useEffect(() => {
     async function load() {
       try {
-        const [regRes, authRes] = await Promise.all([
-          supabase.from('registration_config').select('*').single(),
-          supabase.from('auth_providers_config').select('provider, is_enabled').eq('is_enabled', true),
-        ]);
-        if (regRes.data) {
-          setConfig({
-            fields: regRes.data.fields || [],
-            require_marketing_consent: regRes.data.require_marketing_consent ?? true,
-            require_privacy_consent: regRes.data.require_privacy_consent ?? true,
-            terms_url: regRes.data.terms_url || '/terms',
-            privacy_url: regRes.data.privacy_url || '/privacy',
-          });
+        const res = await fetch('/api/auth/register-config', { cache: 'no-store' });
+        if (res.ok) {
+          const json = (await res.json()) as {
+            registration?: {
+              fields?: RegField[];
+              require_marketing_consent?: boolean | null;
+              require_privacy_consent?: boolean | null;
+              terms_url?: string | null;
+              privacy_url?: string | null;
+            };
+            providers?: AuthProviderInfo[];
+          };
+          if (json.registration) {
+            setConfig({
+              fields: json.registration.fields ?? [],
+              require_marketing_consent: json.registration.require_marketing_consent ?? true,
+              require_privacy_consent: json.registration.require_privacy_consent ?? true,
+              terms_url: json.registration.terms_url || '/terms',
+              privacy_url: json.registration.privacy_url || '/privacy',
+            });
+          }
+          if (json.providers) setSocialProviders(json.providers);
         }
-        if (authRes.data) setSocialProviders(authRes.data);
-      } catch { /* tables may not exist, use defaults */ }
+      } catch { /* keep defaults */ }
       setConfigLoading(false);
     }
     load();

