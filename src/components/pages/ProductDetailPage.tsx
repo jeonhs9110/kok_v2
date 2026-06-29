@@ -8,6 +8,7 @@ import { getProducts } from '@/lib/api/products';
 import { getAllCategories } from '@/lib/api/categories';
 import { translateProduct } from '@/lib/openai';
 import ProductDetailComponents from '@/components/ProductDetailComponents';
+import { sanitizeHtml } from '@/lib/html/sanitizeHtml';
 
 const labels: Record<string, {
   home: string; shop: string; details: string; notFound: string;
@@ -176,7 +177,12 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
           <h2 className="text-lg font-extrabold tracking-widest mb-12 uppercase text-center">{lb.detailView}</h2>
           <div
             className="detail-body max-w-3xl mx-auto"
-            dangerouslySetInnerHTML={{ __html: productData.detailBody }}
+            // 2026-06-29: defense-in-depth — same rationale as PageBlocks.
+            // Admin-authored via RichEditor, but stripping <script> +
+            // inline event handlers protects against compromised admin
+            // accounts AND keeps every dangerouslySetInnerHTML site on
+            // the storefront behind the same sanitizer.
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(productData.detailBody) }}
           />
         </div>
       ) : (
