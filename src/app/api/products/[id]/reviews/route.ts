@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -8,6 +8,35 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 const MAX_NAME = 80;
 const MAX_TITLE = 120;
 const MAX_CONTENT = 4000;
+
+// Per-IP rate limit on POST. Reviews are unauthenticated (legacy
+// constraint — many storefronts let walk-up customers leave a review
+// without an account) so the only abuse brake is a per-IP cap. 5 per
+// hour comfortably covers a legitimate customer who leaves one review
+// per product they bought; blocks scripted floods + bot-stuffed
+// 5-star spam runs.
+const REVIEW_RATE_LIMIT = 5;
+const REVIEW_RATE_WINDOW_MS = 60 * 60 * 1000;
+const reviewRate = new Map<string, { count: number; resetAt: number }>();
+function checkReviewRate(ip: string): boolean {
+  const now = Date.now();
+  const entry = reviewRate.get(ip);
+  if (!entry || now > entry.resetAt) {
+    reviewRate.set(ip, { count: 1, resetAt: now + REVIEW_RATE_WINDOW_MS });
+    return true;
+  }
+  if (entry.count >= REVIEW_RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+function getRequestIp(req: Request): string {
+  const xff = (req as NextRequest).headers.get('x-forwarded-for');
+  if (xff) {
+    const first = xff.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  return (req as NextRequest).headers.get('x-real-ip') || 'unknown';
+}
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -59,6 +88,13 @@ export async function POST(req: Request, { params }: RouteContext) {
   const { id } = await params;
   if (!id) return NextResponse.json({ ok: false, error: 'product_id required' }, { status: 400 });
 
+  if (!checkReviewRate(getRequestIp(req))) {
+    return NextResponse.json(
+      { ok: false, error: 'too_many_requests' },
+      { status: 429 },
+    );
+  }
+
   let body: unknown;
   try {
     body = await req.json();
@@ -93,6 +129,20 @@ export async function POST(req: Request, { params }: RouteContext) {
 
   if (process.env.USE_RDS === 'true') {
     try {
+      // Verify the product exists + is_active before accepting the
+      // review. Without this, a script could POST reviews to deleted or
+      // never-existed product UUIDs to spam the products_reviews table.
+      const { getPgPool } = await import('@/lib/db/pool');
+      const pool = getPgPool();
+      const productCheck = await pool.query<{ is_active: boolean }>(
+        `SELECT is_active FROM public.products WHERE id = $1 LIMIT 1`,
+        [id],
+      );
+      const product = productCheck.rows[0];
+      if (!product || !product.is_active) {
+        return NextResponse.json({ ok: false, error: 'product_not_found' }, { status: 404 });
+      }
+
       const { insertProductReviewInPg } = await import('@/lib/db/admin-writes');
       const ok = await insertProductReviewInPg({
         product_id: id,

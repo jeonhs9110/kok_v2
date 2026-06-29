@@ -6,6 +6,57 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
+interface InstagramConfigRow {
+  rss_feed_url: string | null;
+  handle: string | null;
+}
+
+async function loadInstagramConfig(): Promise<InstagramConfigRow | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getPgPool } = await import('@/lib/db/pool');
+      const pool = getPgPool();
+      const { rows } = await pool.query<InstagramConfigRow>(
+        `SELECT rss_feed_url, handle FROM public.instagram_config LIMIT 1`,
+      );
+      return rows[0] ?? null;
+    } catch (err) {
+      console.error('[instagram/refresh] config RDS read failed:', err);
+      return null;
+    }
+  }
+  if (!supabase) return null;
+  const { data } = await supabase
+    .from('instagram_config')
+    .select('rss_feed_url, handle')
+    .single();
+  return (data as InstagramConfigRow | null) ?? null;
+}
+
+async function loadExistingPostUrls(limit: number): Promise<string[]> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getPgPool } = await import('@/lib/db/pool');
+      const pool = getPgPool();
+      const { rows } = await pool.query<{ post_url: string | null }>(
+        `SELECT post_url FROM public.instagram_posts ORDER BY sort_order LIMIT $1`,
+        [limit],
+      );
+      return rows.map(r => r.post_url ?? '').filter(Boolean);
+    } catch (err) {
+      console.error('[instagram/refresh] posts RDS read failed:', err);
+      return [];
+    }
+  }
+  if (!supabase) return [];
+  const { data } = await supabase
+    .from('instagram_posts')
+    .select('post_url')
+    .order('sort_order')
+    .limit(limit);
+  return (data ?? []).map(p => p.post_url ?? '').filter(Boolean);
+}
+
 function extractPostId(url: string): string | null {
   const match = url.match(/instagram\.com\/(?:p|reel|tv)\/([^/?#]+)/i);
   return match ? match[1] : null;
@@ -39,17 +90,15 @@ export async function POST() {
   const denied = await requireAdmin();
   if (denied) return denied;
   try {
-    if (!supabase) {
+    // 2026-06-29: migrated off Supabase-only reads. Both config + posts
+    // were direct supabase.from(...) calls, so this whole route 503'd
+    // after the 2026-06-27 Supabase decommission — admin clicking
+    // "Instagram 새로고침" got "Database unavailable." every time.
+    const config = await loadInstagramConfig();
+    if (!config) {
       return NextResponse.json({ error: 'Database unavailable.' }, { status: 503 });
     }
-
-    // Get RSS feed URL from config
-    const { data: config } = await supabase
-      .from('instagram_config')
-      .select('rss_feed_url, handle')
-      .single();
-
-    const rssUrl = config?.rss_feed_url?.trim();
+    const rssUrl = config.rss_feed_url?.trim();
     if (!rssUrl) {
       return NextResponse.json(
         { error: 'RSS feed URL이 설정되지 않았습니다. 먼저 설정 저장 후 다시 시도하세요.' },
@@ -104,16 +153,11 @@ export async function POST() {
     const newUrls = allUrls.slice(0, 6);
 
     // Compare with existing
-    const { data: existing } = await supabase
-      .from('instagram_posts')
-      .select('post_url')
-      .order('sort_order')
-      .limit(6);
-
+    const existingUrls = await loadExistingPostUrls(6);
     const existingIds = new Set<string>(
-      (existing || [])
-        .map(p => (p.post_url ? extractPostId(p.post_url) : null))
-        .filter((id): id is string => !!id)
+      existingUrls
+        .map(u => extractPostId(u))
+        .filter((id): id is string => !!id),
     );
     const newIds = newUrls.map(u => extractPostId(u)).filter((id): id is string => !!id);
 
