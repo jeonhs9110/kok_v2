@@ -32,6 +32,25 @@ export async function POST(req: Request) {
     try {
       const { getPgPool } = await import('@/lib/db/pool');
       const pool = getPgPool();
+      // Verify the menu actually allows customer posts before inserting.
+      // Without this gate a customer could craft a request with the id
+      // of an admin-only board (e.g., 공지사항) and POST to it — the
+      // storefront wouldn't show it as customer-writable, but the API
+      // would happily insert a row that then renders on the admin board.
+      // Gate: page_type='board' AND board_write_role != 'admin' AND
+      // is_published=true.
+      const menuCheck = await pool.query<{ page_type: string; board_write_role: string | null; is_published: boolean }>(
+        `SELECT page_type, board_write_role, is_published
+           FROM public.menus
+          WHERE id = $1
+          LIMIT 1`,
+        [menu_id],
+      );
+      const m = menuCheck.rows[0];
+      if (!m || m.page_type !== 'board' || m.board_write_role === 'admin' || !m.is_published) {
+        return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+      }
+
       const { rows } = await pool.query<{ id: string }>(
         `INSERT INTO public.posts (menu_id, title, content, author_name, author_id, is_admin_post, is_published)
            VALUES ($1, $2, $3, $4, $5, false, true)

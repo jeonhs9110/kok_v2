@@ -6,9 +6,18 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
+// Email is intentionally NOT in this list. The MyPage UI sends it for
+// convenience (round-trips userEmail from /api/customer/me) but accepting
+// it here would let a malicious client PATCH a fake address into the
+// profile row while their Cognito identity stays the original — auth
+// would still work via the old email, but /admin/users + the customer's
+// own profile display would show the spoofed one, desyncing the two
+// permanently. Email is owned by Cognito; we never write it from this
+// route. The UI's email-display reads from /api/customer/me's JWT-derived
+// value, not from customer_profiles.email, so the UX is unaffected.
 const ALLOWED_FIELDS = [
   'name', 'phone', 'gender', 'birthday', 'country', 'skin_type',
-  'marketing_consent', 'email',
+  'marketing_consent',
 ] as const;
 
 /**
@@ -116,11 +125,13 @@ export async function DELETE() {
     dbOk = true;
   }
 
-  // Best-effort Cognito cleanup. Currently fails AccessDenied because the
-  // EC2 role doesn't have cognito-idp:AdminDeleteUser; a pending
-  // operations ticket with 권대영 will grant it. Until then, the operator
-  // can finish via aws cognito-idp admin-delete-user from their own
-  // credentials.
+  // Best-effort Cognito cleanup. Now succeeds — the EC2 role gained
+  // cognito-idp:AdminDeleteUser + ListUsers + AdminGetUser on 2026-06-29
+  // (권대영's grant, verified via SSM Send-Command). The "best-effort"
+  // framing stays because we still want to return ok:true on the DB
+  // delete even if Cognito hiccups (e.g., user already removed via the
+  // admin UI), so the customer doesn't get stuck with a half-deleted
+  // account they can't try again.
   let cognitoCleared = false;
   if (auth.email && process.env.USE_COGNITO === 'true') {
     try {
