@@ -69,6 +69,36 @@ export function useHomepageBuilder() {
         if (slideIdOk && overrideOk) {
           safe = { type: 'kokkok-builder-slide-preview', slideId: d.slideId, override: d.override };
         }
+      } else if (
+        data.type === 'kokkok-builder-subhero-preview'
+        || data.type === 'kokkok-builder-topstripe-preview'
+      ) {
+        // Single-row sections (one sub-hero, one top stripe) — override is
+        // a shallow object of presentation fields; no id discrimination
+        // needed since the storefront only renders one of each.
+        const d = data as { override?: unknown };
+        const overrideOk = d.override === null || (typeof d.override === 'object' && d.override !== null);
+        if (overrideOk) {
+          safe = { type: data.type, override: d.override };
+        }
+      } else if (data.type === 'kokkok-builder-banner-preview') {
+        // Multi-row inline banners — each storefront <HomepageBanner>
+        // filters by bannerId so a single broadcast only updates the
+        // banner being edited in the drawer.
+        const d = data as { bannerId?: unknown; override?: unknown };
+        const bannerIdOk = d.bannerId === null || typeof d.bannerId === 'string';
+        const overrideOk = d.override === null || (typeof d.override === 'object' && d.override !== null);
+        if (bannerIdOk && overrideOk) {
+          safe = { type: 'kokkok-builder-banner-preview', bannerId: d.bannerId, override: d.override };
+        }
+      } else if (data.type === 'kokkok-builder-promo-preview') {
+        // 2-slot promo grid — override is the full banners array so the
+        // storefront can overlay both slots in one paint. Validate it's
+        // an array; downstream component does per-row shape merging.
+        const d = data as { banners?: unknown };
+        if (d.banners === null || Array.isArray(d.banners)) {
+          safe = { type: 'kokkok-builder-promo-preview', banners: d.banners };
+        }
       }
       if (!safe) return;
       const iframe = iframeRef.current;

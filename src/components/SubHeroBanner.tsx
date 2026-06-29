@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fontFamilyForKey, anchorTextStyle, anchorToObjectPosition, resolveAnchor, type PositionKey } from '@/lib/typography/options';
@@ -41,7 +44,29 @@ interface Props {
   banner: SubHeroBannerData | null;
 }
 
-export default function SubHeroBanner({ banner }: Props) {
+export default function SubHeroBanner({ banner: serverBanner }: Props) {
+  // Live preview overlay — when the operator opens /admin/sub-hero in
+  // the homepage builder drawer, every form change posts a message that
+  // useHomepageBuilder forwards here. We merge the override over the
+  // server-rendered banner so the central iframe reflects edits before
+  // save. Null payload (drawer close) drops back to the persisted row.
+  // The guard `window.parent === window` makes this a no-op for normal
+  // customer traffic — listener never mounts outside the builder iframe.
+  const [override, setOverride] = useState<Partial<SubHeroBannerData> | null>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      if (!e.data || typeof e.data !== 'object') return;
+      if (e.data.type !== 'kokkok-builder-subhero-preview') return;
+      setOverride(e.data.override ?? null);
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+  const banner: SubHeroBannerData | null = serverBanner
+    ? (override ? { ...serverBanner, ...override } : serverBanner)
+    : null;
   if (!banner) return null;
 
   const titleOffset = banner.title_size_offset ?? 0;

@@ -126,29 +126,30 @@ export default function BannerEditPage() {
         const { error } = await supabase.from('homepage_banners').delete().eq('id', id);
         if (error) throw error;
       }
-      // Best-effort: also strip the matching key from the section order
-      // so the deleted banner never paints. The hub re-loads order on
-      // next mount, so the order array stays accurate. site_settings
-      // edits still go through supabase here — they don't yet have an
-      // admin API route, and the read path is best-effort cleanup.
-      if (supabase) {
-        const { data: row } = await supabase
-          .from('site_settings')
-          .select('value')
-          .eq('key', 'homepage_section_order')
-          .maybeSingle();
-        if (row?.value) {
-          try {
-            const arr = typeof row.value === 'string' ? JSON.parse(row.value) : row.value;
-            if (Array.isArray(arr)) {
-              const filtered = arr.filter((k: string) => k !== `banner:${id}`);
-              await supabase
-                .from('site_settings')
-                .update({ value: JSON.stringify(filtered), updated_at: new Date().toISOString() })
-                .eq('key', 'homepage_section_order');
-            }
-          } catch { /* ignore */ }
+      // Strip the matching key from the section order so the deleted
+      // banner never paints. Uses the same /api/admin/site-settings
+      // endpoint as the rest of the homepage builder — the prior
+      // Supabase-only fallback became a silent no-op after the RDS
+      // cutover and left ghost `banner:<id>` keys in the order array.
+      try {
+        const orderRes = await fetch('/api/admin/site-settings?keys=homepage_section_order', { cache: 'no-store' });
+        if (orderRes.ok) {
+          const json = (await orderRes.json()) as { values?: Record<string, unknown> };
+          const raw = json.values?.homepage_section_order;
+          const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
+          if (Array.isArray(arr)) {
+            const filtered = arr.filter((k: string) => k !== `banner:${id}`);
+            await fetch('/api/admin/site-settings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                items: [{ key: 'homepage_section_order', value: JSON.stringify(filtered) }],
+              }),
+            });
+          }
         }
+      } catch (err) {
+        console.warn('[admin/banners] section-order cleanup failed (non-fatal):', err);
       }
       revalidateHomepageData('homepage_banners');
       toast.show('띠배너가 삭제되었습니다.', 'success');
@@ -171,6 +172,48 @@ export default function BannerEditPage() {
 
   const dirty = JSON.stringify(data) !== JSON.stringify(saved);
   useUnsavedChanges(dirty);
+
+  // Live preview broadcast — when embedded inside /admin/homepage, post
+  // every in-flight banner change up so the central iframe overlays
+  // them on the matching <HomepageBanner id={id}>. rAF-debounced to
+  // coalesce rapid edits; no-op outside the builder iframe.
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+    if (!id) return;
+    const handle = requestAnimationFrame(() => {
+      try {
+        window.parent.postMessage(
+          {
+            type: 'kokkok-builder-banner-preview',
+            bannerId: id,
+            override: {
+              text: data.text,
+              link_url: data.link_url || null,
+              bg_color: data.bg_color,
+              text_color: data.text_color,
+              is_active: data.is_active,
+            },
+          },
+          window.location.origin,
+        );
+      } catch { /* best-effort */ }
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [data, id]);
+
+  // Drop the override on unmount so the persisted row reappears.
+  useEffect(() => {
+    return () => {
+      if (typeof window === 'undefined' || window.parent === window) return;
+      if (!id) return;
+      try {
+        window.parent.postMessage(
+          { type: 'kokkok-builder-banner-preview', bannerId: id, override: null },
+          window.location.origin,
+        );
+      } catch { /* ignore */ }
+    };
+  }, [id]);
 
   if (loading) return <LoadingState />;
 

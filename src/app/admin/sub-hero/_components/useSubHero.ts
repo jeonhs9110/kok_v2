@@ -84,6 +84,63 @@ export function useSubHero() {
 
   useUnsavedChanges(useIsDirty(banner, savedBanner));
 
+  // Live preview broadcast — when embedded inside the /admin/homepage
+  // builder drawer, post every formData change up to the parent hub so
+  // the central 1440px storefront iframe overlays the in-flight values
+  // on the SubHeroBanner. rAF-debounced to coalesce rapid color-picker
+  // / slider drags into a single paint. No-op when not embedded.
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+    const handle = requestAnimationFrame(() => {
+      const override = {
+        image_url: banner.image_url,
+        link_url: banner.link_url,
+        title: banner.title,
+        subtitle: banner.subtitle,
+        title_size_offset: banner.title_size_offset,
+        subtitle_size_offset: banner.subtitle_size_offset,
+        is_active: banner.is_active,
+        title_font_family: banner.title_font_family,
+        subtitle_font_family: banner.subtitle_font_family,
+        title_bold: banner.title_bold,
+        title_italic: banner.title_italic,
+        title_underline: banner.title_underline,
+        subtitle_bold: banner.subtitle_bold,
+        subtitle_italic: banner.subtitle_italic,
+        subtitle_underline: banner.subtitle_underline,
+        title_color: banner.title_color,
+        subtitle_color: banner.subtitle_color,
+        text_position: banner.text_position,
+        text_position_mobile: banner.text_position_mobile,
+        text_anchor: banner.text_anchor,
+        text_anchor_mobile: banner.text_anchor_mobile,
+        image_anchor: banner.image_anchor,
+        image_anchor_mobile: banner.image_anchor_mobile,
+      };
+      try {
+        window.parent.postMessage(
+          { type: 'kokkok-builder-subhero-preview', override },
+          window.location.origin,
+        );
+      } catch { /* best-effort; save is source of truth */ }
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [banner]);
+
+  // Clear the override on unmount so the storefront drops back to the
+  // persisted row when the drawer closes.
+  useEffect(() => {
+    return () => {
+      if (typeof window === 'undefined' || window.parent === window) return;
+      try {
+        window.parent.postMessage(
+          { type: 'kokkok-builder-subhero-preview', override: null },
+          window.location.origin,
+        );
+      } catch { /* ignore */ }
+    };
+  }, []);
+
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
     try {

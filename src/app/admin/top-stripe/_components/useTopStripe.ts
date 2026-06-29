@@ -57,6 +57,34 @@ export function useTopStripe() {
 
   const isDirty = useIsDirty(data, saved);
 
+  // Live preview broadcast — mirrors useSubHero / useSlideLivePreview.
+  // Posts the in-flight stripe values to the parent hub which forwards
+  // them to the central storefront iframe. No-op for non-embedded use.
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+    const handle = requestAnimationFrame(() => {
+      try {
+        window.parent.postMessage(
+          { type: 'kokkok-builder-topstripe-preview', override: data },
+          window.location.origin,
+        );
+      } catch { /* best-effort */ }
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [data]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window === 'undefined' || window.parent === window) return;
+      try {
+        window.parent.postMessage(
+          { type: 'kokkok-builder-topstripe-preview', override: null },
+          window.location.origin,
+        );
+      } catch { /* ignore */ }
+    };
+  }, []);
+
   async function handleSave() {
     setSaving(true);
     try {
