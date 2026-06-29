@@ -24,6 +24,28 @@ interface Props {
   variant?: 'terms' | 'privacy';
 }
 
+// 2026-06-29: dispatched via USE_RDS. Pre-fix this component hit
+// Supabase unconditionally; after the 2026-06-27 decommission the
+// `if (!data) return null` early-exit silently elided the entire
+// business-info disclosure from /privacy AND /terms — a legal
+// compliance gap, since 전자상거래법 §13 and 개인정보보호법 §31
+// require these fields to be visible on those pages.
+async function loadBizInfo(): Promise<BizInfo | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getBusinessInfoFromPg } = await import('@/lib/db/storefront-reads');
+      const row = await getBusinessInfoFromPg();
+      return (row as unknown as BizInfo | null) ?? null;
+    } catch (err) {
+      console.error('[BusinessInfoDisclosure] RDS read failed:', err);
+      return null;
+    }
+  }
+  if (!supabase) return null;
+  const { data } = await supabase.from('business_info').select('*').maybeSingle();
+  return (data as BizInfo | null) ?? null;
+}
+
 /**
  * Structured business-info disclosure rendered below legal pages.
  * Pulls live values from public.business_info so the admin only has to
@@ -31,11 +53,8 @@ interface Props {
  * 전자상거래법 (terms) and 개인정보보호법 (privacy).
  */
 export default async function BusinessInfoDisclosure({ lang, variant = 'terms' }: Props) {
-  if (!supabase) return null;
-  const { data } = await supabase.from('business_info').select('*').maybeSingle();
-  if (!data) return null;
-
-  const biz = data as BizInfo;
+  const biz = await loadBizInfo();
+  if (!biz) return null;
   const isKr = lang === 'kr';
   const companyName = isKr ? biz.company_name_kr : (biz.company_name_en || biz.company_name_kr);
   const address     = isKr ? biz.address_kr     : (biz.address_en     || biz.address_kr);

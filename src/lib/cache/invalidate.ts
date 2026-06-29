@@ -32,7 +32,16 @@ export type HomepageTag =
   // cache so the operator's new window/count takes effect immediately
   // instead of waiting on the 5-minute analytics revalidate.
   | 'top_viewed_config'
-  | 'analytics';
+  | 'analytics'
+  // Added 2026-06-29 (storefront sweep). Footer's getCachedBusinessInfo
+  // and BusinessInfoDisclosure both tag with 'business_info'; without
+  // this entry, admin saves of business_info via /admin/legal would
+  // stay stale on the footer + the privacy/terms compliance block for
+  // up to 5 minutes (Footer's unstable_cache revalidate window) AFTER
+  // the operator clicks save. revalidateHeaderData() only clears the
+  // in-process header memo; the unstable_cache layer needs its own
+  // tag eviction.
+  | 'business_info';
 
 export async function revalidateHomepageData(tag: HomepageTag): Promise<void> {
   updateTag(tag);
