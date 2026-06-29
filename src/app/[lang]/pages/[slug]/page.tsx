@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import PageBlocks from '@/components/PageBlocks';
+import { sanitizeHtml } from '@/lib/html/sanitizeHtml';
 import type { PageBlock } from '@/lib/pages/blocks';
 
 interface CmsPageRow {
@@ -84,17 +85,6 @@ export async function generateMetadata({
       siteName: 'KOKKOK GARDEN',
     },
   };
-}
-
-// Strip script tags and event handlers from HTML content
-function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-    .replace(/<iframe\b[^>]*>/gi, '')
-    .replace(/<object\b[^>]*>/gi, '')
-    .replace(/<embed\b[^>]*>/gi, '')
-    .replace(/javascript\s*:/gi, '');
 }
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';

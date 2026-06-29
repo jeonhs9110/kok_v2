@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getReviewCard } from '@/lib/api/reviews';
+import { sanitizeHtml } from '@/lib/html/sanitizeHtml';
 
 export async function generateMetadata({
   params,
@@ -102,11 +103,14 @@ export default async function ReviewDetailPage({
           </div>
         )}
 
-        {/* Body — HTML rendered with the same styles as 제품 상세 body */}
+        {/* Body — operator-authored HTML, defanged via the shared
+            sanitizeHtml so a stray <script> / inline handler / iframe
+            from the Naver-scrape pipeline (or a careless admin paste)
+            can't fire on a storefront visitor. */}
         {review.content_html ? (
           <div
             className="detail-body"
-            dangerouslySetInnerHTML={{ __html: review.content_html }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(review.content_html) }}
           />
         ) : (
           <p className="text-neutral-400 text-sm">내용이 없습니다.</p>

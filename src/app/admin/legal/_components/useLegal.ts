@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { revalidateHeaderData } from '@/lib/cache/invalidate';
+import { revalidateHeaderData, revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
 
 export interface LegalPage {
@@ -137,7 +137,13 @@ export function useLegal() {
         ok = postRes.ok;
       }
       if (!ok) throw new Error('both patch and post failed');
+      // revalidateHeaderData clears the in-process header memo; the
+      // 'business_info' tag eviction is what drops the unstable_cache
+      // wrapper that the Footer + BusinessInfoDisclosure both read
+      // from. Without the second call, those would still render the
+      // pre-save values for up to 5 minutes.
       await revalidateHeaderData();
+      await revalidateHomepageData('business_info');
       setSaved('biz');
       setTimeout(() => setSaved(null), 2000);
       toast.show('사업자 정보가 저장되었습니다.', 'success');

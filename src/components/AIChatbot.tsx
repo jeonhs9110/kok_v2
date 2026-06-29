@@ -257,20 +257,24 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
 
   const handleContactSubmit = async () => {
     if (!contactForm.email.trim()) return;
+    // 2026-06-29: previously this component dynamically imported the
+    // Supabase JS bundle and wrote `chatbot_leads` directly from the
+    // browser, which silently failed every time post-2026-06-27 (the
+    // Supabase project was decommissioned but the catch swallowed the
+    // error and the user still saw the "Thanks!" message). Now goes
+    // through /api/customer/chatbot-leads which dispatches via USE_RDS.
     try {
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      if (supabaseUrl && supabaseKey) {
-        const { createClient } = await import('@supabase/supabase-js');
-        const sb = createClient(supabaseUrl, supabaseKey);
-        await sb.from('chatbot_leads').insert({
-          name: contactForm.name || null,
+      await fetch('/api/customer/chatbot-leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           email: contactForm.email,
-          skin_type: contactForm.skinType || null,
-          country: contactForm.country || null,
-        });
-      }
-    } catch { /* silently fail */ }
+          name: contactForm.name || undefined,
+          skin_type: contactForm.skinType || undefined,
+          country: contactForm.country || undefined,
+        }),
+      });
+    } catch { /* silently fail — still show the thank-you UI */ }
     setShowContactForm(false);
     setContactSubmitted(true);
     setMessages(prev => [
