@@ -7,6 +7,13 @@ import { createClient } from '@supabase/supabase-js';
 // Contact rendering reads from `business_info` (Footer's source) instead of
 // the legacy `site_settings.contact_*` keys, so all contact surfaces on the
 // site display the same number / email / address.
+//
+// 2026-06-29: dispatched via USE_RDS. The `_supabase` underscore prefix
+// was meant to flag the legacy path, but ContactInfoView was still
+// calling _getBizContact() on every CONTACT_SLUGS menu hit — so any
+// menu mapped to one of CONTACT_SLUGS (contact, 문의, cs, support,
+// customer-service) was rendering frozen 2026-06-27 contact data
+// instead of whatever the operator has edited since.
 const _supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const _supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const _supabase = _supabaseUrl && _supabaseKey ? createClient(_supabaseUrl, _supabaseKey) : null;
@@ -25,6 +32,29 @@ interface BizContact {
 }
 
 async function _getBizContact(): Promise<BizContact | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getBusinessInfoFromPg } = await import('@/lib/db/storefront-reads');
+      const row = await getBusinessInfoFromPg();
+      if (!row) return null;
+      const r = row as unknown as Record<string, string | null>;
+      return {
+        phone: r.phone ?? null,
+        email: r.email ?? null,
+        address_kr: r.address_kr ?? null,
+        address_en: r.address_en ?? null,
+        cs_hours_kr: r.cs_hours_kr ?? null,
+        cs_hours_en: r.cs_hours_en ?? null,
+        cs_lunch_kr: r.cs_lunch_kr ?? null,
+        cs_lunch_en: r.cs_lunch_en ?? null,
+        cs_holiday_kr: r.cs_holiday_kr ?? null,
+        cs_holiday_en: r.cs_holiday_en ?? null,
+      };
+    } catch (err) {
+      console.error('[MenuPage] business_info RDS read failed:', err);
+      return null;
+    }
+  }
   if (!_supabase) return null;
   const { data } = await _supabase
     .from('business_info')

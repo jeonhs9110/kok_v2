@@ -11,6 +11,12 @@ import { DEFAULT_THEME_TOKENS, parseThemeTokens, type ThemeTokens } from './toke
  * cache() which only dedups within ONE render and hit Supabase on every
  * fresh request. Admin saves at /admin/theme and /admin/best-seller-display
  * should call revalidateTag('theme_tokens') to drop the cached value.
+ *
+ * 2026-06-29: added the USE_RDS dispatcher. Pre-fix this read hit
+ * Supabase unconditionally, so every theme edit landing in RDS post-
+ * cutover was invisible to the storefront — the site has been rendering
+ * the frozen 2026-06-27 token snapshot for 3 days (colors, fonts,
+ * spacings, the entire visual system).
  */
 function client() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -20,6 +26,16 @@ function client() {
 
 export const getThemeTokens = unstable_cache(
   async (): Promise<ThemeTokens> => {
+    if (process.env.USE_RDS === 'true') {
+      try {
+        const { getSiteSettingFromPg } = await import('@/lib/db/storefront-reads');
+        const v = await getSiteSettingFromPg('theme_tokens');
+        return parseThemeTokens(v);
+      } catch (err) {
+        console.error('[cache:theme_tokens] RDS failed:', err);
+        return DEFAULT_THEME_TOKENS;
+      }
+    }
     const c = client();
     if (!c) return DEFAULT_THEME_TOKENS;
     try {
