@@ -222,6 +222,16 @@ export interface SubHeroBannerRow {
   subtitle_color: string | null;
   text_position: string | null;
   text_position_mobile: string | null;
+  // Migrations 30 + 31 — continuous (x, y) percent anchors for the
+  // text marker and image focal point. Stored as jsonb {x, y} on the
+  // server; declared `unknown` here because the storefront calls
+  // resolveAnchor() which handles parsing + fallback to the legacy
+  // 9-cell text_position. Were missing from this interface entirely,
+  // so the cache layer + every typed consumer silently dropped them.
+  text_anchor: unknown;
+  text_anchor_mobile: unknown;
+  image_anchor: unknown;
+  image_anchor_mobile: unknown;
   is_active: boolean;
   created_at: string;
 }

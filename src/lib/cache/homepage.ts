@@ -98,6 +98,14 @@ export async function getCachedPromoBanners(): Promise<PromoBanner[]> {
 }
 
 // ─── sub-hero ─────────────────────────────────────────────────────
+// 2026-06-29: pass the four (text/image) × (desktop/mobile) anchor
+// columns through to SubHeroBannerData. The DB rows have them
+// (migrations 30 + 31), the SubHeroBanner.tsx component already reads
+// them via `banner.text_anchor` etc. with resolveAnchor() fallbacks,
+// but this cache layer silently stripped them from the returned
+// shape. Storefront fell back to the legacy 9-cell text_position
+// even when the operator had explicitly set continuous anchors —
+// precise drag-positioning was invisible to the public site.
 const cachedSubHeroInner = unstable_cache(
   async (): Promise<SubHeroBannerData | null> => {
     if (process.env.USE_RDS === 'true') {
@@ -124,6 +132,10 @@ const cachedSubHeroInner = unstable_cache(
         subtitle_color: data.subtitle_color,
         text_position: data.text_position,
         text_position_mobile: data.text_position_mobile,
+        text_anchor: data.text_anchor,
+        text_anchor_mobile: data.text_anchor_mobile,
+        image_anchor: data.image_anchor,
+        image_anchor_mobile: data.image_anchor_mobile,
       };
     }
     const c = client();
@@ -136,7 +148,8 @@ const cachedSubHeroInner = unstable_cache(
           title_font_family, subtitle_font_family,
           title_bold, title_italic, title_underline,
           subtitle_bold, subtitle_italic, subtitle_underline,
-          title_color, subtitle_color, text_position, text_position_mobile
+          title_color, subtitle_color, text_position, text_position_mobile,
+          text_anchor, text_anchor_mobile, image_anchor, image_anchor_mobile
         `)
         .eq('is_active', true).order('created_at', { ascending: false }).limit(1).maybeSingle(),
       QUERY_BUDGET_MS,
@@ -163,6 +176,10 @@ const cachedSubHeroInner = unstable_cache(
       subtitle_color: data.subtitle_color,
       text_position: data.text_position,
       text_position_mobile: data.text_position_mobile,
+      text_anchor: data.text_anchor,
+      text_anchor_mobile: data.text_anchor_mobile,
+      image_anchor: data.image_anchor,
+      image_anchor_mobile: data.image_anchor_mobile,
     };
   },
   ['homepage:subhero'],
