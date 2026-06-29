@@ -88,7 +88,15 @@ export function makeBlock(type: BlockType): PageBlock {
         cta_text: '',
         cta_link: '',
         bg_color: '#f5f5f5',
-        text_color: '#111111',
+        // Empty so the renderer's layout-aware fallback wins by default:
+        //   - fullbleed → '#ffffff' (white on photo overlay)
+        //   - image-right → '#111' (dark on light card)
+        // Operator can still pick a custom value via the ColorRow control;
+        // see [src/app/admin/pages/_components/BlockEditors/HeroBlockEditor.tsx].
+        // Without this, fullbleed shipped unreadable dark titles on photo
+        // backgrounds the first time an operator picked the fullbleed
+        // layout without manually opening the color picker.
+        text_color: '',
         layout: 'image-right',
       };
     case 'text':

@@ -129,7 +129,7 @@ export function useHomepageBuilder() {
 
   const isReorderable = (k: string) => CORE_REORDERABLE.has(k) || isBannerKey(k);
 
-  async function saveSectionOrder(next: string[]) {
+  async function saveSectionOrder(next: string[]): Promise<boolean> {
     try {
       const res = await fetch('/api/admin/site-settings', {
         method: 'POST',
@@ -137,9 +137,17 @@ export function useHomepageBuilder() {
         body: JSON.stringify({ items: [{ key: 'homepage_section_order', value: JSON.stringify(next) }] }),
       });
       if (!res.ok) throw new Error('http_' + res.status);
-      revalidateHomepageData('homepage_section_order');
+      // CRITICAL: await the revalidation before returning. Without the
+      // await, callers (handleDrop, handleAddBanner) bump iframeKey
+      // before the section_order cache tag is evicted, so the iframe
+      // reload races against the old cache — operator sees stale
+      // ordering on the preview for up to ~60s until ISR rolls over.
+      await revalidateHomepageData('homepage_section_order');
+      return true;
     } catch (err) {
       console.error('[admin/homepage] section order save failed:', err);
+      toast.show('섹션 순서 저장에 실패했습니다.', 'error');
+      return false;
     }
   }
 
@@ -155,7 +163,7 @@ export function useHomepageBuilder() {
     e.dataTransfer.dropEffect = 'move';
     setDragOverKey(key);
   }, [dragKey]);
-  const handleDrop = useCallback((targetKey: string, e: React.DragEvent) => {
+  const handleDrop = useCallback(async (targetKey: string, e: React.DragEvent) => {
     e.preventDefault();
     if (!dragKey || dragKey === targetKey) return;
     if (!isReorderable(targetKey) || !isReorderable(dragKey)) return;
@@ -163,13 +171,24 @@ export function useHomepageBuilder() {
     const from = onlyReorderable.indexOf(dragKey);
     const to = onlyReorderable.indexOf(targetKey);
     if (from < 0 || to < 0) return;
+    // Snapshot for rollback. If the POST fails, restore prior order so
+    // the rail and preview iframe both reflect the truth.
+    const previousOrder = sectionOrder;
     const next = [...onlyReorderable];
     next.splice(from, 1);
     next.splice(to, 0, dragKey);
     setSectionOrder(next);
     setDragOverKey(null);
-    void saveSectionOrder(next);
+    const ok = await saveSectionOrder(next);
+    if (!ok) {
+      setSectionOrder(previousOrder);
+      return;
+    }
     setIframeKey(k => k + 1);
+    // saveSectionOrder is a stable closure over the hook's setState
+    // setters and `toast`; including it in deps would add noise without
+    // changing behavior.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dragKey, sectionOrder, setSectionOrder]);
   const handleDragEnd = useCallback(() => {
     setDragKey(null);
@@ -202,14 +221,16 @@ export function useHomepageBuilder() {
       if (insertIdx >= 0) next.splice(insertIdx, 0, newKey);
       else next.unshift(newKey);
       setSectionOrder(next);
-      void saveSectionOrder(next);
-      revalidateHomepageData('homepage_banners');
+      await saveSectionOrder(next);
+      await revalidateHomepageData('homepage_banners');
       setIframeKey(k => k + 1);
       handleEdit(newKey);
     } catch (err) {
       console.error('[admin/homepage] add banner failed:', err);
       toast.show('띠배너 추가에 실패했습니다.', 'error');
     }
+    // saveSectionOrder is a stable closure — same reason as handleDrop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sectionOrder, setBanners, setSectionOrder, handleEdit, toast]);
 
   const handleDrawerClose = useCallback(() => {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { sanitizeStorageKey, MAX_STORAGE_KEY_LEN } from '@/lib/storage/keyGuard';
 
 /**
  * DELETE /api/admin/storage/delete?bucket=<id>&key=<key>
@@ -18,14 +19,18 @@ export async function DELETE(request: Request) {
 
   const url = new URL(request.url);
   const bucket = url.searchParams.get('bucket');
-  const key = url.searchParams.get('key');
+  const rawKey = url.searchParams.get('key');
   if (!bucket || !ALLOWED_BUCKETS.has(bucket)) {
     return NextResponse.json({ error: 'invalid_bucket' }, { status: 400 });
   }
-  if (!key) {
+  if (!rawKey) {
     return NextResponse.json({ error: 'key_required' }, { status: 400 });
   }
-  if (key.startsWith('/') || key.includes('..')) {
+  if (rawKey.length > MAX_STORAGE_KEY_LEN) {
+    return NextResponse.json({ error: 'key_too_long' }, { status: 400 });
+  }
+  const key = sanitizeStorageKey(rawKey);
+  if (!key) {
     return NextResponse.json({ error: 'invalid_key' }, { status: 400 });
   }
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { ExternalLink, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 export interface PaymentProvider {
   id: number;
@@ -129,7 +130,7 @@ export default function PaymentProviderCard({
             </button>
           </div>
 
-          <a href={p.help_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] underline opacity-70 hover:opacity-100 transition-opacity">
+          <a href={safeUrl(p.help_url)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[11px] underline opacity-70 hover:opacity-100 transition-opacity">
             개발자 콘솔 바로가기 <ExternalLink className="w-3 h-3" />
           </a>
 

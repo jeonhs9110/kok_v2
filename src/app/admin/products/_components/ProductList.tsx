@@ -3,6 +3,7 @@
 import { Pencil, Trash2, ImageIcon, ExternalLink } from 'lucide-react';
 import type { Product } from '@/lib/api/products';
 import { EmptyState, LoadingState, StatusDot, TableShell, TableHeaderRow } from '@/components/admin/CafeWidgets';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 /**
  * Read-only table of products. Pure props in, callbacks out — owns no state.
@@ -105,7 +106,7 @@ export default function ProductList({
             <td className="px-4 py-2">
               {item.naver_store_url ? (
                 <a
-                  href={item.naver_store_url}
+                  href={safeUrl(item.naver_store_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-[#16a34a] text-[11.5px] hover:underline"
