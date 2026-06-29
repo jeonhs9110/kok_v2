@@ -15,6 +15,10 @@ export function kindFromName(name: string): Asset['kind'] {
  * Recursively list every object under `prefix` (4 levels deep enough for
  * the current upload layout). Supabase's `list()` returns a mix of files
  * and folders — folders have a null `id`, so we recurse into those.
+ *
+ * Live S3 listing happens via /api/admin/storage/list; this is the
+ * pre-cutover Supabase Storage fallback that page.tsx only reaches when
+ * USE_S3_FROM_BROWSER is false (dev / non-prod environments).
  */
 export async function listBucketRecursive(
   supabase: SupabaseClient,
@@ -50,81 +54,57 @@ export async function listBucketRecursive(
   return out;
 }
 
+interface UsageHit {
+  table: string;
+  label: string;
+  examples: string[];
+  count: number;
+}
+
 /**
- * Check usage of an asset URL across the tables most likely to reference
- * it. Returns a Korean message ready to show in a confirm modal, plus a
- * flag for whether any usage was found.
+ * Check usage of an asset URL across the 10 tables that can embed it,
+ * and produce a Korean confirm-modal message. Calls the server-side
+ * /api/admin/asset-usage endpoint, which does the actual cross-table
+ * scan via the standard USE_RDS dispatcher.
  *
- * Audit 2026-06-21: expanded coverage past the original 6 tables to
- * include the JSONB surfaces that previously fell through:
- *   - products.detail_body (rich-text HTML; matched with ilike %url%)
- *   - products.detail_components (JSONB array; cast to text and ilike)
- *   - menus.content (JSONB { lang: html } map; cast to text and ilike)
- *   - pages.blocks (JSONB block array; cast to text and ilike)
+ * 2026-06-29: previously this function did the cross-table scan
+ * CLIENT-SIDE via direct Supabase queries. After the 2026-06-27
+ * decommission, every query came back empty so the confirm modal
+ * always read "no references found" even when the image was still
+ * live on the storefront. Operators have been deleting in-use images
+ * with that false safety signal for 3 days. Now goes through the
+ * server-side route which dispatches via USE_RDS.
  *
- * The `::text` casts make these searchable via PostgREST's `like`/`ilike`
- * operators. The substring match is broader than a strict equality check
- * (a URL fragment could false-match), but it's correct in practice
- * because Supabase upload URLs are long opaque hashes — collisions are
- * astronomically unlikely.
+ * Signature kept for backwards compatibility — `_supabase` is ignored.
  */
 export async function buildDeleteConfirmMessage(
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
   url: string,
   assetLabel: string,
 ): Promise<{ message: string; hasReferences: boolean }> {
-  // products.images is a text[] — .contains() builds the right
-  // `images=cs.{url}` array-containment filter for text[].
-  const [
-    products, sub_hero, carousel, promo, reviews, ig,
-    productDetailBody, productDetailComponents, menus, pagesRefs,
-  ] = await Promise.all([
-    supabase.from('products').select('id, name').contains('images', [url]).limit(5),
-    supabase.from('sub_hero_banners').select('id').eq('image_url', url).limit(5),
-    supabase.from('carousel_slides').select('id, badge').eq('image_url', url).limit(5),
-    supabase.from('promo_banners').select('id').eq('image_url', url).limit(5),
-    supabase.from('review_cards').select('id, title').eq('image_url', url).limit(5),
-    supabase.from('instagram_posts').select('id').eq('image_url', url).limit(5),
-    // Product detail body — rich-text HTML with embedded <img src="...">.
-    supabase.from('products').select('id, name').ilike('detail_body', `%${url}%`).limit(5),
-    // Product detail_components — JSONB array of { type, url }. Cast to
-    // text so a substring match catches the URL inside the array.
-    supabase.from('products').select('id, name').filter('detail_components::text', 'ilike', `%${url}%`).limit(5),
-    // Menus content — JSONB { lang: html } map. Same cast trick.
-    supabase.from('menus').select('id, slug').filter('content::text', 'ilike', `%${url}%`).limit(5),
-    // Pages.blocks — JSONB { lang: block[] }. Same cast trick.
-    supabase.from('pages').select('id, slug').filter('blocks::text', 'ilike', `%${url}%`).limit(5),
-  ]);
-
-  const productRefs = products.data ?? [];
-  const subHeroRefs = sub_hero.data ?? [];
-  const carouselRefs = carousel.data ?? [];
-  const promoRefs = promo.data ?? [];
-  const reviewRefs = reviews.data ?? [];
-  const igRefs = ig.data ?? [];
-  const productBodyRefs = productDetailBody.data ?? [];
-  const productCompRefs = productDetailComponents.data ?? [];
-  const menuRefs = menus.data ?? [];
-  const pageRefs = pagesRefs.data ?? [];
-  const total = productRefs.length + subHeroRefs.length + carouselRefs.length
-              + promoRefs.length + reviewRefs.length + igRefs.length
-              + productBodyRefs.length + productCompRefs.length
-              + menuRefs.length + pageRefs.length;
-
-  if (total > 0) {
-    const lines: string[] = [];
-    if (productRefs.length > 0) {
-      lines.push(`• 상품 메인 이미지 ${productRefs.length}개 (${productRefs.slice(0, 3).map(p => p.name).filter(Boolean).join(', ')}${productRefs.length > 3 ? ' 외' : ''})`);
+  let usage: UsageHit[] = [];
+  try {
+    const res = await fetch(`/api/admin/asset-usage?url=${encodeURIComponent(url)}`, { cache: 'no-store' });
+    if (res.ok) {
+      const json = await res.json() as { usage?: UsageHit[] };
+      usage = json.usage ?? [];
     }
-    if (subHeroRefs.length > 0) lines.push(`• 서브 히어로 배너 ${subHeroRefs.length}개`);
-    if (carouselRefs.length > 0) lines.push(`• 메인 캐러셀 슬라이드 ${carouselRefs.length}개`);
-    if (promoRefs.length > 0)    lines.push(`• 프로모 배너 ${promoRefs.length}개`);
-    if (reviewRefs.length > 0)   lines.push(`• 리뷰 카드 ${reviewRefs.length}개`);
-    if (igRefs.length > 0)       lines.push(`• 인스타 슬롯 ${igRefs.length}개`);
-    if (productBodyRefs.length > 0) lines.push(`• 상품 상세 본문 ${productBodyRefs.length}개 (에디터 내부 이미지)`);
-    if (productCompRefs.length > 0) lines.push(`• 상품 상세 컴포넌트 ${productCompRefs.length}개`);
-    if (menuRefs.length > 0)     lines.push(`• 메뉴 페이지 본문 ${menuRefs.length}개`);
-    if (pageRefs.length > 0)     lines.push(`• 페이지 빌더 블록 ${pageRefs.length}개`);
+  } catch (err) {
+    console.error('[assets] usage check failed; proceeding without safety net:', err);
+    // Don't block the operator — the prompt now warns we couldn't verify.
+    return {
+      hasReferences: false,
+      message: `⚠️ 참조 확인 중 오류가 발생했습니다. 그래도 삭제하시겠습니까?\n\n${assetLabel}`,
+    };
+  }
+
+  if (usage.length > 0) {
+    const lines = usage.map(u => {
+      const ex = u.examples.length > 0
+        ? ` (${u.examples.slice(0, 3).join(', ')}${u.examples.length > 3 || u.count > 3 ? ' 외' : ''})`
+        : '';
+      return `• ${u.label} ${u.count}개${ex}`;
+    });
     return {
       hasReferences: true,
       message: `⚠️ 이 이미지는 아래에서 사용 중입니다:\n\n${lines.join('\n')}\n\n${assetLabel}\n\n삭제하면 해당 위치에 이미지가 표시되지 않습니다. 계속 삭제하시겠습니까?`,
