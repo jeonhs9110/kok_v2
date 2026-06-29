@@ -132,17 +132,20 @@ resource "aws_route53_record" "ses_mail_mx" {
   records = ["10 feedback-smtp.${var.region}.amazonses.com"]
 }
 
-# DMARC — p=none is monitor mode. Aggregated reports go to
-# dmarc-reports@kokkokgarden.com (the operator needs to forward this
-# alias somewhere they read, OR ignore the reports — the policy still
-# protects them). After 30 days of clean monitoring reports, switch
-# p=none → p=quarantine for actual enforcement.
+# DMARC — p=none is monitor mode. The `rua=` aggregated-report clause
+# was dropped because the operator chose not to provision an inbox
+# under the domain. The policy still works without rua — receiving
+# providers (Gmail/Outlook) consult the DKIM/SPF alignment rules
+# without needing to report back to anyone. We lose visibility into
+# attempted spoofing, but the protection is intact. To re-enable
+# reporting later, add `; rua=mailto:<real-mailbox>@kokkokgarden.com`
+# to the record value.
 resource "aws_route53_record" "ses_dmarc" {
   zone_id = aws_route53_zone.main.zone_id
   name    = "_dmarc.kokkokgarden.com"
   type    = "TXT"
   ttl     = 1800
-  records = ["v=DMARC1; p=none; rua=mailto:dmarc-reports@kokkokgarden.com; pct=100; aspf=r; adkim=r"]
+  records = ["v=DMARC1; p=none; pct=100; aspf=r; adkim=r"]
 }
 
 # Output the NS values for the operator to set at Yesnic (the domain

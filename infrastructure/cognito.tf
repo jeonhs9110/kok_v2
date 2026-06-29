@@ -57,10 +57,15 @@ resource "aws_cognito_user_pool" "main" {
   # DKIM key and From: noreply@kokkokgarden.com so Gmail/Outlook
   # accept it instead of routing to spam.
   email_configuration {
-    email_sending_account  = var.use_ses_for_cognito ? "DEVELOPER" : "COGNITO_DEFAULT"
-    from_email_address     = var.use_ses_for_cognito ? "KOKKOK GARDEN <noreply@${var.domain_name}>" : null
-    source_arn             = var.use_ses_for_cognito ? aws_ses_domain_identity.kokkokgarden.arn : null
-    reply_to_email_address = var.use_ses_for_cognito ? "support@${var.domain_name}" : null
+    email_sending_account = var.use_ses_for_cognito ? "DEVELOPER" : "COGNITO_DEFAULT"
+    from_email_address    = var.use_ses_for_cognito ? "KOKKOK GARDEN <noreply@${var.domain_name}>" : null
+    source_arn            = var.use_ses_for_cognito ? aws_ses_domain_identity.kokkokgarden.arn : null
+    # Intentionally no reply_to. The operator decided not to provision a
+    # customer-facing mailbox under the domain — the "noreply@" From
+    # alone signals automated send + don't-reply, and Gmail/Outlook
+    # treat the absence of a Reply-To header as canonical "this is a
+    # transactional broadcast". Adding a fake reply-to would bounce
+    # silently if a customer ever hit reply.
   }
 
   # KOKKOK-branded verification email. Replaces the generic
