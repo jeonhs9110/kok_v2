@@ -59,3 +59,31 @@ async function requireCustomerSupabase(): Promise<CustomerAuth | NextResponse> {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
   }
 }
+
+/**
+ * Optional variant of requireCustomer() for routes that need to behave
+ * differently for signed-in vs anonymous callers without 401-ing the
+ * anonymous case. Returns the CustomerAuth shape when the request
+ * carries a valid Cognito ID token; returns null otherwise. Never
+ * throws — verification errors fall through to null so a malformed
+ * cookie doesn't break a public endpoint.
+ */
+export async function requireCustomerOptional(): Promise<CustomerAuth | null> {
+  try {
+    if (process.env.USE_COGNITO === 'true') {
+      const jar = await cookies();
+      const idToken = jar.get('cognito_id_token')?.value;
+      if (!idToken) return null;
+      const { verifyCognitoIdToken } = await import('./cognito');
+      const claims = await verifyCognitoIdToken(idToken);
+      if (!claims) return null;
+      return { userId: claims.sub, email: claims.email };
+    }
+    const supabase = await getSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    return { userId: user.id, email: user.email };
+  } catch {
+    return null;
+  }
+}

@@ -56,6 +56,24 @@ export async function POST(req: Request) {
 
   if (process.env.USE_RDS === 'true') {
     try {
+      // Verify the post exists and is published before accepting the
+      // comment. Without this gate a signed-in customer could POST a
+      // comment against any post id (including drafts the operator
+      // never published, or rows from a deleted board) — the comment
+      // would write but not render anywhere visible, and an admin
+      // reviewing the comments queue would see ghost entries
+      // pointing at posts that don't exist.
+      const { getPgPool } = await import('@/lib/db/pool');
+      const pool = getPgPool();
+      const postCheck = await pool.query<{ is_published: boolean }>(
+        `SELECT is_published FROM public.posts WHERE id = $1 LIMIT 1`,
+        [post_id],
+      );
+      const post = postCheck.rows[0];
+      if (!post || !post.is_published) {
+        return NextResponse.json({ ok: false, error: 'post_not_available' }, { status: 404 });
+      }
+
       const { createCommentInPg } = await import('@/lib/db/admin-writes');
       const row = await createCommentInPg({
         post_id, parent_id: parent, author_name: name, content, is_admin_comment: false,
