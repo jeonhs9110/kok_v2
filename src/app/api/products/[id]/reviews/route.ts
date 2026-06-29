@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -14,29 +15,12 @@ const MAX_CONTENT = 4000;
 // without an account) so the only abuse brake is a per-IP cap. 5 per
 // hour comfortably covers a legitimate customer who leaves one review
 // per product they bought; blocks scripted floods + bot-stuffed
-// 5-star spam runs.
-const REVIEW_RATE_LIMIT = 5;
-const REVIEW_RATE_WINDOW_MS = 60 * 60 * 1000;
-const reviewRate = new Map<string, { count: number; resetAt: number }>();
-function checkReviewRate(ip: string): boolean {
-  const now = Date.now();
-  const entry = reviewRate.get(ip);
-  if (!entry || now > entry.resetAt) {
-    reviewRate.set(ip, { count: 1, resetAt: now + REVIEW_RATE_WINDOW_MS });
-    return true;
-  }
-  if (entry.count >= REVIEW_RATE_LIMIT) return false;
-  entry.count++;
-  return true;
-}
-function getRequestIp(req: Request): string {
-  const xff = (req as NextRequest).headers.get('x-forwarded-for');
-  if (xff) {
-    const first = xff.split(',')[0]?.trim();
-    if (first) return first;
-  }
-  return (req as NextRequest).headers.get('x-real-ip') || 'unknown';
-}
+// 5-star spam runs. Refactored 2026-06-29 to the shared limiter.
+const reviewLimiter = createRateLimiter({
+  name: 'product_reviews',
+  limit: 5,
+  windowMs: 60 * 60 * 1000,
+});
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -88,7 +72,7 @@ export async function POST(req: Request, { params }: RouteContext) {
   const { id } = await params;
   if (!id) return NextResponse.json({ ok: false, error: 'product_id required' }, { status: 400 });
 
-  if (!checkReviewRate(getRequestIp(req))) {
+  if (!reviewLimiter.check(getRequestIp(req))) {
     return NextResponse.json(
       { ok: false, error: 'too_many_requests' },
       { status: 429 },

@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getProducts } from '@/lib/api/products';
+import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 
-// Simple in-memory rate limiter (per IP, 10 requests per minute)
-const rateLimit = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 10;
-const RATE_WINDOW = 60_000; // 1 minute
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimit.get(ip);
-  if (!entry || now > entry.resetAt) {
-    rateLimit.set(ip, { count: 1, resetAt: now + RATE_WINDOW });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT) return false;
-  entry.count++;
-  return true;
-}
+// Per-IP brake on the chatbot: 10 messages/min. Refactored
+// 2026-06-29 to use the shared limiter — same numbers as before.
+const chatLimiter = createRateLimiter({
+  name: 'chat',
+  limit: 10,
+  windowMs: 60_000,
+});
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -194,9 +186,7 @@ When appropriate, gradually collect:
 }
 
 export async function POST(req: NextRequest) {
-  // Rate limiting
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip') || 'unknown';
-  if (!checkRateLimit(ip)) {
+  if (!chatLimiter.check(getRequestIp(req))) {
     return NextResponse.json(
       { error: 'Too many requests. Please wait a moment.' },
       { status: 429 }
