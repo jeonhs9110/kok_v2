@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { getCachedReviews } from '@/lib/cache/homepage';
+import { safeUrl } from '@/lib/url/safeUrl';
 import type { Lang } from '@/lib/i18n/types';
 
 const TITLE: Record<Lang, string> = {
