@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { ExternalLink, Globe, X } from 'lucide-react';
 import Image from 'next/image';
+import { safeUrl } from '@/lib/url/safeUrl';
 import {
   REGION_ORDER,
   REGION_LABEL_KEY,
@@ -191,7 +192,7 @@ export default function ShopWorldwide({ labels, retailers }: ShopWorldwideProps)
                 return isPending ? (
                   <div key={v.id} className="cursor-default opacity-60">{content}</div>
                 ) : (
-                  <a key={v.id} href={v.storeUrl} target="_blank" rel="noopener noreferrer">{content}</a>
+                  <a key={v.id} href={safeUrl(v.storeUrl)} target="_blank" rel="noopener noreferrer">{content}</a>
                 );
               })}
             </div>

@@ -60,11 +60,12 @@ jobs:
         env:
           NODE_ENV: production
           NEXT_TELEMETRY_DISABLED: '1'
-          # NEXT_PUBLIC_* must be present at BUILD time — Next.js inlines
-          # them into the client bundle. Add these to repo Settings →
-          # Secrets and variables → Actions → New repository secret.
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # 2026-06-30: NEXT_PUBLIC_SUPABASE_URL / *_ANON_KEY were removed
+          # from this env block when Supabase was cut. The browser client
+          # (src/lib/supabase/browser.ts) falls back to a placeholder when
+          # those vars are absent at build time — bundle stays valid; the
+          # legacy createBrowserClient instance is unreachable in prod
+          # because every call site dispatches on USE_*_FROM_BROWSER first.
           # Media storage cutover — Supabase Storage → S3 + CloudFront.
           # The bucket name and CDN URL are NOT secrets (the bucket is
           # private at S3, public via CloudFront with this URL prefix),

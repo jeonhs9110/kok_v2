@@ -498,6 +498,14 @@ export async function deleteUserInPg(userId: string, email: string | null): Prom
         [email, ANON_NAME],
       );
     }
+    // Orders must persist for accounting compliance, but the FK on
+    // orders.user_id has no ON DELETE clause (defaults to NO ACTION).
+    // Unlink the customer FK so the parent delete below doesn't trip
+    // the constraint AND so the customer's identity is no longer
+    // retrievable from the order row (PIPA §21).
+    await client.query(`UPDATE public.orders SET user_id = NULL WHERE user_id = $1`, [userId]);
+    // Cart is ephemeral — drop it.
+    await client.query(`DELETE FROM public.cart_items WHERE user_id = $1`, [userId]);
     // Row deletions.
     await client.query(`DELETE FROM public.wishlist WHERE user_id = $1`, [userId]);
     await client.query(`DELETE FROM public.customer_profiles WHERE id = $1`, [userId]);

@@ -80,7 +80,7 @@ function HeroBlock({
               )}
               {block.cta_text && block.cta_link && (
                 <Link
-                  href={block.cta_link}
+                  href={safeUrl(block.cta_link)}
                   className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-black text-[13px] font-bold tracking-wider hover:bg-neutral-100 transition-colors rounded-full"
                 >
                   {block.cta_text}
@@ -112,7 +112,7 @@ function HeroBlock({
         )}
         {block.cta_text && block.cta_link && (
           <Link
-            href={block.cta_link}
+            href={safeUrl(block.cta_link)}
             className="inline-flex items-center gap-2 self-start px-6 py-3 bg-brand-ink text-white text-[12px] font-bold tracking-wider hover:bg-black transition-colors"
           >
             {block.cta_text}
@@ -208,15 +208,45 @@ function CtaBlock({ block }: { block: Extract<PageBlock, { type: 'cta' }> }) {
   );
 }
 
+/**
+ * Allow-list for embed iframe origins. Any host outside this set returns
+ * null and the embed is skipped — keeps `javascript:` / `data:` schemes
+ * and arbitrary cross-origin frames out of the storefront DOM.
+ */
+const EMBED_ALLOWED_HOSTS = new Set([
+  'www.youtube.com',
+  'youtube.com',
+  'youtube-nocookie.com',
+  'www.youtube-nocookie.com',
+  'player.vimeo.com',
+  'vimeo.com',
+  'www.instagram.com',
+  'instagram.com',
+  'open.spotify.com',
+]);
+
+function safeEmbedUrl(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+    if (!EMBED_ALLOWED_HOSTS.has(u.hostname)) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
+
 function EmbedBlock({ block }: { block: Extract<PageBlock, { type: 'embed' }> }) {
   if (!block.url) return null;
+  const safe = safeEmbedUrl(block.url);
+  if (!safe) return null;
   const aspect = block.aspect ?? '16/9';
   const aspectClass = aspect === '4/3' ? 'aspect-[4/3]' : aspect === '1/1' ? 'aspect-square' : 'aspect-video';
   return (
     <section className="max-w-4xl mx-auto px-4 sm:px-6">
       <div className={`relative w-full ${aspectClass} rounded-lg overflow-hidden bg-black`}>
         <iframe
-          src={block.url}
+          src={safe}
           className="absolute inset-0 w-full h-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen

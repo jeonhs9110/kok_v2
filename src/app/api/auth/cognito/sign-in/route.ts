@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 
 /**
  * POST /api/auth/cognito/sign-in
@@ -14,8 +15,22 @@ import { NextResponse } from 'next/server';
  * httpOnly so no client JS can read or steal them via XSS. Same-site
  * lax so the cookie survives the post-sign-in redirect but does not
  * ride on cross-origin top-level navigations.
+ *
+ * Rate limit: 10 attempts per IP per 5 minutes. Cognito's pool-wide
+ * AdvancedSecurity throttle catches sustained brute force at scale,
+ * but a per-IP brake here stops credential stuffing from one source
+ * before it reaches Cognito.
  */
-export async function POST(request: Request) {
+const signInLimiter = createRateLimiter({
+  name: 'cognito_sign_in',
+  limit: 10,
+  windowMs: 5 * 60 * 1000,
+});
+
+export async function POST(request: NextRequest) {
+  if (!signInLimiter.check(getRequestIp(request))) {
+    return NextResponse.json({ error: 'too_many_requests' }, { status: 429 });
+  }
   let body: { email?: unknown; password?: unknown };
   try {
     body = await request.json();

@@ -5,6 +5,32 @@ import { Play } from 'lucide-react';
 import Link from 'next/link';
 import { useI18n } from '@/lib/i18n/context';
 import SectionBackground, { type SectionBackgroundConfig } from '@/components/SectionBackground';
+import { safeUrl } from '@/lib/url/safeUrl';
+
+/**
+ * Allow-listed video-embed hosts. Anything outside this list returns
+ * null and the iframe is skipped — keeps `javascript:` / `data:` and
+ * arbitrary cross-origin frames out of the storefront DOM.
+ */
+const SHORTS_EMBED_ALLOWED_HOSTS = new Set([
+  'www.youtube.com',
+  'youtube.com',
+  'youtube-nocookie.com',
+  'www.youtube-nocookie.com',
+  'player.vimeo.com',
+  'vimeo.com',
+]);
+
+function safeShortEmbedUrl(raw: string): string | null {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'https:') return null;
+    if (!SHORTS_EMBED_ALLOWED_HOSTS.has(u.hostname)) return null;
+    return u.toString();
+  } catch {
+    return null;
+  }
+}
 
 export interface ShortItem {
   embedUrl: string;
@@ -123,7 +149,7 @@ export default function ShortsFeed({ shorts, bgConfig = null, header }: Props) {
 
                     {short.productUrl && (
                       <Link
-                        href={short.productUrl}
+                        href={safeUrl(short.productUrl)}
                         className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-white/90 hover:bg-white text-black text-[11px] font-bold px-4 py-1.5 rounded-full tracking-wide transition-colors whitespace-nowrap shadow-lg"
                       >
                         {viewLabel}
@@ -132,10 +158,14 @@ export default function ShortsFeed({ shorts, bgConfig = null, header }: Props) {
                   </div>
                 )}
 
-                {(isPlaying || !videoId) && (
+                {(isPlaying || !videoId) && (() => {
+                  const embedSafe = safeShortEmbedUrl(short.embedUrl);
+                  if (!embedSafe) return null;
+                  const playable = embedSafe + (embedSafe.includes('?') ? '&autoplay=1&mute=1' : '?autoplay=1&mute=1');
+                  return (
                   <div className="relative w-full h-full">
                     <iframe
-                      src={short.embedUrl + (short.embedUrl.includes('?') ? '&autoplay=1&mute=1' : '?autoplay=1&mute=1')}
+                      src={playable}
                       title={lang === 'kr' ? '브랜드 쇼츠 영상' : 'Brand shorts video'}
                       className="w-full h-full object-cover pointer-events-auto"
                       style={{ border: 'none' }}
@@ -144,14 +174,15 @@ export default function ShortsFeed({ shorts, bgConfig = null, header }: Props) {
                     />
                     {short.productUrl && (
                       <Link
-                        href={short.productUrl}
+                        href={safeUrl(short.productUrl)}
                         className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-white/90 hover:bg-white text-black text-[11px] font-bold px-4 py-1.5 rounded-full tracking-wide transition-colors whitespace-nowrap shadow-lg z-10"
                       >
                         {viewLabel}
                       </Link>
                     )}
                   </div>
-                )}
+                  );
+                })()}
               </div>
             );
           })}
