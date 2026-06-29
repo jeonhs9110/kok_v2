@@ -41,7 +41,16 @@ export type HomepageTag =
   // the operator clicks save. revalidateHeaderData() only clears the
   // in-process header memo; the unstable_cache layer needs its own
   // tag eviction.
-  | 'business_info';
+  | 'business_info'
+  // Added 2026-06-29 (admin sweep r7). getActiveSiteBackground tags
+  // with 'site_background', but the /admin/logo background management
+  // hook (useBackgroundManagement) never called revalidateHomepageData
+  // at all — so after operator activated/deactivated/deleted a
+  // background row, the storefront kept rendering the previously-active
+  // background for up to 60s (the unstable_cache TTL). Particularly
+  // jarring for video backgrounds where the operator hits ▶️ Activate
+  // and expects the live storefront preview to follow.
+  | 'site_background';
 
 export async function revalidateHomepageData(tag: HomepageTag): Promise<void> {
   updateTag(tag);

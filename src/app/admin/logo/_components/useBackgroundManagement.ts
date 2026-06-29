@@ -4,6 +4,7 @@ import { useConfirm } from '@/components/admin/ConfirmModal';
 import { useToast } from '@/components/admin/Toast';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
+import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import type { Background } from './BackgroundMediaCard';
 
 const BUCKET = 'site-assets';
@@ -106,6 +107,15 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
     }
   };
 
+  // 2026-06-29: every site_background mutation now follows with a
+  // revalidateHomepageData('site_background') so the storefront's
+  // unstable_cache (getActiveSiteBackground, tagged 'site_background')
+  // is evicted immediately. The prior code only called onIframeReload()
+  // on the admin side — the local iframe restarted, but the public
+  // storefront kept rendering the previously-active background until
+  // the 60s ISR window expired. Particularly jarring for video
+  // backgrounds where the operator hits Activate and expects the live
+  // storefront preview to follow.
   const activateBackground = async (id: string) => {
     setBgBusyId(id);
     try {
@@ -136,6 +146,7 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
         await supabase.from('site_backgrounds').update({ is_active: true }).eq('id', id);
       }
       await loadBackgrounds();
+      await revalidateHomepageData('site_background');
       onIframeReload();
     } finally {
       setBgBusyId(null);
@@ -155,6 +166,7 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
         await supabase.from('site_backgrounds').update({ is_active: false }).eq('id', id);
       }
       await loadBackgrounds();
+      await revalidateHomepageData('site_background');
       onIframeReload();
     } finally {
       setBgBusyId(null);
@@ -177,6 +189,10 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
           .eq('id', bg.id);
       }
       await loadBackgrounds();
+      // Only evict if the toggled row is the currently-active one — the
+      // storefront only reads the active row, so scroll_driven changes
+      // on inactive rows don't affect public render.
+      if (bg.is_active) await revalidateHomepageData('site_background');
     } finally {
       setBgBusyId(null);
     }
@@ -204,6 +220,11 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
         await supabase.from('site_backgrounds').delete().eq('id', bg.id);
       }
       await loadBackgrounds();
+      // Always evict on delete: even if the row was inactive, the
+      // storefront's previously-cached active row might reference an
+      // object we just removed from storage (rare but real after
+      // multi-tab editing).
+      await revalidateHomepageData('site_background');
       onIframeReload();
     } finally {
       setBgBusyId(null);
