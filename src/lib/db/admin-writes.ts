@@ -381,13 +381,51 @@ export async function setUserRoleInPg(userId: string, role: 'admin' | 'user'): P
   return (rowCount ?? 0) > 0;
 }
 
+/**
+ * Delete an admin-initiated user, cascading the rows that the original
+ * Supabase `auth.users → ON DELETE CASCADE` FK used to clean up for
+ * free. With the Cognito cutover those FKs are dead — customer_profiles
+ * no longer has an active reference to delete-cascade from (`auth.users`
+ * is gone from the RDS schema), and wishlist + the public.users row
+ * itself were never FK-linked. So this function has to fan the delete
+ * out manually.
+ *
+ * Surfaces cascaded (in order — wishlist + profile first so a row
+ * never lingers PII-bearing if users-row delete fails halfway):
+ *   - public.wishlist (user_id) — customer-curated product list
+ *   - public.customer_profiles (id) — PII: name/phone/birthday/etc.
+ *   - public.users (id) — the admin-facing identity row
+ *
+ * Pre-fix the admin /admin/users → Delete button only removed the
+ * users row, leaving customer_profiles + wishlist orphaned. PIPA
+ * §21 requires destruction of personal info on account deletion;
+ * leaving customer_profiles behind is a real compliance gap. The
+ * customer-initiated DELETE /api/customer/profile already cascades
+ * this way — this just brings the admin path to parity.
+ *
+ * Returns true if the users row was deleted (the source-of-truth
+ * for "did the account go away"); the upstream Cognito cleanup
+ * decides whether the full account is gone.
+ */
 export async function deleteUserInPg(userId: string): Promise<boolean> {
   const pool = getPgPool();
-  const { rowCount } = await pool.query(
-    `DELETE FROM public.users WHERE id = $1`,
-    [userId],
-  );
-  return (rowCount ?? 0) > 0;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`DELETE FROM public.wishlist WHERE user_id = $1`, [userId]);
+    await client.query(`DELETE FROM public.customer_profiles WHERE id = $1`, [userId]);
+    const { rowCount } = await client.query(
+      `DELETE FROM public.users WHERE id = $1`,
+      [userId],
+    );
+    await client.query('COMMIT');
+    return (rowCount ?? 0) > 0;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // ─── product_reviews (customer submit) ───────────────────────────

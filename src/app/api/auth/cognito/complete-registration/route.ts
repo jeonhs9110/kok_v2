@@ -56,45 +56,80 @@ export async function POST(request: Request) {
   try {
     const { getPgPool } = await import('@/lib/db/pool');
     const pool = getPgPool();
-    await pool.query(
-      `INSERT INTO public.customer_profiles (
-          id, email, name, phone, gender, birthday, age_range, country,
-          skin_type, marketing_consent, privacy_consent, auth_provider,
-          custom_fields, created_at, updated_at
-        )
-        VALUES (
-          $1, $2, $3, $4, $5, $6::date, $7, $8,
-          $9, $10, $11, 'email',
-          COALESCE($12::jsonb, '{}'::jsonb), NOW(), NOW()
-        )
-        ON CONFLICT (id) DO UPDATE
-          SET email             = EXCLUDED.email,
-              name              = EXCLUDED.name,
-              phone             = EXCLUDED.phone,
-              gender            = EXCLUDED.gender,
-              birthday          = EXCLUDED.birthday,
-              age_range         = EXCLUDED.age_range,
-              country           = EXCLUDED.country,
-              skin_type         = EXCLUDED.skin_type,
-              marketing_consent = EXCLUDED.marketing_consent,
-              privacy_consent   = EXCLUDED.privacy_consent,
-              custom_fields     = EXCLUDED.custom_fields,
-              updated_at        = NOW()`,
-      [
-        claims.sub,
-        claims.email ?? null,
-        body.name?.trim() || null,
-        body.phone?.trim() || null,
-        body.gender || null,
-        body.birthday || null,
-        body.age_range || null,
-        body.country?.trim() || null,
-        body.skin_type || null,
-        body.marketing_consent ?? false,
-        body.privacy_consent ?? false,
-        body.custom_fields ? JSON.stringify(body.custom_fields) : null,
-      ],
-    );
+    // Two writes in one logical step:
+    //   1. public.users — the admin-facing identity row. Pre-Cognito,
+    //      Supabase's auth.users → public.users trigger did this for
+    //      free. After the cutover there's no trigger and no equivalent
+    //      Lambda hooked into PostConfirmation, so every Cognito sign-up
+    //      since 2026-06-27 has been invisible to /admin/users (which
+    //      reads only from public.users). Operator literally cannot see
+    //      who has signed up. Default role='user' (the schema default).
+    //      is_verified=true because by the time we reach this route the
+    //      Cognito ConfirmSignUp step has completed — the email IS
+    //      verified upstream.
+    //   2. public.customer_profiles — the PII-bearing profile row keyed
+    //      by the same id (the Cognito sub).
+    // Use a single transaction so a customer_profiles failure rolls back
+    // the users row too (the inverse — users without profile — is the
+    // less dangerous state because storefront flows can still operate
+    // off Cognito claims, but consistency matters).
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        `INSERT INTO public.users (id, email, role, is_verified, created_at)
+           VALUES ($1, $2, 'user', true, NOW())
+           ON CONFLICT (id) DO UPDATE
+             SET email = EXCLUDED.email,
+                 is_verified = EXCLUDED.is_verified`,
+        [claims.sub, claims.email ?? null],
+      );
+      await client.query(
+        `INSERT INTO public.customer_profiles (
+            id, email, name, phone, gender, birthday, age_range, country,
+            skin_type, marketing_consent, privacy_consent, auth_provider,
+            custom_fields, created_at, updated_at
+          )
+          VALUES (
+            $1, $2, $3, $4, $5, $6::date, $7, $8,
+            $9, $10, $11, 'email',
+            COALESCE($12::jsonb, '{}'::jsonb), NOW(), NOW()
+          )
+          ON CONFLICT (id) DO UPDATE
+            SET email             = EXCLUDED.email,
+                name              = EXCLUDED.name,
+                phone             = EXCLUDED.phone,
+                gender            = EXCLUDED.gender,
+                birthday          = EXCLUDED.birthday,
+                age_range         = EXCLUDED.age_range,
+                country           = EXCLUDED.country,
+                skin_type         = EXCLUDED.skin_type,
+                marketing_consent = EXCLUDED.marketing_consent,
+                privacy_consent   = EXCLUDED.privacy_consent,
+                custom_fields     = EXCLUDED.custom_fields,
+                updated_at        = NOW()`,
+        [
+          claims.sub,
+          claims.email ?? null,
+          body.name?.trim() || null,
+          body.phone?.trim() || null,
+          body.gender || null,
+          body.birthday || null,
+          body.age_range || null,
+          body.country?.trim() || null,
+          body.skin_type || null,
+          body.marketing_consent ?? false,
+          body.privacy_consent ?? false,
+          body.custom_fields ? JSON.stringify(body.custom_fields) : null,
+        ],
+      );
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
+      throw err;
+    } finally {
+      client.release();
+    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error('[api/auth/cognito/complete-registration] failed:', err);
