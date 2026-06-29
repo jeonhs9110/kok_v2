@@ -131,13 +131,14 @@ export default function BannerEditPage() {
       // endpoint as the rest of the homepage builder — the prior
       // Supabase-only fallback became a silent no-op after the RDS
       // cutover and left ghost `banner:<id>` keys in the order array.
+      let sectionOrderTouched = false;
       try {
         const orderRes = await fetch('/api/admin/site-settings?keys=homepage_section_order', { cache: 'no-store' });
         if (orderRes.ok) {
           const json = (await orderRes.json()) as { values?: Record<string, unknown> };
           const raw = json.values?.homepage_section_order;
           const arr = typeof raw === 'string' ? JSON.parse(raw) : raw;
-          if (Array.isArray(arr)) {
+          if (Array.isArray(arr) && arr.includes(`banner:${id}`)) {
             const filtered = arr.filter((k: string) => k !== `banner:${id}`);
             await fetch('/api/admin/site-settings', {
               method: 'POST',
@@ -146,12 +147,19 @@ export default function BannerEditPage() {
                 items: [{ key: 'homepage_section_order', value: JSON.stringify(filtered) }],
               }),
             });
+            sectionOrderTouched = true;
           }
         }
       } catch (err) {
         console.warn('[admin/banners] section-order cleanup failed (non-fatal):', err);
       }
       revalidateHomepageData('homepage_banners');
+      // When the row's key was actually present in the saved order, the
+      // storefront's cached `homepage_section_order` still references the
+      // now-deleted banner. Evict that tag too so the next public render
+      // sees the trimmed order instead of trying to paint a ghost slot
+      // for up to 60s (sectionOrder.ts unstable_cache TTL).
+      if (sectionOrderTouched) revalidateHomepageData('homepage_section_order');
       toast.show('띠배너가 삭제되었습니다.', 'success');
       // If embedded in the homepage drawer, signal close; else go back.
       if (typeof window !== 'undefined' && window.parent !== window) {
