@@ -115,6 +115,11 @@ export default function ThemePage() {
                     className="mt-1 w-full px-3 py-2 text-sm rounded border border-[#e5e7eb] focus:outline-none focus:border-[#3b82f6] font-mono"
                   />
                 </label>
+                {t.tokens.ga_measurement_id && !/^G-[A-Z0-9]+$/i.test(t.tokens.ga_measurement_id) && (
+                  <p className="text-[11px] text-[#dc2626] mt-1 font-semibold">
+                    G-로 시작하고 영문/숫자만 사용한 측정 ID여야 합니다. 형식이 맞지 않으면 스토어에 로드되지 않습니다.
+                  </p>
+                )}
                 <p className="text-[10px] text-[#9ca3af] mt-2 leading-relaxed">
                   GA4 속성의 측정 ID(<code className="font-mono">G-</code>로 시작)를 입력하면 스토어
                   방문이 Google Analytics에 함께 기록됩니다. 비워두면 GA가 로드되지 않습니다.
