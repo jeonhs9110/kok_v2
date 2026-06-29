@@ -22,7 +22,7 @@ import { redirect } from 'next/navigation';
  *   - the stub source is gone (audit caught the placeholder strings
  *     on 2026-06-29)
  *
- * Language picked from Accept-Language exactly like `src/middleware.ts`
+ * Language picked from Accept-Language exactly like `src/proxy.ts`
  * does for `/`. Korean default for Korean browsers; English otherwise.
  */
 export default async function ProductDetailLegacyRedirect({ params }: { params: Promise<{ id: string }> }) {

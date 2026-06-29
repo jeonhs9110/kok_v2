@@ -11,7 +11,7 @@ import { redirect } from 'next/navigation';
  *
  * Replaced with a 307 to the canonical lang-prefixed list at
  * `/[lang]/products/page.tsx`. Same language-detection rule as
- * `src/middleware.ts` so a Korean browser lands on `/kr/products`
+ * `src/proxy.ts` so a Korean browser lands on `/kr/products`
  * and English elsewhere.
  */
 export default async function ProductsLegacyRedirect() {

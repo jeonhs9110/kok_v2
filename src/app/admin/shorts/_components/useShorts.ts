@@ -56,6 +56,10 @@ export function useShorts() {
     fetchShorts();
     fetchProducts();
     fetchBg();
+    // Mount-only fetch — the three fetchers are stable closures over the
+    // module-level supabase client; listing them in deps would re-fetch
+    // on every render with no behavior change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // After products[] arrives, patch productName onto any shorts that came
