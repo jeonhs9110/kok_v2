@@ -100,12 +100,15 @@ function LoginFormInner({ lang }: { lang: Lang }) {
           setError(t.error);
           return;
         }
-        // Cookie is already set by the server. Trust `next` if present;
-        // otherwise land on the storefront — the admin layout's own
-        // proxy gate will hop the user to /admin if their JWT has the
-        // admins group claim. Skipping the post-login role round-trip
-        // keeps Cognito's 1-call promise (vs Supabase needed `users`).
-        window.location.href = next ?? `/${lang}`;
+        // The sign-in route already verified the JWT and put `isAdmin`
+        // on the response (it also set the kokkok_admin_auth mirror
+        // cookie). Use that to send admins straight to /admin — the
+        // Supabase path did this via a users-table lookup, and the
+        // Cognito cutover used to drop the user on the storefront and
+        // make them navigate to /admin manually. Same UX as before now.
+        const json = (await res.json().catch(() => ({}))) as { isAdmin?: boolean };
+        const destination = next ?? (json.isAdmin ? '/admin' : `/${lang}`);
+        window.location.href = destination;
         return;
       }
 
