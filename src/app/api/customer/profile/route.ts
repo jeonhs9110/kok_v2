@@ -159,20 +159,87 @@ export async function DELETE() {
   const auth = await requireCustomer();
   if (auth instanceof NextResponse) return auth;
 
+  // PIPA §21 (개인정보 파기 의무) requires destruction of personal info
+  // on account close. We had three classes of customer-authored content
+  // that the previous DELETE didn't touch:
+  //
+  //   - posts (community board)  → author_name + author_id are PII
+  //   - comments                 → author_name is PII (no author_id col)
+  //   - product_reviews          → author_name is PII (no author_id col)
+  //
+  // Naive cascade-delete would destroy community discussion that other
+  // customers contributed to ("I agree with X" stops making sense when
+  // X's post is gone). So we anonymize instead — replace author_name
+  // with the Cafe24-style "탈퇴회원" placeholder and null out author_id
+  // on posts. The content stays, the PII goes. Standard Korean-ecom
+  // practice + audit-trail-friendly.
+  //
+  // All of this runs in a single transaction with the row deletions
+  // below so partial state on failure rolls back cleanly — better to
+  // re-try the whole delete than to leave PII anonymized in some
+  // tables but still present in others.
+  const ANON_NAME = '탈퇴회원';
   let dbOk = false;
   if (process.env.USE_RDS === 'true') {
     try {
       const { getPgPool } = await import('@/lib/db/pool');
       const pool = getPgPool();
-      await pool.query(`DELETE FROM public.customer_profiles WHERE id = $1`, [auth.userId]);
-      await pool.query(`DELETE FROM public.wishlist WHERE user_id = $1`, [auth.userId]).catch(() => {});
-      await pool.query(`DELETE FROM public.users WHERE id = $1`, [auth.userId]).catch(() => {});
-      dbOk = true;
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        // Anonymize authored content first so a failure on the delete
+        // doesn't leave the PII rewrite half-done.
+        await client.query(
+          `UPDATE public.posts SET author_name = $2, author_id = NULL
+             WHERE author_id = $1`,
+          [auth.userId, ANON_NAME],
+        );
+        if (auth.email) {
+          // comments + reviews don't carry author_id; they're matched by
+          // the customer's email (which the customer/comments POST stored
+          // as author_name when they didn't type a display name). Only
+          // rows that match the customer's exact email are touched —
+          // this is conservative; a custom display name like "Sarah"
+          // can't be tied back to a specific Cognito sub, so we leave
+          // those alone rather than risk anonymizing someone else's
+          // contributions.
+          await client.query(
+            `UPDATE public.comments SET author_name = $2
+               WHERE author_name = $1`,
+            [auth.email, ANON_NAME],
+          );
+          await client.query(
+            `UPDATE public.product_reviews SET author_name = $2
+               WHERE author_name = $1`,
+            [auth.email, ANON_NAME],
+          );
+        }
+        // Now the row deletions.
+        await client.query(`DELETE FROM public.customer_profiles WHERE id = $1`, [auth.userId]);
+        await client.query(`DELETE FROM public.wishlist WHERE user_id = $1`, [auth.userId]);
+        await client.query(`DELETE FROM public.users WHERE id = $1`, [auth.userId]);
+        await client.query('COMMIT');
+        dbOk = true;
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
+        throw err;
+      } finally {
+        client.release();
+      }
     } catch (err) {
       console.error('[customer/profile] pg delete failed:', err);
       return NextResponse.json({ ok: false }, { status: 500 });
     }
   } else if (supabase) {
+    // Supabase fallback (dev only). Mirrors the same anonymize-then-
+    // delete shape, just without the transaction wrapper since the
+    // Supabase JS client doesn't expose one and the dev box isn't the
+    // source of truth.
+    await supabase.from('posts').update({ author_name: ANON_NAME, author_id: null }).eq('author_id', auth.userId);
+    if (auth.email) {
+      await supabase.from('comments').update({ author_name: ANON_NAME }).eq('author_name', auth.email);
+      await supabase.from('product_reviews').update({ author_name: ANON_NAME }).eq('author_name', auth.email);
+    }
     await supabase.from('customer_profiles').delete().eq('id', auth.userId);
     await supabase.from('wishlist').delete().eq('user_id', auth.userId);
     dbOk = true;

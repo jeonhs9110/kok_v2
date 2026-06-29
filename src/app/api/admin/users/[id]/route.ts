@@ -129,7 +129,11 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
   if (process.env.USE_RDS === 'true') {
     try {
       const { deleteUserInPg } = await import('@/lib/db/admin-writes');
-      dbOk = await deleteUserInPg(id);
+      // Pass email so comments + product_reviews authored under the
+      // customer's email (no FK to user_id available) get anonymized
+      // too — see deleteUserInPg's doc for the full anonymize-then-
+      // delete shape.
+      dbOk = await deleteUserInPg(id, email);
     } catch (err) {
       console.error('[admin/users] pg delete failed:', err);
       return NextResponse.json({ ok: false }, { status: 500 });

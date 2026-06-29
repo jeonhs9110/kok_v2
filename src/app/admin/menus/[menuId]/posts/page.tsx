@@ -46,7 +46,6 @@ export default function PostsAdminPage() {
   // One-shot fetch on mount + when menuId changes. The lint rule wants an
   // external-store subscription, but there's no live source to subscribe to
   // — we read once and rely on the explicit refetches in mutation handlers.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const resetForm = () => {

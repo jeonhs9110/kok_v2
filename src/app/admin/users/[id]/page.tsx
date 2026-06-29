@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Mail, Calendar, Shield, Phone, MapPin, Cake, Globe, Sparkles, MessageCircle, Heart, Package, FileText } from 'lucide-react';
+import { ArrowLeft, Mail, Calendar, Shield, Phone, Cake, Globe, Sparkles, MessageCircle, Heart, Package, FileText } from 'lucide-react';
 import { PageHeader, LoadingState, EmptyState } from '@/components/admin/CafeWidgets';
 import { formatKstDate } from '@/lib/formatKstDate';
 
