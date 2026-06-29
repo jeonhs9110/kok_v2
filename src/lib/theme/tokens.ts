@@ -263,43 +263,78 @@ export function parseThemeTokens(raw: unknown): ThemeTokens {
 }
 
 /**
+ * Defang a token value before interpolating it into a CSS string that
+ * lands inside `<style>` via dangerouslySetInnerHTML. The values are
+ * admin-controlled (operator types them in /admin/theme), so they're
+ * trusted in the normal case — but a typo OR a compromised admin
+ * account OR a malicious paste could submit a string like
+ *   `red; } </style><script>document.location='evil'</script>`
+ * which would break out of the <style> element and execute JS on every
+ * storefront page. Stripping `<` and `>` from the value kills the HTML
+ * break-out; the rest of the operator's input survives as a (possibly
+ * malformed but inert) CSS value. Defense in depth — we never want to
+ * be one admin XSS away from injecting code into every page.
+ *
+ * Live-preview path (the postMessage handler in /[lang]/layout.tsx)
+ * uses `textContent` instead of innerHTML so it doesn't share this
+ * risk; only the SSR-on-first-paint render needs defanging.
+ */
+function safeCssValue(v: string): string {
+  return String(v).replace(/[<>]/g, '');
+}
+
+/**
  * Convert tokens into a `:root { --…: …; }` CSS rule. Skip empty fonts so
  * the @theme defaults from globals.css apply for those.
  */
 export function tokensToCss(t: ThemeTokens): string {
+  const v = safeCssValue;
   const lines: string[] = [
-    `--color-brand-ink: ${t.color_brand_ink};`,
-    `--color-brand-accent: ${t.color_brand_accent};`,
-    `--color-brand-muted: ${t.color_brand_muted};`,
-    `--color-brand-primary: ${t.color_brand_primary};`,
-    `--color-brand-notice-from: ${t.color_brand_notice_from};`,
-    `--color-brand-notice-to: ${t.color_brand_notice_to};`,
-    `--radius-button: ${t.radius_button};`,
-    `--header-menu-font-size: ${t.header_menu_font_size};`,
-    `--header-submenu-font-size: ${t.header_submenu_font_size};`,
-    `--header-logo-height: ${t.header_logo_height};`,
-    `--subhero-subtitle-size: ${t.subhero_subtitle_size};`,
-    `--product-section-title-size: ${t.product_section_title_size};`,
-    `--product-name-size: ${t.product_name_size};`,
-    `--product-price-size: ${t.product_price_size};`,
-    `--home-product-summary-size: ${t.home_product_summary_size};`,
-    `--home-product-image-ratio: ${t.home_product_image_ratio};`,
-    `--hero-height-mobile: ${t.hero_height_mobile};`,
-    `--hero-height-tablet: ${t.hero_height_tablet};`,
-    `--hero-height-desktop: ${t.hero_height_desktop};`,
+    `--color-brand-ink: ${v(t.color_brand_ink)};`,
+    `--color-brand-accent: ${v(t.color_brand_accent)};`,
+    `--color-brand-muted: ${v(t.color_brand_muted)};`,
+    `--color-brand-primary: ${v(t.color_brand_primary)};`,
+    `--color-brand-notice-from: ${v(t.color_brand_notice_from)};`,
+    `--color-brand-notice-to: ${v(t.color_brand_notice_to)};`,
+    `--radius-button: ${v(t.radius_button)};`,
+    `--header-menu-font-size: ${v(t.header_menu_font_size)};`,
+    `--header-submenu-font-size: ${v(t.header_submenu_font_size)};`,
+    `--header-logo-height: ${v(t.header_logo_height)};`,
+    `--subhero-subtitle-size: ${v(t.subhero_subtitle_size)};`,
+    `--product-section-title-size: ${v(t.product_section_title_size)};`,
+    `--product-name-size: ${v(t.product_name_size)};`,
+    `--product-price-size: ${v(t.product_price_size)};`,
+    `--home-product-summary-size: ${v(t.home_product_summary_size)};`,
+    `--home-product-image-ratio: ${v(t.home_product_image_ratio)};`,
+    `--hero-height-mobile: ${v(t.hero_height_mobile)};`,
+    `--hero-height-tablet: ${v(t.hero_height_tablet)};`,
+    `--hero-height-desktop: ${v(t.hero_height_desktop)};`,
   ];
   // Empty hero_max_width -> no var emission -> CSS falls through to
   // "none" so the carousel stays full-width on every viewport. Setting
   // a value makes .kokkok-hero-region pick up the cap.
-  if (t.hero_max_width) lines.push(`--hero-max-width: ${t.hero_max_width};`);
+  if (t.hero_max_width) lines.push(`--hero-max-width: ${v(t.hero_max_width)};`);
   // Empty header_logo_max_width -> no var emission -> CSS falls through
   // to `max-width: none` so the logo's natural width is unconstrained
   // (pre-2026-06-24 behavior). Setting a value clamps the logo width.
-  if (t.header_logo_max_width) lines.push(`--header-logo-max-width: ${t.header_logo_max_width};`);
-  if (t.font_body) lines.push(`--font-body: ${t.font_body};`);
-  if (t.font_display) lines.push(`--font-display: ${t.font_display};`);
-  if (t.font_header) lines.push(`--font-header: ${t.font_header};`);
-  if (t.font_button) lines.push(`--font-button: ${t.font_button};`);
-  if (t.font_price) lines.push(`--font-price: ${t.font_price};`);
+  if (t.header_logo_max_width) lines.push(`--header-logo-max-width: ${v(t.header_logo_max_width)};`);
+  if (t.font_body) lines.push(`--font-body: ${v(t.font_body)};`);
+  if (t.font_display) lines.push(`--font-display: ${v(t.font_display)};`);
+  if (t.font_header) lines.push(`--font-header: ${v(t.font_header)};`);
+  if (t.font_button) lines.push(`--font-button: ${v(t.font_button)};`);
+  if (t.font_price) lines.push(`--font-price: ${v(t.font_price)};`);
   return `:root { ${lines.join(' ')} }`;
+}
+
+/**
+ * Validate a Google Analytics 4 measurement ID. Real GA4 IDs look like
+ * `G-XXXXXXXXXX` — a 'G-' prefix followed by uppercase alphanumerics.
+ * Used by storefront layout to gate the gtag.js injection: a malformed
+ * or hostile string (e.g. `'+document.location='evil'+'`) won't reach
+ * the inline `<Script>` block since the operator's input is interpolated
+ * straight into the script body.
+ */
+export function isValidGaMeasurementId(id: string | null | undefined): boolean {
+  if (!id) return false;
+  return /^G-[A-Z0-9]+$/i.test(id);
 }

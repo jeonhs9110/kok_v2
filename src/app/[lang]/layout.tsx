@@ -13,7 +13,7 @@ import { getCachedNavMenus, getCachedCategoriesTree, getCachedLogoUrl } from '@/
 import { getThemeTokens } from '@/lib/theme/getThemeTokens';
 import { getTopStripe } from '@/lib/api/topStripe';
 import TopStripeBanner from '@/components/TopStripeBanner';
-import { tokensToCss } from '@/lib/theme/tokens';
+import { tokensToCss, isValidGaMeasurementId } from '@/lib/theme/tokens';
 import Script from 'next/script';
 
 export async function generateMetadata() {
@@ -73,7 +73,14 @@ export default async function LangLayout({
             on Next.js navigation. afterInteractive defers loading
             past hydration so it doesn't compete with the critical
             path. */}
-        {themeTokens.ga_measurement_id && (
+        {/* GA4 — gate on the strict G-XXXXXXXXXX format. The value is
+            interpolated straight into the inline <Script> body and the
+            external src URL, so a malformed (or hostile) operator entry
+            could either break the script tag or land arbitrary JS in
+            the page. The validation check kills both vectors at the
+            source: only the canonical G-prefix-and-alphanumerics shape
+            ever reaches the rendered HTML. */}
+        {isValidGaMeasurementId(themeTokens.ga_measurement_id) && (
           <>
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${themeTokens.ga_measurement_id}`}
