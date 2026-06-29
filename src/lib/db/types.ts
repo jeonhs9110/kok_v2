@@ -37,15 +37,13 @@ export interface ProductRow {
   created_at: string;
 }
 
-export interface CategoryRow {
-  id: string;
-  name_kr: string;
-  name_en: string;
-  slug: string;
-  parent_id: string | null;
-  sort_order: number;
-  created_at: string;
-}
+// The canonical CategoryRow lives further down with `name: Record<string,
+// string>` (jsonb LangMap). An earlier shape with separate `name_kr` /
+// `name_en` columns was declared here too; TypeScript declaration
+// merging let both interfaces coexist with contradictory fields and the
+// compiler stayed silent. Verified 2026-06-29 — no call site ever
+// referenced `categoryRow.name_kr` / `.name_en`, so removing the dead
+// shape doesn't break anything.
 
 export interface MenuRow {
   id: string;
