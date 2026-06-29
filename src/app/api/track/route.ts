@@ -3,6 +3,27 @@ import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import geoip from 'geoip-country';
 import { categorizeReferrer, extractSearchKeyword } from '@/lib/analytics/referrer';
+import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
+
+// Per-IP cap on analytics writes. A normal browsing session is < 100
+// pageviews / 5min; the 300/5min threshold leaves a wide buffer for
+// rapid-fire SPA navigations (the page tracker fires on every route
+// change) while killing any scripted flood that targets this anonymous
+// endpoint. Without the cap a single bot could fill the analytics
+// table with arbitrary `path`/`referrer` strings, polluting the
+// dashboard and growing the table unbounded.
+const trackLimiter = createRateLimiter({
+  name: 'track',
+  limit: 300,
+  windowMs: 5 * 60 * 1000,
+});
+
+// Hard caps for the operator-visible string columns so a malicious
+// caller can't submit a 10MB path/referrer and balloon a row. Same
+// 500/2000 split /api/admin/dashboard's aggregator assumes.
+const MAX_PATH_LEN = 500;
+const MAX_REFERRER_LEN = 2000;
+const MAX_SEARCH_LEN = 2000;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -102,7 +123,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false }, { status: 500 });
     }
 
-    const { path, referrer, search } = await req.json();
+    // Per-IP brake. A normal session is well under 300/5min; flooders
+    // get a 429 and stop polluting the analytics table.
+    if (!trackLimiter.check(getRequestIp(req))) {
+      return NextResponse.json({ ok: false, error: 'too_many_requests' }, { status: 429 });
+    }
+
+    const body = await req.json();
+    // Truncate string fields at the boundary. Without these caps a
+    // malicious caller could submit a 10MB path/referrer and bloat the
+    // row; the dashboard's aggregator + the table's storage cost don't
+    // need anything past these limits to work.
+    const path = typeof body.path === 'string' ? body.path.slice(0, MAX_PATH_LEN) : null;
+    const referrer = typeof body.referrer === 'string' ? body.referrer.slice(0, MAX_REFERRER_LEN) : null;
+    const search = typeof body.search === 'string' ? body.search.slice(0, MAX_SEARCH_LEN) : null;
 
     // Country resolution priority:
     //   1. x-vercel-ip-country header  — works on Vercel (preview/dev)

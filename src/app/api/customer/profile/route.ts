@@ -20,6 +20,22 @@ const ALLOWED_FIELDS = [
   'marketing_consent',
 ] as const;
 
+// Per-field length caps so a malicious client can't submit a 10MB
+// `name` field and bloat the customer_profiles row. The `text` columns
+// in the schema have no PG-side limit; without these caps the only
+// brake was the rate limit on requireCustomer'd routes, which is fine
+// against a flood but not against a single big payload. Numbers are
+// generous — long enough for any plausible real value, short enough
+// that the row stays bounded.
+const FIELD_MAX_LEN: Record<string, number> = {
+  name: 100,
+  phone: 30,
+  gender: 30,
+  birthday: 20,  // 'YYYY-MM-DD' fits comfortably
+  country: 60,
+  skin_type: 40,
+};
+
 /**
  * GET /api/customer/profile → the signed-in customer's profile row.
  */
@@ -61,7 +77,19 @@ export async function PATCH(req: Request) {
 
   const fields: Record<string, unknown> = {};
   for (const k of ALLOWED_FIELDS) {
-    if (k in payload) fields[k] = payload[k];
+    if (!(k in payload)) continue;
+    const v = payload[k];
+    // Enforce per-field caps. Strings get sliced (silently truncated
+    // is better UX than 400-ing the form on a stray paste with a
+    // trailing newline). Non-string values pass through unchanged —
+    // marketing_consent is a boolean, birthday may be null. Anything
+    // that isn't a string and isn't in FIELD_MAX_LEN falls through.
+    const cap = FIELD_MAX_LEN[k];
+    if (cap !== undefined && typeof v === 'string') {
+      fields[k] = v.slice(0, cap);
+    } else {
+      fields[k] = v;
+    }
   }
   if (Object.keys(fields).length === 0) {
     return NextResponse.json({ ok: false, error: 'no allowed fields' }, { status: 400 });
