@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { unstable_cache } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import { translations, type TranslationKey } from '@/lib/i18n/translations';
+import { safeUrl } from '@/lib/url/safeUrl';
 import type { Lang } from '@/lib/i18n/types';
 
 /**
@@ -192,7 +193,7 @@ export default async function Footer({ lang }: { lang: Lang }) {
               <div className="flex items-center space-x-3 mt-6">
                 {biz?.instagram_url && (
                   <a
-                    href={biz.instagram_url}
+                    href={safeUrl(biz.instagram_url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Instagram"
@@ -203,7 +204,7 @@ export default async function Footer({ lang }: { lang: Lang }) {
                 )}
                 {biz?.youtube_url && (
                   <a
-                    href={biz.youtube_url}
+                    href={safeUrl(biz.youtube_url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="YouTube"

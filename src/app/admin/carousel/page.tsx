@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { StatCard, StatStrip, PageHeader } from '@/components/admin/CafeWidgets';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { useToast } from '@/components/admin/Toast';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 
 const supabase = getSupabaseBrowser();
@@ -24,6 +25,7 @@ import { emptyForm, formFromSlide, type SlideFormData } from './_lib';
 
 export default function CarouselAdminPage() {
   const confirm = useConfirm();
+  const toast = useToast();
   const [slides, setSlides] = useState<CarouselSlide[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -84,34 +86,51 @@ export default function CarouselAdminPage() {
   async function handleDelete(id: string) {
     const ok = await confirm({ message: '이 슬라이드를 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
+    // Snapshot for rollback. A network/500 failure here was silently
+    // removing the slide from the admin UI while it stayed live on
+    // the homepage — operator believed the slide was gone, customers
+    // still saw it.
+    const previous = slides;
     setSlides(prev => prev.filter(s => s.id !== id));
     try {
       if (USE_RDS_FROM_BROWSER) {
-        await fetch(`/api/admin/carousel-slides?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        const res = await fetch(`/api/admin/carousel-slides?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`http ${res.status}`);
       } else if (supabase) {
-        await supabase.from('carousel_slides').delete().eq('id', id);
+        const { error } = await supabase.from('carousel_slides').delete().eq('id', id);
+        if (error) throw error;
       }
       revalidateHomepageData('carousel');
     } catch (err) {
       console.error('[admin/carousel] delete failed:', err);
+      setSlides(previous);
+      toast.show('삭제에 실패했습니다. 다시 시도해주세요.', 'error');
     }
   }
 
   async function handleToggle(id: string, current: boolean) {
+    // Snapshot for rollback. Without this an operator clicks "deactivate"
+    // and sees the slide go dim — but if the PATCH fails silently the
+    // slide is still active on the public homepage.
+    const previous = slides;
     setSlides(prev => prev.map(s => (s.id === id ? { ...s, is_active: !current } : s)));
     try {
       if (USE_RDS_FROM_BROWSER) {
-        await fetch(`/api/admin/carousel-slides?id=${encodeURIComponent(id)}`, {
+        const res = await fetch(`/api/admin/carousel-slides?id=${encodeURIComponent(id)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ is_active: !current }),
         });
+        if (!res.ok) throw new Error(`http ${res.status}`);
       } else if (supabase) {
-        await supabase.from('carousel_slides').update({ is_active: !current }).eq('id', id);
+        const { error } = await supabase.from('carousel_slides').update({ is_active: !current }).eq('id', id);
+        if (error) throw error;
       }
       revalidateHomepageData('carousel');
     } catch (err) {
       console.error('[admin/carousel] toggle failed:', err);
+      setSlides(previous);
+      toast.show('상태 변경에 실패했습니다.', 'error');
     }
   }
 

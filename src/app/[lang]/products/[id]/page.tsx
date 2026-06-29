@@ -112,7 +112,17 @@ export default async function ProductDetailRoute({ params }: { params: Promise<{
           type="application/ld+json"
           // Schema.org-valid JSON. Pretty-print kept off — saves bytes on
           // SSR and search crawlers don't care about whitespace.
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
+          //
+          // CRITICAL XSS HARDENING: JSON.stringify does NOT escape `<`,
+          // which means an admin-saved product name or description
+          // containing `</script><script>alert(1)</script>` breaks out
+          // of the JSON-LD block and executes on every viewer's browser.
+          // Defang the closing-script-tag sequence by replacing `<` with
+          // its Unicode escape — still parses as JSON, no longer parses
+          // as the end of the script element.
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(ld).replace(/</g, '\\u003c'),
+          }}
         />
       )}
       <ProductDetailPage lang={lang} canPurchase={country === 'KR'} id={id} />

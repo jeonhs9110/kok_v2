@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useI18n } from '@/lib/i18n/context';
 import { useCart } from '@/lib/cart/CartContext';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 interface ProductActionButtonsProps {
   productId: string;
@@ -88,7 +89,7 @@ export default function ProductActionButtons({ productId, productName, price, or
       {/* Naver Store button */}
       {naverStoreUrl && (
         <a
-          href={naverStoreUrl}
+          href={safeUrl(naverStoreUrl)}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 w-full py-3.5 bg-[#03C75A] text-white font-bold text-[13px] tracking-wider hover:bg-[#02b351] transition-colors"

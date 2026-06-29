@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 
 /**
  * POST /api/auth/cognito/confirm
@@ -8,8 +9,23 @@ import { NextResponse } from 'next/server';
  *
  * Completes the sign-up flow by validating the verification code
  * Cognito emailed the user. After this the account can sign in.
+ *
+ * Rate limit: 10 attempts per IP per hour. The verification code is
+ * 6 digits = 1 in 10^6 random guesses per attempt; without a brake,
+ * a scripted caller could brute force the space against any known
+ * email in ~50k seconds. The limiter stops a single source long
+ * before that becomes feasible.
  */
-export async function POST(request: Request) {
+const confirmLimiter = createRateLimiter({
+  name: 'cognito_confirm',
+  limit: 10,
+  windowMs: 60 * 60 * 1000,
+});
+
+export async function POST(request: NextRequest) {
+  if (!confirmLimiter.check(getRequestIp(request))) {
+    return NextResponse.json({ error: 'too_many_requests' }, { status: 429 });
+  }
   let body: { email?: unknown; code?: unknown };
   try {
     body = await request.json();
