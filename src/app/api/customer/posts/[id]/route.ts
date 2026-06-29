@@ -68,12 +68,38 @@ export async function DELETE(_req: Request, { params }: Ctx) {
     try {
       const { getPgPool } = await import('@/lib/db/pool');
       const pool = getPgPool();
-      const { rowCount } = await pool.query(
-        `DELETE FROM public.posts WHERE id = $1 AND author_id = $2`,
-        [id, auth.userId],
-      );
-      if ((rowCount ?? 0) === 0) return NextResponse.json({ ok: false }, { status: 404 });
-      return NextResponse.json({ ok: true });
+      // 2026-06-29: cascade comments. Mirror of deletePostInPg
+      // (admin path). The customer-owned post delete used to leave
+      // comments orphaned with a dangling post_id; same accumulating
+      // tech-debt symptom on every owner-initiated delete. The
+      // ownership gate stays — we only delete comments when the
+      // post-row itself matched (the SELECT … FOR UPDATE inside the
+      // transaction guarantees nobody else flipped author_id between
+      // the check and the comment delete).
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const post = await client.query<{ id: string }>(
+          `SELECT id FROM public.posts WHERE id = $1 AND author_id = $2 FOR UPDATE`,
+          [id, auth.userId],
+        );
+        if ((post.rowCount ?? 0) === 0) {
+          await client.query('ROLLBACK');
+          return NextResponse.json({ ok: false }, { status: 404 });
+        }
+        await client.query(`DELETE FROM public.comments WHERE post_id = $1`, [id]);
+        await client.query(
+          `DELETE FROM public.posts WHERE id = $1 AND author_id = $2`,
+          [id, auth.userId],
+        );
+        await client.query('COMMIT');
+        return NextResponse.json({ ok: true });
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
+        throw err;
+      } finally {
+        client.release();
+      }
     } catch (err) {
       console.error('[customer/posts] pg delete failed:', err);
       return NextResponse.json({ ok: false }, { status: 500 });
