@@ -361,6 +361,14 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
   };
 
   const handleSocialLogin = async (provider: string) => {
+    if (USE_COGNITO_FROM_BROWSER) {
+      // Post-Supabase-cutoff (2026-06-29): Cognito does not have social
+      // OAuth wired up yet. Show a friendly error instead of firing the
+      // dead Supabase OAuth call, which would either silently no-op
+      // (placeholder client) or trip a network error.
+      setError(lang === 'kr' ? '소셜 로그인은 준비 중입니다.' : 'Social login is not available yet.');
+      return;
+    }
     try {
       await supabase.auth.signInWithOAuth({
         provider: provider as 'google' | 'kakao' | 'apple',

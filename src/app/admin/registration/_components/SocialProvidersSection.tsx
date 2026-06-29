@@ -31,10 +31,16 @@ export default function SocialProvidersSection({
       {openSection === 'social' && (
         <div className="p-5 pt-0 space-y-4">
           <p className="text-sm text-gray-500">각 소셜 로그인 제공자의 API 키를 입력하고 활성화하세요. 키를 발급받으려면 각 링크를 클릭하세요.</p>
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
-            <strong>Supabase Redirect URI</strong> (각 제공자에 등록 필요):<br />
-            <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-[11px]">{supabaseUrl}/auth/v1/callback</code>
-          </div>
+          {supabaseUrl ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-700">
+              <strong>Supabase Redirect URI</strong> (각 제공자에 등록 필요):<br />
+              <code className="bg-amber-100 px-1.5 py-0.5 rounded font-mono text-[11px]">{supabaseUrl}/auth/v1/callback</code>
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-xs text-gray-600">
+              소셜 로그인은 현재 비활성화 상태입니다. 활성화하려면 운영자에게 문의하세요.
+            </div>
+          )}
 
           {providers.map(p => {
             const info = PROVIDER_LOGOS[p.provider];
