@@ -98,28 +98,47 @@ export async function POST(req: Request) {
   }
 
   if (process.env.USE_RDS === 'true') {
+    const { getPgPool } = await import('@/lib/db/pool');
+    const pool = getPgPool();
+    // Pull a dedicated connection from the pool so SELECT FOR UPDATE +
+    // DELETE/INSERT run inside the same transaction. The prior code
+    // used two pool.query() calls back-to-back, which could route to
+    // different connections and miss the lock semantics entirely —
+    // two browser tabs (or mobile + desktop) toggling the same product
+    // could both see "doesn't exist", both INSERT, leaving the row
+    // duplicated in the table (and the heart in an indeterminate state
+    // depending on which response landed last).
+    const client = await pool.connect();
     try {
-      const { getPgPool } = await import('@/lib/db/pool');
-      const pool = getPgPool();
-      const exists = await pool.query<{ exists: boolean }>(
-        `SELECT EXISTS(SELECT 1 FROM public.wishlist WHERE user_id = $1 AND product_id = $2) AS exists`,
+      await client.query('BEGIN');
+      const existing = await client.query(
+        `SELECT 1 FROM public.wishlist
+          WHERE user_id = $1 AND product_id = $2
+          FOR UPDATE`,
         [auth.userId, productId],
       );
-      if (exists.rows[0]?.exists) {
-        await pool.query(
+      if ((existing.rowCount ?? 0) > 0) {
+        // DELETE clears all matching rows in one shot, which also
+        // cleans up any duplicates left behind by past races.
+        await client.query(
           `DELETE FROM public.wishlist WHERE user_id = $1 AND product_id = $2`,
           [auth.userId, productId],
         );
+        await client.query('COMMIT');
         return NextResponse.json({ wishlisted: false });
       }
-      await pool.query(
+      await client.query(
         `INSERT INTO public.wishlist (user_id, product_id) VALUES ($1, $2)`,
         [auth.userId, productId],
       );
+      await client.query('COMMIT');
       return NextResponse.json({ wishlisted: true });
     } catch (err) {
+      await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
       console.error('[customer/wishlist] pg toggle failed:', err);
       return NextResponse.json({ ok: false }, { status: 500 });
+    } finally {
+      client.release();
     }
   }
 
