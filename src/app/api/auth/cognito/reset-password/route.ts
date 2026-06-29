@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { checkPasswordPolicy } from '@/lib/auth/passwordPolicy';
+import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 
 /**
  * POST /api/auth/cognito/reset-password
@@ -8,9 +10,25 @@ import { NextResponse } from 'next/server';
  *
  * Completes the forgot-password flow by accepting the emailed
  * recovery code along with the new password. Same cognito.tf
- * password policy enforced server-side.
+ * password policy enforced server-side via the shared checker.
+ *
+ * Rate limit: 10 attempts per IP per hour. Cognito itself locks the
+ * code after a few wrong attempts; this prevents an attacker who
+ * scraped a leaked email from cycling new codes faster than the user
+ * can react.
  */
+
+const resetPasswordLimiter = createRateLimiter({
+  name: 'cognito_reset_password',
+  limit: 10,
+  windowMs: 60 * 60 * 1000,
+});
+
 export async function POST(request: Request) {
+  if (!resetPasswordLimiter.check(getRequestIp(request))) {
+    return NextResponse.json({ error: 'too_many_requests' }, { status: 429 });
+  }
+
   let body: { email?: unknown; code?: unknown; newPassword?: unknown };
   try {
     body = await request.json();
@@ -23,7 +41,7 @@ export async function POST(request: Request) {
   if (!email || !code || !newPassword) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
   }
-  if (newPassword.length < 8 || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+  if (!checkPasswordPolicy(newPassword).allValid) {
     return NextResponse.json({ error: 'weak_password' }, { status: 400 });
   }
   const { resetPasswordWithCognito } = await import('@/lib/auth/cognito-server');

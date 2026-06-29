@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { checkPasswordPolicy } from '@/lib/auth/passwordPolicy';
+import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 
 /**
  * POST /api/auth/cognito/sign-up
@@ -8,8 +10,24 @@ import { NextResponse } from 'next/server';
  *
  * Cognito sends a verification code to the email; the client then
  * calls /api/auth/cognito/confirm with the code.
+ *
+ * Rate limit: 10 sign-ups per IP per hour. Tight enough to stop a
+ * scripted flood that would burn through SES sandbox quota / Cognito
+ * pool quota; loose enough that a family sharing a NAT can each
+ * register without colliding.
  */
+
+const signUpLimiter = createRateLimiter({
+  name: 'cognito_sign_up',
+  limit: 10,
+  windowMs: 60 * 60 * 1000,
+});
+
 export async function POST(request: Request) {
+  if (!signUpLimiter.check(getRequestIp(request))) {
+    return NextResponse.json({ error: 'too_many_requests' }, { status: 429 });
+  }
+
   let body: { email?: unknown; password?: unknown };
   try {
     body = await request.json();
@@ -21,10 +39,13 @@ export async function POST(request: Request) {
   if (!email || !password) {
     return NextResponse.json({ error: 'email_and_password_required' }, { status: 400 });
   }
-  // Match cognito.tf password policy. Server-side check so a custom
-  // client form can't bypass the rules and trigger an opaque Cognito
-  // error.
-  if (password.length < 8 || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+  // Server-side policy check mirrors the client `PasswordChecklist`
+  // and infrastructure/cognito.tf. Previously this only enforced
+  // length + lowercase + number, so a non-UI client could submit a
+  // password missing uppercase or symbol and get an opaque
+  // InvalidPassword error back from Cognito instead of the friendly
+  // "weak_password" code the form already handles.
+  if (!checkPasswordPolicy(password).allValid) {
     return NextResponse.json({ error: 'weak_password' }, { status: 400 });
   }
 
