@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { LogOut, ExternalLink, X } from 'lucide-react';
 import { NAV_ITEMS } from './nav';
+import { USE_COGNITO_FROM_BROWSER } from '@/lib/auth/clientFlags';
 
 interface Props {
   pathname: string;
@@ -120,8 +121,31 @@ export default function AdminSidebar({ pathname, drawerOpen, onCloseDrawer }: Pr
           </span>
         </Link>
         <button
-          onClick={() => {
+          onClick={async () => {
+            // Pre-Cognito this button only cleared the (non-httpOnly)
+            // kokkok_admin_auth mirror cookie and redirected. After the
+            // Cognito cutover that's a real security regression: the
+            // cognito_id_token / cognito_access_token / cognito_refresh_token
+            // are httpOnly so document.cookie can't touch them, and
+            // proxy.ts gates /admin on the id_token. Result: operator
+            // hits "Logout", lands on `/`, but anyone using the same
+            // browser window can navigate straight back to /admin
+            // and the JWT in the cookie still passes the admins-group
+            // check. /api/auth/cognito/sign-out runs the upstream
+            // GlobalSignOut AND clears every cookie server-side
+            // (including kokkok_auth + kokkok_admin_auth), so the
+            // logout is actually a logout. Mirror the same dispatcher
+            // pattern Header.tsx uses for the storefront button.
+            if (USE_COGNITO_FROM_BROWSER) {
+              try {
+                await fetch('/api/auth/cognito/sign-out', { method: 'POST' });
+              } catch { /* fall through to client-side cleanup */ }
+            }
+            // Belt-and-suspenders for the non-Cognito fallback path
+            // AND for the rare case where the fetch above failed before
+            // the server could send back the cookie-clear directives.
             document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            document.cookie = "kokkok_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
             window.location.href = '/';
           }}
           title="로그아웃"
