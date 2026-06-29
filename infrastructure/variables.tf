@@ -95,23 +95,22 @@ variable "ec2_ami_owner" {
 # ---- Phase 1 app env vars (passed into EC2 user-data) ----
 # These are baked into /etc/kokkok/env on the instance and read by systemd.
 # Once Phase 2 IAM is wired, these should move to Secrets Manager.
+#
+# Post-Supabase-cutoff (2026-06-30): both variables are allowed to be
+# empty. PR #328 made the browser/server clients non-throwing with a
+# placeholder fallback, so an empty value here just produces unused
+# placeholder env on EC2 — no crash. The values still flow into
+# /etc/kokkok/env so the app can dial Supabase if the operator
+# explicitly puts back a working pair (emergency rollback only).
 variable "next_public_supabase_url" {
   type    = string
   default = ""
-  validation {
-    condition     = length(var.next_public_supabase_url) > 0
-    error_message = "next_public_supabase_url must be set. Empty value produces a broken Next.js build (server falls back to MOCK data, storefront loses hero/nav/products). Set it in infrastructure/secrets.auto.tfvars (gitignored)."
-  }
 }
 
 variable "next_public_supabase_anon_key" {
   type      = string
   sensitive = true
   default   = ""
-  validation {
-    condition     = length(var.next_public_supabase_anon_key) > 0
-    error_message = "next_public_supabase_anon_key must be set. Set it in infrastructure/secrets.auto.tfvars (gitignored)."
-  }
 }
 
 variable "openai_api_key" {
