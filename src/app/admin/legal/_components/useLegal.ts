@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
+import { useToast } from '@/components/admin/Toast';
 
 export interface LegalPage {
   id: number;
@@ -53,6 +54,7 @@ const EMPTY_BIZ: BusinessInfo = {
  * standard USE_RDS flag.
  */
 export function useLegal() {
+  const toast = useToast();
   const [pages, setPages] = useState<LegalPage[]>([]);
   const [biz, setBiz] = useState<BusinessInfo>(EMPTY_BIZ);
   const [loading, setLoading] = useState(true);
@@ -85,44 +87,66 @@ export function useLegal() {
 
   async function savePage(p: LegalPage) {
     setSaving(p.slug);
-    await fetch('/api/admin/crud/legal_pages', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: p.id,
-        patch: {
-          title_kr: p.title_kr, title_en: p.title_en,
-          content_kr: p.content_kr, content_en: p.content_en,
-          is_published: p.is_published,
-        },
-      }),
-    });
-    await revalidateHeaderData();
-    setSaved(p.slug);
-    setTimeout(() => setSaved(null), 2000);
-    setSaving(null);
+    try {
+      const res = await fetch('/api/admin/crud/legal_pages', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: p.id,
+          patch: {
+            title_kr: p.title_kr, title_en: p.title_en,
+            content_kr: p.content_kr, content_en: p.content_en,
+            is_published: p.is_published,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      await revalidateHeaderData();
+      setSaved(p.slug);
+      setTimeout(() => setSaved(null), 2000);
+      toast.show('약관 페이지가 저장되었습니다.', 'success');
+    } catch (err) {
+      console.error('[admin/legal] savePage failed:', err);
+      toast.show('약관 페이지 저장에 실패했습니다.', 'error');
+    } finally {
+      setSaving(null);
+    }
   }
 
   async function saveBiz() {
     setSaving('biz');
-    // business_info is a singleton (id=1). PATCH the existing row; if
-    // missing, fall through to insert.
-    const patchRes = await fetch('/api/admin/crud/business_info', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: 1, patch: biz }),
-    });
-    if (!patchRes.ok) {
-      await fetch('/api/admin/crud/business_info', {
-        method: 'POST',
+    try {
+      // business_info is a singleton (id=1). PATCH the existing row; if
+      // missing, fall through to insert. The audit caught that earlier the
+      // success toast fired even when both calls returned non-2xx — now
+      // the operator only sees ✓ if at least one succeeded.
+      let ok = false;
+      const patchRes = await fetch('/api/admin/crud/business_info', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: 1, ...biz }),
+        body: JSON.stringify({ id: 1, patch: biz }),
       });
+      if (patchRes.ok) {
+        ok = true;
+      } else {
+        const postRes = await fetch('/api/admin/crud/business_info', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: 1, ...biz }),
+        });
+        ok = postRes.ok;
+      }
+      if (!ok) throw new Error('both patch and post failed');
+      await revalidateHeaderData();
+      setSaved('biz');
+      setTimeout(() => setSaved(null), 2000);
+      toast.show('사업자 정보가 저장되었습니다.', 'success');
+    } catch (err) {
+      console.error('[admin/legal] saveBiz failed:', err);
+      toast.show('사업자 정보 저장에 실패했습니다.', 'error');
+    } finally {
+      setSaving(null);
     }
-    await revalidateHeaderData();
-    setSaved('biz');
-    setTimeout(() => setSaved(null), 2000);
-    setSaving(null);
   }
 
   function updatePage(slug: string, updates: Partial<LegalPage>) {

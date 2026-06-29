@@ -2,9 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { List, MessageSquare } from 'lucide-react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
-
-const supabase = getSupabaseBrowser();
 import {
   LABEL_KEYS,
   DEFAULT_RETAILERS,
@@ -21,10 +18,15 @@ import { buildDefaultLabelRow, type LabelRow, type RetailerRow } from './_lib';
  * owns its own state and persistence handlers, scoped to its own file:
  *   - _components/LabelsEditor.tsx  — i18n label rows + per-row save
  *   - _components/RetailersEditor.tsx — country/vendor CRUD + uploads
- *   - _lib.ts — shared types + Supabase asset upload helper
+ *   - _lib.ts — shared types + S3 asset upload helper
  *
- * Loading both datasets up front (rather than per-tab on mount) preserves the
- * original UX: a single "로딩 중..." spinner before either tab is interactive.
+ * 2026-06-29: migrated off direct Supabase calls to the generic admin
+ * CRUD API (/api/admin/crud/worldwide_*), which dispatches to RDS via
+ * the standard USE_RDS flag. Both worldwide_retailers + worldwide_labels
+ * were added to the CRUD allow-list.
+ *
+ * Loading both datasets up front (rather than per-tab on mount) preserves
+ * the original UX: a single "로딩 중..." spinner before either tab is interactive.
  */
 
 function defaultRetailerRows(): RetailerRow[] {
@@ -56,32 +58,21 @@ export default function WorldwideAdminPage() {
     async function load() {
       const defaultLabels = LABEL_KEYS.map(k => buildDefaultLabelRow(k));
 
-      if (!supabase) {
-        if (cancelled) return;
-        setLabels(defaultLabels);
-        setRetailers(defaultRetailerRows());
-        setLoading(false);
-        return;
-      }
-
       try {
         const [lRes, rRes] = await Promise.all([
-          supabase.from('worldwide_labels').select('*'),
-          supabase.from('worldwide_retailers').select('*').order('sort_order'),
+          fetch('/api/admin/crud/worldwide_labels?orderBy=label_key&direction=ASC', { cache: 'no-store' }),
+          fetch('/api/admin/crud/worldwide_retailers?orderBy=sort_order&direction=ASC', { cache: 'no-store' }),
         ]);
         if (cancelled) return;
 
-        const byKey = new Map<string, LabelRow>(
-          (lRes.data as LabelRow[] | null)?.map(r => [r.label_key, r]) ?? [],
-        );
+        const lRows = lRes.ok ? ((await lRes.json()) as { rows?: LabelRow[] }).rows ?? [] : [];
+        const rRows = rRes.ok ? ((await rRes.json()) as { rows?: RetailerRow[] }).rows ?? [] : [];
+
+        const byKey = new Map<string, LabelRow>(lRows.map(r => [r.label_key, r]));
         setLabels(
           LABEL_KEYS.map(k => byKey.get(k) ?? buildDefaultLabelRow(k as keyof WorldwideLabels)),
         );
-        setRetailers(
-          rRes.data && rRes.data.length > 0
-            ? (rRes.data as RetailerRow[])
-            : defaultRetailerRows(),
-        );
+        setRetailers(rRows.length > 0 ? rRows : defaultRetailerRows());
       } catch {
         if (cancelled) return;
         setLabels(defaultLabels);

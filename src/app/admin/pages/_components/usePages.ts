@@ -98,6 +98,16 @@ export function usePages() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Client-side validation — empty slug or empty Korean title silently
+    // hit the server before this change. Now we say which is missing.
+    if (!formData.slug.trim()) {
+      toast.show('slug(URL 주소)을 입력해주세요.', 'warning');
+      return;
+    }
+    if (!formData.titles.kr?.trim()) {
+      toast.show('한국어 제목을 입력해주세요.', 'warning');
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -120,6 +130,7 @@ export function usePages() {
         nav_order: formData.nav_order,
       };
 
+      const wasEditing = !!editingId;
       const res = editingId
         ? await fetch('/api/admin/crud/pages', {
             method: 'PATCH',
@@ -135,6 +146,7 @@ export function usePages() {
 
       await fetchAll();
       resetModal();
+      toast.show(wasEditing ? '페이지가 수정되었습니다.' : '페이지가 추가되었습니다.', 'success');
     } catch (err) {
       console.error('페이지 저장 실패:', err);
       toast.show('페이지 저장에 실패했습니다.', 'error');
@@ -146,24 +158,36 @@ export function usePages() {
   const handleDelete = async (id: string) => {
     const ok = await confirm({ message: '이 페이지를 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
+    const snapshot = pages;
+    setPages(prev => prev.filter(p => p.id !== id));
     try {
-      await fetch(`/api/admin/crud/pages?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-      setPages(prev => prev.filter(p => p.id !== id));
-    } catch {
-      console.warn('삭제 실패');
+      const res = await fetch(`/api/admin/crud/pages?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('http_' + res.status);
+      toast.show('페이지가 삭제되었습니다.', 'success');
+    } catch (err) {
+      console.error('[admin/pages] delete failed:', err);
+      setPages(snapshot);
+      toast.show('삭제에 실패했습니다.', 'error');
     }
   };
 
   const togglePublish = async (page: Page) => {
+    // Optimistic — the row toggles immediately so the operator gets
+    // visual confirmation; on API error we roll back.
+    const next = !page.is_published;
+    setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_published: next } : p));
     try {
-      await fetch('/api/admin/crud/pages', {
+      const res = await fetch('/api/admin/crud/pages', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: page.id, patch: { is_published: !page.is_published } }),
+        body: JSON.stringify({ id: page.id, patch: { is_published: next } }),
       });
-      setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_published: !p.is_published } : p));
-    } catch {
-      console.warn('상태 변경 실패');
+      if (!res.ok) throw new Error('http_' + res.status);
+      toast.show(next ? '게시되었습니다.' : '비공개로 변경되었습니다.', 'success');
+    } catch (err) {
+      console.error('[admin/pages] togglePublish failed:', err);
+      setPages(prev => prev.map(p => p.id === page.id ? { ...p, is_published: !next } : p));
+      toast.show('상태 변경에 실패했습니다.', 'error');
     }
   };
 

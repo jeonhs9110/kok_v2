@@ -1,10 +1,7 @@
 import { useState } from 'react';
-import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { EMPTY_RETAILER, uploadWorldwideAsset, type RetailerRow } from '../_lib';
-
-const supabase = getSupabaseBrowser();
 
 /**
  * State + DB handlers for /admin/worldwide. Owns the retailer list,
@@ -12,6 +9,10 @@ const supabase = getSupabaseBrowser();
  * handlers, and the "add another vendor for the same country" branch.
  * Country-image + banner-color sync across all rows of the same
  * country_code lives here too.
+ *
+ * 2026-06-29: migrated off direct Supabase calls to /api/admin/crud/
+ * worldwide_retailers (RDS-aware dispatcher). The Supabase-only path
+ * broke silently after the 2026-06-27 decommission.
  *
  * Returned bag wires straight into RetailersEditor's render: the parent
  * is now pure UI (sort hint card, add button, SortableList rendering
@@ -35,10 +36,6 @@ export function useRetailers(initialRetailers: RetailerRow[]) {
   }
 
   async function saveRetailer(index: number) {
-    if (!supabase) {
-      toast.show('Supabase가 설정되지 않았습니다.', 'error');
-      return;
-    }
     const r = retailers[index];
     if (!r.country_code || !r.country_native || !r.country_en) {
       toast.show('국가 코드, 원어명, 영문명은 필수입니다.', 'warning');
@@ -58,43 +55,72 @@ export function useRetailers(initialRetailers: RetailerRow[]) {
       banner_color: r.banner_color || '#111111',
       is_active: r.is_active,
       sort_order: r.sort_order,
-      updated_at: new Date().toISOString(),
     };
-    const res = r.id
-      ? await supabase.from('worldwide_retailers').update(payload).eq('id', r.id).select().single()
-      : await supabase.from('worldwide_retailers').insert(payload).select().single();
-    if (res.error) {
-      setSavingKey(null);
-      toast.show(`저장 실패: ${res.error.message}`, 'error');
-      return;
-    }
-    if (res.data) updateRetailer(index, { id: (res.data as RetailerRow).id });
 
-    // country_image_url + banner_color sync across rows of the same country_code
-    if (code) {
-      await supabase
-        .from('worldwide_retailers')
-        .update({
-          country_image_url: r.country_image_url || '',
-          banner_color: r.banner_color || '#111111',
-        })
-        .eq('country_code', code);
-      setRetailers(prev =>
-        prev.map(row =>
-          row.country_code.toLowerCase() === code
-            ? {
-                ...row,
+    try {
+      let savedId: number | null = r.id;
+      if (r.id) {
+        const res = await fetch('/api/admin/crud/worldwide_retailers', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: r.id, patch: payload }),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+      } else {
+        const res = await fetch('/api/admin/crud/worldwide_retailers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const { row } = await res.json() as { row: { id: number } | null };
+        if (row) {
+          savedId = row.id;
+          updateRetailer(index, { id: row.id });
+        }
+      }
+
+      // country_image_url + banner_color sync across rows of the same
+      // country_code — patch every sibling row through the same generic
+      // CRUD endpoint so the storefront's per-country banner stays
+      // consistent. Skips the row we just saved.
+      if (code) {
+        const siblings = retailers
+          .filter(row => row.id && row.id !== savedId && row.country_code.toLowerCase() === code);
+        await Promise.all(siblings.map(row =>
+          fetch('/api/admin/crud/worldwide_retailers', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: row.id,
+              patch: {
                 country_image_url: r.country_image_url || '',
                 banner_color: r.banner_color || '#111111',
-              }
-            : row,
-        ),
-      );
-    }
+              },
+            }),
+          }),
+        ));
+        setRetailers(prev =>
+          prev.map(row =>
+            row.country_code.toLowerCase() === code
+              ? {
+                  ...row,
+                  country_image_url: r.country_image_url || '',
+                  banner_color: r.banner_color || '#111111',
+                }
+              : row,
+          ),
+        );
+      }
 
-    setSavingKey(null);
-    setSavedKey(`retailer-${index}`);
-    setTimeout(() => setSavedKey(null), 1500);
+      setSavedKey(`retailer-${index}`);
+      setTimeout(() => setSavedKey(null), 1500);
+    } catch (err) {
+      console.error('[admin/worldwide] saveRetailer failed:', err);
+      toast.show('저장에 실패했습니다.', 'error');
+    } finally {
+      setSavingKey(null);
+    }
   }
 
   async function handleFileUpload(
@@ -158,14 +184,20 @@ export function useRetailers(initialRetailers: RetailerRow[]) {
       confirmText: '삭제',
     });
     if (!ok) return;
-    if (r.id && supabase) {
-      const { error } = await supabase.from('worldwide_retailers').delete().eq('id', r.id);
-      if (error) {
-        toast.show(`삭제 실패: ${error.message}`, 'error');
+    if (r.id) {
+      try {
+        const res = await fetch(`/api/admin/crud/worldwide_retailers?id=${encodeURIComponent(r.id)}`, {
+          method: 'DELETE',
+        });
+        if (!res.ok) throw new Error(`API ${res.status}`);
+      } catch (err) {
+        console.error('[admin/worldwide] deleteRetailer failed:', err);
+        toast.show('삭제에 실패했습니다.', 'error');
         return;
       }
     }
     setRetailers(prev => prev.filter((_, i) => i !== index));
+    toast.show('판매처가 삭제되었습니다.', 'success');
   }
 
   async function handleReorder(next: RetailerRow[]) {
@@ -173,13 +205,16 @@ export function useRetailers(initialRetailers: RetailerRow[]) {
     // need another full renumber.
     const renumbered = next.map((r, i) => ({ ...r, sort_order: (i + 1) * 10 }));
     setRetailers(renumbered);
-    if (!supabase) return;
     try {
       await Promise.all(
         renumbered
           .filter(r => r.id !== null)
           .map(r =>
-            supabase.from('worldwide_retailers').update({ sort_order: r.sort_order }).eq('id', r.id!),
+            fetch('/api/admin/crud/worldwide_retailers', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: r.id, patch: { sort_order: r.sort_order } }),
+            }),
           ),
       );
     } catch (err) {
