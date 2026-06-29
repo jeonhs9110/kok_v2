@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { HomepageBanner } from '@/lib/api/homepageBanners';
 import type { Lang } from '@/lib/i18n/types';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 interface Props {
   banner: HomepageBanner;
@@ -58,11 +59,17 @@ export default function HomepageBanner({ banner: serverBanner, lang }: Props) {
     // External URLs use a plain anchor so Next.js doesn't try to
     // prefetch the foreign origin or treat it as an internal route.
     // Internal paths get the prefetched <Link>.
-    const isExternal = /^https?:\/\//i.test(banner.link_url);
+    // safeUrl() collapses javascript: / data: / vbscript: to '#' before
+    // it can land in an href — protects against an admin typo or
+    // compromised admin account dropping a malicious URL into the
+    // banner row.
+    const safe = safeUrl(banner.link_url);
+    if (safe === '#') return inner;
+    const isExternal = /^https?:\/\//i.test(safe);
     if (isExternal) {
       return (
         <a
-          href={banner.link_url}
+          href={safe}
           target="_blank"
           rel="noopener noreferrer"
           className="block hover:opacity-90 transition-opacity"
@@ -72,7 +79,7 @@ export default function HomepageBanner({ banner: serverBanner, lang }: Props) {
       );
     }
     return (
-      <Link href={banner.link_url} className="block hover:opacity-90 transition-opacity">
+      <Link href={safe} className="block hover:opacity-90 transition-opacity">
         {inner}
       </Link>
     );

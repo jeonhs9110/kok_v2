@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import SectionBackground, { type SectionBackgroundConfig } from '@/components/SectionBackground';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 export interface InstagramPost {
   id: string;
@@ -128,7 +129,7 @@ export default function InstagramSection({ data }: Props) {
                 }
 
                 // Option 2: Manual uploaded image (fallback)
-                const href = post?.link_url || profileUrl;
+                const href = safeUrl(post?.link_url || profileUrl);
                 return (
                   <a
                     key={i}

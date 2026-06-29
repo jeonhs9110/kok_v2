@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { PageBlock } from '@/lib/pages/blocks';
 import { sanitizeHtml } from '@/lib/html/sanitizeHtml';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 /**
  * Public storefront renderer for the page-builder block array. Imported by
@@ -181,7 +182,7 @@ function ImageBlock({
   );
   return (
     <section className="px-4 sm:px-6">
-      {block.link_url ? <Link href={block.link_url}>{content}</Link> : content}
+      {block.link_url ? <Link href={safeUrl(block.link_url)}>{content}</Link> : content}
     </section>
   );
 }
@@ -198,7 +199,7 @@ function CtaBlock({ block }: { block: Extract<PageBlock, { type: 'cta' }> }) {
   return (
     <section className={`flex ${justify} px-4 sm:px-6`}>
       <Link
-        href={block.link_url}
+        href={safeUrl(block.link_url)}
         className={`inline-flex items-center gap-2 px-8 py-4 text-[13px] font-bold tracking-wider transition-colors ${buttonClass}`}
       >
         {block.label}

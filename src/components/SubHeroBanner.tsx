@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { fontFamilyForKey, anchorTextStyle, anchorToObjectPosition, resolveAnchor, type PositionKey } from '@/lib/typography/options';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 export interface SubHeroBannerData {
   id: string;
@@ -171,13 +172,15 @@ export default function SubHeroBanner({ banner: serverBanner }: Props) {
     </div>
   );
 
-  if (banner.link_url && banner.link_url !== '#') {
+  const safeBannerHref = safeUrl(banner.link_url);
+  if (safeBannerHref !== '#') {
+    const isExternal = /^https?:\/\//i.test(safeBannerHref);
     return (
       <section>
         <Link
-          href={banner.link_url}
-          target={banner.link_url.startsWith('http') ? '_blank' : undefined}
-          rel={banner.link_url.startsWith('http') ? 'noopener noreferrer' : undefined}
+          href={safeBannerHref}
+          target={isExternal ? '_blank' : undefined}
+          rel={isExternal ? 'noopener noreferrer' : undefined}
         >
           {inner}
         </Link>
