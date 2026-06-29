@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import type { HomepageBanner } from '@/lib/api/homepageBanners';
 import type { Lang } from '@/lib/i18n/types';
@@ -17,7 +20,25 @@ interface Props {
  * Mirrors TopStripeBanner's look (bg/text colors + center text) but
  * lives inside the homepage flow rather than above the global header.
  */
-export default function HomepageBanner({ banner, lang }: Props) {
+export default function HomepageBanner({ banner: serverBanner, lang }: Props) {
+  // Live preview overlay — /admin/banners/[id] broadcasts the in-flight
+  // form values when the operator opens the drawer; we only apply the
+  // override if the bannerId matches this row's id, so editing one
+  // banner doesn't disturb the others currently rendered.
+  const [override, setOverride] = useState<Partial<HomepageBanner> | null>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      if (!e.data || typeof e.data !== 'object') return;
+      if (e.data.type !== 'kokkok-builder-banner-preview') return;
+      if (e.data.bannerId !== serverBanner.id) return;
+      setOverride(e.data.override ?? null);
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [serverBanner.id]);
+  const banner = override ? { ...serverBanner, ...override } : serverBanner;
   if (!banner.is_active) return null;
   const text = banner.text?.[lang] || banner.text?.kr || banner.text?.en || '';
   if (!text) return null;

@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -12,7 +15,25 @@ interface Props {
   banners: PromoBanner[];
 }
 
-export default function PromoBannersSection({ banners }: Props) {
+export default function PromoBannersSection({ banners: serverBanners }: Props) {
+  // Live preview overlay — /admin/promo-banners broadcasts the full
+  // in-flight banners array. Each broadcast replaces the rendered set
+  // wholesale so image uploads, link edits, and active toggles all
+  // appear in the central iframe before save. Null payload (drawer
+  // close) drops back to the persisted rows.
+  const [override, setOverride] = useState<PromoBanner[] | null>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      if (!e.data || typeof e.data !== 'object') return;
+      if (e.data.type !== 'kokkok-builder-promo-preview') return;
+      setOverride(Array.isArray(e.data.banners) ? e.data.banners : null);
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+  const banners = override ?? serverBanners;
   if (!banners || banners.length === 0) return null;
 
   // Show at most 2 banners

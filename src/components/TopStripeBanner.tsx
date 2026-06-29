@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 export interface TopStripeBannerData {
@@ -20,8 +23,27 @@ interface Props {
  *
  * If link_url is set, the whole stripe becomes a clickable Link;
  * otherwise it renders as a div.
+ *
+ * Live preview overlay — /admin/top-stripe broadcasts in-flight values
+ * via `kokkok-builder-topstripe-preview` so the central iframe in the
+ * homepage builder reflects edits before save. No-op for customers.
  */
-export default function TopStripeBanner({ data }: Props) {
+export default function TopStripeBanner({ data: serverData }: Props) {
+  const [override, setOverride] = useState<Partial<TopStripeBannerData> | null>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      if (!e.data || typeof e.data !== 'object') return;
+      if (e.data.type !== 'kokkok-builder-topstripe-preview') return;
+      setOverride(e.data.override ?? null);
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
+  const data: TopStripeBannerData | null = serverData
+    ? (override ? { ...serverData, ...override } : serverData)
+    : null;
   if (!data || !data.is_active || !data.text) return null;
   const style: React.CSSProperties = {
     backgroundColor: data.bg_color || '#1f2937',

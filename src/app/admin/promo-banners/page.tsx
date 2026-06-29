@@ -34,6 +34,43 @@ export default function PromoBannersAdminPage() {
 
   useEffect(() => { fetchBanners(); }, []);
 
+  // Live preview broadcast — post the full banners array up to the
+  // builder hub on every change. The storefront PromoBannersSection
+  // overlays the array wholesale (each slot has its own row identity
+  // via `id`). rAF-debounced; no-op outside the builder iframe.
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+    const handle = requestAnimationFrame(() => {
+      try {
+        window.parent.postMessage(
+          {
+            type: 'kokkok-builder-promo-preview',
+            banners: banners.map(b => ({
+              id: b.id,
+              image_url: b.image_url,
+              link_url: b.link_url,
+              sort_order: b.sort_order,
+            })),
+          },
+          window.location.origin,
+        );
+      } catch { /* best-effort */ }
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [banners]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window === 'undefined' || window.parent === window) return;
+      try {
+        window.parent.postMessage(
+          { type: 'kokkok-builder-promo-preview', banners: null },
+          window.location.origin,
+        );
+      } catch { /* ignore */ }
+    };
+  }, []);
+
   async function fetchBanners() {
     setIsLoading(true);
     try {

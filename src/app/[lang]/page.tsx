@@ -119,11 +119,13 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   // saved their order before the section existed.
   const sectionsMap: Record<string, React.ReactNode> = {
     'carousel': isCarouselFirst ? (
-      <div className="kokkok-hero-overlay">
+      <div className="kokkok-hero-overlay" data-builder-section="carousel">
         <HeroSlider lang={lang} slides={carouselSlides} />
       </div>
     ) : (
-      <HeroSlider lang={lang} slides={carouselSlides} />
+      <div data-builder-section="carousel">
+        <HeroSlider lang={lang} slides={carouselSlides} />
+      </div>
     ),
     'promo-banners': (
       <div data-builder-section="promo-banners">
