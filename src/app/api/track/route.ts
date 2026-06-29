@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
-import geoip from 'geoip-country';
 import { categorizeReferrer, extractSearchKeyword } from '@/lib/analytics/referrer';
 import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 
@@ -24,6 +23,43 @@ const trackLimiter = createRateLimiter({
 const MAX_PATH_LEN = 500;
 const MAX_REFERRER_LEN = 2000;
 const MAX_SEARCH_LEN = 2000;
+
+// geoip-country is intentionally lazy-loaded — see geoipLookup() below.
+// The package reads its own MaxMind binary database from its node_modules
+// folder at module-evaluation time. When that file is missing in the EC2
+// runtime (which has happened after a few deploys — the Next.js
+// standalone bundle doesn't always copy the data file even with
+// serverExternalPackages set), a top-level `import geoip from
+// 'geoip-country'` throws BEFORE this route's handler ever runs.
+// Next.js then surfaces a generic "Internal Server Error" with no JSON
+// body — opaque to /api/track callers (PageTracker), starves the
+// analytics dashboard, and silently breaks the top-viewed section.
+// Lazy import + a tight try/catch keeps a missing data file from
+// taking down the whole route; country falls through to 'UNKNOWN'
+// the same way the dashboard already expects.
+let geoipModule: typeof import('geoip-country') | null = null;
+let geoipLoadFailed = false;
+async function geoipLookup(ip: string): Promise<string | null> {
+  if (geoipLoadFailed) return null;
+  if (!geoipModule) {
+    try {
+      geoipModule = await import('geoip-country');
+    } catch (err) {
+      geoipLoadFailed = true;
+      console.warn(
+        '[track] geoip-country load failed — country resolution will fall back to UNKNOWN:',
+        err instanceof Error ? err.message : String(err),
+      );
+      return null;
+    }
+  }
+  try {
+    return geoipModule.default.lookup(ip)?.country ?? null;
+  } catch (err) {
+    console.warn('[track] geoip lookup threw for ip:', err instanceof Error ? err.message : String(err));
+    return null;
+  }
+}
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -151,8 +187,7 @@ export async function POST(req: NextRequest) {
       null;
     const ip = getClientIp(req);
     if (!country && ip) {
-      const lookup = geoip.lookup(ip);
-      country = lookup?.country || null;
+      country = await geoipLookup(ip);
     }
     if (!country) country = 'UNKNOWN';
 
