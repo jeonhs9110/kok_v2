@@ -6,7 +6,7 @@ import { useHomepageSections, type HomepageBanner } from './useHomepageSections'
 import { useHomepageData } from './useHomepageData';
 
 const CORE_REORDERABLE = new Set([
-  'carousel', 'promo-banners', 'products', 'shorts', 'sub-hero', 'instagram', 'reviews',
+  'carousel', 'promo-banners', 'products', 'shorts', 'sub-hero', 'instagram', 'reviews', 'top-viewed',
 ]);
 
 /**
@@ -72,6 +72,7 @@ export function useHomepageBuilder() {
       } else if (
         data.type === 'kokkok-builder-subhero-preview'
         || data.type === 'kokkok-builder-topstripe-preview'
+        || data.type === 'kokkok-builder-topviewed-preview'
       ) {
         // Single-row sections (one sub-hero, one top stripe) — override is
         // a shallow object of presentation fields; no id discrimination

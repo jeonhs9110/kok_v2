@@ -12,6 +12,7 @@ import {
   MenuSquare,
   Scale,
   Megaphone,
+  TrendingUp,
 } from 'lucide-react';
 import { isBannerKey } from '@/lib/api/sectionOrder';
 import type { SectionDef } from './SectionCard';
@@ -150,6 +151,17 @@ export function useHomepageSections({
           status: countsLabel(counts.reviewsActive, counts.reviewsTotal),
           visible: counts.reviewsActive > 0,
           hint: '홈 메인 + /menus/review',
+        },
+        {
+          // Top-viewed editor added 2026-06-29 — surfaced by the homepage
+          // builder audit as a fully-uncontrolled section. Auto-populated
+          // from analytics; operator now controls title, window, count,
+          // and on/off via /admin/top-viewed.
+          key: 'top-viewed', name: '인기 상품 (자동)', icon: TrendingUp,
+          href: '/admin/top-viewed',
+          status: '자동 노출 · 최근 조회수 기준',
+          visible: true,
+          hint: '최근 N일간 가장 많이 본 상품 (관리자 설정)',
         },
       ],
     },
