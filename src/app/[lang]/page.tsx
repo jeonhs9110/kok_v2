@@ -63,19 +63,46 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { lang } = await params;
   const isKr = lang === 'kr';
+  const title = isKr ? '콕콕가든 — 제주 카멜리아 PDRN 스킨케어' : 'Kokkok Garden — Jeju Camellia PDRN Skincare';
+  const description = isKr
+    ? '제주 동백 PDRN 성분의 K-뷰티 스킨케어. 1회 사용으로 완성하는 보습 케어.'
+    : 'Korean skincare powered by Jeju Camellia PDRN. One-step deep hydration.';
+  const url = `https://www.kokkokgarden.com/${lang}`;
+  // 2026-06-29: filled out the OG / Twitter cards. Pre-fix the homepage
+  // openGraph block had only `title` + `locale` + `type` set — no
+  // `url`, no `siteName`, no `images`, and no twitter card at all.
+  // Every product detail / reviews / CMS page already exposed the full
+  // set, so KakaoTalk / Facebook / Twitter shares of the homepage
+  // dropped to a no-image fallback while shares of every other page on
+  // the site rendered rich previews. The homepage is the primary brand
+  // URL — the asymmetric one had the biggest reach.
+  //
+  // SVG-as-OG image works in modern Kakao / Facebook crawlers; if a
+  // platform falls back to a default the title + description still
+  // carry. When the operator wants a true raster OG image they can
+  // drop a /public/og-default.png in and we'll swap the URL here.
+  const ogImage = 'https://www.kokkokgarden.com/kokkokgarden_primary.svg';
   return {
-    title: isKr ? '콕콕가든 — 제주 카멜리아 PDRN 스킨케어' : 'Kokkok Garden — Jeju Camellia PDRN Skincare',
-    description: isKr
-      ? '제주 동백 PDRN 성분의 K-뷰티 스킨케어. 1회 사용으로 완성하는 보습 케어.'
-      : 'Korean skincare powered by Jeju Camellia PDRN. One-step deep hydration.',
+    title,
+    description,
     alternates: {
       canonical: `/${lang}`,
       languages: { 'ko-KR': '/kr', 'en-US': '/en' },
     },
     openGraph: {
       title: isKr ? '콕콕가든' : 'Kokkok Garden',
-      locale: isKr ? 'ko_KR' : 'en_US',
+      description,
+      url,
       type: 'website',
+      locale: isKr ? 'ko_KR' : 'en_US',
+      siteName: 'KOKKOK GARDEN',
+      images: [{ url: ogImage, alt: isKr ? '콕콕가든' : 'Kokkok Garden' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
     },
   };
 }

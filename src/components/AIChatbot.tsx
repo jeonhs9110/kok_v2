@@ -147,8 +147,20 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
           setIsEnabled(false);
           return;
         }
-        const visible = isKorea ? (data.show_domestic ?? false) : (data.show_global ?? false);
-        setIsEnabled(visible);
+        // The widget is "visible" only when ALL three gates pass:
+        //   1. The kill-switch (is_enabled) — operator's "사용" toggle.
+        //      Pre-fix the widget ignored this and kept rendering even
+        //      after the operator disabled the chatbot, then any click
+        //      hit /api/chat → 503 "Chat service is currently disabled."
+        //      Better to hide the bubble entirely.
+        //   2. The per-region toggle (show_global / show_domestic) —
+        //      operator chose to expose the chatbot to this audience.
+        //   3. (Backward compat) data.is_enabled defaults to true when
+        //      the row predates the column, so legacy configs keep
+        //      their existing on/off behavior driven by show_* alone.
+        const enabled = data.is_enabled ?? true;
+        const exposedToRegion = isKorea ? (data.show_domestic ?? false) : (data.show_global ?? false);
+        setIsEnabled(enabled && exposedToRegion);
         const customGreeting = lang === 'kr' ? data.greeting_kr : data.greeting_en;
         if (customGreeting) {
           setMessages([{ id: 'greeting', role: 'assistant', content: customGreeting }]);
