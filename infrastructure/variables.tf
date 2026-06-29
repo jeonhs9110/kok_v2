@@ -134,18 +134,21 @@ variable "analytics_ip_salt" {
 }
 
 # ---- RDS cutover toggle ----
-# Flip to `true` to point the EC2 app at AWS RDS instead of Supabase. When
-# true, EC2 user_data fetches the RDS password from Secrets Manager at boot
-# and exports DATABASE_URL + USE_RDS=true to the systemd EnvironmentFile.
+# Post-cutover invariant (2026-06-25 onward): RDS is the live data store
+# and Supabase has been retired. The default is `true` so a routine
+# `terraform apply` (no -var override) preserves the cutover state and
+# can't accidentally roll prod back to Supabase. EC2 user_data fetches
+# the RDS password from Secrets Manager at boot and exports
+# DATABASE_URL + USE_RDS=true to the systemd EnvironmentFile.
 # The dispatcher in src/lib/db/pool.ts reads USE_RDS=true and routes data
-# reads/writes through node-postgres into RDS instead of Supabase.
+# reads/writes through node-postgres into RDS.
 #
-# Cutover:  terraform apply -var="use_rds=true"  -replace=aws_instance.app
-# Rollback: terraform apply -var="use_rds=false" -replace=aws_instance.app
+# Rollback (only if Supabase project still exists):
+#   terraform apply -var="use_rds=false" -replace=aws_instance.app
 variable "use_rds" {
-  description = "If true, the app reads/writes via AWS RDS (DATABASE_URL). If false, falls back to Supabase. Cutover toggle for the Supabase → RDS migration."
+  description = "If true, the app reads/writes via AWS RDS (DATABASE_URL). If false, falls back to Supabase. Post-cutover default is true; flip to false only for emergency rollback while Supabase is still alive."
   type        = bool
-  default     = false
+  default     = true
 }
 
 # ---- Media storage (S3 + CloudFront) ----
