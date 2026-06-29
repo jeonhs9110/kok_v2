@@ -1,6 +1,7 @@
 'use client';
 
 import { TableShell, TableHeaderRow } from '@/components/admin/CafeWidgets';
+import { formatKstDate } from '@/lib/formatKstDate';
 
 export interface ChatbotLead {
   id: string;
@@ -43,7 +44,7 @@ export default function ChatbotLeadsTable({ leads }: Props) {
                   <td className="px-4 py-2 text-[#3b82f6] text-[12px]">{lead.email}</td>
                   <td className="px-4 py-2 text-[#6b7280] text-[11.5px]">{lead.skin_type || '—'}</td>
                   <td className="px-4 py-2 text-[#6b7280] text-[11.5px]">{lead.country || '—'}</td>
-                  <td className="px-4 py-2 text-[#9ca3af] text-[11.5px] tabular-nums">{new Date(lead.created_at).toLocaleDateString('ko-KR')}</td>
+                  <td className="px-4 py-2 text-[#9ca3af] text-[11.5px] tabular-nums">{formatKstDate(lead.created_at)}</td>
                 </tr>
               ))}
             </tbody>

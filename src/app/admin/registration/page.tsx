@@ -8,8 +8,10 @@ import CustomerDataSection from './_components/CustomerDataSection';
 import type { RegField, AuthProvider, VerificationConfig, CustomerProfile } from './_components/types';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { useIsDirty } from '@/hooks/useIsDirty';
+import { useToast } from '@/components/admin/Toast';
 
 export default function RegistrationAdminPage() {
+  const toast = useToast();
   const [fields, setFields] = useState<RegField[]>([]);
   const [authProviders, setAuthProviders] = useState<AuthProvider[]>([]);
   const [verification, setVerification] = useState<VerificationConfig>({
@@ -176,7 +178,13 @@ export default function RegistrationAdminPage() {
     setFields(prev => prev.filter(f => f.key !== key));
   }
   function addField() {
-    if (!newField.key || !newField.label_kr) return;
+    if (!newField.key || !newField.label_kr) {
+      toast.show(
+        !newField.key ? '필드 키(key)를 입력해주세요.' : '한국어 라벨을 입력해주세요.',
+        'warning',
+      );
+      return;
+    }
     setFields(prev => [...prev, {
       ...newField, required: false, enabled: true, removable: true,
     }]);

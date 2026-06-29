@@ -7,6 +7,7 @@ import { useParams } from 'next/navigation';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
+import { formatKstDate } from '@/lib/formatKstDate';
 import type { Post, Menu } from '@/lib/api/menus';
 import { revalidateHeaderData } from '@/lib/cache/invalidate';
 
@@ -61,7 +62,10 @@ export default function PostsAdminPage() {
   };
 
   const handleSave = async () => {
-    if (!form.title.trim()) return;
+    if (!form.title.trim()) {
+      toast.show('제목을 입력해주세요.', 'warning');
+      return;
+    }
     const payload = { ...form, menu_id: menuId, is_admin_post: true, is_published: true };
     try {
       const res = editingId
@@ -77,17 +81,20 @@ export default function PostsAdminPage() {
           });
       if (!res.ok) throw new Error('http_' + res.status);
       await revalidateHeaderData();
+      const wasEditing = !!editingId;
       resetForm();
       fetchAll();
+      toast.show(wasEditing ? '게시글이 수정되었습니다.' : '게시글이 추가되었습니다.', 'success');
     } catch { toast.show('저장 실패', 'error'); }
   };
 
   const handleDelete = async (id: string) => {
     const ok = await confirm({ message: '이 게시글을 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    await fetch(`/api/admin/crud/posts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const res = await fetch(`/api/admin/crud/posts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     await revalidateHeaderData();
     fetchAll();
+    toast.show(res.ok ? '게시글이 삭제되었습니다.' : '삭제에 실패했습니다.', res.ok ? 'success' : 'error');
   };
 
   return (
@@ -126,7 +133,7 @@ export default function PostsAdminPage() {
                 <tr key={post.id} className="hover:bg-[#fafbfc] transition-colors">
                   <td className="p-3 pl-4 text-[12px] font-semibold text-gray-900">{post.title}</td>
                   <td className="p-3 text-[12px] text-gray-500">{post.author_name}</td>
-                  <td className="p-3 text-[12px] text-gray-400">{new Date(post.created_at).toLocaleDateString('ko-KR')}</td>
+                  <td className="p-3 text-[12px] text-gray-400">{formatKstDate(post.created_at)}</td>
                   <td className="p-3 pr-4 text-right">
                     <div className="flex gap-1 justify-end">
                       <button onClick={() => openEdit(post)} className="text-gray-400 hover:text-amber-600 p-1.5 rounded hover:bg-[#f3f4f6] transition-colors">

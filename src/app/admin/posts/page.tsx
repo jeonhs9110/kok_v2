@@ -5,12 +5,15 @@ import { Pencil, Trash2, FileText, BookOpen, MessageSquare } from 'lucide-react'
 import Link from 'next/link';
 import { StatCard, StatStrip, PageHeader, EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 import { useConfirm } from '@/components/admin/ConfirmModal';
+import { useToast } from '@/components/admin/Toast';
+import { formatKstDate } from '@/lib/formatKstDate';
 import type { Post, Menu } from '@/lib/api/menus';
 
 type PostWithMenu = Post & { menu_title: string; menu_slug: string };
 
 export default function AllPostsAdminPage() {
   const confirm = useConfirm();
+  const toast = useToast();
   const [posts, setPosts] = useState<PostWithMenu[]>([]);
   const [menus, setMenus] = useState<Menu[]>([]);
   const [filterMenuId, setFilterMenuId] = useState<string>('all');
@@ -50,8 +53,9 @@ export default function AllPostsAdminPage() {
   const handleDelete = async (id: string) => {
     const ok = await confirm({ message: '이 게시글을 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    await fetch(`/api/admin/crud/posts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const res = await fetch(`/api/admin/crud/posts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     fetchAll();
+    toast.show(res.ok ? '게시글이 삭제되었습니다.' : '삭제에 실패했습니다.', res.ok ? 'success' : 'error');
   };
 
   const filtered = useMemo(() => {
@@ -137,7 +141,7 @@ export default function AllPostsAdminPage() {
                   </td>
                   <td className="p-3 text-[12px] text-gray-600">{post.menu_title}</td>
                   <td className="p-3 text-[12px] text-gray-500">{post.author_name}</td>
-                  <td className="p-3 text-[12px] text-gray-400">{new Date(post.created_at).toLocaleDateString('ko-KR')}</td>
+                  <td className="p-3 text-[12px] text-gray-400">{formatKstDate(post.created_at)}</td>
                   <td className="p-3 pr-4 text-right">
                     <div className="flex gap-1 justify-end">
                       <Link

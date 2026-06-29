@@ -10,6 +10,7 @@ import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
 import { LoadingState } from '@/components/admin/CafeWidgets';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import BannerEditForm, { type BannerRow } from './_components/BannerEditForm';
 
 const supabase = getSupabaseBrowser();
@@ -150,6 +151,7 @@ export default function BannerEditPage() {
         }
       }
       revalidateHomepageData('homepage_banners');
+      toast.show('띠배너가 삭제되었습니다.', 'success');
       // If embedded in the homepage drawer, signal close; else go back.
       if (typeof window !== 'undefined' && window.parent !== window) {
         try {
@@ -168,6 +170,7 @@ export default function BannerEditPage() {
   }
 
   const dirty = JSON.stringify(data) !== JSON.stringify(saved);
+  useUnsavedChanges(dirty);
 
   if (loading) return <LoadingState />;
 
