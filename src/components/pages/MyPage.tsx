@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { User, Package, Heart, LogOut, Save, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import CountryPicker from '@/components/CountryPicker';
+import { DEFAULT_COUNTRY, findCountry, findCountryByDial } from '@/lib/geo/countries';
 
 /**
  * Customer "my page". Reads + writes go through the dispatcher API
@@ -60,7 +62,7 @@ const EMPTY_PROFILE: CustomerProfile = {
   name: '', phone: '', gender: '', birthday: '', country: '', skin_type: '', marketing_consent: false,
 };
 
-export default function MyPage({ lang }: { lang: string }) {
+export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
   const t = L[lang] ?? L['en'];
   const isKr = lang === 'kr';
   const searchParams = useSearchParams();
@@ -240,7 +242,10 @@ export default function MyPage({ lang }: { lang: string }) {
                     <ProfileRow label={t.phone} value={profile.phone} />
                     <ProfileRow label={t.gender} value={profile.gender} />
                     <ProfileRow label={t.birthday} value={profile.birthday} />
-                    <ProfileRow label={t.country} value={profile.country} />
+                    <ProfileRow label={t.country} value={(() => {
+                      const c = findCountry(profile.country);
+                      return c ? (isKr ? c.nameKr : c.nameEn) : profile.country;
+                    })()} />
                     <ProfileRow label={t.skinType} value={profile.skin_type} />
                     <ProfileRow label={t.marketingConsent} value={profile.marketing_consent ? '✓' : '—'} />
                     <ProfileRow label={t.joined} value={userCreated} />
@@ -278,7 +283,34 @@ export default function MyPage({ lang }: { lang: string }) {
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.phone}</label>
-                    <input type="tel" value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-black" />
+                    {(() => {
+                      const raw = editForm.phone || '';
+                      const match = raw.match(/^\+(\d{1,4})\s*(.*)$/);
+                      const dialCode = match?.[1] ?? DEFAULT_COUNTRY.dialCode;
+                      const national = match?.[2] ?? raw;
+                      const selectedCountry = findCountryByDial(dialCode) ?? DEFAULT_COUNTRY;
+                      return (
+                        <div className="flex gap-2 mt-1">
+                          <CountryPicker
+                            mode="dial"
+                            lang={lang}
+                            value={selectedCountry.code}
+                            onChange={c => setEditForm(p => ({ ...p, phone: `+${c.dialCode} ${national}` }))}
+                            ariaLabel={isKr ? '국가 번호' : 'Country code'}
+                            className="w-32 flex-shrink-0"
+                          />
+                          <input
+                            type="tel"
+                            value={national}
+                            onChange={e => {
+                              const cleaned = e.target.value.replace(/[^\d\s-]/g, '');
+                              setEditForm(p => ({ ...p, phone: `+${selectedCountry.dialCode} ${cleaned}` }));
+                            }}
+                            className="flex-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-black"
+                          />
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.gender}</label>
@@ -293,7 +325,14 @@ export default function MyPage({ lang }: { lang: string }) {
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.country}</label>
-                    <input type="text" value={editForm.country} onChange={e => setEditForm(p => ({ ...p, country: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-black" />
+                    <div className="mt-1">
+                      <CountryPicker
+                        mode="country"
+                        lang={lang}
+                        value={(findCountry(editForm.country) ?? DEFAULT_COUNTRY).code}
+                        onChange={c => setEditForm(p => ({ ...p, country: c.code }))}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.skinType}</label>

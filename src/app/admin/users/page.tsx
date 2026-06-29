@@ -1,6 +1,6 @@
 'use client';
 
-import { Search, Users as UsersIcon, ShieldCheck } from 'lucide-react';
+import { Search, Users as UsersIcon, ShieldCheck, Download } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { StatCard, StatStrip, PageHeader, EmptyState, LoadingState } from '@/components/admin/CafeWidgets';
 import UsersTable from './_components/UsersTable';
@@ -68,15 +68,31 @@ export default function UsersAdminPage() {
             : 'DB 미연결'
         }
         actions={
-          <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="이메일 검색..."
-              className="pl-9 pr-3 py-1.5 text-[12px] border border-[#d1d5db] rounded bg-white focus:outline-none focus:ring-1 focus:ring-[#3b82f6] kokkok-keep-border"
-            />
+          <div className="flex items-center gap-2">
+            {/* CSV export — opens in Excel with Korean headers. Use
+                case: marketing team filters by marketing_consent for
+                an email blast OR computes age/region breakdowns. The
+                download is a synchronous response from
+                /api/admin/users/export (auth-gated server side). */}
+            <button
+              type="button"
+              onClick={() => { window.location.href = '/api/admin/users/export'; }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold text-white bg-[#16a34a] hover:bg-[#15803d] rounded transition-colors"
+              title="전체 사용자를 CSV로 내보내기 (Excel 호환)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              CSV 내보내기
+            </button>
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="이메일 검색..."
+                className="pl-9 pr-3 py-1.5 text-[12px] border border-[#d1d5db] rounded bg-white focus:outline-none focus:ring-1 focus:ring-[#3b82f6] kokkok-keep-border"
+              />
+            </div>
           </div>
         }
       />
