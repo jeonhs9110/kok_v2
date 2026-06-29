@@ -1,71 +1,67 @@
-# Route 53 "shadow zone" for kokkokgarden.com
+# Route 53 hosted zone for kokkokgarden.com
 #
-# IMPORTANT: this is a SHADOW zone. We create it in AWS, populate it
-# with the same records currently live in Vercel, BUT we DO NOT change
-# the registrar's nameservers. So:
+# 2026-06-30: prepared for the Vercel cutoff. The apex A record has
+# been upgraded from "Vercel IPs" to "ALIAS → CloudFront" so bare
+# kokkokgarden.com survives the moment Vercel is canceled. SES
+# verification + DKIM + SPF + DMARC records also added here so DNS
+# stays inside AWS and the operator never touches Vercel again.
 #
-#   Yesnic (registrar)
-#     └─ nameservers point to Vercel  ← stays untouched (live DNS)
-#          └─ Vercel serves DNS traffic the world sees
+# The flip-the-switch step is OUT of terraform's hands: at the domain
+# registrar (Yesnic), change the kokkokgarden.com nameservers from
+# Vercel's to the four AWS values in the route53_nameservers output.
+# Until that happens, Vercel keeps serving DNS to the world.
 #
-#   AWS Route 53 (this resource)        ← we build this
-#     └─ has the same records, ready to serve
-#     └─ has its own NS records, but NOBODY POINTS AT THEM YET
-#
-# Cost: $0.50/mo per hosted zone + ~$0.40 per million queries (queries
-# stay at $0 until nameservers flip). Well within budget.
-#
-# Handoff plan: when Dynamic Solution is ready to take over DNS, the
-# only change is "update kokkokgarden.com nameservers at Yesnic to the
-# NS values from this Route 53 zone" (output below). Propagation takes
-# 24-48 hours but the records resolve identically because we mirrored
-# them. No prod risk to the live site once the apex/www records are
-# verified correct here.
-#
-# Records mirrored from current Vercel-hosted DNS (probed 2026-06-24):
-#   - apex A → 64.29.17.1, 64.29.17.65          (Vercel IPs, legacy)
-#   - www CNAME → d2j7yfbvcyb3f7.cloudfront.net (our CloudFront)
+# Records this zone owns:
+#   - apex A ALIAS → CloudFront                 (storefront — survives Vercel cancel)
+#   - www CNAME → CloudFront DNS                (legacy compat)
 #   - MX → 10 mx3.daouoffice.com                (Daouoffice email)
-#   - TXT (SPF) → "v=spf1 ip4:34.22.91.177 …"   (email auth)
+#   - TXT (apex SPF) → preserves Daouoffice mailflow
+#   - TXT (_amazonses) → SES domain ownership proof
+#   - 3× CNAME (_domainkey) → SES DKIM signing keys
+#   - TXT (mail. SPF) → SES bounce subdomain authorization
+#   - MX (mail.) → SES bounce return path
+#   - TXT (_dmarc) → policy=none (monitor mode)
 #
-# Note: when Dynamic Solution actually cuts over, they should also
-# upgrade the apex from "A → Vercel IPs" (which will go dark when
-# Vercel is canceled) to "A ALIAS → CloudFront" — a 5-min change that
-# lets bare kokkokgarden.com serve the storefront too. For now we
-# preserve the existing setup so the shadow zone is a faithful copy.
+# Cost: $0.50/mo per hosted zone + ~$0.40 per million queries. Well
+# within the $70/mo budget cap; replaces whatever Vercel was charging
+# for DNS once the nameservers flip.
 
 resource "aws_route53_zone" "main" {
   name    = "kokkokgarden.com"
-  comment = "Shadow zone — populated 2026-06-24, NOT YET LIVE. Switch nameservers at Yesnic to activate. Vercel is currently authoritative."
+  comment = "Authoritative once nameservers flip at Yesnic from Vercel to the four NS values output below."
 
   tags = {
     Name        = "kokkokgarden.com"
     Environment = "prod"
     Project     = "kokkok-garden"
-    Status      = "shadow"
+    Status      = "ready-for-cutover"
   }
 }
 
-# Apex A records — mirror of Vercel's legacy IPs. Dynamic Solution
-# should change these to an ALIAS pointing at CloudFront before
-# canceling Vercel, otherwise bare kokkokgarden.com goes dark.
+# Apex A ALIAS → CloudFront. AWS resolves this to the CloudFront edge
+# IPs at lookup time, so bare kokkokgarden.com always serves the same
+# distribution as www. Without ALIAS we'd need static A records, which
+# can't track CloudFront's IPs as they change.
 resource "aws_route53_record" "apex_a" {
   zone_id = aws_route53_zone.main.zone_id
   name    = "kokkokgarden.com"
   type    = "A"
-  ttl     = 300
-  records = ["64.29.17.1", "64.29.17.65"]
+  alias {
+    name                   = aws_cloudfront_distribution.main.domain_name
+    zone_id                = aws_cloudfront_distribution.main.hosted_zone_id
+    evaluate_target_health = false
+  }
 }
 
-# www CNAME → CloudFront distribution (already serving live traffic
-# at this address via Vercel's CNAME today; mirror unchanged here so
-# the failover is seamless).
+# www → CloudFront. CNAME works here because www isn't the zone apex;
+# both kokkokgarden.com and www.kokkokgarden.com are in the
+# CloudFront distribution's aliases list (see cloudfront.tf).
 resource "aws_route53_record" "www_cname" {
   zone_id = aws_route53_zone.main.zone_id
   name    = "www.kokkokgarden.com"
   type    = "CNAME"
   ttl     = 300
-  records = ["d2j7yfbvcyb3f7.cloudfront.net"]
+  records = [aws_cloudfront_distribution.main.domain_name]
 }
 
 # Email (Daouoffice / 다오 그룹웨어) — preserves any contact@... mailbox.
@@ -90,12 +86,72 @@ resource "aws_route53_record" "apex_spf" {
   ]
 }
 
-# Output the NS values that need to land at Yesnic when Dynamic
-# Solution actually wants to flip authoritative DNS. Until they do,
-# this output is just informational.
+# ─────────────────────────────────────────────────────────────────────
+# SES records (formerly the operator's "add at Vercel" homework list,
+# now native here so no manual DNS work is needed post-Vercel-cutoff).
+# ─────────────────────────────────────────────────────────────────────
+
+# SES domain ownership proof — TXT at _amazonses.<domain>.
+resource "aws_route53_record" "ses_verification" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "_amazonses.kokkokgarden.com"
+  type    = "TXT"
+  ttl     = 1800
+  records = [aws_ses_domain_identity.kokkokgarden.verification_token]
+}
+
+# DKIM signing keys — one CNAME per token. for_each over the 3 tokens
+# so a future SES re-key (rotates tokens) replaces all three cleanly.
+resource "aws_route53_record" "ses_dkim" {
+  for_each = toset(aws_ses_domain_dkim.kokkokgarden.dkim_tokens)
+  zone_id  = aws_route53_zone.main.zone_id
+  name     = "${each.value}._domainkey.kokkokgarden.com"
+  type     = "CNAME"
+  ttl      = 1800
+  records  = ["${each.value}.dkim.amazonses.com"]
+}
+
+# Mail-from subdomain SPF — authorizes SES IPs to send From: addresses
+# under mail.kokkokgarden.com (the bounce return path).
+resource "aws_route53_record" "ses_mail_spf" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "mail.kokkokgarden.com"
+  type    = "TXT"
+  ttl     = 1800
+  records = ["v=spf1 include:amazonses.com ~all"]
+}
+
+# Mail-from subdomain MX — SES uses this to receive bounce/complaint
+# return-path messages. ap-northeast-2 region pinned to match the SES
+# identity.
+resource "aws_route53_record" "ses_mail_mx" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "mail.kokkokgarden.com"
+  type    = "MX"
+  ttl     = 1800
+  records = ["10 feedback-smtp.${var.region}.amazonses.com"]
+}
+
+# DMARC — p=none is monitor mode. Aggregated reports go to
+# dmarc-reports@kokkokgarden.com (the operator needs to forward this
+# alias somewhere they read, OR ignore the reports — the policy still
+# protects them). After 30 days of clean monitoring reports, switch
+# p=none → p=quarantine for actual enforcement.
+resource "aws_route53_record" "ses_dmarc" {
+  zone_id = aws_route53_zone.main.zone_id
+  name    = "_dmarc.kokkokgarden.com"
+  type    = "TXT"
+  ttl     = 1800
+  records = ["v=DMARC1; p=none; rua=mailto:dmarc-reports@kokkokgarden.com; pct=100; aspf=r; adkim=r"]
+}
+
+# Output the NS values for the operator to set at Yesnic (the domain
+# registrar). This is THE one cutover step that can't be automated —
+# the registrar's API isn't part of AWS. Until the operator does this,
+# Vercel keeps serving DNS to the world.
 output "route53_nameservers" {
   value       = aws_route53_zone.main.name_servers
-  description = "AWS Route 53 nameservers for kokkokgarden.com. Currently unused — when Dynamic Solution is ready to cut over from Vercel, update the nameservers at Yesnic to these four values. Until then, the zone is a dormant mirror."
+  description = "AWS Route 53 nameservers for kokkokgarden.com. To cut Vercel off entirely: log into Yesnic, replace the current Vercel nameservers with these four values, save. Propagation 24-48h. After that, Vercel can be canceled without affecting the site, mailflow, or SES."
 }
 
 output "route53_zone_id" {
