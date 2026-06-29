@@ -82,7 +82,6 @@ export function useLegal() {
     setLoading(false);
   }
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   async function savePage(p: LegalPage) {

@@ -444,28 +444,61 @@ export async function setUserRoleInPg(userId: string, role: 'admin' | 'user'): P
  * itself were never FK-linked. So this function has to fan the delete
  * out manually.
  *
- * Surfaces cascaded (in order — wishlist + profile first so a row
- * never lingers PII-bearing if users-row delete fails halfway):
- *   - public.wishlist (user_id) — customer-curated product list
- *   - public.customer_profiles (id) — PII: name/phone/birthday/etc.
- *   - public.users (id) — the admin-facing identity row
+ * Surfaces touched (in order — anonymize authored content first so the
+ * PII rewrite isn't half-done if a downstream step fails):
+ *   - public.posts          → anonymize (preserve community discussion;
+ *                             replace author_name with '탈퇴회원',
+ *                             null out author_id)
+ *   - public.comments       → anonymize by author_name = email match
+ *   - public.product_reviews → anonymize by author_name = email match
+ *   - public.wishlist (user_id) — DELETE
+ *   - public.customer_profiles (id) — DELETE
+ *   - public.users (id) — DELETE
  *
- * Pre-fix the admin /admin/users → Delete button only removed the
- * users row, leaving customer_profiles + wishlist orphaned. PIPA
- * §21 requires destruction of personal info on account deletion;
- * leaving customer_profiles behind is a real compliance gap. The
- * customer-initiated DELETE /api/customer/profile already cascades
- * this way — this just brings the admin path to parity.
+ * Pre-fix the admin /admin/users → Delete button removed the users
+ * row + wishlist + customer_profiles but left the customer's
+ * authored content with their PII (author_name = email/display name)
+ * attached. PIPA §21 (개인정보 파기 의무) requires destruction of
+ * personal info on account close — anonymization is the canonical
+ * Korean-ecom approach because cascade-deleting community discussion
+ * destroys other customers' contributions ("I agree with X" stops
+ * making sense when X's post is gone). The customer-initiated
+ * /api/customer/profile DELETE mirrors this same shape.
+ *
+ * `email` is the customer's email-as-stored, used to match author_name
+ * on comments + product_reviews (those tables don't have author_id).
+ * Pass null when unknown — only the posts.author_id anonymization runs
+ * in that case.
  *
  * Returns true if the users row was deleted (the source-of-truth
  * for "did the account go away"); the upstream Cognito cleanup
  * decides whether the full account is gone.
  */
-export async function deleteUserInPg(userId: string): Promise<boolean> {
+export async function deleteUserInPg(userId: string, email: string | null): Promise<boolean> {
+  const ANON_NAME = '탈퇴회원';
   const pool = getPgPool();
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    // Anonymize authored content first.
+    await client.query(
+      `UPDATE public.posts SET author_name = $2, author_id = NULL
+         WHERE author_id = $1`,
+      [userId, ANON_NAME],
+    );
+    if (email) {
+      await client.query(
+        `UPDATE public.comments SET author_name = $2
+           WHERE author_name = $1`,
+        [email, ANON_NAME],
+      );
+      await client.query(
+        `UPDATE public.product_reviews SET author_name = $2
+           WHERE author_name = $1`,
+        [email, ANON_NAME],
+      );
+    }
+    // Row deletions.
     await client.query(`DELETE FROM public.wishlist WHERE user_id = $1`, [userId]);
     await client.query(`DELETE FROM public.customer_profiles WHERE id = $1`, [userId]);
     const { rowCount } = await client.query(

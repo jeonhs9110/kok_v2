@@ -238,7 +238,15 @@ export default function Header({
                   // Cognito cookies are httpOnly — only the server can
                   // clear them. Same call also runs Cognito GlobalSignOut
                   // so any stolen JWT becomes inert backend-side.
-                  await fetch('/api/auth/cognito/sign-out', { method: 'POST' });
+                  // Wrapped in try/catch so a network blip during logout
+                  // doesn't strand the visitor on the page with cookies
+                  // intact — the reload below still fires and the
+                  // server-side delete already cleared the cookies in
+                  // the rare case the request actually reached the
+                  // endpoint and only the response was lost.
+                  try {
+                    await fetch('/api/auth/cognito/sign-out', { method: 'POST' });
+                  } catch { /* fall through to reload */ }
                 } else {
                   document.cookie = "kokkok_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
                   document.cookie = "kokkok_admin_auth=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
