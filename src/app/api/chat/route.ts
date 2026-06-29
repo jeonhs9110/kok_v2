@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getProducts } from '@/lib/api/products';
 
 // Simple in-memory rate limiter (per IP, 10 requests per minute)
 const rateLimit = new Map<string, { count: number; resetAt: number }>();
@@ -38,6 +39,33 @@ const DEFAULT_CONFIG: ChatbotConfig = {
 };
 
 async function getChatbotConfig(): Promise<ChatbotConfig> {
+  // Singleton row in chatbot_config (id=1). Dispatcher pattern matches
+  // the rest of the codebase: RDS-first, Supabase fallback for pre-cutover
+  // environments. Pre-2026-06-29 this route called Supabase unconditionally,
+  // so post-decommission the chatbot was silently using DEFAULT_CONFIG —
+  // operator-set greeting was lost.
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getPgPool } = await import('@/lib/db/pool');
+      const pool = getPgPool();
+      const { rows } = await pool.query<{
+        is_enabled: boolean | null;
+        model: string | null;
+        greeting_en: string | null;
+        greeting_kr: string | null;
+      }>(`SELECT is_enabled, model, greeting_en, greeting_kr FROM public.chatbot_config LIMIT 1`);
+      const row = rows[0];
+      if (row) return {
+        is_enabled: row.is_enabled ?? true,
+        model: row.model ?? 'gpt-4o-mini',
+        greeting_en: row.greeting_en ?? '',
+        greeting_kr: row.greeting_kr ?? '',
+      };
+    } catch (err) {
+      console.error('[chat] chatbot_config RDS read failed:', err);
+    }
+    return DEFAULT_CONFIG;
+  }
   if (!supabase) return DEFAULT_CONFIG;
   try {
     const { data } = await supabase.from('chatbot_config').select('*').single();
@@ -52,24 +80,34 @@ async function getChatbotConfig(): Promise<ChatbotConfig> {
 }
 
 async function getProductKnowledge(): Promise<string> {
-  if (!supabase) return 'No product data available.';
+  // Use the canonical getProducts() dispatcher (RDS-first, Supabase
+  // fallback) instead of querying Supabase directly. Without this the
+  // chatbot was sending "Product data temporarily unavailable." to the
+  // LLM ever since the 2026-06-27 Supabase decommission — customers
+  // got generic K-beauty platitudes instead of catalog-specific
+  // recommendations. The .summary/.description casing matches the
+  // domain Product type from @/lib/api/products.
+  let products: Awaited<ReturnType<typeof getProducts>>;
   try {
-    const { data } = await supabase
-      .from('products')
-      .select('name, summary, ingredient, description, price, original_price, is_active')
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(30);
-    if (!data || data.length === 0) return 'No products currently available.';
-    return data
-      .map(
-        (p, i) =>
-          `${i + 1}. ${p.name} — ${p.summary}\n   Ingredients: ${p.ingredient}\n   Price: ₩${Number(p.price).toLocaleString()}${p.original_price ? ` (original ₩${Number(p.original_price).toLocaleString()})` : ''}\n   ${p.description ?? ''}`
-      )
-      .join('\n\n');
-  } catch {
+    products = await getProducts();
+  } catch (err) {
+    console.error('[chat] getProducts failed:', err);
     return 'Product data temporarily unavailable.';
   }
+  const active = products.filter(p => p.is_active).slice(0, 30);
+  if (active.length === 0) return 'No products currently available.';
+  return active
+    .map((p, i) => {
+      const price = `₩${p.price.toLocaleString()}`;
+      const original = p.originalPrice && p.originalPrice > p.price
+        ? ` (original ₩${p.originalPrice.toLocaleString()})`
+        : '';
+      return `${i + 1}. ${p.name} — ${p.summary}
+   Ingredients: ${p.ingredient}
+   Price: ${price}${original}
+   ${p.description ?? ''}`;
+    })
+    .join('\n\n');
 }
 
 function buildSystemPrompt(products: string, lang: string): string {
