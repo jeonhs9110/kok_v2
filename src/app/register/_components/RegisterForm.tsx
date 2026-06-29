@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { USE_COGNITO_FROM_BROWSER } from '@/lib/auth/clientFlags';
 import { checkPasswordPolicy } from '@/lib/auth/passwordPolicy';
+import { safeUrl } from '@/lib/url/safeUrl';
 import type { Lang } from '@/lib/i18n/types';
 
 const supabase = getSupabaseBrowser();
@@ -576,7 +577,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
                 <input type="checkbox" checked={privacyChecked} onChange={() => setPrivacyChecked(!privacyChecked)} className="w-4 h-4 rounded border-gray-300 mt-0.5" />
                 <span className="text-xs text-gray-600">
                   {t.privacyConsent}{' '}
-                  <Link href={config?.privacy_url || '/privacy'} className="text-blue-500 underline" target="_blank">보기</Link>
+                  <Link href={safeUrl(config?.privacy_url || '/privacy')} className="text-blue-500 underline" target="_blank">보기</Link>
                 </span>
               </label>
             )}

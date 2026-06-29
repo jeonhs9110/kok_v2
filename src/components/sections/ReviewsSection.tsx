@@ -75,7 +75,7 @@ export default async function ReviewsSection({ lang }: { lang: Lang }) {
             return external ? (
               <a
                 key={r.id}
-                href={href}
+                href={safeUrl(href)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block"
@@ -83,7 +83,7 @@ export default async function ReviewsSection({ lang }: { lang: Lang }) {
                 {Card}
               </a>
             ) : (
-              <Link key={r.id} href={href} className="block">
+              <Link key={r.id} href={safeUrl(href)} className="block">
                 {Card}
               </Link>
             );

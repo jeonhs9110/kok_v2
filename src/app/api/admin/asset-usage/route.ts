@@ -47,12 +47,24 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url).searchParams.get('url')?.trim() ?? '';
   if (!url) return NextResponse.json({ usage: [] });
+  // Reject bogus inputs. The URL must look like an http(s) URL to a
+  // media asset; raw `%` would short-circuit four sequential-scan ILIKEs
+  // across products.detail_body, products.detail_components,
+  // menus.content, and pages.blocks — a DOS vector via any logged-in
+  // admin session.
+  if (url.length > 1024 || !/^https?:\/\//.test(url)) {
+    return NextResponse.json({ usage: [] });
+  }
+  // Escape SQL LIKE wildcards in the operator's URL before wrapping it
+  // in `%...%`. Without this, `%` or `_` in the URL itself match more
+  // than they should AND amplify the table-scan cost.
+  const likeEscaped = url.replace(/[\\%_]/g, '\\$&');
 
   if (process.env.USE_RDS === 'true') {
     try {
       const { getPgPool } = await import('@/lib/db/pool');
       const pool = getPgPool();
-      const like = `%${url}%`;
+      const like = `%${likeEscaped}%`;
       const [
         products, subHero, carousel, promo, reviews, ig,
         detailBody, detailComponents, menus, pagesRefs,
@@ -118,7 +130,7 @@ export async function GET(req: Request) {
 
   // Supabase fallback for non-prod parity.
   if (!supabase) return NextResponse.json({ usage: [] }, { status: 500 });
-  const like = `%${url}%`;
+  const like = `%${likeEscaped}%`;
   const [
     products, subHero, carousel, promo, reviews, ig,
     detailBody, detailComponents, menus, pagesRefs,

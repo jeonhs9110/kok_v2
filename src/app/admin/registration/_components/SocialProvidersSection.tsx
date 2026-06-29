@@ -3,6 +3,7 @@
 import { Key, ExternalLink } from 'lucide-react';
 import SectionHeader from './SectionHeader';
 import { PROVIDER_LOGOS, type AuthProvider } from './types';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 interface Props {
   providers: AuthProvider[];
@@ -50,7 +51,7 @@ export default function SocialProvidersSection({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-bold">{info.name}</span>
-                    <a href={p.help_url} target="_blank" rel="noopener noreferrer" className="text-[11px] flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity underline">
+                    <a href={safeUrl(p.help_url)} target="_blank" rel="noopener noreferrer" className="text-[11px] flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity underline">
                       API 키 발급 <ExternalLink className="w-3 h-3" />
                     </a>
                   </div>
