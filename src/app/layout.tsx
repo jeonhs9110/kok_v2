@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
 import StorefrontLayoutWrapper from '@/components/StorefrontLayoutWrapper';
@@ -39,6 +39,15 @@ const freesentationExtras = localFont({
   preload: false,
 });
 
+export const viewport: Viewport = {
+  // theme-color drives the Android Chrome address-bar tint and the
+  // iOS PWA status-bar background. Brand ink matches the storefront
+  // header so the chrome feels continuous with the page. Moved out
+  // of metadata 2026-06-30 — Next 16 logs a deprecation warning when
+  // theme-color / appleWebApp.statusBarStyle live on `metadata`.
+  themeColor: '#1f2937',
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.kokkokgarden.com'),
   title: {
@@ -48,10 +57,6 @@ export const metadata: Metadata = {
   description: 'Premium K-Beauty skincare featuring Heartleaf, Jericho Rose, and Sedum.',
   manifest: '/manifest.webmanifest',
   applicationName: 'KOKKOK GARDEN',
-  // theme-color drives the Android Chrome address-bar tint and the
-  // iOS PWA status-bar background. Brand ink matches the storefront
-  // header so the chrome feels continuous with the page.
-  themeColor: '#1f2937',
   appleWebApp: {
     capable: true,
     title: 'KOKKOK GARDEN',

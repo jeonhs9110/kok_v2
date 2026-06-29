@@ -54,4 +54,15 @@ test.describe('storefront smoke', () => {
     expect(headers['x-frame-options']?.toLowerCase()).toBe('sameorigin');
     expect(headers['x-content-type-options']).toBe('nosniff');
   });
+
+  test('/en renders the brand + hero so the English path doesn\'t regress', async ({ page }) => {
+    // Symmetric coverage for the English-language root. Catches a missed
+    // translation, a broken `lang === 'en'` branch, or an EN-only fetch
+    // shape regression before it ships to overseas customers.
+    await page.goto('/en');
+    await expect(page.getByAltText(/kokkok garden/i)).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: /featured products/i })
+    ).toBeVisible();
+  });
 });

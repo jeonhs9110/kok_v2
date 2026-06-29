@@ -68,3 +68,5 @@ next-env.d.ts
 .gstack/
 .claude/
 /tmp/
+**/*.tfplan
+infrastructure/tfplan*

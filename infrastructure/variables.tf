@@ -92,26 +92,14 @@ variable "ec2_ami_owner" {
   default = "amazon"
 }
 
-# ---- Phase 1 app env vars (passed into EC2 user-data) ----
-# These are baked into /etc/kokkok/env on the instance and read by systemd.
-# Once Phase 2 IAM is wired, these should move to Secrets Manager.
+# ---- App env vars (passed into EC2 user_data) ----
+# Baked into /etc/kokkok/env on the instance and read by systemd.
 #
-# Post-Supabase-cutoff (2026-06-30): both variables are allowed to be
-# empty. PR #328 made the browser/server clients non-throwing with a
-# placeholder fallback, so an empty value here just produces unused
-# placeholder env on EC2 — no crash. The values still flow into
-# /etc/kokkok/env so the app can dial Supabase if the operator
-# explicitly puts back a working pair (emergency rollback only).
-variable "next_public_supabase_url" {
-  type    = string
-  default = ""
-}
-
-variable "next_public_supabase_anon_key" {
-  type      = string
-  sensitive = true
-  default   = ""
-}
+# 2026-06-30: next_public_supabase_url + next_public_supabase_anon_key
+# variables were removed once Supabase was decommissioned. The browser
+# Supabase client (src/lib/supabase/browser.ts) falls back to a
+# placeholder when env is absent, and every call site is dispatcher-
+# gated to RDS/Cognito/S3 — no dead env needed in user_data.
 
 variable "openai_api_key" {
   type      = string
