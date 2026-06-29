@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 export interface TopStripeBannerData {
   is_active: boolean;
@@ -57,8 +58,9 @@ export default function TopStripeBanner({ data: serverData }: Props) {
       {data.text}
     </div>
   );
-  if (data.link_url) {
-    return <Link href={data.link_url} className="block hover:opacity-90 transition-opacity">{inner}</Link>;
+  const safeHref = safeUrl(data.link_url);
+  if (safeHref !== '#') {
+    return <Link href={safeHref} className="block hover:opacity-90 transition-opacity">{inner}</Link>;
   }
   return inner;
 }

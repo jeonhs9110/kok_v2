@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 export interface PromoBanner {
   id: string;
@@ -43,12 +44,15 @@ export default function PromoBannersSection({ banners: serverBanners }: Props) {
     <section className="py-8 md:py-12">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-3 md:gap-5">
-          {display.map((banner) => (
+          {display.map((banner) => {
+            const href = safeUrl(banner.link_url);
+            const isExternal = /^https?:\/\//i.test(href);
+            return (
             <Link
               key={banner.id}
-              href={banner.link_url || '#'}
-              target={banner.link_url?.startsWith('http') ? '_blank' : undefined}
-              rel={banner.link_url?.startsWith('http') ? 'noopener noreferrer' : undefined}
+              href={href}
+              target={isExternal ? '_blank' : undefined}
+              rel={isExternal ? 'noopener noreferrer' : undefined}
               className="relative block aspect-square overflow-hidden rounded-xl group isolate"
             >
               {banner.image_url ? (
@@ -72,7 +76,8 @@ export default function PromoBannersSection({ banners: serverBanners }: Props) {
               {/* Hover overlay */}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

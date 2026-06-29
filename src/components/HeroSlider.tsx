@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Lang } from '@/lib/i18n/types';
 import type { CarouselSlide } from '@/lib/api/carousel';
 import { fontFamilyForKey, anchorToObjectPosition, anchorTextStyle, resolveAnchor } from '@/lib/typography/options';
+import { safeUrl } from '@/lib/url/safeUrl';
 
 
 /**
@@ -528,29 +529,35 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
 
             return (
               <div key={slide.id} className="flex-[0_0_100%] min-w-0 h-full relative" style={isFullpage ? undefined : { backgroundColor: slide.bgColor }}>
-                {slide.linkUrl ? (
-                  slide.linkUrl.startsWith('http') ? (
+                {(() => {
+                  const safe = safeUrl(slide.linkUrl);
+                  if (safe === '#') return inner;
+                  const isExternal = /^https?:\/\//i.test(safe);
+                  if (isExternal) {
                     // External URL → plain <a> so Next.js doesn't try to
                     // prefetch a remote origin.
-                    <a
-                      href={slide.linkUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block w-full h-full select-text"
-                      draggable={false}
-                    >
-                      {inner}
-                    </a>
-                  ) : (
+                    return (
+                      <a
+                        href={safe}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full h-full select-text"
+                        draggable={false}
+                      >
+                        {inner}
+                      </a>
+                    );
+                  }
+                  return (
                     <Link
-                      href={slide.linkUrl}
+                      href={safe}
                       className="block w-full h-full select-text"
                       draggable={false}
                     >
                       {inner}
                     </Link>
-                  )
-                ) : inner}
+                  );
+                })()}
               </div>
             );
           })}
