@@ -372,13 +372,41 @@ export async function deleteProductInPg(productId: string): Promise<boolean> {
 }
 
 // ─── users (admin role + delete) ─────────────────────────────────
+/**
+ * Set the role on a public.users row. Self-heals: if no users row
+ * exists for this id (post-cutover Cognito signup that landed before
+ * PR #318 created the row in complete-registration), pull the email
+ * from customer_profiles and INSERT the users row with the new role
+ * inline. Without this, an operator promoting one of those orphan
+ * users would see ok=false / "0 rows updated" with no obvious cause —
+ * the role would be flipped in Cognito (the group sync still fires
+ * upstream) but the RDS row says they're still 'user', which then
+ * shows up wrong on /admin/users.
+ *
+ * Returns true when the desired role is in place after the call,
+ * regardless of whether we updated or inserted.
+ */
 export async function setUserRoleInPg(userId: string, role: 'admin' | 'user'): Promise<boolean> {
   const pool = getPgPool();
-  const { rowCount } = await pool.query(
+  const upd = await pool.query(
     `UPDATE public.users SET role = $2 WHERE id = $1`,
     [userId, role],
   );
-  return (rowCount ?? 0) > 0;
+  if ((upd.rowCount ?? 0) > 0) return true;
+  // No row yet — look up the email from customer_profiles and insert
+  // a fresh public.users row carrying the requested role.
+  const profile = await pool.query<{ email: string | null }>(
+    `SELECT email FROM public.customer_profiles WHERE id = $1`,
+    [userId],
+  );
+  const email = profile.rows[0]?.email ?? null;
+  const ins = await pool.query(
+    `INSERT INTO public.users (id, email, role, is_verified, created_at)
+       VALUES ($1, $2, $3, true, NOW())
+       ON CONFLICT (id) DO UPDATE SET role = EXCLUDED.role`,
+    [userId, email, role],
+  );
+  return (ins.rowCount ?? 0) > 0;
 }
 
 /**
