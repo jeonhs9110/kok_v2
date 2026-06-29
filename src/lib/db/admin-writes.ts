@@ -177,13 +177,39 @@ export async function updatePostInPg(postId: string, input: UpdatePostInput): Pr
   return (rowCount ?? 0) > 0;
 }
 
+/**
+ * Delete a post AND every comment that hangs off it. Pre-fix this
+ * function only deleted the post row; comments stayed in the table with
+ * a now-dangling post_id reference. Because /api/customer/comments?postId=
+ * returns whatever rows match by post_id without checking post
+ * existence, those orphans wouldn't render anywhere visible (the post
+ * page is gone) but they kept accumulating row-by-row on every admin
+ * post-delete. Same effect for the customer-initiated post DELETE which
+ * uses its own DELETE statement (see /api/customer/posts/[id]/route.ts —
+ * a sibling fix mirrors the cascade there).
+ *
+ * Single transaction so the comment delete + post delete commit
+ * atomically — partial state on a failure would leave dangling
+ * post_id references the operator now has no UI to clean up.
+ */
 export async function deletePostInPg(postId: string): Promise<boolean> {
   const pool = getPgPool();
-  const { rowCount } = await pool.query(
-    `DELETE FROM public.posts WHERE id = $1`,
-    [postId],
-  );
-  return (rowCount ?? 0) > 0;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`DELETE FROM public.comments WHERE post_id = $1`, [postId]);
+    const { rowCount } = await client.query(
+      `DELETE FROM public.posts WHERE id = $1`,
+      [postId],
+    );
+    await client.query('COMMIT');
+    return (rowCount ?? 0) > 0;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // ─── site_settings ───────────────────────────────────────────────

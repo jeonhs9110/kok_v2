@@ -183,6 +183,17 @@ export async function PATCH(req: Request, { params }: Ctx) {
   return NextResponse.json({ ok: true });
 }
 
+// Tables whose self-referential parent_id should cascade-delete to
+// children on parent DELETE. The /admin UIs for these tables already
+// promise the cascade in their confirm modals ("이 메뉴와 모든 서브메뉴가
+// 삭제됩니다" / "이 카테고리와 모든 서브카테고리가 삭제됩니다") — without
+// the cascade those subrows were left orphaned with a dangling parent_id.
+// `categories` has its own dedicated route at /api/admin/categories
+// (see that file's custom DELETE) so it's NOT included here — the
+// crud-route cascade is just for the tables routed exclusively through
+// this generic endpoint, which today is `menus`.
+const CASCADE_PARENT_ID_TABLES = new Set<string>(['menus']);
+
 export async function DELETE(req: Request, { params }: Ctx) {
   const denied = await requireAdmin();
   if (denied) return denied;
@@ -195,7 +206,32 @@ export async function DELETE(req: Request, { params }: Ctx) {
     try {
       const { getPgPool } = await import('@/lib/db/pool');
       const pool = getPgPool();
-      await pool.query(`DELETE FROM public.${quoteIdent(table)} WHERE id = $1`, [id]);
+      if (CASCADE_PARENT_ID_TABLES.has(table)) {
+        // Transactional cascade — children first, then parent. If the
+        // parent delete fails the whole thing rolls back so we don't
+        // leave a broken half-state where the children are gone but
+        // the parent stayed.
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          await client.query(
+            `DELETE FROM public.${quoteIdent(table)} WHERE parent_id = $1`,
+            [id],
+          );
+          await client.query(
+            `DELETE FROM public.${quoteIdent(table)} WHERE id = $1`,
+            [id],
+          );
+          await client.query('COMMIT');
+        } catch (err) {
+          await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
+          throw err;
+        } finally {
+          client.release();
+        }
+      } else {
+        await pool.query(`DELETE FROM public.${quoteIdent(table)} WHERE id = $1`, [id]);
+      }
       return NextResponse.json({ ok: true });
     } catch (err) {
       console.error(`[admin/crud/${table}] pg delete failed:`, err);
@@ -204,6 +240,11 @@ export async function DELETE(req: Request, { params }: Ctx) {
   }
 
   if (!supabase) return NextResponse.json({ ok: false }, { status: 500 });
+  // Supabase fallback (dev / pre-cutover). Mirror the cascade so dev
+  // behavior matches prod — keeps test data clean.
+  if (CASCADE_PARENT_ID_TABLES.has(table)) {
+    await supabase.from(table).delete().eq('parent_id', id);
+  }
   const { error } = await supabase.from(table).delete().eq('id', id);
   if (error) return NextResponse.json({ ok: false }, { status: 500 });
   return NextResponse.json({ ok: true });
