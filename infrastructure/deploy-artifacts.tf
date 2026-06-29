@@ -1,17 +1,26 @@
 # S3 bucket holding the GitHub-Actions-built Next.js artifact that EC2
-# user-data downloads on boot. Phase 2 of the build/deploy split.
+# user_data downloads on boot. Phase 2 of the build/deploy split.
 #
-# INTERIM SECURITY POSTURE: bucket is public-read on `latest.tar.gz` so EC2
-# can curl it without an IAM role (jeonhs9110 lacks iam:PassRole). Build
-# artifacts contain only client-public JS — server-side env (OPENAI_API_KEY,
-# etc.) is injected separately on the EC2 via terraform variables, never
-# baked into the artifact. So "public artifact" exposure is equivalent to
-# the client JS the storefront already serves.
+# WHY PUBLIC-READ: the kokkok-ec2-role instance profile that EC2
+# attaches to does NOT have `s3:GetObject` on this bucket — the
+# kokkok-ec2-s3 policy (provisioned by Dynamic Solution) is currently
+# scoped to kokkok-media only. A 2026-06-30 attempt to switch the
+# user_data fetch from `curl` to `aws s3 cp` returned 403 Forbidden
+# on the role-signed HeadObject. Until 권대영 adds the deploy bucket
+# to the policy, EC2 reaches the artifact via anonymous HTTPS — the
+# bucket therefore needs a permissive public-read on the two artifact
+# keys. (Mailbox for the request: zero@dynamicsolution.co.kr.)
 #
-# CLEAN MODE (when 권대영 grants IAM): drop the public_access_block override +
-# bucket_policy, add aws_iam_instance_profile.ec2_app to aws_instance.app,
-# switch EC2 user-data from `curl` to `aws s3 cp`. See
-# [[pending-email-to-daeyoung-iam-for-phase2]] memory.
+# Risk surface: the tarball contains only client-public JS — server-
+# side env (OPENAI_API_KEY, DATABASE_URL, Cognito IDs) is injected
+# separately on the EC2 via terraform variables + Secrets Manager,
+# never baked into the artifact. So "public artifact" exposure is
+# equivalent to the client JS the storefront already serves.
+#
+# CLEAN MODE (when the role gains the permission): drop the public
+# read policy, flip block_public_policy = true, and switch the
+# user_data fetch in ec2.tf back to `aws s3 cp` (the AL2023 AMI
+# ships the AWS CLI; no install step needed).
 
 resource "aws_s3_bucket" "deploy_artifacts" {
   bucket = "${var.project_name}-deploy-artifacts"
@@ -24,18 +33,18 @@ resource "aws_s3_bucket_versioning" "deploy_artifacts" {
   versioning_configuration { status = "Enabled" }
 }
 
-# Allow public read on just the artifact key — block everything else.
+# Allow public read on just the artifact keys — block everything else.
 resource "aws_s3_bucket_public_access_block" "deploy_artifacts" {
   bucket = aws_s3_bucket.deploy_artifacts.id
 
   block_public_acls       = true
   ignore_public_acls      = true
-  block_public_policy     = false  # required so bucket_policy below can apply
+  block_public_policy     = false # required so bucket_policy below can apply
   restrict_public_buckets = false
 }
 
-# Public-read policy scoped to specific keys only — `latest.tar.gz` for
-# normal deploys and the `builds/*` history for rollback.
+# Public-read policy scoped to specific keys only — `latest.tar.gz`
+# for normal deploys and the `builds/*` history for rollback.
 data "aws_iam_policy_document" "deploy_artifacts_public_read" {
   statement {
     sid    = "PublicReadArtifacts"
@@ -86,6 +95,6 @@ output "deploy_artifacts_bucket" {
 }
 
 output "deploy_artifacts_latest_url" {
-  description = "Public URL the EC2 user-data should curl on boot."
+  description = "Public URL the EC2 user-data curls on boot."
   value       = "https://${aws_s3_bucket.deploy_artifacts.bucket}.s3.${var.region}.amazonaws.com/latest.tar.gz"
 }

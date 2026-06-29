@@ -13,10 +13,6 @@ output "ec2_instance_id" {
   value       = aws_instance.app.id
 }
 
-output "s3_storage_bucket" {
-  value = aws_s3_bucket.storage.bucket
-}
-
 output "cognito_user_pool_id" {
   description = "Cognito user pool ID. Goes in NEXT_PUBLIC_COGNITO_USER_POOL_ID on EC2."
   value       = aws_cognito_user_pool.main.id

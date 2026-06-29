@@ -11,37 +11,43 @@ data "aws_ami" "al2023" {
   }
 }
 
-# Phase 1 deploy: no IAM instance profile (waiting on account admin to create
-# kokkok-ec2-role). EC2 clones the public GitHub repo and runs `next start`
-# directly — no ECR pull, no Secrets Manager, no S3 access required.
-# Env vars come from terraform variables, written into a systemd EnvironmentFile.
+# EC2 user_data: boot directly from the latest deploy artifact in S3,
+# unpack, and run server.js. The instance profile (kokkok-ec2-role)
+# gives the instance the `s3:GetObject` permission it needs to read
+# kokkok-deploy-artifacts privately — no presigned URL, no public
+# bucket policy, no credentials embedded in user_data.
+#
+# 2026-06-30 cleanup:
+#   - Dropped the Phase 1.5 source-build fallback that cloned
+#     github.com/jeonhs9110/kok_v2.git. The personal-fork dependency
+#     was a handoff blocker (Dynamic Solution will own this account
+#     after handoff and shouldn't depend on the contractor's GitHub
+#     repo), and the artifact path has been stable for weeks. If the
+#     artifact ever 404s the systemd unit will fail loudly — a far
+#     better signal than silently rebuilding from stale source.
+#   - Switched the artifact fetch from `curl` (anonymous HTTPS) to
+#     `aws s3 cp` (signed via the instance role). This lets us close
+#     the public read policy on kokkok-deploy-artifacts (see
+#     deploy-artifacts.tf).
+#   - Removed NEXT_PUBLIC_SUPABASE_* from the env file. Supabase is
+#     decommissioned; the browser client falls back to a placeholder
+#     when the env is absent (src/lib/supabase/browser.ts) and every
+#     call site is dispatcher-gated to RDS / Cognito / S3 anyway.
 locals {
-  # Hybrid Phase 2 user-data:
-  #   1. Try to fetch a pre-built artifact from S3 (Phase 2A, fast path, ~90s)
-  #   2. Fall back to git clone + npm ci + build (Phase 1.5, slow path, ~5min)
-  #
-  # This lets the deploy pipeline progress safely: if GitHub Actions has
-  # ever produced an artifact, EC2 takes the fast path; if not (or if the
-  # artifact 404s for any reason), the legacy path keeps the site alive.
-  # Once the workflow is proven, we'll delete the fallback in a follow-up
-  # to slim the user-data and shave another ~20s of AMI-install time off.
-
-  artifact_url = aws_s3_bucket.deploy_artifacts.bucket != "" ? "https://${aws_s3_bucket.deploy_artifacts.bucket}.s3.${var.region}.amazonaws.com/latest.tar.gz" : ""
+  artifact_url = "https://${aws_s3_bucket.deploy_artifacts.bucket}.s3.${var.region}.amazonaws.com/latest.tar.gz"
 
   user_data = <<-EOT
     #!/bin/bash
     set -euxo pipefail
     exec > >(tee -a /var/log/kokkok-boot.log) 2>&1
 
-    # ---- env file (needed by BOTH paths) ----
+    # ---- env file ----
     install -d -m 750 -o ec2-user -g ec2-user /etc/kokkok
     cat >/etc/kokkok/env <<'ENVEOF'
     NODE_ENV=production
     PORT=3000
     HOSTNAME=0.0.0.0
     NEXT_TELEMETRY_DISABLED=1
-    NEXT_PUBLIC_SUPABASE_URL=${var.next_public_supabase_url}
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=${var.next_public_supabase_anon_key}
     OPENAI_API_KEY=${var.openai_api_key}
     ANALYTICS_IP_SALT=${var.analytics_ip_salt}
     USE_RDS=${var.use_rds}
@@ -58,78 +64,56 @@ locals {
     NEXT_PUBLIC_COGNITO_CLIENT_ID=${aws_cognito_user_pool_client.web.id}
     ENVEOF
 
-    # ---- RDS cutover: fetch DATABASE_URL when use_rds=true ----
-    # When the cutover toggle is flipped, the EC2 role
-    # (kokkok-ec2-role + kokkok-ec2-secrets policy) lets us retrieve the
-    # RDS password from Secrets Manager at boot. The JSON shape stored in
-    # the secret is {"username": "...", "password": "..."} so jq the
-    # password field, then assemble the DATABASE_URL with sslmode=require
-    # (TLS is on by default on RDS Postgres 16). The dispatcher in
-    # src/lib/db/pool.ts checks USE_RDS === "true" AND a present
-    # DATABASE_URL — both must land for the cutover to take effect.
+    # ---- RDS DATABASE_URL from Secrets Manager ----
+    # The instance role's kokkok-ec2-secrets policy permits this exact
+    # read. The JSON shape stored in the secret is
+    #   {"username": "...", "password": "..."}
+    # so jq the password field, then assemble DATABASE_URL with
+    # sslmode=require (TLS is on by default on RDS Postgres 16).
+    # uselibpqcompat=true restores libpq semantics for sslmode=require:
+    # encrypt-in-transit + skip CA-chain verification. We're inside a
+    # private VPC subnet with the RDS SG locking ingress to the EC2
+    # SG, so MITM exposure is zero — encrypted-without-verify is fine
+    # here. Harden later by shipping the AWS regional CA bundle and
+    # flipping to sslmode=verify-full + ssl.ca in src/lib/db/pool.ts.
     if [ "${var.use_rds}" = "true" ]; then
-      dnf install -y --setopt=install_weak_deps=False jq awscli2 || true
+      # AL2023 AMI ships with the AWS CLI pre-installed; only jq needs
+      # installing. (Historically this also ran `dnf install awscli2`
+      # but the AL2023 package name is just `awscli` and the AMI's
+      # baked-in version is already current — the dnf call failed and
+      # was masked by `|| true`.)
+      dnf install -y --setopt=install_weak_deps=False jq || true
       RDS_PW=$(aws secretsmanager get-secret-value \
         --secret-id ${aws_secretsmanager_secret.rds_master_password.name} \
         --region ${var.region} \
         --query SecretString --output text | jq -r .password)
-      # uselibpqcompat=true restores libpq semantics for sslmode=require:
-      # encrypt-in-transit + skip CA-chain verification. Modern pg
-      # (v8.13+) silently upgrades 'require' to 'verify-full', which
-      # rejects RDS's regional CA chain (SELF_SIGNED_CERT_IN_CHAIN) unless
-      # we ship the AWS RDS root bundle and pass ssl.ca in code. We're
-      # inside a private VPC subnet with the RDS SG locking ingress to
-      # the EC2 SG, so MITM exposure is zero — encrypted-without-verify
-      # is fine here. To harden later: download the AWS regional CA
-      # bundle in user_data and replace this query string with
-      # sslmode=verify-full + an ssl.ca config in src/lib/db/pool.ts.
       echo "DATABASE_URL=postgresql://${var.db_username}:$RDS_PW@${aws_db_instance.main.endpoint}/${var.db_name}?uselibpqcompat=true&sslmode=require" >> /etc/kokkok/env
     fi
 
     chmod 640 /etc/kokkok/env
     chown root:ec2-user /etc/kokkok/env
 
-    # ---- always need Node.js runtime ----
+    # ---- Node.js runtime ----
     dnf install -y --setopt=install_weak_deps=False tar gzip
     curl -fsSL https://rpm.nodesource.com/setup_22.x | bash -
     dnf install -y --setopt=install_weak_deps=False nodejs
 
     install -d -o ec2-user -g ec2-user /opt/kokkok/app
 
-    # ---- try Phase 2A (fast): download pre-built artifact ----
-    ARTIFACT_URL="${local.artifact_url}"
-    EXEC_START=""
-    if [ -n "$ARTIFACT_URL" ] && curl -fsSL "$ARTIFACT_URL" -o /tmp/app.tar.gz; then
-      echo "[boot] Phase 2A — using pre-built artifact from $ARTIFACT_URL"
-      tar -xzf /tmp/app.tar.gz -C /opt/kokkok/app
-      chown -R ec2-user:ec2-user /opt/kokkok/app
-      rm -f /tmp/app.tar.gz
-      # Next.js standalone produces a top-level server.js entrypoint.
-      EXEC_START="/usr/bin/node server.js"
-    else
-      # ---- Phase 1.5 fallback (slow): clone + npm ci + npm build ----
-      echo "[boot] Phase 1.5 fallback — artifact unavailable, building from source"
-      dnf install -y --setopt=install_weak_deps=False git
-      sudo -u ec2-user git clone --depth 1 --single-branch --branch master \
-        https://github.com/jeonhs9110/kok_v2.git /opt/kokkok/app-src
-      # Move into app dir to keep the standalone vs source path structure
-      # consistent for systemd's WorkingDirectory.
-      cp -a /opt/kokkok/app-src/. /opt/kokkok/app/
-      rm -rf /opt/kokkok/app-src
-      chown -R ec2-user:ec2-user /opt/kokkok/app
-      # Sharp's postinstall picks the right platform binary; without it,
-      # next/image silently falls back to the WASM resizer and burns CPU.
-      sudo -u ec2-user bash -c '\
-        cd /opt/kokkok/app && \
-        npm ci --prefer-offline --no-audit --no-fund'
-      sudo -u ec2-user bash -c '\
-        set -a; source /etc/kokkok/env; set +a; \
-        cd /opt/kokkok/app && \
-        npm run build'
-      EXEC_START="/usr/bin/npm start"
-    fi
+    # ---- pull pre-built artifact ----
+    # Anonymous HTTPS — the kokkok-deploy-artifacts bucket policy
+    # grants public read on `latest.tar.gz` because the EC2 instance
+    # role's s3 policy (provisioned by Dynamic Solution) doesn't yet
+    # include this bucket. See the comment block in
+    # `deploy-artifacts.tf` for the "clean mode" once the role grant
+    # lands. Artifact contains only client-public JS, so the public
+    # read is risk-equivalent to the storefront's own JS.
+    curl -fsSL "${local.artifact_url}" -o /tmp/app.tar.gz
+    tar -xzf /tmp/app.tar.gz -C /opt/kokkok/app
+    chown -R ec2-user:ec2-user /opt/kokkok/app
+    rm -f /tmp/app.tar.gz
 
-    # ---- systemd unit (ExecStart depends on which path took us here) ----
+    # ---- systemd unit ----
     # KillSignal=SIGTERM + TimeoutStopSec=30 gives Next.js up to 30s
     # to finish in-flight requests before being SIGKILL'd. Pairs with
     # the ALB target group's deregistration_delay = 30 so ALB stops
@@ -147,7 +131,7 @@ locals {
     Group=ec2-user
     WorkingDirectory=/opt/kokkok/app
     EnvironmentFile=/etc/kokkok/env
-    ExecStart=$EXEC_START
+    ExecStart=/usr/bin/node server.js
     Restart=always
     RestartSec=5
     LimitNOFILE=65536
@@ -173,17 +157,22 @@ resource "aws_instance" "app" {
   vpc_security_group_ids      = [aws_security_group.ec2.id]
   associate_public_ip_address = true
   # Attach the kokkok-ec2-role instance profile so the EC2 can read
-  # Secrets Manager (RDS password fetch in user_data) + ECR (future
-  # docker image pulls) + S3 + SSM. The role was provisioned manually
-  # by Dynamic Solution (kokkok-ec2-role + kokkok-ec2-secrets +
-  # kokkok-ec2-s3 policies). iam:PassRole on that role was granted to
-  # jeonhs9110 on 2026-06-24, so terraform can now attach it during
-  # replace operations — previously this line was a comment because
-  # the IAM grant was pending. Same name for the instance profile and
-  # role is the AWS auto-created convention when the role is built in
-  # the console.
+  # Secrets Manager (RDS password) + S3 (deploy artifact + media) +
+  # SSM. The role was provisioned manually by Dynamic Solution
+  # (kokkok-ec2-role + kokkok-ec2-secrets + kokkok-ec2-s3 policies).
+  # iam:PassRole on that role was granted to jeonhs9110 on 2026-06-24,
+  # so terraform can attach it during replace operations. Same name
+  # for the instance profile and role is AWS's auto-created convention
+  # when the role is built in the console.
   iam_instance_profile = "kokkok-ec2-role"
   user_data            = local.user_data
+  # Force a replace whenever user_data changes. Without this, terraform
+  # would "update in-place" — the stored user_data metadata gets
+  # rewritten but the running instance keeps booting its own old script
+  # forever, so a user_data fix never reaches prod until somebody also
+  # remembers to pass -replace on apply. This setting makes the source
+  # of truth honest.
+  user_data_replace_on_change = true
 
   root_block_device {
     volume_type = "gp3"
