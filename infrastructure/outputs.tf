@@ -36,3 +36,10 @@ output "cognito_admin_group_name" {
   description = "Group name to check for /admin/* gating. Middleware reads `cognito:groups` claim for this string."
   value       = aws_cognito_user_group.admins.name
 }
+
+# SES identity ARN — referenced by Cognito's email_configuration when
+# use_ses_for_cognito flips to true.
+output "ses_domain_arn" {
+  description = "ARN of the SES sending identity. Passed into Cognito's email_configuration.source_arn when use_ses_for_cognito=true."
+  value       = aws_ses_domain_identity.kokkokgarden.arn
+}

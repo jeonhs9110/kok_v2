@@ -190,3 +190,29 @@ variable "alerts_email" {
   type        = string
   default     = "jeonhs9110@gmail.com"
 }
+
+# ---- SES email deliverability cutover ----
+# When true, Cognito's verification + reset emails are sent through the
+# SES domain identity (noreply@kokkokgarden.com) instead of the default
+# Cognito sender (no-reply@verificationemail.com). The default sender
+# has no DKIM and no domain match, so every email lands in Gmail/Outlook
+# spam — confirmed by the first real registration attempt 2026-06-30.
+#
+# DO NOT flip to true until BOTH conditions are met:
+#   1. The DKIM CNAMEs from `terraform output ses_dns_records` are
+#      visible at Vercel DNS AND SES has marked the domain "Verified"
+#      (console: SES → Verified identities → kokkokgarden.com).
+#   2. SES production access has been granted by AWS Support (file
+#      via `aws sesv2 put-account-details --production-access-enabled`
+#      — sandbox-mode SES can only send to addresses YOU pre-verified,
+#      which doesn't fix the customer-facing problem).
+#
+# Apply path once both conditions are met:
+#   terraform apply -var="use_ses_for_cognito=true"
+# (No EC2 replace needed — Cognito reads email_configuration on every
+# OutgoingMessage call.)
+variable "use_ses_for_cognito" {
+  description = "If true, Cognito sends verification/reset emails through SES from noreply@kokkokgarden.com. Default false until DNS is verified AND SES production access is granted."
+  type        = bool
+  default     = false
+}
