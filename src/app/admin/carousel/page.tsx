@@ -100,7 +100,7 @@ export default function CarouselAdminPage() {
         const { error } = await supabase.from('carousel_slides').delete().eq('id', id);
         if (error) throw error;
       }
-      revalidateHomepageData('carousel');
+      await revalidateHomepageData('carousel');
     } catch (err) {
       console.error('[admin/carousel] delete failed:', err);
       setSlides(previous);
@@ -126,7 +126,7 @@ export default function CarouselAdminPage() {
         const { error } = await supabase.from('carousel_slides').update({ is_active: !current }).eq('id', id);
         if (error) throw error;
       }
-      revalidateHomepageData('carousel');
+      await revalidateHomepageData('carousel');
     } catch (err) {
       console.error('[admin/carousel] toggle failed:', err);
       setSlides(previous);
@@ -165,7 +165,7 @@ export default function CarouselAdminPage() {
         const failed = results.find(r => r.error);
         if (failed?.error) throw failed.error;
       }
-      revalidateHomepageData('carousel');
+      await revalidateHomepageData('carousel');
     } catch (err) {
       console.error('[admin/carousel] reorder persist failed:', err);
       setSlides(previous);

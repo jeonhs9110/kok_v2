@@ -131,7 +131,7 @@ export function useInstagram() {
     setIsSavingConfig(true);
     try {
       await putInstagramConfig({ handle, description, rss_feed_url: rssFeedUrl });
-      revalidateHomepageData('instagram');
+      await revalidateHomepageData('instagram');
       toast.show('인스타그램 설정이 저장되었습니다', 'success');
     } catch { toast.show('저장에 실패했습니다.', 'error'); }
     finally { setIsSavingConfig(false); }
@@ -146,7 +146,7 @@ export function useInstagram() {
         header_text_color: headerTextColor || null,
         header_bg_color: headerBgEnabled ? headerBgColor : null,
       });
-      revalidateHomepageData('instagram');
+      await revalidateHomepageData('instagram');
       setHeaderSaved(true);
       setTimeout(() => setHeaderSaved(false), 2000);
     } catch (err) {
@@ -166,7 +166,7 @@ export function useInstagram() {
         bg_media_url: bg.mediaUrl,
         bg_media_type: bg.mediaType,
       });
-      revalidateHomepageData('instagram');
+      await revalidateHomepageData('instagram');
       setBgSaved(true);
       setTimeout(() => setBgSaved(false), 2000);
     } catch (err) {
@@ -234,7 +234,7 @@ export function useInstagram() {
           setPosts(prev => prev.map((p, i) => i === slot ? { ...p, id: data.id } : p));
         }
       }
-      revalidateHomepageData('instagram');
+      await revalidateHomepageData('instagram');
     } catch (err) {
       const msg = err instanceof Error ? err.message : '알 수 없는 오류';
       console.error('Instagram save error:', err);
@@ -252,7 +252,7 @@ export function useInstagram() {
       } else if (supabase) {
         await supabase.from('instagram_posts').delete().eq('id', post.id);
       }
-      revalidateHomepageData('instagram');
+      await revalidateHomepageData('instagram');
     }
     setPosts(prev => prev.map((p, i) => i === slot ? emptyPost(i) : p));
   };

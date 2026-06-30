@@ -166,8 +166,8 @@ export default function PromoBannersAdminPage() {
           if (error) throw error;
         }
       }
+      await revalidateHomepageData('promo_banners');
       toast.show(isNew ? '배너가 저장되었습니다' : '배너가 수정되었습니다', 'success');
-      revalidateHomepageData('promo_banners');
     } catch (e) {
       console.error(e);
       toast.show('저장에 실패했습니다.', 'error');
@@ -190,7 +190,7 @@ export default function PromoBannersAdminPage() {
         await supabase.from('promo_banners').delete().eq('id', banner.id);
       }
       setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, id: `new-${b.sort_order}`, image_url: '', link_url: '' } : b));
-      revalidateHomepageData('promo_banners');
+      await revalidateHomepageData('promo_banners');
     } catch {
       toast.show('삭제에 실패했습니다.', 'error');
     }
