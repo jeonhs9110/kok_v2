@@ -133,7 +133,13 @@ export function makeAdminTableRoute(config: AdminTableConfig) {
             id,
             (body as { is_active: boolean }).is_active,
           );
-          return NextResponse.json({ ok });
+          // 0-rows-affected is "the row doesn't exist anymore" — return
+          // 404 so client `res.ok` checks see the failure. Previously
+          // this returned 200 with { ok: false } in the body, but every
+          // admin hook only inspects res.ok (HTTP status), so the
+          // operator saw success when nothing was updated.
+          if (!ok) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+          return NextResponse.json({ ok: true });
         } catch (err) {
           console.error(`[api/admin/${config.table} PATCH toggle] failed:`, err);
           return NextResponse.json({ error: 'toggle_failed' }, { status: 500 });
@@ -146,7 +152,8 @@ export function makeAdminTableRoute(config: AdminTableConfig) {
       try {
         const { genericUpdateInPg } = await import('@/lib/db/admin-writes');
         const ok = await genericUpdateInPg(config.table, id, payload);
-        return NextResponse.json({ ok });
+        if (!ok) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+        return NextResponse.json({ ok: true });
       } catch (err) {
         console.error(`[api/admin/${config.table} PATCH] failed:`, err);
         return NextResponse.json({ error: 'update_failed' }, { status: 500 });
@@ -162,7 +169,12 @@ export function makeAdminTableRoute(config: AdminTableConfig) {
       try {
         const { genericDeleteInPg } = await import('@/lib/db/admin-writes');
         const ok = await genericDeleteInPg(config.table, id);
-        return NextResponse.json({ ok });
+        // Same 0-rows-affected handling as PATCH above — the row was
+        // already gone (another operator deleted it, or the id was
+        // never valid). Return 404 so the client's res.ok check
+        // surfaces the discrepancy.
+        if (!ok) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+        return NextResponse.json({ ok: true });
       } catch (err) {
         console.error(`[api/admin/${config.table} DELETE] failed:`, err);
         return NextResponse.json({ error: 'delete_failed' }, { status: 500 });

@@ -61,11 +61,17 @@ export async function PUT(request: Request) {
       `SELECT id FROM public.shorts_config LIMIT 1`,
     );
     if (existing.rows[0]) {
+      // Same rowCount-discard bug as instagram-config: if the existing
+      // row gets deleted between our SELECT and UPDATE, the function
+      // returns false and we previously still replied { ok: true }.
+      // Throw so the catch below returns 500 and the client retries.
       const { genericUpdateInPg } = await import('@/lib/db/admin-writes');
-      await genericUpdateInPg('shorts_config', existing.rows[0].id, payload);
+      const updated = await genericUpdateInPg('shorts_config', existing.rows[0].id, payload);
+      if (!updated) throw new Error('shorts_config_update_no_rows');
     } else {
       const { genericInsertInPg } = await import('@/lib/db/admin-writes');
-      await genericInsertInPg('shorts_config', payload);
+      const inserted = await genericInsertInPg('shorts_config', payload);
+      if (!inserted) throw new Error('shorts_config_insert_failed');
     }
     return NextResponse.json({ ok: true });
   } catch (err) {

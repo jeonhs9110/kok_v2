@@ -10,20 +10,22 @@ interface CommentFormProps {
   onCancel?: () => void;
 }
 
-const lb: Record<string, { name: string; content: string; submit: string; cancel: string; namePh: string; contentPh: string }> = {
-  kr: { name: '이름', content: '내용', submit: '등록', cancel: '취소', namePh: '이름을 입력하세요', contentPh: '내용을 입력하세요' },
-  en: { name: 'Name', content: 'Comment', submit: 'Submit', cancel: 'Cancel', namePh: 'Enter your name', contentPh: 'Enter your comment' },
+const lb: Record<string, { name: string; content: string; submit: string; cancel: string; namePh: string; contentPh: string; error: string }> = {
+  kr: { name: '이름', content: '내용', submit: '등록', cancel: '취소', namePh: '이름을 입력하세요', contentPh: '내용을 입력하세요', error: '댓글 등록에 실패했어요. 잠시 후 다시 시도해주세요.' },
+  en: { name: 'Name', content: 'Comment', submit: 'Submit', cancel: 'Cancel', namePh: 'Enter your name', contentPh: 'Enter your comment', error: 'Could not submit your comment. Please try again.' },
 };
 
 export default function CommentForm({ postId, parentId, lang, onSubmitted, onCancel }: CommentFormProps) {
   const [authorName, setAuthorName] = useState('');
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const l = lb[lang] ?? lb['en'];
 
   const handleSubmit = async () => {
     if (!authorName.trim() || !content.trim()) return;
     setSubmitting(true);
+    setError(null);
     try {
       const isAdmin = typeof document !== 'undefined' && document.cookie.includes('kokkok_admin_auth=true');
       // Admin "notice"-style comments (is_admin_comment=true) only
@@ -41,11 +43,22 @@ export default function CommentForm({ postId, parentId, lang, onSubmitted, onCan
           ...(isAdmin ? { is_admin_comment: true } : {}),
         }),
       });
-      if (res.ok) {
-        setAuthorName('');
-        setContent('');
-        onSubmitted();
+      // Surface failures: previously a non-OK response or a network
+      // error left the form populated but with no signal. The reader
+      // expected to see their comment after the parent's onSubmitted
+      // refetch, didn't, and assumed the system ate it (correct guess —
+      // but they had no way to retry). Now: show an inline error AND
+      // keep the typed text so the customer can fix or retry.
+      if (!res.ok) {
+        setError(l.error);
+        return;
       }
+      setAuthorName('');
+      setContent('');
+      onSubmitted();
+    } catch (err) {
+      console.error('[comments] submit failed:', err);
+      setError(l.error);
     } finally {
       setSubmitting(false);
     }
@@ -84,6 +97,11 @@ export default function CommentForm({ postId, parentId, lang, onSubmitted, onCan
           </button>
         )}
       </div>
+      {error && (
+        <p role="alert" aria-live="polite" className="text-xs text-red-500 font-semibold">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
