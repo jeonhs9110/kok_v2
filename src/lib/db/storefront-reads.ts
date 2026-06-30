@@ -252,12 +252,20 @@ export async function getPostsByMenuPaginatedFromPg(
   return { posts: postsRows, total: Number(countRows[0]?.count ?? 0) };
 }
 
+// Cap per-post comment fetch at 500. Until pagination ships on the
+// post-detail page, a runaway thread (spam, abuse, or a viral post)
+// would otherwise pull the full table into memory and stall the
+// render — at 10× scale this is a real OOM cliff on a t4g.small.
+// 500 is well above any organic thread length and still bounded.
+const MAX_COMMENTS_PER_POST = 500;
+
 export async function getCommentsByPostFromPg(postId: string): Promise<CommentRow[]> {
   const pool = getPgPool();
   const { rows } = await pool.query<CommentRow>(
     `SELECT * FROM public.comments
       WHERE post_id = $1
-      ORDER BY created_at ASC`,
+      ORDER BY created_at ASC
+      LIMIT ${MAX_COMMENTS_PER_POST}`,
     [postId],
   );
   return rows;
@@ -333,12 +341,20 @@ export interface AdminUserRow {
   created_at: string;
 }
 
+// Hard ceiling on /admin/users list. Until the admin page implements
+// pagination, this caps the worst case at 5000 rows — the rendered
+// HTML table is already slow at that size, so failing to load past
+// this point would be a visible signal that the admin needs pagination.
+// CSV export is its own route + stream and is not bounded by this.
+const MAX_ADMIN_USERS_LIST = 5000;
+
 export async function getAllUsersFromPg(): Promise<AdminUserRow[]> {
   const pool = getPgPool();
   const { rows } = await pool.query<AdminUserRow>(
     `SELECT id, email, role, is_verified, created_at
        FROM public.users
-      ORDER BY created_at DESC`,
+      ORDER BY created_at DESC
+      LIMIT ${MAX_ADMIN_USERS_LIST}`,
   );
   return rows;
 }

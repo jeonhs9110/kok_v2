@@ -277,7 +277,12 @@ async function fetchAndFollowNaverRedirects(url: string, hops: number): Promise<
   const redirectMatch = html.match(/top\.location\.replace\(\s*['"]([^'"]+)['"]\s*\)/i);
   if (redirectMatch) {
     const next = redirectMatch[1].replace(/\\\//g, '/');
-    if (/^https?:\/\/(?:m\.)?(?:blog|post)\.naver\.com\b/i.test(next)) {
+    // Use NAVER_ALLOWED (defined above) directly instead of an inline
+    // regex — the inline version was slightly more permissive and made
+    // the two checks easy to drift apart on future edits. The recursive
+    // call also re-validates with NAVER_ALLOWED at line 251, so this is
+    // belt-and-suspenders, not the only gate.
+    if (NAVER_ALLOWED.test(next)) {
       return fetchAndFollowNaverRedirects(next, hops + 1);
     }
   }

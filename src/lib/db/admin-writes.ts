@@ -93,6 +93,14 @@ export async function genericSetActiveInPg(
   return (rowCount ?? 0) > 0;
 }
 
+// Hard ceiling for the generic admin CRUD list endpoint. Used by every
+// /api/admin/crud/<table> GET handler — without a LIMIT a malicious
+// admin (or a junior dev writing an admin page) could trigger an
+// unbounded SELECT * over products, posts, customer_profiles, etc.
+// At 10× scale (1000 products, 500 posts) the raw payload is still
+// fine inside this cap; beyond that, paginate the calling admin page.
+const GENERIC_LIST_HARD_CAP = 5000;
+
 export async function genericListInPg(
   table: string,
   orderBy: string = 'created_at',
@@ -100,7 +108,9 @@ export async function genericListInPg(
 ): Promise<Record<string, unknown>[]> {
   const pool = getPgPool();
   const { rows } = await pool.query(
-    `SELECT * FROM public.${quoteIdent(table)} ORDER BY ${quoteIdent(orderBy)} ${direction}`,
+    `SELECT * FROM public.${quoteIdent(table)}
+      ORDER BY ${quoteIdent(orderBy)} ${direction}
+      LIMIT ${GENERIC_LIST_HARD_CAP}`,
   );
   return rows as Record<string, unknown>[];
 }

@@ -63,14 +63,27 @@ export async function DELETE(_req: Request, { params }: Ctx) {
   if (!id) return NextResponse.json({ ok: false }, { status: 400 });
 
   if (process.env.USE_RDS === 'true') {
+    // Wrap in a transaction so the post + its comments are deleted
+    // atomically. Without this, deleting a post would leave orphan
+    // comment rows pointing at a non-existent post_id — invisible in
+    // the admin UI but they accumulate in the DB and would surface as
+    // dangling FK references on any future cleanup. The customer-side
+    // delete already does this; the admin path was the only outlier.
+    const { getPgPool } = await import('@/lib/db/pool');
+    const pool = getPgPool();
+    const client = await pool.connect();
     try {
-      const { getPgPool } = await import('@/lib/db/pool');
-      const pool = getPgPool();
-      await pool.query(`DELETE FROM public.posts WHERE id = $1`, [id]);
+      await client.query('BEGIN');
+      await client.query(`DELETE FROM public.comments WHERE post_id = $1`, [id]);
+      await client.query(`DELETE FROM public.posts WHERE id = $1`, [id]);
+      await client.query('COMMIT');
       return NextResponse.json({ ok: true });
     } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
       console.error('[admin/posts] pg delete failed:', err);
       return NextResponse.json({ ok: false }, { status: 500 });
+    } finally {
+      client.release();
     }
   }
 
