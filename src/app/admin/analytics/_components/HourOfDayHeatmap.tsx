@@ -25,10 +25,16 @@ export default function HourOfDayHeatmap({
   peakHour: number | null;
   peakDow: number | null;
 }) {
+  // Heatmap should be a 7×24 grid but the upstream loader sparse-fills
+  // (only writes a cell when there's at least one session), so missing
+  // rows / cells come through as `undefined`. Optional-chain the lookup
+  // and coalesce to 0 — without this, an empty Sunday row throws
+  // "Cannot read properties of undefined" on the analytics page render.
   let max = 0;
   for (let d = 0; d < 7; d++) {
     for (let h = 0; h < 24; h++) {
-      if (heatmap[d][h] > max) max = heatmap[d][h];
+      const v = heatmap[d]?.[h] ?? 0;
+      if (v > max) max = v;
     }
   }
   const peakLabel =
@@ -63,7 +69,7 @@ export default function HourOfDayHeatmap({
                     {day}
                   </div>
                   {Array.from({ length: 24 }, (_, h) => {
-                    const value = heatmap[dow][h];
+                    const value = heatmap[dow]?.[h] ?? 0;
                     const intensity = value / max;
                     const isPeak = dow === peakDow && h === peakHour;
                     return (

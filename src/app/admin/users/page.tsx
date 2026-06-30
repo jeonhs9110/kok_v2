@@ -16,14 +16,20 @@ export default function UsersAdminPage() {
   const { users, isLoading, isLive, source, toggleRole, deleteUser } = useUsers();
   const [search, setSearch] = useState('');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  // Track the signed-in super-admin's own userId so the table can
+  // disable role-toggle + delete on their OWN row — locking yourself out
+  // of admin (or deleting your own account) is a foot-gun that has no
+  // legitimate use case. Mutations must go through ANOTHER super-admin.
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
       try {
         const r = await fetch('/api/customer/me', { cache: 'no-store' });
         if (!r.ok) return;
-        const j = (await r.json()) as { isSuperAdmin?: boolean };
+        const j = (await r.json()) as { isSuperAdmin?: boolean; userId?: string };
         setIsSuperAdmin(!!j.isSuperAdmin);
+        setCurrentUserId(j.userId ?? null);
       } catch { /* leave false */ }
     })();
   }, []);
@@ -104,7 +110,13 @@ export default function UsersAdminPage() {
           ) : filtered.length === 0 ? (
             <EmptyState label={search ? '검색 결과가 없습니다' : '등록된 사용자가 없습니다'} />
           ) : (
-            <UsersTable users={filtered} onToggleRole={toggleRole} onDelete={deleteUser} canMutate={isSuperAdmin} />
+            <UsersTable
+              users={filtered}
+              onToggleRole={toggleRole}
+              onDelete={deleteUser}
+              canMutate={isSuperAdmin}
+              currentUserId={currentUserId}
+            />
           )}
         </div>
       </div>

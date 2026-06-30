@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireCustomer } from '@/lib/auth/requireCustomer';
+import { deriveStoredAuthorName } from '@/lib/customer/maskAuthor';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -30,7 +31,11 @@ export async function POST(req: Request) {
   // pattern in /api/admin/products.
   if (!title || typeof title !== 'string' || title.trim().length === 0 || title.length > MAX_TITLE) return NextResponse.json({ ok: false, error: 'invalid title' }, { status: 400 });
   if (!content || typeof content !== 'string' || content.trim().length === 0 || content.length > MAX_CONTENT) return NextResponse.json({ ok: false, error: 'invalid content' }, { status: 400 });
-  const name = (typeof author_name === 'string' ? author_name : auth.email ?? 'anonymous').slice(0, 80);
+  const name = deriveStoredAuthorName({
+    supplied: typeof author_name === 'string' ? author_name : null,
+    userId: auth.userId,
+    email: auth.email,
+  });
 
   if (process.env.USE_RDS === 'true') {
     try {

@@ -31,6 +31,29 @@ export async function requireAdmin(): Promise<NextResponse | null> {
 }
 
 /**
+ * Read the caller's Cognito sub (userId) without enforcing any role —
+ * used by routes that already passed requireSuperAdmin and need to
+ * cross-check the target id against the caller for self-mutation
+ * prevention. Returns null when the cookie / claims are absent.
+ */
+export async function getCallerUserId(): Promise<string | null> {
+  if (process.env.USE_COGNITO !== 'true') return null;
+  try {
+    const jar = await cookies();
+    const idToken = jar.get('cognito_id_token')?.value;
+    if (!idToken) return null;
+    const { verifyCognitoIdToken } = await import('./cognito');
+    const claims = await verifyCognitoIdToken(idToken);
+    if (!claims) return null;
+    const sub = (claims as { sub?: unknown }).sub;
+    return typeof sub === 'string' && sub.length > 0 ? sub : null;
+  } catch (err) {
+    console.error('[getCallerUserId] unexpected error:', err);
+    return null;
+  }
+}
+
+/**
  * Reusable gate for super-admin-only API routes (role mutation,
  * customer deletion, audit-log read, etc.). Returns null on pass,
  * a 401/403 NextResponse otherwise.

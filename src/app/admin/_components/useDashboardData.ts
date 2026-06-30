@@ -136,6 +136,14 @@ export function useDashboardData() {
         prevEnd,
       });
       const res = await fetch(`/api/admin/dashboard?${params}`, { cache: 'no-store' });
+      // Guard res.ok before parsing — a 401/403/500 response body might
+      // still be JSON (an error envelope) but never carries the `data`
+      // shape this hook expects. Without this, EMPTY skeleton stayed
+      // visible while the UI reported "loaded".
+      if (!res.ok) {
+        console.error(`[dashboard] fetchAll http ${res.status}`);
+        return;
+      }
       const json = (await res.json()) as { data?: DashboardData | null; source?: DashboardSource };
       setSource(json.source ?? null);
       if (json.data) setData(json.data);

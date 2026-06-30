@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { CreditCard } from 'lucide-react';
 import PaymentProviderCard, { type PaymentProvider } from './_components/PaymentProviderCard';
+import { useToast } from '@/components/admin/Toast';
 
 export default function PaymentsAdminPage() {
+  const toast = useToast();
   const [providers, setProviders] = useState<PaymentProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -32,22 +34,30 @@ export default function PaymentsAdminPage() {
 
   async function saveProvider(p: PaymentProvider) {
     setSaving(p.provider);
-    await fetch('/api/admin/crud/payment_providers_config', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: p.id,
-        patch: {
-          is_enabled: p.is_enabled,
-          api_key: p.api_key,
-          secret_key: p.secret_key,
-          merchant_id: p.merchant_id,
-        },
-      }),
-    });
-    setSaved(p.provider);
-    setTimeout(() => setSaved(null), 2000);
-    setSaving(null);
+    try {
+      const res = await fetch('/api/admin/crud/payment_providers_config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: p.id,
+          patch: {
+            is_enabled: p.is_enabled,
+            api_key: p.api_key,
+            secret_key: p.secret_key,
+            merchant_id: p.merchant_id,
+          },
+        }),
+      });
+      if (!res.ok) throw new Error(`http_${res.status}`);
+      setSaved(p.provider);
+      setTimeout(() => setSaved(null), 2000);
+      toast.show('결제 설정이 저장되었습니다.', 'success');
+    } catch (err) {
+      console.error('[admin/payments] save failed:', err);
+      toast.show('저장에 실패했습니다.', 'error');
+    } finally {
+      setSaving(null);
+    }
   }
 
   if (loading) return <div className="text-[#6b7280]">로딩 중...</div>;

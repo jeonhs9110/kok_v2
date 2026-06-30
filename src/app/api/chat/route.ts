@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
-import { getProducts } from '@/lib/api/products';
 import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 
 // Per-IP brake on the chatbot: 10 messages/min. Refactored
@@ -71,35 +71,66 @@ async function getChatbotConfig(): Promise<ChatbotConfig> {
   return DEFAULT_CONFIG;
 }
 
-async function getProductKnowledge(): Promise<string> {
-  // Use the canonical getProducts() dispatcher (RDS-first, Supabase
-  // fallback) instead of querying Supabase directly. Without this the
-  // chatbot was sending "Product data temporarily unavailable." to the
-  // LLM ever since the 2026-06-27 Supabase decommission — customers
-  // got generic K-beauty platitudes instead of catalog-specific
-  // recommendations. The .summary/.description casing matches the
-  // domain Product type from @/lib/api/products.
-  let products: Awaited<ReturnType<typeof getProducts>>;
-  try {
-    products = await getProducts();
-  } catch (err) {
-    console.error('[chat] getProducts failed:', err);
-    return 'Product data temporarily unavailable.';
-  }
-  const active = products.filter(p => p.is_active).slice(0, 30);
-  if (active.length === 0) return 'No products currently available.';
-  return active
-    .map((p, i) => {
-      const price = `₩${p.price.toLocaleString()}`;
-      const original = p.originalPrice && p.originalPrice > p.price
-        ? ` (original ₩${p.originalPrice.toLocaleString()})`
-        : '';
-      return `${i + 1}. ${p.name} — ${p.summary}
-   Ingredients: ${p.ingredient}
+/**
+ * Build the catalog string injected into the chatbot's system prompt.
+ *
+ * Previously this called `getProducts()` which `SELECT *`s every product
+ * row — including `detail_body` (rich text), `detail_components` (jsonb
+ * with image URLs), and the full image array. At 5 products today that's
+ * fine; at 500 products it's a multi-MB SELECT and JSON serialization
+ * per chat message, then 99% of the columns are thrown away here.
+ *
+ * 2026-06-30: switched to a lean RDS-only projection (only the columns
+ * actually used in the prompt) wrapped in `unstable_cache` so the same
+ * 30-product catalog string is reused across every chat message for
+ * 5 minutes. Cache tag `products` is the one admin saves already
+ * revalidate; new product saves invalidate the chat feed without a
+ * code change.
+ */
+const getProductKnowledgeCached = unstable_cache(
+  async (): Promise<string> => {
+    try {
+      const { getPgPool } = await import('@/lib/db/pool');
+      const pool = getPgPool();
+      const { rows } = await pool.query<{
+        name: string;
+        summary: string | null;
+        ingredient: string | null;
+        description: string | null;
+        price: string;
+        original_price: string | null;
+      }>(
+        `SELECT name, summary, ingredient, description, price, original_price
+           FROM public.products
+          WHERE is_active = true
+          ORDER BY is_best_seller DESC NULLS LAST, created_at DESC
+          LIMIT 30`,
+      );
+      if (rows.length === 0) return 'No products currently available.';
+      return rows
+        .map((p, i) => {
+          const price = `₩${Number(p.price).toLocaleString()}`;
+          const op = Number(p.original_price ?? 0);
+          const original = op > Number(p.price)
+            ? ` (original ₩${op.toLocaleString()})`
+            : '';
+          return `${i + 1}. ${p.name} — ${p.summary ?? ''}
+   Ingredients: ${p.ingredient ?? ''}
    Price: ${price}${original}
    ${p.description ?? ''}`;
-    })
-    .join('\n\n');
+        })
+        .join('\n\n');
+    } catch (err) {
+      console.error('[chat] product knowledge query failed:', err);
+      return 'Product data temporarily unavailable.';
+    }
+  },
+  ['chat-product-knowledge'],
+  { revalidate: 300, tags: ['products'] },
+);
+
+async function getProductKnowledge(): Promise<string> {
+  return getProductKnowledgeCached();
 }
 
 function buildSystemPrompt(products: string, lang: string): string {

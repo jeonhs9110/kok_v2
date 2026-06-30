@@ -234,12 +234,22 @@ export async function POST(req: NextRequest) {
       if (error) throw error;
     })();
 
-    await Promise.race([
-      insert,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('analytics insert timeout 5s')), INSERT_TIMEOUT_MS),
-      ),
-    ]);
+    // Race the insert against a 5s timer. Track the timer handle so the
+    // "fast path" (insert resolves first) can clear it — without the
+    // clear, every successful insert leaks a 5s pending timer holding
+    // a node-internal closure for 5s after the response was sent. At
+    // ~10 req/s that's 50 idle timers permanently in the event loop.
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        insert,
+        new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('analytics insert timeout 5s')), INSERT_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -113,6 +113,27 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=604800, must-revalidate' },
         ],
       },
+      // Defense-in-depth: every admin + customer JSON route holds
+      // PII (orders, profiles, email, role assignment) or is auth-
+      // scoped per-user. CloudFront's /api/* behavior already
+      // bypasses caching, but an intermediate proxy (corporate
+      // gateway, mobile-carrier transparent cache, browser
+      // back/forward cache) MUST NOT replay a previous user's
+      // response. no-store + private + max-age=0 covers all three.
+      {
+        source: '/api/admin/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+        ],
+      },
+      {
+        source: '/api/customer/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+        ],
+      },
     ];
   },
   async redirects() {

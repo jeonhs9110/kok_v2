@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { unstable_cache } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 
 const SITE_URL = 'https://www.kokkokgarden.com';
@@ -9,9 +10,12 @@ const SITE_URL = 'https://www.kokkokgarden.com';
 // routes ship in the baked sitemap.xml. Every product / menu / page /
 // post / review page would be invisible to Google's crawler.
 //
-// Sitemap requests are rare (Google polls every few days), and the
-// pg fan-out is 5 simple SELECTs, so the per-request cost is
-// negligible compared to handling stale-after-deploy sitemap pages.
+// The dynamic render is cheap thanks to `cachedFetchSitemapData` below
+// (in-process unstable_cache, 1-hour TTL with tag invalidation on
+// product/menu/page/post saves). Sitemap requests are rare (Googlebot
+// every few days) but Bing / Naver / random crawlers can hit it more
+// frequently, and the underlying pg fan-out is 5 full-table SELECTs —
+// caching the parsed result drops each hit to ~0.5ms.
 export const dynamic = 'force-dynamic';
 
 interface SitemapData {
@@ -22,8 +26,8 @@ interface SitemapData {
   reviews: Array<{ id: string; updated_at: string }>;
 }
 
-async function fetchSitemapData(): Promise<SitemapData | null> {
-  if (process.env.USE_RDS === 'true') {
+const fetchSitemapDataCached = unstable_cache(
+  async (): Promise<SitemapData | null> => {
     try {
       const { getSitemapDataFromPg } = await import('@/lib/db/storefront-reads');
       return await getSitemapDataFromPg();
@@ -31,6 +35,18 @@ async function fetchSitemapData(): Promise<SitemapData | null> {
       console.error('[sitemap] pg fetch failed; URLs omitted:', err);
       return null;
     }
+  },
+  ['sitemap-fan-out'],
+  // 1-hour TTL is generous for crawl cadence; admin saves on
+  // products / menus / pages / posts / review_cards all evict via the
+  // tag list below, so operator changes are reflected on the next
+  // crawler hit instead of waiting an hour.
+  { revalidate: 3600, tags: ['products', 'menus', 'pages', 'posts', 'review_cards', 'homepage'] },
+);
+
+async function fetchSitemapData(): Promise<SitemapData | null> {
+  if (process.env.USE_RDS === 'true') {
+    return fetchSitemapDataCached();
   }
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';

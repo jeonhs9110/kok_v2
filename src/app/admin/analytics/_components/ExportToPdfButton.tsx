@@ -2,10 +2,8 @@
 
 import { useState } from 'react';
 import { FileDown, Loader2 } from 'lucide-react';
-import { pdf } from '@react-pdf/renderer';
 import type { AnalyticsData } from './useAnalyticsData';
 import type { DateRange } from '../../_components/useDashboardData';
-import AnalyticsReportPdf from './AnalyticsReportPdf';
 
 /**
  * Generate-and-download button for the marketing analytics report.
@@ -39,6 +37,15 @@ export default function ExportToPdfButton({
       const generatedAt = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
         d.getHours(),
       )}:${pad(d.getMinutes())}`;
+
+      // Lazy-load @react-pdf/renderer + the dedicated PDF layout component on click.
+      // Static imports would drag ~600KB of PDF runtime (font shaper, layout engine,
+      // Pretendard font, vector-PDF JSX bridge) into the analytics page's first paint
+      // even when the operator never exports. Now it's only fetched on demand.
+      const [{ pdf }, { default: AnalyticsReportPdf }] = await Promise.all([
+        import('@react-pdf/renderer'),
+        import('./AnalyticsReportPdf'),
+      ]);
 
       const blob = await pdf(
         <AnalyticsReportPdf data={data} range={range} generatedAt={generatedAt} />,

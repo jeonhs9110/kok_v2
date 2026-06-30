@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireCustomer } from '@/lib/auth/requireCustomer';
+import { deriveStoredAuthorName } from '@/lib/customer/maskAuthor';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -53,7 +54,11 @@ export async function POST(req: Request) {
   if (!content || typeof content !== 'string' || content.trim().length === 0 || content.length > MAX_CONTENT) {
     return NextResponse.json({ ok: false, error: 'invalid content' }, { status: 400 });
   }
-  const name = (typeof author_name === 'string' && author_name.trim().length > 0 ? author_name.trim() : auth.email ?? 'anonymous').slice(0, 80);
+  const name = deriveStoredAuthorName({
+    supplied: typeof author_name === 'string' ? author_name : null,
+    userId: auth.userId,
+    email: auth.email,
+  });
   const parent = typeof parent_id === 'string' && parent_id.length > 0 ? parent_id : null;
 
   if (process.env.USE_RDS === 'true') {

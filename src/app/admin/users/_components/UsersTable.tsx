@@ -12,6 +12,8 @@ interface Props {
   onDelete: (id: string) => void;
   /** When false, hide role-toggle + delete buttons (admins only — super-admins only). */
   canMutate: boolean;
+  /** Signed-in caller's userId. Used to disable self-mutation on their own row. */
+  currentUserId: string | null;
 }
 
 /**
@@ -19,10 +21,15 @@ interface Props {
  * the detail drill-in. The role-toggle + delete buttons render only
  * when `canMutate` is true (super-admin gate).
  *
+ * Self-protection: on the caller's OWN row the buttons render but are
+ * disabled — preventing accidental self-demotion (which would lock the
+ * operator out of /admin) or self-deletion. To mutate that row, another
+ * super-admin has to do it.
+ *
  * Stop event propagation on the action buttons so clicking them doesn't
  * also fire the row's Link navigation.
  */
-export default function UsersTable({ users, onToggleRole, onDelete, canMutate }: Props) {
+export default function UsersTable({ users, onToggleRole, onDelete, canMutate, currentUserId }: Props) {
   return (
     <TableShell>
       <thead>
@@ -66,21 +73,30 @@ export default function UsersTable({ users, onToggleRole, onDelete, canMutate }:
             </td>
             <td className="px-4 py-2 text-right">
               {canMutate ? (
-                <div className="flex gap-0.5 justify-end">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onToggleRole(user); }}
-                    title={user.role === 'admin' ? '사용자로 변경' : '관리자로 변경'}
-                    className="text-[#9ca3af] hover:text-[#3b82f6] transition-colors p-1 rounded hover:bg-[#f3f4f6]"
-                  >
-                    {user.role === 'admin' ? <ShieldOff className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onDelete(user.id); }}
-                    className="text-[#9ca3af] hover:text-[#ef4444] transition-colors p-1 rounded hover:bg-[#f3f4f6]"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                (() => {
+                  const isSelf = currentUserId !== null && user.id === currentUserId;
+                  const selfTitle = '본인 계정은 본인이 수정/삭제할 수 없습니다 (다른 super-admin이 처리)';
+                  return (
+                    <div className="flex gap-0.5 justify-end">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (!isSelf) onToggleRole(user); }}
+                        disabled={isSelf}
+                        title={isSelf ? selfTitle : (user.role === 'admin' ? '사용자로 변경' : '관리자로 변경')}
+                        className="text-[#9ca3af] hover:text-[#3b82f6] transition-colors p-1 rounded hover:bg-[#f3f4f6] disabled:hover:text-[#9ca3af] disabled:hover:bg-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {user.role === 'admin' ? <ShieldOff className="w-3.5 h-3.5" /> : <Shield className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); if (!isSelf) onDelete(user.id); }}
+                        disabled={isSelf}
+                        title={isSelf ? selfTitle : '삭제'}
+                        className="text-[#9ca3af] hover:text-[#ef4444] transition-colors p-1 rounded hover:bg-[#f3f4f6] disabled:hover:text-[#9ca3af] disabled:hover:bg-transparent disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })()
               ) : (
                 <span className="text-[10px] text-[#cbd5e1] font-medium" title="super-admin 권한이 필요합니다">
                   read-only
