@@ -25,7 +25,6 @@ export default function PaymentsAdminPage() {
   }
 
   // One-shot fetch on mount; explicit refetch in saveProvider keeps it fresh.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadProviders(); }, []);
 
   function updateProvider(provider: string, updates: Partial<PaymentProvider>) {

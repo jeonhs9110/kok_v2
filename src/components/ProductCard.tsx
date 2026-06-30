@@ -83,7 +83,14 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
             NO IMAGE
           </div>
         )}
-        <div className="absolute bottom-3 right-3 z-10 flex gap-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-200">
+        {/* Hover-reveal pattern is desktop-only — tablets (sm/md
+            breakpoints, iPad, Galaxy Tab) have no real :hover, so the
+            previous `sm:opacity-0` made the wishlist + cart buttons
+            invisible AND un-tappable on the largest segment of the
+            Korean DTC mobile audience. Keep them visible from xs all
+            the way up to lg, then fade-in-on-hover only on lg+ where
+            a mouse is actually present. */}
+        <div className="absolute bottom-3 right-3 z-10 flex gap-1.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-200">
           <button
             type="button"
             onClick={toggleWish}

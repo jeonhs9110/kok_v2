@@ -116,7 +116,6 @@ export default function RegistrationAdminPage() {
     setLoading(false);
   }
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadAll(); }, []);
 
   async function upsertConfig(table: string, body: Record<string, unknown>): Promise<void> {
