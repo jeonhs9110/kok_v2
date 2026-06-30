@@ -1,5 +1,7 @@
 # RDS cutover runbook
 
+**⚠️ HISTORICAL — completed 2026-06-25.** RDS is now the sole database; Supabase project is being deleted today. Retained as reference for the cutover sequence.
+
 **Status as of 2026-06-25:** RDS is a verified hot mirror of Supabase.
 Schema + data migrated, row counts identical for all production tables
 (products, categories, carousel_slides, promo_banners, analytics,

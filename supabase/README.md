@@ -1,7 +1,13 @@
-# Supabase migrations
+# Supabase migrations (HISTORICAL)
 
-This directory is the source of truth for **future** database schema changes.
-The Supabase CLI manages versioned, ordered, repeatable migrations here —
+**⚠️ HISTORICAL — Supabase decommissioned 2026-06-30.** This directory's migration files document the schema as it was built originally on Supabase, and which was migrated 1:1 into AWS RDS Postgres 16 on 2026-06-25. The migration files are retained as **schema history reference**; the Supabase CLI workflow described below no longer applies.
+
+For **new schema changes** going forward, run DDL directly against the RDS instance (see `scripts/db/README.md`).
+
+---
+
+This directory was originally the source of truth for database schema changes.
+The Supabase CLI managed versioned, ordered, repeatable migrations here —
 replacing the previous workflow of one-off `.sql` files dropped at the repo
 root and manually run through the dashboard SQL editor.
 
