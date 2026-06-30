@@ -37,7 +37,7 @@ export default async function PostDetailPage({ slug, postId, lang }: Props) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4 text-xs text-neutral-400">
               <span>{post.author_name}</span>
-              <span>{new Date(post.created_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+              <span>{new Date(post.created_at).toLocaleDateString(lang === 'kr' ? 'ko-KR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
             </div>
             <PostActions postId={postId} authorId={post.author_id} slug={slug} lang={lang} />
           </div>

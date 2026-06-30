@@ -75,8 +75,12 @@ export function legacyMaskAuthorName(stored: string | null | undefined): string 
   if (!trimmed) return '회원';
   if (EMAIL_LIKE.test(trimmed)) {
     // Old row from before the mask — derive pseudonym from the email
-    // itself so rows by the same legacy author stay clustered.
-    return pseudonym(trimmed);
+    // itself so rows by the same legacy author stay clustered. Email
+    // is RFC 5321 local-part-case-sensitive but mailbox providers
+    // overwhelmingly treat it case-insensitively, so lowercase here to
+    // keep two legacy rows ("Foo@x.com" + "foo@x.com") under one
+    // pseudonym — matches what `pseudonym()` itself does for userIds.
+    return pseudonym(trimmed.toLowerCase());
   }
   return trimmed.slice(0, MAX_NAME);
 }

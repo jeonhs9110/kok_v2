@@ -359,13 +359,21 @@ export async function getAllUsersFromPg(): Promise<AdminUserRow[]> {
   return rows;
 }
 
+// Cap product detail-page reviews at 200. A single viral product can
+// rack up thousands; today's product detail page renders all reviews
+// inline (no pagination), so the cap doubles as a paginate-now signal
+// the same way the comment cap above does. 200 is well past any
+// organic review count and still bounded against OOM under traffic.
+const MAX_PRODUCT_REVIEWS_PER_PAGE = 200;
+
 // ─── product_reviews (read) ──────────────────────────────────────
 export async function getProductReviewsFromPg(productId: string): Promise<ProductReviewRow[]> {
   const pool = getPgPool();
   const { rows } = await pool.query<ProductReviewRow>(
     `SELECT * FROM public.product_reviews
       WHERE product_id = $1 AND is_published = true
-      ORDER BY created_at DESC`,
+      ORDER BY created_at DESC
+      LIMIT ${MAX_PRODUCT_REVIEWS_PER_PAGE}`,
     [productId],
   );
   return rows;

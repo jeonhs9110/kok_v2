@@ -166,7 +166,7 @@ function LoginFormInner({ lang }: { lang: Lang }) {
               autoComplete="email"
               required
               aria-invalid={!!error}
-              className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-brand-ink placeholder:text-gray-400"
+              className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-base sm:text-sm text-brand-ink placeholder:text-gray-400"
             />
             <label htmlFor="login-password" className="sr-only">{t.password}</label>
             <input
@@ -178,7 +178,7 @@ function LoginFormInner({ lang }: { lang: Lang }) {
               autoComplete="current-password"
               required
               aria-invalid={!!error}
-              className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-brand-ink placeholder:text-gray-400"
+              className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-base sm:text-sm text-brand-ink placeholder:text-gray-400"
             />
           </div>
 
