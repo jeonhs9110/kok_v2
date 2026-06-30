@@ -113,6 +113,19 @@ locals {
     chown -R ec2-user:ec2-user /opt/kokkok/app
     rm -f /tmp/app.tar.gz
 
+    # ---- deploy refresh script ----
+    # Install kokkok-refresh.sh so the GHA workflow's "Trigger EC2
+    # deploy refresh" step can call it via SSM. The script source is
+    # checked into infrastructure/scripts/kokkok-refresh.sh and
+    # inlined here so it lands on every new instance without an extra
+    # provisioning round-trip. Inline-content avoids a templatefile()
+    # call which would pull in indentation context and break the bash
+    # heredocs inside the script.
+    cat >/usr/local/bin/kokkok-refresh.sh <<'REFRESHEOF'
+${file("${path.module}/scripts/kokkok-refresh.sh")}
+REFRESHEOF
+    chmod 755 /usr/local/bin/kokkok-refresh.sh
+
     # ---- systemd unit ----
     # KillSignal=SIGTERM + TimeoutStopSec=30 gives Next.js up to 30s
     # to finish in-flight requests before being SIGKILL'd. Pairs with
