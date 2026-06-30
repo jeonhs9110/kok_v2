@@ -154,18 +154,23 @@ export default function CartContent() {
                   </div>
 
                   <div className="flex sm:justify-center mt-4 sm:mt-0">
+                    {/* Mobile floor 44×44 (Apple HIG) — desktop keeps
+                        the tighter 36×36 for the dense cart layout
+                        where a mouse hits the exact target reliably. */}
                     <div className="inline-flex items-center border border-neutral-200 rounded">
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                         disabled={item.quantity <= 1}
-                        className="w-9 h-9 flex items-center justify-center text-neutral-400 hover:text-black hover:bg-neutral-50 disabled:opacity-30 transition-colors"
+                        aria-label="Decrease quantity"
+                        className="min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-neutral-400 hover:text-black hover:bg-neutral-50 disabled:opacity-30 transition-colors"
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
                       <span className="w-10 text-center text-[13px] font-semibold">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                        className="w-9 h-9 flex items-center justify-center text-neutral-400 hover:text-black hover:bg-neutral-50 transition-colors"
+                        aria-label="Increase quantity"
+                        className="min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 w-11 h-11 sm:w-9 sm:h-9 flex items-center justify-center text-neutral-400 hover:text-black hover:bg-neutral-50 transition-colors"
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>

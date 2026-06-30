@@ -118,6 +118,12 @@ export default async function RootLayout({
             grids and the cart. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font --
+            The @next/next/no-page-custom-font rule is Pages-Router-only
+            advice ("put fonts in _document.js"). In App Router, the
+            documented place for custom font <link> tags IS the root
+            layout.tsx <head>, so this warning is a known false positive
+            we acknowledge once here rather than chasing every release. */}
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Inter:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;700;900&family=Playfair+Display:wght@400;700;900&display=swap"

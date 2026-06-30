@@ -57,7 +57,6 @@ export default function ChatbotAdminPage() {
 
   // One-shot fetch on mount; explicit refetch in handleSave keeps it fresh.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadConfig();
     loadLeads();
   }, []);
