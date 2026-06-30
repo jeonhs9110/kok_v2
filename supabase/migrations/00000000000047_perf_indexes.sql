@@ -50,9 +50,16 @@ CREATE INDEX IF NOT EXISTS wishlist_product_idx
 CREATE INDEX IF NOT EXISTS cart_items_user_idx
   ON public.cart_items(user_id);
 
-CREATE INDEX IF NOT EXISTS analytics_user_idx
-  ON public.analytics(user_id)
-  WHERE user_id IS NOT NULL;
+-- public.analytics is the anonymous event log (id, country, path,
+-- referrer, ip_hash, created_at, traffic_source, search_keyword,
+-- device_type, utm_*). There is NO user_id column — sessions are
+-- correlated via salted ip_hash. The original migration line indexed
+-- (user_id) WHERE user_id IS NOT NULL, which failed at apply time
+-- with "column user_id does not exist". The dashboard's real hot path
+-- is country + time aggregation, so index that instead.
+CREATE INDEX IF NOT EXISTS analytics_country_created_idx
+  ON public.analytics(country, created_at DESC)
+  WHERE country IS NOT NULL AND country <> 'UNKNOWN';
 
 CREATE INDEX IF NOT EXISTS product_reviews_product_created_idx
   ON public.product_reviews(product_id, created_at DESC);
