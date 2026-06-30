@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { headers } from 'next/headers';
+import { headers, cookies } from 'next/headers';
 import { isValidLang } from '@/lib/i18n/types';
 import { I18nProvider } from '@/lib/i18n/context';
 import Header from '@/components/Header';
@@ -40,6 +40,22 @@ export default async function LangLayout({
   const country = headersList.get('x-vercel-ip-country') || headersList.get('x-user-country') || 'KR';
   const isKorea = country === 'KR';
 
+  // Cookie-consent gate for ALL non-essential tracking. GA4 + any
+  // future third-party analytics tag must read this and skip injection
+  // when the visitor hasn't accepted. This mirrors the PageTracker
+  // gate (PR #350) — same cookie value (`kokkok_cookie_consent=accepted`),
+  // same legal basis: PIPA Article 22 + 정보통신망법 Article 23 +
+  // GDPR Articles 6/7 all require pre-consent for analytics cookies.
+  //
+  // SSR-time read means the GA <Script> tag literally isn't in the
+  // HTML for un-consented visitors — strictly better than rendering it
+  // and hoping a client gate kicks in before the script auto-fetches.
+  // Trade-off: a visitor who accepts via the banner needs ONE
+  // navigation (or refresh) before GA starts; that's the normal
+  // consent-banner UX and an acceptable cost for actual compliance.
+  const cookieJar = await cookies();
+  const analyticsConsented = cookieJar.get('kokkok_cookie_consent')?.value === 'accepted';
+
   // SSR the header's dynamic data so the initial HTML already has the
   // full nav, mega-categories, and logo. Without this, the client-side
   // useEffect inside Header would fetch these after mount and the visible
@@ -73,14 +89,17 @@ export default async function LangLayout({
             on Next.js navigation. afterInteractive defers loading
             past hydration so it doesn't compete with the critical
             path. */}
-        {/* GA4 — gate on the strict G-XXXXXXXXXX format. The value is
-            interpolated straight into the inline <Script> body and the
-            external src URL, so a malformed (or hostile) operator entry
-            could either break the script tag or land arbitrary JS in
-            the page. The validation check kills both vectors at the
-            source: only the canonical G-prefix-and-alphanumerics shape
-            ever reaches the rendered HTML. */}
-        {isValidGaMeasurementId(themeTokens.ga_measurement_id) && (
+        {/* GA4 — gate on TWO conditions:
+            1. operator has pasted a measurement ID in /admin/theme and
+               it matches the strict G-XXXXXXXXXX format (kills XSS via
+               the value interpolated into <Script src> + inline body)
+            2. visitor has clicked Accept on the cookie banner (PIPA +
+               GDPR — same gate as PageTracker, see consent comment
+               above)
+            When either fails the <Script> tag is simply omitted from
+            the rendered HTML, which is the strongest possible gate —
+            no third-party JS is fetched at all. */}
+        {analyticsConsented && isValidGaMeasurementId(themeTokens.ga_measurement_id) && (
           <>
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${themeTokens.ga_measurement_id}`}
