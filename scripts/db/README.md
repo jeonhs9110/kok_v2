@@ -1,5 +1,7 @@
 # Supabase → RDS Migration Runbook
 
+**⚠️ HISTORICAL — migration completed 2026-06-25.** This tooling captured + restored the production data from Supabase to RDS. Retained as reference for the migration sequence; the scripts themselves are no longer executed.
+
 Phase A2 (schema + data dump/restore) + A3 (verification) tooling.
 
 ## Pre-requisites

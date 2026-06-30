@@ -63,6 +63,19 @@
    - 위치 anchor → 미리보기에서 클릭으로 텍스트 / 이미지 초점 위치 지정
 3. **슬라이드 저장** → 60초 이내 홈에 반영
 
+### 6. 회원 CSV 내보내기 (마케팅용)
+
+1. `/admin/users` → 우측 상단 **CSV 내보내기** (녹색 버튼)
+2. 다운로드되는 파일: `kokkok-customers-YYYY-MM-DD.csv`
+3. UTF-8 BOM 포함 → Excel 더블클릭으로 한글 헤더 그대로 열림
+4. 컬럼: 이메일, 이름, 권한, 전화번호, 성별, 생년월일, 국가, 피부 타입, 마케팅 동의, 이메일 인증, 가입일
+
+### 7. 회원 권한 변경 (일반 ↔ 관리자)
+
+1. `/admin/users` → 해당 행 클릭하여 상세 페이지 진입
+2. **권한 변경** 버튼 (방패 모양 아이콘)
+3. ⚠️ **super-admin 권한 필요**. 일반 admin은 권한 변경 불가.
+
 ---
 
 ## 장애 대응
@@ -81,50 +94,59 @@ curl -i https://www.kokkokgarden.com/api/health
 - 응답 없음 / 타임아웃 → ALB or EC2 자체가 다운
 
 **2차 조치**:
-- ALB target 확인 → EC2 인스턴스가 healthy인지
-- EC2 SSH 접속 → `sudo journalctl -u kokkok -n 100` 로그 확인
-- 환경변수 누락 의심 시 → `sudo systemctl show kokkok | grep Environment`
+- ALB target 확인 (AWS 콘솔 → EC2 → Target Groups → kokkok-tg) → 인스턴스가 healthy인지
+- EC2 SSM Session Manager 접속 → `sudo journalctl -u kokkok -n 100` 로그 확인
+- 환경변수 확인: `cat /etc/kokkok/env`
+- 인스턴스 재시작: `terraform apply -replace=aws_instance.app` (infrastructure 디렉토리에서)
 
 ### B. 직전 배포 후 사이트 깨짐 → 롤백
 
-**전제**: 운영자가 SSH 키 + IAM PassRole 권한 미보유 (Phase 2 작업). 현재는 권대영 (zero@dynamicsolution.co.kr) 협조 필요.
+**Quick path**:
+1. AWS 콘솔 → S3 → `kokkok-deploy-artifacts/` 버킷
+2. `latest.tar.gz` → 이전 정상 버전으로 덮어쓰기 (versioning 활성화되어 있음 → Object → Versions → 이전 버전 Restore)
+3. `terraform apply -replace=aws_instance.app` → 새 EC2가 부팅 시 `latest.tar.gz`를 다시 받음
+4. ~2-3분 후 `/api/health` 200 확인
 
-**Quick path** (권대영 통해):
-1. S3 콘솔 → `kokkok-deploy-artifacts/` 버킷
-2. `latest.tar.gz` → 이전 정상 커밋의 `master-<commit>.tar.gz`로 덮어쓰기 (objects → restore version)
-3. EC2 인스턴스 재시작 → user-data가 `latest`를 다시 받아 standalone 시작
-4. ~2~3분 후 `/api/health` 200 확인
+**소스 단에서 revert**:
+1. `git revert <bad-commit>` → master push
+2. GitHub Actions가 자동으로 새 `latest.tar.gz` 생성
+3. `terraform apply -replace=aws_instance.app`
 
-**Phase 2 완료 시 자동화 예정**: `scripts/rollback.sh <commit-sha>` 한 줄로 수행.
+### C. RDS 다운 / 응답 없음
 
-### C. Supabase 다운 / 응답 없음
+**증상**: `/api/health`가 `rds.products: ok=false` 반환.
 
-1. https://status.supabase.com 확인
-2. 다운 확인되면 → 운영자 대시보드 (`/admin/*`) 일시적으로 사용 불가, storefront는 unstable_cache 덕분에 ~60초 동안은 정상 (TTL 만료 후 빈 상태)
-3. 복구되면 자동 회복. 운영자에게 "1시간 내 복구 예정" 공지만 전달.
+1. AWS 콘솔 → RDS → `kokkok-postgres` 인스턴스 상태 확인
+2. CloudWatch Alarms 확인 (RDS CPU, 연결 수, 디스크 등)
+3. AWS Health Dashboard (https://health.aws.amazon.com)에서 ap-northeast-2 RDS 장애 공지 확인
+4. 짧은 장애면 자동 회복. 길어지면 RDS Snapshot에서 복구 (deletion protection 활성화되어 있어 실수 삭제 불가).
+5. 복구 동안 storefront는 `unstable_cache` 덕분에 ~60초 동안 정상. TTL 만료 후 빈 상태.
 
-### D. OpenAI API 키 만료
+### D. OpenAI API 키 만료 / 챗봇 503
 
-**증상**: `/api/chat` 503 응답. 해외 사용자의 챗봇이 응답 안 함.
+**증상**: `/api/chat` 503 응답. 챗봇이 응답 안 함.
 
-1. OpenAI dashboard → 새 API 키 발급
-2. Vercel + EC2 양쪽에 `OPENAI_API_KEY` 갱신
-   - Vercel: Project → Settings → Environment Variables
-   - EC2: `/etc/systemd/system/kokkok.service` 환경변수 수정 → `sudo systemctl daemon-reload && sudo systemctl restart kokkok`
-3. `curl /api/chat -X POST -d '{"message":"test"}'`로 검증
+1. OpenAI dashboard에서 새 API 키 발급
+2. `infrastructure/secrets.auto.tfvars`에서 `openai_api_key` 갱신
+3. `cd infrastructure && terraform apply -replace=aws_instance.app`
+4. 약 90초 후 새 인스턴스 healthy → `curl -X POST https://www.kokkokgarden.com/api/chat -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"hi"}]}'`로 검증
 
 ### E. 운영자 비밀번호 잃어버림
 
-**전제**: 운영자에게 Supabase auth 계정이 있어야 함 (현재 미발급 — pending 작업).
+1. `/login` 페이지 → **비밀번호 찾기** 클릭
+2. 이메일 입력 → Cognito가 6자리 인증 코드 발송 (현재 발신처: Cognito 기본 sender. SES 승인 후 `noreply@kokkokgarden.com`)
+3. 메일 수신 → `/forgot-password` 화면에서 코드 + 새 비밀번호 입력
+4. 변경 완료 → 새 비밀번호로 로그인
 
-**계정 발급 후 절차**:
-1. `/login` → "비밀번호 찾기" → 이메일 입력
-2. 메일 수신 → 링크 클릭 → `/auth/reset-password` 이동
-3. 새 비밀번호 설정
+**메일이 안 오면**:
+- 스팸함 확인 (현재 Cognito 기본 sender는 도메인 신뢰도 낮음)
+- 그래도 없으면: 개발자가 AWS 콘솔 → Cognito → User Pool → 해당 사용자 → "Reset password" 수동 발급
 
-**계정 미발급 상태**:
-1. 개발자에게 임시 비밀번호 요청 (Supabase 콘솔에서 직접 발급)
-2. 첫 로그인 후 즉시 비밀번호 변경
+### F. 인스타그램 임베드가 회색 상자로 보임
+
+1. Instagram 측 차단 (rate limit / 차단 IP) 가능성
+2. 다른 네트워크에서 확인 → 사용자에게도 동일 증상이면 RSS 다시 새로고침 (`/admin/instagram` → RSS 갱신)
+3. 지속되면 Instagram Graph API 토큰 갱신 필요 — 개발자 협조
 
 ---
 
@@ -141,6 +163,5 @@ curl -i https://www.kokkokgarden.com/api/health
 **Q. 헤더 메뉴 폰트 변경 후 모바일에서 글자가 안 바뀜**
 - `/admin/theme` "헤더 메뉴 글씨 크기"는 데스크탑 + 모바일 동시 적용. 변경 후 60초 대기 + 모바일 브라우저 캐시 새로고침
 
-**Q. 인스타그램 임베드가 회색 상자로 보임**
-- Instagram 측 차단 (rate limit / 차단 IP) 가능성. 다른 네트워크에서 확인 → 사용자에게도 동일 증상이면 RSS 다시 새로고침 (`/admin/instagram` → RSS 갱신)
-</content>
+**Q. 가입 인증 메일이 스팸함으로 들어감**
+- 현재 Cognito 기본 sender 사용 중. AWS SES production access 승인되면 `noreply@kokkokgarden.com`으로 전환되어 정상화 예정. 그때까지는 고객 안내문구에 "스팸함도 확인해주세요" 포함 권장.

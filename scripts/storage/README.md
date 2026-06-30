@@ -1,5 +1,7 @@
 # Supabase Storage → S3 Mirror
 
+**⚠️ HISTORICAL — migration completed 2026-06-25.** Every Supabase Storage object was mirrored into `kokkok-media` and every DB row's URL was rewritten to `/media/*`. Retained as reference for the mirror sequence; the script is no longer executed.
+
 Phase F prep. Copies every object in the Supabase Storage buckets the
 app uses into the production S3 bucket, preserving the key path 1:1
 so persisted URLs in the DB still resolve after the cutover swaps the
