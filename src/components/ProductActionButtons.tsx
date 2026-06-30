@@ -47,10 +47,14 @@ export default function ProductActionButtons({ productId, productName, price, or
       {/* Quantity Selector */}
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-neutral-800 tracking-wider">{lb.qty}</span>
+        {/* Touch target: each button is ~44×44 on mobile, falling back
+            to the original tighter desktop sizing on sm+. Apple HIG min
+            is 44, Material Design is 48dp — phones below either spec
+            saw mis-taps on the qty controls. */}
         <div className="flex items-center border border-neutral-200">
-          <button onClick={decrease} className="px-4 py-2.5 text-lg text-neutral-400 hover:bg-neutral-50 hover:text-black transition-colors" disabled={quantity <= 1}>−</button>
+          <button onClick={decrease} className="min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 px-4 py-2.5 text-lg text-neutral-400 hover:bg-neutral-50 hover:text-black transition-colors disabled:opacity-30" disabled={quantity <= 1} aria-label="Decrease quantity">−</button>
           <span className="w-12 text-center text-sm font-semibold">{quantity}</span>
-          <button onClick={increase} className="px-4 py-2.5 text-lg text-neutral-400 hover:bg-neutral-50 hover:text-black transition-colors">+</button>
+          <button onClick={increase} className="min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 px-4 py-2.5 text-lg text-neutral-400 hover:bg-neutral-50 hover:text-black transition-colors" aria-label="Increase quantity">+</button>
         </div>
       </div>
 

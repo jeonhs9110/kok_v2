@@ -76,7 +76,12 @@ export default function CookieConsent() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 p-4 animate-in slide-in-from-bottom-4 duration-300"
+      // Pad the bottom inside the fixed banner so the action row clears
+      // the iPhone home indicator (env(safe-area-inset-bottom) ≈ 34px).
+      // Without this the Decline button sits behind the home indicator
+      // when the URL bar is expanded and is un-tappable.
+      style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0))' }}
+      className="fixed bottom-0 left-0 right-0 z-40 px-4 pt-4 animate-in slide-in-from-bottom-4 duration-300"
       role="region"
       aria-label={t.message}
     >

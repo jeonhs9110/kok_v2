@@ -294,10 +294,14 @@ export interface AdminProductUpsertInput {
   seo: unknown | null; // jsonb ProductSeo
 }
 
+// Same cap as genericListInPg above. Admin /products list page renders
+// the full table client-side; at >5000 products the HTML alone is
+// slow regardless of DB cost. The cap is a paginate-now signal, not a
+// soft optimization.
 export async function listProductsForAdminInPg(): Promise<ProductRow[]> {
   const pool = getPgPool();
   const { rows } = await pool.query<ProductRow>(
-    `SELECT * FROM public.products ORDER BY created_at DESC`,
+    `SELECT * FROM public.products ORDER BY created_at DESC LIMIT ${GENERIC_LIST_HARD_CAP}`,
   );
   return rows;
 }

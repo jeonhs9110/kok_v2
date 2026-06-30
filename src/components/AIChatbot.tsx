@@ -299,24 +299,32 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
 
   return (
     <>
-      {/* ── Floating icon button (bottom-right) ── */}
+      {/* ── Floating icon button (bottom-right) ──
+          Bottom offset uses env(safe-area-inset-bottom) so the FAB
+          clears the iPhone home indicator + the URL bar on iOS Safari.
+          Without this the button sits under the home indicator and is
+          invisible until the user scrolls and the URL bar shrinks. */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="kokkok-keep-radius fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-brand-notice-to to-brand-notice-from shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center transition-all duration-200"
+          style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom, 0))' }}
+          className="kokkok-keep-radius fixed right-6 z-50 w-14 h-14 rounded-full bg-gradient-to-br from-brand-notice-to to-brand-notice-from shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center transition-all duration-200"
           aria-label="Open AI Chatbot"
         >
           <MessageCircle className="w-6 h-6 text-white" />
         </button>
       )}
 
-      {/* ── Expanded: Chat panel (bottom-right) ── */}
+      {/* ── Expanded: Chat panel (bottom-right) ──
+          Same safe-area offset as the FAB so the panel doesn't get
+          clipped by the home indicator on iPhone. */}
       {isOpen && (
         <div
           role="dialog"
           aria-modal="false"
           aria-labelledby="chatbot-title"
-          className="fixed bottom-6 right-3 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[380px] max-h-[min(80vh,600px)] sm:max-h-[600px] flex flex-col bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] border border-gray-200/80 overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200"
+          style={{ bottom: 'max(1.5rem, env(safe-area-inset-bottom, 0))' }}
+          className="fixed right-3 sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[380px] max-h-[min(80vh,600px)] sm:max-h-[600px] flex flex-col bg-white rounded-2xl shadow-[0_8px_40px_rgba(0,0,0,0.15)] border border-gray-200/80 overflow-hidden animate-in slide-in-from-bottom-2 fade-in duration-200"
         >
 
           {/* Header */}
@@ -385,10 +393,10 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
                 </div>
                 <div className="max-w-[80%] bg-gray-50 border border-gray-100 rounded-2xl rounded-bl-md p-4 space-y-2.5">
                   <p className="text-[13px] text-gray-700 font-medium">{L.emailPrompt}</p>
-                  <input type="text" placeholder={L.namePlaceholder} value={contactForm.name} onChange={e => setContactForm(p => ({ ...p, name: e.target.value }))} className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#6b9fd4] bg-white" />
-                  <input type="email" placeholder={L.emailPlaceholder + ' *'} value={contactForm.email} onChange={e => setContactForm(p => ({ ...p, email: e.target.value }))} className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#6b9fd4] bg-white" />
-                  <input type="text" placeholder={L.skinTypePlaceholder} value={contactForm.skinType} onChange={e => setContactForm(p => ({ ...p, skinType: e.target.value }))} className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#6b9fd4] bg-white" />
-                  <input type="text" placeholder={L.countryPlaceholder} value={contactForm.country} onChange={e => setContactForm(p => ({ ...p, country: e.target.value }))} className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#6b9fd4] bg-white" />
+                  <input type="text" placeholder={L.namePlaceholder} value={contactForm.name} onChange={e => setContactForm(p => ({ ...p, name: e.target.value }))} className="w-full text-base sm:text-xs px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#6b9fd4] bg-white" />
+                  <input type="email" placeholder={L.emailPlaceholder + ' *'} value={contactForm.email} onChange={e => setContactForm(p => ({ ...p, email: e.target.value }))} className="w-full text-base sm:text-xs px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#6b9fd4] bg-white" />
+                  <input type="text" placeholder={L.skinTypePlaceholder} value={contactForm.skinType} onChange={e => setContactForm(p => ({ ...p, skinType: e.target.value }))} className="w-full text-base sm:text-xs px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#6b9fd4] bg-white" />
+                  <input type="text" placeholder={L.countryPlaceholder} value={contactForm.country} onChange={e => setContactForm(p => ({ ...p, country: e.target.value }))} className="w-full text-base sm:text-xs px-3 py-2 border border-gray-200 rounded-lg outline-none focus:border-[#6b9fd4] bg-white" />
                   <div className="flex gap-2 pt-1">
                     <button onClick={handleContactSubmit} disabled={!contactForm.email.trim()} className="flex-1 flex items-center justify-center gap-1.5 bg-brand-ink text-white text-xs font-semibold py-2 rounded-lg hover:bg-black transition disabled:opacity-40">
                       {L.submit} <ArrowRight className="w-3 h-3" />

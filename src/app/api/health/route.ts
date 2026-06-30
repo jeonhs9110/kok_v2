@@ -27,20 +27,32 @@ export async function GET() {
       { status: 503 },
     );
   }
+  // Probe RDS reachability without revealing row counts. The previous
+  // success response leaked `detail: 'count=5'` from the products
+  // table; an attacker hitting this endpoint repeatedly could infer
+  // catalog growth + schema changes from the trend line. ALB only
+  // needs HTTP 200 vs 503 to drain the target.
   try {
     const { getPgPool } = await import('@/lib/db/pool');
     const pool = getPgPool();
-    const ping = pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.products`);
-    const timed = (await Promise.race([
-      ping,
-      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout after 2s')), 2000)),
-    ])) as { rows: Array<{ n: string }> };
-    checks['rds.products'] = { ok: true, detail: `count=${timed.rows[0]?.n ?? '?'}` };
-  } catch (err) {
-    checks['rds.products'] = {
-      ok: false,
-      detail: err instanceof Error ? err.message : String(err),
-    };
+    const ping = pool.query(`SELECT 1`);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([
+        ping,
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('timeout after 2s')), 2000);
+        }),
+      ]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+    checks['rds'] = { ok: true };
+  } catch {
+    // Don't leak the error message — could include DB host, schema name,
+    // or driver internals. Operator can read the full error from the
+    // EC2 systemd logs.
+    checks['rds'] = { ok: false };
   }
 
   const allOk = Object.values(checks).every(c => c.ok);
