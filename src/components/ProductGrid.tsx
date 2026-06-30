@@ -22,6 +22,13 @@ interface ProductGridProps {
    * render unchanged.
    */
   displayConfig?: BestSellerDisplay;
+  /**
+   * Locale for the empty-state copy. Empty state previously hard-coded
+   * Korean ("상품이 없습니다.") even when the rest of the page rendered
+   * in English. Optional with a safe 'kr' default so existing callers
+   * don't break.
+   */
+  lang?: 'kr' | 'en';
 }
 
 const BASE_MAX_WIDTH_PX = 1240;
@@ -49,6 +56,7 @@ export default function ProductGrid({
   products,
   canPurchase = true,
   displayConfig = DEFAULT_BEST_SELLER_DISPLAY,
+  lang = 'kr',
 }: ProductGridProps) {
   // Container max-width still scales with card_scale so brands that
   // want a wider band on ultra-wide monitors get one. Cards stay a %
@@ -73,8 +81,14 @@ export default function ProductGrid({
           // broken page. A short message keeps the chrome and signals
           // "intentional, not failed."
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-sm text-neutral-500 mb-1">상품이 없습니다.</p>
-            <p className="text-xs text-neutral-400">곧 새로운 상품으로 찾아뵙겠습니다.</p>
+            <p className="text-sm text-neutral-500 mb-1">
+              {lang === 'en' ? 'No products available.' : '상품이 없습니다.'}
+            </p>
+            <p className="text-xs text-neutral-400">
+              {lang === 'en'
+                ? "We'll be back with something new soon."
+                : '곧 새로운 상품으로 찾아뵙겠습니다.'}
+            </p>
           </div>
         ) : (
           <div

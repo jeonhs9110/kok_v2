@@ -173,7 +173,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
             View All
           </Link>
         </div>
-        <ProductGrid products={bestSellerProducts} canPurchase={isKorea} displayConfig={bestSellerDisplay} />
+        <ProductGrid products={bestSellerProducts} canPurchase={isKorea} displayConfig={bestSellerDisplay} lang={lang} />
       </section>
     ),
     'top-viewed': (

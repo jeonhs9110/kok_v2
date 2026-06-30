@@ -27,17 +27,21 @@ const MAX_NAME = 60;
 const EMAIL_LIKE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function pseudonym(userId: string): string {
-  // Short stable hash of the user id (last 4 hex chars of the FNV-1a
-  // 32-bit hash). Two characters of collision space gives ~65k
-  // pseudonyms before any visual collision; combined with first-letter
-  // initialization across the board, collisions are perceptual non-
-  // issues at 100k+ users.
+  // Stable hash of the user id (last 6 base-36 chars of the FNV-1a
+  // 32-bit hash) — ~2.2B possible suffixes. Earlier 4-char output gave
+  // ~1.7M slots which is fine today but birthday-paradox-collides at
+  // ~1500 users; 6 chars buys headroom past any plausible KOKKOK scale.
+  //
+  // Cognito subs are case-insensitive UUIDs, but defensively normalize
+  // to lowercase before hashing — if a downstream API ever emits the
+  // same id in mixed case the customer's posts must still cluster.
+  const norm = (userId ?? '').toLowerCase();
   let h = 0x811c9dc5 >>> 0;
-  for (let i = 0; i < userId.length; i++) {
-    h ^= userId.charCodeAt(i);
+  for (let i = 0; i < norm.length; i++) {
+    h ^= norm.charCodeAt(i);
     h = Math.imul(h, 0x01000193) >>> 0;
   }
-  return `회원_${h.toString(36).slice(-4)}`;
+  return `회원_${h.toString(36).padStart(6, '0').slice(-6)}`;
 }
 
 /**

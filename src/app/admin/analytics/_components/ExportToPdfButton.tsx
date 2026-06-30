@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { FileDown, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/admin/Toast';
 import type { AnalyticsData } from './useAnalyticsData';
 import type { DateRange } from '../../_components/useDashboardData';
 
@@ -24,6 +25,7 @@ export default function ExportToPdfButton({
   data: AnalyticsData;
   range: DateRange;
 }) {
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
 
   async function handleClick() {
@@ -63,9 +65,11 @@ export default function ExportToPdfButton({
       // Defer revoke so the browser finishes the download stream.
       setTimeout(() => URL.revokeObjectURL(url), 4000);
     } catch (err) {
+      // Toast instead of alert() — modal alerts feel out-of-band in
+      // the rest of the admin UI (every other failure path toasts).
+      // The full error stays in console for diagnosis.
       console.error('[analytics] PDF generation failed:', err);
-      const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-      alert(`PDF 생성에 실패했습니다.\n\n${detail}\n\n네트워크가 폰트 파일을 차단하고 있을 수 있습니다. 브라우저 콘솔(F12)에서 상세 오류를 확인할 수 있습니다.`);
+      toast.show('PDF 생성에 실패했습니다. 콘솔(F12)에서 상세 오류를 확인하세요.', 'error');
     } finally {
       setBusy(false);
     }

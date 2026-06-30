@@ -134,6 +134,27 @@ const nextConfig: NextConfig = {
           { key: 'Pragma', value: 'no-cache' },
         ],
       },
+      // /api/chat carries the OpenAI completion + the admin-configured
+      // system prompt; /api/track captures session-level analytics
+      // (ip_hash, device, UTM). Neither is safe for an intermediate
+      // proxy or bf-cache to replay — same defense-in-depth as the
+      // admin/customer rules above. The chat route additionally relies
+      // on an in-memory rate limiter that loses fairness if responses
+      // are cached.
+      {
+        source: '/api/chat',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+        ],
+      },
+      {
+        source: '/api/track',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0, must-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+        ],
+      },
     ];
   },
   async redirects() {

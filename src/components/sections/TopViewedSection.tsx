@@ -68,7 +68,7 @@ export default async function TopViewedSection({
           View All
         </Link>
       </div>
-      <ProductGrid products={items} canPurchase={canPurchase} />
+      <ProductGrid products={items} canPurchase={canPurchase} lang={lang} />
     </section>
   );
 }

@@ -137,30 +137,39 @@ export default function CarouselAdminPage() {
   async function handleReorder(next: CarouselSlide[]) {
     // Renumber sort_order at fixed increments of 10 so future single-slot
     // inserts (manual sort_order=15 etc.) don't require renumbering the
-    // whole list immediately. Local state updates optimistically; failed
-    // writes get logged but don't block the user — the next fetchAll()
-    // will resync from the server.
+    // whole list immediately. Local state updates optimistically; on
+    // persist failure we roll back AND toast — the previous behavior of
+    // logging silently meant operators thought their drag-reorder had
+    // saved when in fact a 401/500/network blip dropped it on the
+    // floor, only resurfacing the original order on the next refresh.
+    const previous = slides;
     const renumbered = next.map((s, i) => ({ ...s, sort_order: (i + 1) * 10 }));
     setSlides(renumbered);
     try {
       if (USE_RDS_FROM_BROWSER) {
-        await Promise.all(renumbered.map(s =>
+        const responses = await Promise.all(renumbered.map(s =>
           fetch(`/api/admin/carousel-slides?id=${encodeURIComponent(s.id)}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sort_order: s.sort_order }),
           }),
         ));
+        const failed = responses.find(r => !r.ok);
+        if (failed) throw new Error(`carousel_reorder_http_${failed.status}`);
       } else if (supabase) {
-        await Promise.all(
+        const results = await Promise.all(
           renumbered.map(s =>
             supabase.from('carousel_slides').update({ sort_order: s.sort_order }).eq('id', s.id),
           ),
         );
+        const failed = results.find(r => r.error);
+        if (failed?.error) throw failed.error;
       }
       revalidateHomepageData('carousel');
     } catch (err) {
       console.error('[admin/carousel] reorder persist failed:', err);
+      setSlides(previous);
+      toast.show('순서 변경에 실패했습니다. 다시 시도해 주세요.', 'error');
     }
   }
 

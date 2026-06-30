@@ -109,14 +109,21 @@ const getProductKnowledgeCached = unstable_cache(
       if (rows.length === 0) return 'No products currently available.';
       return rows
         .map((p, i) => {
-          const price = `₩${Number(p.price).toLocaleString()}`;
-          const op = Number(p.original_price ?? 0);
-          const original = op > Number(p.price)
-            ? ` (original ₩${op.toLocaleString()})`
+          // Guard against corrupted price rows. Without this, a non-
+          // numeric price would format as "₩NaN" inside the GPT
+          // system prompt and the customer-facing reply quotes "NaN"
+          // back to the user.
+          const priceNum = Number(p.price);
+          const priceStr = Number.isFinite(priceNum)
+            ? `₩${priceNum.toLocaleString()}`
+            : 'price on request';
+          const opNum = Number(p.original_price ?? 0);
+          const original = Number.isFinite(opNum) && Number.isFinite(priceNum) && opNum > priceNum
+            ? ` (original ₩${opNum.toLocaleString()})`
             : '';
           return `${i + 1}. ${p.name} — ${p.summary ?? ''}
    Ingredients: ${p.ingredient ?? ''}
-   Price: ${price}${original}
+   Price: ${priceStr}${original}
    ${p.description ?? ''}`;
         })
         .join('\n\n');
