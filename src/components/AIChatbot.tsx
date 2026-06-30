@@ -276,7 +276,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
     // error and the user still saw the "Thanks!" message). Now goes
     // through /api/customer/chatbot-leads which dispatches via USE_RDS.
     try {
-      await fetch('/api/customer/chatbot-leads', {
+      const res = await fetch('/api/customer/chatbot-leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -286,7 +286,17 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
           country: contactForm.country || undefined,
         }),
       });
-    } catch { /* silently fail — still show the thank-you UI */ }
+      // Don't surface a failure to the customer — UX intent is "thank
+      // you regardless" so a network blip doesn't make them re-enter
+      // their details. BUT log the !res.ok case so operations sees the
+      // signal in EC2 logs / future log shipping. Without this, dropped
+      // leads were completely invisible.
+      if (!res.ok) {
+        console.error(`[chatbot-leads] dropped lead, http ${res.status}`);
+      }
+    } catch (err) {
+      console.error('[chatbot-leads] network error, lead lost:', err);
+    }
     setShowContactForm(false);
     setContactSubmitted(true);
     setMessages(prev => [

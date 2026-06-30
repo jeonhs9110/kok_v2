@@ -157,7 +157,7 @@ export function useProducts() {
         const { error } = await supabase.from('products').update({ is_active: !currentStatus }).eq('id', id);
         if (error) throw error;
       }
-      revalidateHomepageData('products');
+      await revalidateHomepageData('products');
       toast.show(currentStatus ? '비공개로 변경되었습니다.' : '공개로 변경되었습니다.', 'success');
     } catch (err) {
       console.warn('[admin/products] 토글 DB 동기화 실패:', err);
@@ -189,7 +189,7 @@ export function useProducts() {
         const { error } = await supabase.from('products').delete().eq('id', id);
         if (error) throw error;
       }
-      revalidateHomepageData('products');
+      await revalidateHomepageData('products');
       toast.show('상품이 삭제되었습니다.', 'success');
     } catch (err) {
       console.warn('[admin/products] 삭제 DB 동기화 실패:', err);

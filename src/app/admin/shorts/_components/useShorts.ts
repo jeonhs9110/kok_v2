@@ -143,7 +143,7 @@ export function useShorts() {
           setBgConfigId(data.id);
         }
       }
-      revalidateHomepageData('shorts');
+      await revalidateHomepageData('shorts');
       onSuccess();
     } catch (err) {
       onError(err);
@@ -312,17 +312,17 @@ export function useShorts() {
             body: JSON.stringify({ youtube_id: videoId }),
           });
           if (res.ok) {
+            await revalidateHomepageData('shorts');
             toast.show(`YouTube ID '${videoId}' 추가됨`, 'success');
             fetchShorts();
-            revalidateHomepageData('shorts');
           }
         } else {
           if (!supabase) throw new Error('클라이언트 없음');
           const { error } = await supabase.from('shorts').insert([{ youtube_id: videoId }]);
           if (!error) {
+            await revalidateHomepageData('shorts');
             toast.show(`YouTube ID '${videoId}' 추가됨`, 'success');
             fetchShorts();
-            revalidateHomepageData('shorts');
           }
         }
       } catch { /* mock mode */ }
@@ -339,8 +339,11 @@ export function useShorts() {
       } else if (supabase) {
         await supabase.from('shorts').delete().eq('id', id);
       }
-      revalidateHomepageData('shorts');
-    } catch { /* ignore */ }
+      await revalidateHomepageData('shorts');
+    } catch (err) {
+      console.error('[admin/shorts] delete failed:', err);
+      toast.show('삭제에 실패했습니다.', 'error');
+    }
   };
 
   const handleLinkProduct = async (shortId: string, productId: string | null) => {
@@ -357,9 +360,11 @@ export function useShorts() {
       }
       const prod = products.find(p => p.id === productId);
       setShorts(prev => prev.map(s => s.id === shortId ? { ...s, productId: productId, productName: prod?.name || null } : s));
-      revalidateHomepageData('shorts');
-    } catch { /* ignore */ }
-    finally { setLinkingId(null); }
+      await revalidateHomepageData('shorts');
+    } catch (err) {
+      console.error('[admin/shorts] product link failed:', err);
+      toast.show('상품 연결에 실패했습니다.', 'error');
+    } finally { setLinkingId(null); }
   };
 
   return {

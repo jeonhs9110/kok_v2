@@ -78,11 +78,11 @@ export function useTopViewed() {
       });
       if (!res.ok) throw new Error('http_' + res.status);
       setSaved(data);
-      revalidateHomepageData('top_viewed_config');
+      await revalidateHomepageData('top_viewed_config');
       // Window / count changes invalidate the analytics-derived product
       // list — evict that tag too so the next render re-queries with the
       // new bounds instead of returning the stale 5-min cached set.
-      revalidateHomepageData('analytics');
+      await revalidateHomepageData('analytics');
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2500);
       toast.show('인기 상품 섹션 설정이 저장되었습니다.', 'success');

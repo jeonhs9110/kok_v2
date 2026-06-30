@@ -100,7 +100,7 @@ export default function BannerEditPage() {
         const { error } = await supabase.from('homepage_banners').update(payload).eq('id', id);
         if (error) throw error;
       }
-      revalidateHomepageData('homepage_banners');
+      await revalidateHomepageData('homepage_banners');
       setSaved(data);
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
@@ -153,13 +153,13 @@ export default function BannerEditPage() {
       } catch (err) {
         console.warn('[admin/banners] section-order cleanup failed (non-fatal):', err);
       }
-      revalidateHomepageData('homepage_banners');
+      await revalidateHomepageData('homepage_banners');
       // When the row's key was actually present in the saved order, the
       // storefront's cached `homepage_section_order` still references the
       // now-deleted banner. Evict that tag too so the next public render
       // sees the trimmed order instead of trying to paint a ghost slot
       // for up to 60s (sectionOrder.ts unstable_cache TTL).
-      if (sectionOrderTouched) revalidateHomepageData('homepage_section_order');
+      if (sectionOrderTouched) await revalidateHomepageData('homepage_section_order');
       toast.show('띠배너가 삭제되었습니다.', 'success');
       // If embedded in the homepage drawer, signal close; else go back.
       if (typeof window !== 'undefined' && window.parent !== window) {

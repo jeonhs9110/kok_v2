@@ -154,7 +154,7 @@ export function useSlideForm(
           if (error) throw error;
         }
       }
-      revalidateHomepageData('carousel');
+      await revalidateHomepageData('carousel');
       onSaved();
     } catch (err) {
       console.error('슬라이드 저장 실패:', err);

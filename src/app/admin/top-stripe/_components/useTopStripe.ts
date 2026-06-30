@@ -95,7 +95,7 @@ export function useTopStripe() {
       });
       if (!res.ok) throw new Error('http_' + res.status);
       setSaved(data);
-      revalidateHomepageData('top_stripe');
+      await revalidateHomepageData('top_stripe');
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2500);
     } catch (err) {

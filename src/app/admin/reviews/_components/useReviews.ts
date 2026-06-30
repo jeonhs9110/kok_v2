@@ -177,7 +177,7 @@ export function useReviews() {
       if (returnedId && !r.id) update(i, { id: returnedId });
       setSavedId(returnedId);
       setTimeout(() => setSavedId(null), 2000);
-      revalidateHomepageData('reviews');
+      await revalidateHomepageData('reviews');
     } catch (err) {
       const msg = err instanceof Error ? err.message : '저장 실패';
       toast.show(`저장 실패: ${msg}`, 'error');
@@ -203,7 +203,7 @@ export function useReviews() {
           const { error } = await supabase.from('review_cards').delete().eq('id', r.id);
           if (error) throw error;
         }
-        revalidateHomepageData('reviews');
+        await revalidateHomepageData('reviews');
       } catch (err) {
         console.warn('[admin/reviews] 삭제 실패:', err);
         setRows(snapshot);
@@ -244,7 +244,7 @@ export function useReviews() {
       }
       // Tag eviction so the storefront's unstable_cache wrapper drops
       // the cached order immediately — was staling for up to 60s before.
-      revalidateHomepageData('reviews');
+      await revalidateHomepageData('reviews');
     }
   }
 

@@ -273,7 +273,7 @@ export function useProductForm(
         }
       }
 
-      revalidateHomepageData('products');
+      await revalidateHomepageData('products');
       onSaved();
     } catch (err) {
       console.error('[ProductDetailModal] save failed:', err);

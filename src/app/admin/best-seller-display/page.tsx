@@ -98,7 +98,7 @@ export default function BestSellerDisplayAdminPage() {
         }),
       });
       if (!res.ok) throw new Error('http_' + res.status);
-      revalidateHomepageData('best_seller_display');
+      await revalidateHomepageData('best_seller_display');
       // BSD owns a subset of theme_tokens (product_section_title_size,
       // product_name_size, home_product_summary_size, product_price_size,
       // home_product_image_ratio). Without evicting the theme_tokens tag
@@ -108,7 +108,7 @@ export default function BestSellerDisplayAdminPage() {
       // even though the row was written. Mirrors useTheme.handleSave +
       // useLogo.handleTokensSave (the other two surfaces that edit
       // theme_tokens).
-      revalidateHomepageData('theme_tokens');
+      await revalidateHomepageData('theme_tokens');
       setSaved(data);
       setSavedFonts(fonts);
       setFullTokens(mergedTokens);

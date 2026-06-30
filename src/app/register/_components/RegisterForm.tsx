@@ -605,8 +605,22 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
                   onChange={e => setFormData(p => ({ ...p, [f.key]: e.target.value }))}
                   required={f.required}
                   placeholder={label}
-                  autoComplete={isPassword ? 'new-password' : undefined}
-                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-brand-ink placeholder:text-gray-400 outline-none focus:border-black transition"
+                  // Hint mobile keyboards / password managers about each
+                  // field so iOS Safari + Chrome can offer the right
+                  // saved value (email autofill, address country, etc.).
+                  // Without this iOS shows the generic suggestions bar
+                  // and the registration form takes ~3x longer to
+                  // complete on a phone.
+                  autoComplete={
+                    isPassword ? 'new-password'
+                    : f.type === 'email' ? 'email'
+                    : f.key === 'name' ? 'name'
+                    : f.key === 'phone' ? 'tel'
+                    : f.key === 'country' ? 'country-name'
+                    : f.key === 'birthday' ? 'bday'
+                    : undefined
+                  }
+                  className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-base sm:text-sm text-brand-ink placeholder:text-gray-400 outline-none focus:border-black transition"
                 />
                 {isPassword && (
                   <>

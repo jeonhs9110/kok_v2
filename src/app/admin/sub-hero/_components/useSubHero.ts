@@ -227,7 +227,7 @@ export function useSubHero() {
         }
       }
       setSavedBanner({ ...banner, id: savedId });
-      revalidateHomepageData('sub_hero');
+      await revalidateHomepageData('sub_hero');
       toast.show('서브 히어로 배너가 저장되었습니다.', 'success');
     } catch (e) {
       console.error(e);
