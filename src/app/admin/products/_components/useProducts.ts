@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import type { Product } from '@/lib/api/products';
 import type { Category } from '@/lib/api/categories';
@@ -68,6 +69,7 @@ function rowToProduct(d: ProductRowFromApi): Product {
  */
 export function useProducts() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -165,6 +167,15 @@ export function useProducts() {
   };
 
   const handleDelete = async (id: string) => {
+    // Confirm before destructive action — previously a single trash-icon
+    // click silently deleted the row with no undo. At 100+ SKUs the
+    // misclick cost is too high.
+    const ok = await confirm({
+      message: '이 상품을 삭제하시겠습니까? 되돌릴 수 없습니다.',
+      tone: 'danger',
+      confirmText: '삭제',
+    });
+    if (!ok) return;
     const snapshot = products;
     setProducts(prev => prev.filter(p => p.id !== id));
     try {

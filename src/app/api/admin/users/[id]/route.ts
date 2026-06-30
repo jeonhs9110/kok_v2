@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { requireSuperAdmin } from '@/lib/auth/requireAdmin';
+import { requireSuperAdmin, getCallerUserId } from '@/lib/auth/requireAdmin';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -24,6 +24,18 @@ export async function PATCH(req: Request, { params }: RouteContext) {
 
   const { id } = await params;
   if (!id) return NextResponse.json({ ok: false, error: 'id required' }, { status: 400 });
+
+  // Self-protection: a super-admin must not be able to demote themselves.
+  // The UI disables the button on the caller's own row, but enforce it
+  // server-side too — a malicious or scripted PATCH would otherwise
+  // lock the operator out of /admin with no recovery path.
+  const callerId = await getCallerUserId();
+  if (callerId && callerId === id) {
+    return NextResponse.json(
+      { ok: false, error: 'cannot mutate own role; ask another super-admin' },
+      { status: 409 },
+    );
+  }
 
   let body: unknown;
   try {
@@ -110,6 +122,15 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
 
   const { id } = await params;
   if (!id) return NextResponse.json({ ok: false, error: 'id required' }, { status: 400 });
+
+  // Self-protection: refuse self-deletion. Same reasoning as PATCH.
+  const callerId = await getCallerUserId();
+  if (callerId && callerId === id) {
+    return NextResponse.json(
+      { ok: false, error: 'cannot delete own account; ask another super-admin' },
+      { status: 409 },
+    );
+  }
 
   // Look up email first so we can delete the Cognito identity after.
   let email: string | null = null;

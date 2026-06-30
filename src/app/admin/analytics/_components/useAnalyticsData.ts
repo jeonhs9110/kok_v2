@@ -142,6 +142,15 @@ export function useAnalyticsData() {
         priorEnd,
       });
       const res = await fetch(`/api/admin/analytics?${params}`, { cache: 'no-store' });
+      // Guard res.ok before parsing — a 401/403/500 response body might
+      // still be JSON (an error envelope), but it never carries the
+      // `data` shape this hook expects. Without this check the empty
+      // EMPTY skeleton would silently stick around while the operator
+      // sees a normal "loaded" UI.
+      if (!res.ok) {
+        console.error(`[analytics] fetchAll http ${res.status}`);
+        return;
+      }
       const json = (await res.json()) as { data?: AnalyticsData | null; source?: AnalyticsSource };
       setSource(json.source ?? null);
       if (json.data) setData(json.data);

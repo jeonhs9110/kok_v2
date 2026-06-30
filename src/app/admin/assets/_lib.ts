@@ -90,11 +90,13 @@ export async function buildDeleteConfirmMessage(
       usage = json.usage ?? [];
     }
   } catch (err) {
-    console.error('[assets] usage check failed; proceeding without safety net:', err);
-    // Don't block the operator — the prompt now warns we couldn't verify.
+    console.error('[assets] usage check failed; flagging as referenced for safety:', err);
+    // Fail closed: when we can't verify, treat it as still-referenced so any
+    // caller branching on `hasReferences` defaults to the cautious path.
+    // The prompt also asks the operator to confirm explicitly.
     return {
-      hasReferences: false,
-      message: `⚠️ 참조 확인 중 오류가 발생했습니다. 그래도 삭제하시겠습니까?\n\n${assetLabel}`,
+      hasReferences: true,
+      message: `⚠️ 참조 확인 중 오류가 발생했습니다. 안전을 위해 참조 중일 수 있다고 간주합니다. 그래도 삭제하시겠습니까?\n\n${assetLabel}`,
     };
   }
 

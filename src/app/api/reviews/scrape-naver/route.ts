@@ -134,7 +134,17 @@ export async function POST(request: Request): Promise<NextResponse<ScrapeResult 
   // Domain allow-list — only Naver blog/post hosts get scraped. Keeps
   // this endpoint from being repurposed as a generic open redirect /
   // SSRF tool. Other review sources can be added by extending the list.
-  const allowed = /^(?:https?:\/\/)?(?:www\.|m\.)?(?:blog\.naver\.com|post\.naver\.com|naver\.me)\b/i;
+  //
+  // 2026-06-30: naver.me dropped from the allow-list. It's a Naver-
+  // operated URL shortener that 302s to any URL Naver chooses to host
+  // — including admin URLs the operator wouldn't expect to be reachable
+  // from this endpoint. `fetch` follows redirects by default, and the
+  // 30x Location header was never re-checked against the allow-list,
+  // so a `naver.me/<id>` that resolves to the AWS metadata service
+  // (169.254.169.254) would let an attacker exfiltrate the EC2 instance
+  // role credentials. The redirect-following inside
+  // fetchAndFollowNaverRedirects() also now re-validates each hop's URL.
+  const allowed = /^(?:https?:\/\/)?(?:www\.|m\.)?(?:blog\.naver\.com|post\.naver\.com)\b/i;
   if (!allowed.test(url)) {
     return NextResponse.json({ error: 'unsupported_host' }, { status: 400 });
   }
@@ -227,9 +237,24 @@ function extractNaverPostBody(html: string): string | null {
  *
  * Returns the final HTML string or null on non-2xx / network error.
  */
+// Same allow-list used at the top of POST() — must match. Defines
+// every host this endpoint is permitted to fetch from at every hop
+// (including the second-hop URL extracted from Naver's JS-redirect
+// stub).
+const NAVER_ALLOWED = /^https?:\/\/(?:www\.|m\.)?(?:blog\.naver\.com|post\.naver\.com)\b/i;
+
 async function fetchAndFollowNaverRedirects(url: string, hops: number): Promise<string | null> {
   if (hops > 2) return null;
+  // Re-validate at every hop. Prevents an attacker-controlled
+  // top.location.replace stub from pivoting fetch() to 169.254.169.254
+  // (AWS metadata) or any other internal-VPC host.
+  if (!NAVER_ALLOWED.test(url)) return null;
 
+  // fetch follows 30x redirects by default. With naver.me removed from
+  // the allow-list above the only inputs are blog/post.naver.com URLs,
+  // which only ever redirect within naver.com themselves. The JS-stub
+  // path (lines below) also re-checks the next URL against
+  // NAVER_ALLOWED before re-fetching.
   const res = await fetch(url, {
     headers: {
       // Mobile UA forces Naver to serve the m.blog.naver.com flavor that

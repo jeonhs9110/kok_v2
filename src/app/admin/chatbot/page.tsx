@@ -74,24 +74,32 @@ export default function ChatbotAdminPage() {
         greeting_kr: config.greeting_kr,
       };
       // chatbot_config is a singleton (id=1). Patch the existing row;
-      // fall back to insert if there isn't one yet.
+      // ONLY fall back to insert on 404 (row missing). Previously any
+      // non-OK PATCH (500, 403, auth) flowed through to POST which
+      // inserted a duplicate — and even if BOTH failed, `setSaved(true)`
+      // still ran. Surface real failures to the operator.
       const patchRes = await fetch('/api/admin/crud/chatbot_config', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: 1, patch: payload }),
       });
-      if (!patchRes.ok) {
-        await fetch('/api/admin/crud/chatbot_config', {
+      if (!patchRes.ok && patchRes.status !== 404) {
+        throw new Error(`patch_${patchRes.status}`);
+      }
+      if (patchRes.status === 404) {
+        const postRes = await fetch('/api/admin/crud/chatbot_config', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: 1, ...payload }),
         });
+        if (!postRes.ok) throw new Error(`post_${postRes.status}`);
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+      toast.show('챗봇 설정이 저장되었습니다.', 'success');
     } catch (err) {
       console.error('Save error:', err);
-      toast.show('저장 실패. DB 테이블이 생성되었는지 확인해주세요.', 'error');
+      toast.show('저장에 실패했습니다.', 'error');
     }
     setSaving(false);
   }

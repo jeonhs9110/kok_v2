@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
+import { requireCustomer } from '@/lib/auth/requireCustomer';
+import { deriveStoredAuthorName } from '@/lib/customer/maskAuthor';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -66,9 +68,17 @@ export async function GET(_req: Request, { params }: RouteContext) {
  * POST /api/products/[id]/reviews
  * Submit a review. Body: { author_name, rating, title|null, content }
  *
- * Customer-facing — no auth. Server validates length + rating bounds.
+ * 2026-06-30 — requires Cognito sign-in. Previously this route was
+ * anonymous-with-IP-ratelimit, which let anyone (rotating proxies,
+ * residential VPNs) post reviews under any author_name they chose —
+ * trivial to spoof "강민지 (수의사)" or another real customer's name
+ * for brand-damage / fake-review / SEO-poisoning. Now the route binds
+ * the review to the authenticated customer's id and ignores any
+ * client-supplied author_name in favor of the derive helper.
  */
 export async function POST(req: Request, { params }: RouteContext) {
+  const auth = await requireCustomer();
+  if (auth instanceof NextResponse) return auth;
   const { id } = await params;
   if (!id) return NextResponse.json({ ok: false, error: 'product_id required' }, { status: 400 });
 
@@ -93,10 +103,17 @@ export async function POST(req: Request, { params }: RouteContext) {
     content?: unknown;
   };
 
-  const name = typeof author_name === 'string' ? author_name.trim() : '';
   const text = typeof content === 'string' ? content.trim() : '';
   const t = typeof title === 'string' ? title.trim() : '';
   const r = Number(rating);
+  // Derive the stored display name from the authenticated user's id,
+  // never from the email and never directly from the client. Caps and
+  // email-shape rejection live in the helper.
+  const name = deriveStoredAuthorName({
+    supplied: typeof author_name === 'string' ? author_name : null,
+    userId: auth.userId,
+    email: auth.email,
+  });
 
   if (!name || name.length > MAX_NAME) {
     return NextResponse.json({ ok: false, error: 'invalid author_name' }, { status: 400 });

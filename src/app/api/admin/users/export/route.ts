@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requireSuperAdmin } from '@/lib/auth/requireAdmin';
 import { findCountry } from '@/lib/geo/countries';
 
 /**
@@ -17,12 +17,14 @@ import { findCountry } from '@/lib/geo/countries';
  * (filter by marketing_consent=true), age-bucket analysis (compute
  * from birthday), or country-segmented campaigns.
  *
- * Admin-only — gated by requireAdmin(). The same row set the admin
- * already has access to via /admin/users; export adds a download
- * instead of forcing them to copy-paste rows.
+ * SUPER-ADMIN only. The /admin/users/[id]/details route was already
+ * gated to requireSuperAdmin because the column set contains PII
+ * (phone, birthday, gender). Export ships the same PII in bulk so it
+ * needs the same boundary — a regular admin operator must not be able
+ * to dump every customer's PII into a spreadsheet.
  */
 export async function GET() {
-  const denied = await requireAdmin();
+  const denied = await requireSuperAdmin();
   if (denied) return denied;
 
   try {

@@ -43,10 +43,16 @@ export default function FontSizePresetPicker({
 }: Props) {
   const parse = parseFloatMode ? parseFloat : (s: string) => parseInt(s, 10);
 
+  // Tailwind cannot detect `grid-cols-${N}` at build time — the JIT
+  // compiler scans source for literal class names, so the dynamic
+  // template silently produces no rule and the grid collapses to a
+  // single column. Map to literal class names that the JIT can see.
+  const gridClass = gridCols === 5 ? 'grid-cols-5' : 'grid-cols-4';
+
   return (
     <div>
       <label className="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">{label}</label>
-      <div className={`grid grid-cols-${gridCols} gap-1.5 mt-1`}>
+      <div className={`grid ${gridClass} gap-1.5 mt-1`}>
         {presets.map(opt => (
           <button
             key={opt.v}
