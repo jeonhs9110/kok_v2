@@ -133,6 +133,72 @@ jobs:
           echo "✓ Published: s3://${S3_BUCKET}/latest.tar.gz (commit ${SHA_SHORT}, ${ARTIFACT_SIZE})"
 
       # ──────────────────────────────────────────────────────────────
+      # Trigger the EC2 deploy refresh.
+      #
+      # Without this step every fix that lands on master sits in S3
+      # forever while the running instance keeps serving the bundle it
+      # pulled at boot time. Pre-2026-06-30 the prod EC2 had been
+      # running stale code for 22h across 7+ merged PRs — invisible to
+      # operators because GHA went green and CloudWatch showed no
+      # errors. The actual `aws s3 cp` above succeeded; nothing on the
+      # box ever fetched the new tarball.
+      #
+      # Looking up the instance by Name tag (not hard-coded ID) so the
+      # workflow keeps working after Terraform replaces the instance.
+      # /usr/local/bin/kokkok-refresh.sh (installed via ec2.tf
+      # user_data + checked into infrastructure/scripts) handles the
+      # atomic swap + health-check rollback.
+      # ──────────────────────────────────────────────────────────────
+      - name: Trigger EC2 deploy refresh
+        run: |
+          set -euxo pipefail
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=kokkok-app-*" "Name=instance-state-name,Values=running" \
+            --query 'Reservations[].Instances[].InstanceId' \
+            --output text | head -n1)
+          if [ -z "$INSTANCE_ID" ]; then
+            echo "::warning::No running kokkok-app-* EC2 instance found — skipping refresh trigger"
+            exit 0
+          fi
+          echo "Triggering deploy refresh on $INSTANCE_ID..."
+          CMD_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name AWS-RunShellScript \
+            --comment "GHA build-publish-artifact for commit ${GITHUB_SHA::7}" \
+            --parameters 'commands=["sudo /usr/local/bin/kokkok-refresh.sh"]' \
+            --query "Command.CommandId" \
+            --output text)
+          echo "SSM command: $CMD_ID"
+
+          # Wait for completion. The refresh script runs ~10-30s
+          # including the health-check retry loop. Surfacing the exit
+          # status here means a bad deploy turns the GHA run red
+          # instead of silently leaving prod broken.
+          aws ssm wait command-executed \
+            --command-id "$CMD_ID" \
+            --instance-id "$INSTANCE_ID" || true
+
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$CMD_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query Status --output text)
+          echo "Refresh status: $STATUS"
+
+          aws ssm get-command-invocation \
+            --command-id "$CMD_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --query StandardOutputContent --output text || true
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "::error::Deploy refresh failed with status=$STATUS"
+            aws ssm get-command-invocation \
+              --command-id "$CMD_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --query StandardErrorContent --output text || true
+            exit 1
+          fi
+
+      # ──────────────────────────────────────────────────────────────
       # Phase 1 of the GitHub → Bitbucket migration: ALSO build a
       # Docker image and push to ECR. The tarball path above keeps
       # working for the live EC2 deploy — Phase 4 switches the EC2
@@ -175,6 +241,7 @@ jobs:
             echo "- **tarball**: \`s3://${S3_BUCKET}/latest.tar.gz\`"
             echo "- **image**: \`${{ steps.ecr-login.outputs.registry }}/kokkok-app:master-${GITHUB_SHA::7}\`"
             echo ""
-            echo "**Next:** run \`terraform apply -replace=aws_instance.app\` to roll out (tarball path)."
+            echo "**Deploy:** auto-triggered via SSM \`kokkok-refresh.sh\` immediately after S3 upload."
+            echo "(Pre-2026-06-30 this required \`terraform apply -replace=aws_instance.app\` manually.)"
             echo "Phase 4 will flip EC2 to pull the docker image instead."
           } >> "$GITHUB_STEP_SUMMARY"
