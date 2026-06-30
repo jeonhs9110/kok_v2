@@ -247,12 +247,24 @@ export function useInstagram() {
   const deletePost = async (slot: number) => {
     const post = posts[slot];
     if (post.id) {
-      if (USE_RDS_FROM_BROWSER) {
-        await fetch(`/api/admin/instagram-posts?id=${encodeURIComponent(post.id)}`, { method: 'DELETE' });
-      } else if (supabase) {
-        await supabase.from('instagram_posts').delete().eq('id', post.id);
+      try {
+        if (USE_RDS_FROM_BROWSER) {
+          // res.ok check — without this a 500 from /api/admin/instagram-posts
+          // still flowed through to the optimistic clear below, leaving the
+          // DB row intact while the operator saw the slot empty. Next
+          // refresh would re-show the post.
+          const res = await fetch(`/api/admin/instagram-posts?id=${encodeURIComponent(post.id)}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error(`http_${res.status}`);
+        } else if (supabase) {
+          const { error } = await supabase.from('instagram_posts').delete().eq('id', post.id);
+          if (error) throw error;
+        }
+        await revalidateHomepageData('instagram');
+      } catch (err) {
+        console.error('[admin/instagram] post delete failed:', err);
+        toast.show('포스트 삭제에 실패했습니다.', 'error');
+        return;
       }
-      await revalidateHomepageData('instagram');
     }
     setPosts(prev => prev.map((p, i) => i === slot ? emptyPost(i) : p));
   };

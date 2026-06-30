@@ -222,6 +222,17 @@ export async function DELETE() {
         await client.query(`UPDATE public.orders SET user_id = NULL WHERE user_id = $1`, [auth.userId]);
         // Cart is ephemeral — drop it.
         await client.query(`DELETE FROM public.cart_items WHERE user_id = $1`, [auth.userId]);
+        // Chatbot leads carry PII (email + name + skin_type + country)
+        // collected via the storefront /api/customer/chatbot-leads
+        // POST. If the same customer later registered and is now
+        // deleting the account, that pre-registration lead row would
+        // otherwise survive as orphaned PII — direct PIPA Article 21
+        // violation (duty to destroy on revocation of consent). Match
+        // by email, which is the only field reliably set on lead
+        // capture.
+        if (auth.email) {
+          await client.query(`DELETE FROM public.chatbot_leads WHERE email = $1`, [auth.email]);
+        }
         // Now the row deletions.
         await client.query(`DELETE FROM public.customer_profiles WHERE id = $1`, [auth.userId]);
         await client.query(`DELETE FROM public.wishlist WHERE user_id = $1`, [auth.userId]);
