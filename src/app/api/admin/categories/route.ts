@@ -60,11 +60,20 @@ export async function DELETE(request: Request) {
           `DELETE FROM public.categories WHERE parent_id = $1`,
           [id],
         );
-        await client.query(
+        // Check that the parent category actually existed — without
+        // this, deleting a stale/already-deleted id silently returns
+        // success and the operator thinks the row went away when in
+        // fact nothing happened. (The subcategory delete above is
+        // intentionally not checked: it's valid for a leaf category
+        // with no children to delete cleanly.)
+        const parent = await client.query(
           `DELETE FROM public.categories WHERE id = $1`,
           [id],
         );
         await client.query('COMMIT');
+        if ((parent.rowCount ?? 0) === 0) {
+          return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
+        }
         return NextResponse.json({ ok: true });
       } catch (err) {
         await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });

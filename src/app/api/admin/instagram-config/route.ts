@@ -66,11 +66,19 @@ export async function PUT(request: Request) {
       `SELECT id FROM public.instagram_config LIMIT 1`,
     );
     if (existing.rows[0]) {
+      // Check the rowCount-derived boolean — genericUpdateInPg returns
+      // false if the WHERE id = $1 matched zero rows (the row got
+      // deleted between our SELECT above and this UPDATE). Previously
+      // we discarded the boolean and replied { ok: true } even on a
+      // 0-row update — operator saw success, but instagram config
+      // wasn't actually saved. Throw so the catch below returns 500.
       const { genericUpdateInPg } = await import('@/lib/db/admin-writes');
-      await genericUpdateInPg('instagram_config', String(existing.rows[0].id), payload);
+      const updated = await genericUpdateInPg('instagram_config', String(existing.rows[0].id), payload);
+      if (!updated) throw new Error('instagram_config_update_no_rows');
     } else {
       const { genericInsertInPg } = await import('@/lib/db/admin-writes');
-      await genericInsertInPg('instagram_config', payload);
+      const inserted = await genericInsertInPg('instagram_config', payload);
+      if (!inserted) throw new Error('instagram_config_insert_failed');
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
