@@ -3,6 +3,17 @@ import { createClient } from '@supabase/supabase-js';
 
 const SITE_URL = 'https://www.kokkokgarden.com';
 
+// Force server-rendered per request. Without this, Next.js prerenders
+// the sitemap at build time — and the GHA build container has no
+// DATABASE_URL, so fetchSitemapData() throws and only the 14 static
+// routes ship in the baked sitemap.xml. Every product / menu / page /
+// post / review page would be invisible to Google's crawler.
+//
+// Sitemap requests are rare (Google polls every few days), and the
+// pg fan-out is 5 simple SELECTs, so the per-request cost is
+// negligible compared to handling stale-after-deploy sitemap pages.
+export const dynamic = 'force-dynamic';
+
 interface SitemapData {
   products: Array<{ id: string; created_at: string }>;
   menus: Array<{ id: string; slug: string; sort_order: number }>;
