@@ -177,22 +177,31 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
     setBgBusyId(bg.id);
     try {
       if (USE_RDS_FROM_BROWSER) {
-        await fetch(`/api/admin/site-backgrounds?id=${encodeURIComponent(bg.id)}`, {
+        // res.ok check — without it a 500 PATCH still flowed into
+        // loadBackgrounds() which (correctly) re-fetched the OLD value,
+        // and the operator saw the toggle flip in their hand then
+        // revert silently with no error signal. Surface the failure.
+        const res = await fetch(`/api/admin/site-backgrounds?id=${encodeURIComponent(bg.id)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ scroll_driven: !bg.scroll_driven }),
         });
+        if (!res.ok) throw new Error(`http_${res.status}`);
       } else if (supabase) {
-        await supabase
+        const { error } = await supabase
           .from('site_backgrounds')
           .update({ scroll_driven: !bg.scroll_driven })
           .eq('id', bg.id);
+        if (error) throw error;
       }
       await loadBackgrounds();
       // Only evict if the toggled row is the currently-active one — the
       // storefront only reads the active row, so scroll_driven changes
       // on inactive rows don't affect public render.
       if (bg.is_active) await revalidateHomepageData('site_background');
+    } catch (err) {
+      console.error('[admin/logo/bg] toggleScrollDriven failed:', err);
+      toast.show('스크롤 효과 설정 변경에 실패했습니다.', 'error');
     } finally {
       setBgBusyId(null);
     }
@@ -215,9 +224,17 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
         }
       }
       if (USE_RDS_FROM_BROWSER) {
-        await fetch(`/api/admin/site-backgrounds?id=${encodeURIComponent(bg.id)}`, { method: 'DELETE' });
+        // res.ok check — without it a 500 DELETE left the DB row alive
+        // while the storage object (deleted earlier in this same
+        // handler, line 214) was already gone. Storefront's next render
+        // 404'd on the background image. Surface so the operator can
+        // retry — if DB delete keeps failing, at least they know the
+        // background is now broken instead of seeing "success".
+        const res = await fetch(`/api/admin/site-backgrounds?id=${encodeURIComponent(bg.id)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`http_${res.status}`);
       } else if (supabase) {
-        await supabase.from('site_backgrounds').delete().eq('id', bg.id);
+        const { error } = await supabase.from('site_backgrounds').delete().eq('id', bg.id);
+        if (error) throw error;
       }
       await loadBackgrounds();
       // Always evict on delete: even if the row was inactive, the
@@ -226,6 +243,9 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
       // multi-tab editing).
       await revalidateHomepageData('site_background');
       onIframeReload();
+    } catch (err) {
+      console.error('[admin/logo/bg] delete failed:', err);
+      toast.show('배경 삭제에 실패했습니다. 페이지를 새로고침해주세요.', 'error');
     } finally {
       setBgBusyId(null);
     }

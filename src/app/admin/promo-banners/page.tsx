@@ -185,13 +185,21 @@ export default function PromoBannersAdminPage() {
     if (!ok) return;
     try {
       if (USE_RDS_FROM_BROWSER) {
-        await fetch(`/api/admin/promo-banners?id=${encodeURIComponent(banner.id)}`, { method: 'DELETE' });
+        // res.ok check — `await fetch()` doesn't throw on non-OK HTTP,
+        // so a 500 DELETE used to flow through to the optimistic state
+        // clear + revalidate. Operator saw success while the row stayed
+        // in RDS, and the storefront kept the banner alive until the
+        // next admin refresh.
+        const res = await fetch(`/api/admin/promo-banners?id=${encodeURIComponent(banner.id)}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`http_${res.status}`);
       } else if (supabase) {
-        await supabase.from('promo_banners').delete().eq('id', banner.id);
+        const { error } = await supabase.from('promo_banners').delete().eq('id', banner.id);
+        if (error) throw error;
       }
       setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, id: `new-${b.sort_order}`, image_url: '', link_url: '' } : b));
       await revalidateHomepageData('promo_banners');
-    } catch {
+    } catch (err) {
+      console.error('[admin/promo-banners] delete failed:', err);
       toast.show('삭제에 실패했습니다.', 'error');
     }
   };
