@@ -91,17 +91,21 @@ export default function ForgotPasswordForm() {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
+          <label htmlFor="forgot-email" className="sr-only">이메일 주소</label>
           <input
+            id="forgot-email"
             type="email"
             value={email}
             onChange={e => setEmail(e.target.value)}
             placeholder="이메일 주소"
             autoComplete="email"
             required
-            className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-brand-ink placeholder:text-gray-400"
+            aria-invalid={!!error}
+            aria-describedby={error ? 'forgot-error' : undefined}
+            className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-base sm:text-sm text-brand-ink placeholder:text-gray-400"
           />
 
-          {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
+          {error && <p id="forgot-error" role="alert" aria-live="polite" className="text-red-500 text-xs font-bold text-center">{error}</p>}
 
           <button
             type="submit"

@@ -219,8 +219,51 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     ),
   };
 
+  // Organization + WebSite JSON-LD for Naver Knowledge Panel + Google
+  // Search rich card. Operator-controlled name/address comes through
+  // business_info, but at this scale we hardcode the brand identity
+  // — switching it would mean rebranding the entire site anyway.
+  const orgLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': 'https://www.kokkokgarden.com#org',
+        name: 'KOKKOK GARDEN',
+        alternateName: ['콕콕가든', '꼭꼭가든'],
+        url: 'https://www.kokkokgarden.com',
+        logo: 'https://www.kokkokgarden.com/kokkokgarden_primary.svg',
+        sameAs: [
+          'https://www.instagram.com/kokkokgarden_kr',
+          'https://smartstore.naver.com/kokkok-garden',
+        ],
+      },
+      {
+        '@type': 'WebSite',
+        '@id': 'https://www.kokkokgarden.com#website',
+        url: 'https://www.kokkokgarden.com',
+        name: 'KOKKOK GARDEN',
+        inLanguage: lang === 'en' ? 'en-US' : 'ko-KR',
+        publisher: { '@id': 'https://www.kokkokgarden.com#org' },
+      },
+    ],
+  };
+
   return (
     <>
+      {/* sr-only h1 — homepage previously had no h1, breaking the WCAG
+          2.4.6 heading hierarchy. Visible page chrome stays the same; a
+          screen reader gets a real page heading. */}
+      <h1 className="sr-only">
+        {lang === 'en' ? 'Kokkok Garden — Premium Korean Skincare' : '콕콕가든 — K-뷰티 스킨케어'}
+      </h1>
+      <script
+        type="application/ld+json"
+        // Plain JSON-LD; the value is constructed server-side from a
+        // hardcoded shape, no operator input flows into it, so no XSS
+        // risk from the embedded JSON.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgLd) }}
+      />
       {sectionOrder.map(key => {
         if (isBannerKey(key)) {
           const id = key.slice('banner:'.length);

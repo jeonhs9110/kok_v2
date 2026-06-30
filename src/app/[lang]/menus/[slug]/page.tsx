@@ -45,6 +45,18 @@ export async function generateMetadata({
       type: 'article',
       locale: lang === 'kr' ? 'ko_KR' : 'en_US',
       siteName: 'KOKKOK GARDEN',
+      // KakaoTalk + Naver post sharing show a text-only card when
+      // og:image is missing. Fall back to the brand SVG so every menu
+      // page gets at least a logo card. When the operator uploads a
+      // dedicated 1200x630 og-default.png, this fallback picks it up
+      // automatically (placeholder file checked into /public).
+      images: [{ url: 'https://www.kokkokgarden.com/kokkokgarden_primary.svg', alt: 'KOKKOK GARDEN' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description: desc,
+      images: ['https://www.kokkokgarden.com/kokkokgarden_primary.svg'],
     },
   };
 }
