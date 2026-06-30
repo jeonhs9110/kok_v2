@@ -284,8 +284,8 @@ export async function getLegalPageFromPg(slug: string): Promise<LegalPageRow | n
   return rows[0] ?? null;
 }
 
-// ─── sitemap data (products / menus / pages / posts) ──────────────
-// Sitemap pulls minimal columns from four tables in parallel. Returns
+// ─── sitemap data (products / menus / pages / posts / reviews) ────
+// Sitemap pulls minimal columns from five tables in parallel. Returns
 // arrays even on partial failure — sitemap.ts logs which category dropped
 // out, mirroring the prior Supabase fan-out behavior.
 export interface SitemapData {
@@ -293,11 +293,12 @@ export interface SitemapData {
   menus: Array<{ id: string; slug: string; sort_order: number }>;
   pages: Array<{ slug: string; created_at: string }>;
   posts: Array<{ id: string; menu_id: string; updated_at: string }>;
+  reviews: Array<{ id: string; updated_at: string }>;
 }
 
 export async function getSitemapDataFromPg(): Promise<SitemapData> {
   const pool = getPgPool();
-  const [products, menus, pages, posts] = await Promise.all([
+  const [products, menus, pages, posts, reviews] = await Promise.all([
     pool.query<{ id: string; created_at: string }>(
       `SELECT id, created_at FROM public.products WHERE is_active = true`,
     ),
@@ -310,12 +311,16 @@ export async function getSitemapDataFromPg(): Promise<SitemapData> {
     pool.query<{ id: string; menu_id: string; updated_at: string }>(
       `SELECT id, menu_id, updated_at FROM public.posts WHERE is_published = true`,
     ),
+    pool.query<{ id: string; updated_at: string }>(
+      `SELECT id, updated_at FROM public.review_cards WHERE is_active = true`,
+    ),
   ]);
   return {
     products: products.rows,
     menus: menus.rows,
     pages: pages.rows,
     posts: posts.rows,
+    reviews: reviews.rows,
   };
 }
 

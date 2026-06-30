@@ -68,20 +68,23 @@ export async function generateMetadata(
     ? '제주 동백 PDRN 성분의 K-뷰티 스킨케어. 1회 사용으로 완성하는 보습 케어.'
     : 'Korean skincare powered by Jeju Camellia PDRN. One-step deep hydration.';
   const url = `https://www.kokkokgarden.com/${lang}`;
-  // 2026-06-29: filled out the OG / Twitter cards. Pre-fix the homepage
-  // openGraph block had only `title` + `locale` + `type` set — no
-  // `url`, no `siteName`, no `images`, and no twitter card at all.
-  // Every product detail / reviews / CMS page already exposed the full
-  // set, so KakaoTalk / Facebook / Twitter shares of the homepage
-  // dropped to a no-image fallback while shares of every other page on
-  // the site rendered rich previews. The homepage is the primary brand
-  // URL — the asymmetric one had the biggest reach.
+  // OG image fallback chain (Kakao / Facebook crawlers walk it from the
+  // top and use the first URL that returns 200):
+  //   1. /og-default.png — 1200×630 raster card. Ships when the design
+  //                        team delivers (operator request 2026-06-30).
+  //                        Kakao + Facebook both prefer raster.
+  //   2. /kokkokgarden_primary.svg — existing wordmark; keeps shares
+  //                                  working today while the PNG is
+  //                                  in design. Some Kakao client
+  //                                  versions skip SVG entirely.
   //
-  // SVG-as-OG image works in modern Kakao / Facebook crawlers; if a
-  // platform falls back to a default the title + description still
-  // carry. When the operator wants a true raster OG image they can
-  // drop a /public/og-default.png in and we'll swap the URL here.
-  const ogImage = 'https://www.kokkokgarden.com/kokkokgarden_primary.svg';
+  // Drop-in is literally: copy og-default.png into /public/ and
+  // redeploy. No code change needed — the order below makes the PNG
+  // authoritative as soon as it exists.
+  const ogImages = [
+    { url: 'https://www.kokkokgarden.com/og-default.png', alt: isKr ? '콕콕가든' : 'Kokkok Garden' },
+    { url: 'https://www.kokkokgarden.com/kokkokgarden_primary.svg', alt: isKr ? '콕콕가든' : 'Kokkok Garden' },
+  ];
   return {
     title,
     description,
@@ -96,13 +99,13 @@ export async function generateMetadata(
       type: 'website',
       locale: isKr ? 'ko_KR' : 'en_US',
       siteName: 'KOKKOK GARDEN',
-      images: [{ url: ogImage, alt: isKr ? '콕콕가든' : 'Kokkok Garden' }],
+      images: ogImages,
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description,
-      images: [ogImage],
+      images: ogImages.map(i => i.url),
     },
   };
 }

@@ -8,6 +8,7 @@ interface SitemapData {
   menus: Array<{ id: string; slug: string; sort_order: number }>;
   pages: Array<{ slug: string; created_at: string }>;
   posts: Array<{ id: string; menu_id: string; updated_at: string }>;
+  reviews: Array<{ id: string; updated_at: string }>;
 }
 
 async function fetchSitemapData(): Promise<SitemapData | null> {
@@ -25,15 +26,17 @@ async function fetchSitemapData(): Promise<SitemapData | null> {
   const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
   if (!supabase) return null;
 
-  const [productsRes, menusRes, pagesRes, postsRes] = await Promise.all([
+  const [productsRes, menusRes, pagesRes, postsRes, reviewsRes] = await Promise.all([
     supabase.from('products').select('id, created_at').eq('is_active', true),
     supabase.from('menus').select('id, slug, sort_order').eq('is_published', true),
     supabase.from('pages').select('slug, created_at').eq('is_published', true),
     supabase.from('posts').select('id, menu_id, updated_at').eq('is_published', true),
+    supabase.from('review_cards').select('id, updated_at').eq('is_active', true),
   ]);
 
   for (const [name, res] of [
-    ['products', productsRes], ['menus', menusRes], ['pages', pagesRes], ['posts', postsRes],
+    ['products', productsRes], ['menus', menusRes], ['pages', pagesRes],
+    ['posts', postsRes], ['reviews', reviewsRes],
   ] as const) {
     if (res.error) {
       console.error(`[sitemap] ${name} query failed; URLs omitted:`, res.error);
@@ -45,6 +48,7 @@ async function fetchSitemapData(): Promise<SitemapData | null> {
     menus: (menusRes.data ?? []) as SitemapData['menus'],
     pages: (pagesRes.data ?? []) as SitemapData['pages'],
     posts: (postsRes.data ?? []) as SitemapData['posts'],
+    reviews: (reviewsRes.data ?? []) as SitemapData['reviews'],
   };
 }
 
@@ -95,5 +99,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ];
   });
 
-  return [...staticRoutes, ...productRoutes, ...menuRoutes, ...pageRoutes, ...postRoutes];
+  // review_cards each get a /[lang]/reviews/[id] detail page; the
+  // landing /[lang]/reviews/ is already in the static list (covered
+  // by /menus/review). Enumerating per-card lets Google crawl the
+  // long tail of admin-curated reviews instead of stopping at the
+  // gallery.
+  const reviewRoutes = data.reviews.flatMap(r => [
+    { url: `${SITE_URL}/kr/reviews/${r.id}`, lastModified: new Date(r.updated_at), changeFrequency: 'monthly' as const, priority: 0.4 },
+    { url: `${SITE_URL}/en/reviews/${r.id}`, lastModified: new Date(r.updated_at), changeFrequency: 'monthly' as const, priority: 0.4 },
+  ]);
+
+  return [...staticRoutes, ...productRoutes, ...menuRoutes, ...pageRoutes, ...postRoutes, ...reviewRoutes];
 }
