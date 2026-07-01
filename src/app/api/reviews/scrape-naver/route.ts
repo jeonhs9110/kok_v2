@@ -18,8 +18,9 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+// Round 27: dropped `runtime = 'nodejs'` (default in Next 16) and
+// `dynamic = 'force-dynamic'` (redundant on a POST route — POSTs are
+// always dynamic). Neither was doing anything; both were clutter.
 
 interface ScrapeResult {
   title: string | null;

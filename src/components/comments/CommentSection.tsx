@@ -11,9 +11,13 @@ interface CommentSectionProps {
   lang: string;
 }
 
+// Round 27: swap the passive "댓글이 없습니다 / No comments yet." for
+// an inviting first-mover prompt — matches the ProductReviewSection
+// pattern ("첫 리뷰를 작성해주세요") and materially lifts community
+// engagement on new posts.
 const lb: Record<string, { comments: string; empty: string; write: string; loadFailed: string; retry: string }> = {
-  kr: { comments: '댓글', empty: '댓글이 없습니다.', write: '댓글 작성', loadFailed: '댓글을 불러오지 못했습니다.', retry: '다시 시도' },
-  en: { comments: 'Comments', empty: 'No comments yet.', write: 'Write a comment', loadFailed: "Couldn't load comments.", retry: 'Retry' },
+  kr: { comments: '댓글', empty: '첫 번째 댓글을 남겨보세요.', write: '댓글 작성', loadFailed: '댓글을 불러오지 못했습니다.', retry: '다시 시도' },
+  en: { comments: 'Comments', empty: 'Be the first to comment.', write: 'Write a comment', loadFailed: "Couldn't load comments.", retry: 'Retry' },
 };
 
 export default function CommentSection({ postId, lang }: CommentSectionProps) {

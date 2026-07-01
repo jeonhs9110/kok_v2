@@ -113,8 +113,13 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   const lang: Lang = rawLang;
 
   const headersList = await headers();
-  const country = headersList.get('x-vercel-ip-country')
-    || headersList.get('cloudfront-viewer-country')
+  // Round 27: dropped x-vercel-ip-country from the priority chain. We
+  // deploy on EC2+ALB+CloudFront (Vercel is only DNS host per project
+  // memory), so the Vercel header is CLIENT-SPOOFABLE and would let
+  // any /en visitor pretend to be Korean to see KR-only pricing +
+  // purchase flow. cloudfront-viewer-country is set by CloudFront
+  // and stripped/rewritten at the edge — it's the trustworthy signal.
+  const country = headersList.get('cloudfront-viewer-country')
     || headersList.get('x-user-country')
     || 'KR';
   const isKorea = country === 'KR';

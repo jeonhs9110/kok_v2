@@ -83,6 +83,16 @@ const nextConfig: NextConfig = {
       'lucide-react',
       'embla-carousel-react',
       'embla-carousel-autoplay',
+      // Round 27: extend to the other barrel-heavy admin deps. TipTap
+      // and @dnd-kit both export their full public API as one barrel
+      // — without this the admin bundle carried dead code from the
+      // rich-editor + sortable-list surfaces even when only one
+      // extension was imported.
+      '@tiptap/react',
+      '@tiptap/starter-kit',
+      '@dnd-kit/core',
+      '@dnd-kit/sortable',
+      '@dnd-kit/utilities',
     ],
   },
   // Don't let Turbopack bundle these — either they read their own
