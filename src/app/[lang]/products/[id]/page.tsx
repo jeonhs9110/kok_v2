@@ -21,7 +21,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 export async function generateMetadata({ params }: { params: Promise<{ lang: string; id: string }> }): Promise<Metadata> {
   const { lang, id } = await params;
   if (!UUID_RE.test(id)) {
-    return { title: '상품을 찾을 수 없습니다 · KOKKOK GARDEN', robots: { index: false, follow: true } };
+    return {
+      title: lang === 'kr' ? '상품을 찾을 수 없습니다 · KOKKOK GARDEN' : 'Product Not Found · KOKKOK GARDEN',
+      robots: { index: false, follow: true },
+    };
   }
   // getProducts() throws on transient RDS/pool failures. A throw
   // inside generateMetadata is NOT caught by error.tsx — Next.js
@@ -44,7 +47,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   const product = products.find(p => p.id === id && p.is_active);
   if (!product) {
     return {
-      title: '상품을 찾을 수 없습니다 · KOKKOK GARDEN',
+      title: lang === 'kr' ? '상품을 찾을 수 없습니다 · KOKKOK GARDEN' : 'Product Not Found · KOKKOK GARDEN',
       robots: { index: false, follow: true },
     };
   }

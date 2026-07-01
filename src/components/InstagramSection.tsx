@@ -34,6 +34,7 @@ export interface InstagramData {
 
 interface Props {
   data?: InstagramData | null;
+  lang?: string;
 }
 
 function IgIcon({ className }: { className?: string }) {
@@ -48,7 +49,7 @@ function IgIcon({ className }: { className?: string }) {
 
 const SLOTS = 6;
 
-export default function InstagramSection({ data }: Props) {
+export default function InstagramSection({ data, lang = 'kr' }: Props) {
   // If the DB doesn't have an instagram_config row (or the fetch failed),
   // hide the whole section instead of falling back to a hardcoded handle.
   // The previous default '@rdrd_official' is an outdated/wrong handle that
@@ -170,7 +171,7 @@ export default function InstagramSection({ data }: Props) {
             className="inline-flex items-center gap-2 border border-neutral-300 text-neutral-800 hover:border-neutral-800 transition-colors px-8 py-3 text-sm font-semibold tracking-widest rounded-full"
           >
             <IgIcon className="w-4 h-4" />
-            Instagram에서 더 보기
+            {lang === 'kr' ? 'Instagram에서 더 보기' : 'See more on Instagram'}
           </a>
         </div>
       </div>

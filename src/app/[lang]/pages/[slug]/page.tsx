@@ -60,7 +60,10 @@ export async function generateMetadata({
   const { lang, slug } = await params;
   const page = await fetchCmsPage(slug, false);
   if (!page) {
-    return { title: '페이지를 찾을 수 없습니다 · KOKKOK GARDEN', robots: { index: false, follow: true } };
+    return {
+      title: lang === 'kr' ? '페이지를 찾을 수 없습니다 · KOKKOK GARDEN' : 'Page Not Found · KOKKOK GARDEN',
+      robots: { index: false, follow: true },
+    };
   }
   const titleText = pickLangString(page.title, lang) || slug;
   const contentText = pickLangString(page.content, lang);

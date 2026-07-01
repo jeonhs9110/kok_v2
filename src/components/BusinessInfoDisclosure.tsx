@@ -56,8 +56,13 @@ export default async function BusinessInfoDisclosure({ lang, variant = 'terms' }
   const biz = await loadBizInfo();
   if (!biz) return null;
   const isKr = lang === 'kr';
-  const companyName = isKr ? biz.company_name_kr : (biz.company_name_en || biz.company_name_kr);
-  const address     = isKr ? biz.address_kr     : (biz.address_en     || biz.address_kr);
+  // Same policy as Footer.tsx — don't cross-language fallback. A /en
+  // customer viewing the PIPA disclosure should not see the Korean
+  // company name / address as a "helpful" fill-in; that misleads
+  // rather than helps. Blank surfaces the disclosure gap so the
+  // operator notices and adds the English translation.
+  const companyName = isKr ? biz.company_name_kr : (biz.company_name_en || '');
+  const address     = isKr ? biz.address_kr     : (biz.address_en     || '');
 
   const L = isKr
     ? {

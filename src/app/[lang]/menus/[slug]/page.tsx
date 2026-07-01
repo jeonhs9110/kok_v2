@@ -19,7 +19,7 @@ export async function generateMetadata({
   const menu = await getMenuBySlug(slug);
   if (!menu) {
     return {
-      title: '페이지를 찾을 수 없습니다 · KOKKOK GARDEN',
+      title: lang === 'kr' ? '페이지를 찾을 수 없습니다 · KOKKOK GARDEN' : 'Page Not Found · KOKKOK GARDEN',
       robots: { index: false, follow: true },
     };
   }

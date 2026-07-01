@@ -93,6 +93,27 @@ export async function POST(request: Request) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+      // Idempotency guard — the route is a one-shot for a fresh
+      // registration. Prior code UPDATE'd customer_profiles on
+      // conflict, so a second call (browser back-button, malicious
+      // extension re-POSTing) with different / blank / attacker-
+      // chosen values would silently wipe the customer's stored
+      // PII + consent flags without any confirmation and break the
+      // PIPA marketing_consent audit trail. Now if the row already
+      // exists we return 409 and route the caller to
+      // /api/customer/profile PATCH which is the intended edit
+      // surface and IS guarded by requireCustomer.
+      const existing = await client.query<{ id: string }>(
+        `SELECT id FROM public.customer_profiles WHERE id = $1 LIMIT 1`,
+        [claims.sub],
+      );
+      if (existing.rowCount && existing.rowCount > 0) {
+        await client.query('ROLLBACK');
+        return NextResponse.json(
+          { error: 'already_registered', hint: 'Use /api/customer/profile to edit.' },
+          { status: 409 },
+        );
+      }
       await client.query(
         `INSERT INTO public.users (id, email, role, is_verified, created_at)
            VALUES ($1, $2, 'user', true, NOW())
@@ -111,20 +132,7 @@ export async function POST(request: Request) {
             $1, $2, $3, $4, $5, $6::date, $7, $8,
             $9, $10, $11, 'email',
             COALESCE($12::jsonb, '{}'::jsonb), NOW(), NOW()
-          )
-          ON CONFLICT (id) DO UPDATE
-            SET email             = EXCLUDED.email,
-                name              = EXCLUDED.name,
-                phone             = EXCLUDED.phone,
-                gender            = EXCLUDED.gender,
-                birthday          = EXCLUDED.birthday,
-                age_range         = EXCLUDED.age_range,
-                country           = EXCLUDED.country,
-                skin_type         = EXCLUDED.skin_type,
-                marketing_consent = EXCLUDED.marketing_consent,
-                privacy_consent   = EXCLUDED.privacy_consent,
-                custom_fields     = EXCLUDED.custom_fields,
-                updated_at        = NOW()`,
+          )`,
         [
           claims.sub,
           claims.email ?? null,

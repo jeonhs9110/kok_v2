@@ -75,7 +75,7 @@ export async function PATCH(req: Request, { params }: RouteContext) {
       let cognitoWarning: { message: string; cli: string } | null = null;
       if (email && process.env.USE_COGNITO === 'true') {
         try {
-          const { addUserToGroup, removeUserFromGroup } = await import('@/lib/auth/cognito-admin');
+          const { addUserToGroup, removeUserFromGroup, globalSignOutByEmail } = await import('@/lib/auth/cognito-admin');
           const cognitoOk = role === 'admin'
             ? await addUserToGroup(email, 'admins')
             : await removeUserFromGroup(email, 'admins');
@@ -85,6 +85,15 @@ export async function PATCH(req: Request, { params }: RouteContext) {
               message: `RDS 권한은 변경되었지만 Cognito 그룹 동기화에 실패했습니다. 이 사용자는 다음 로그인 시 /admin에 접근할 수 없습니다.`,
               cli: `aws cognito-idp ${verb} --user-pool-id ${process.env.COGNITO_USER_POOL_ID ?? ''} --username "${email}" --group-name admins --region ${process.env.AWS_REGION ?? 'ap-northeast-2'}`,
             };
+          } else {
+            // Force re-auth on the target so their JWT's stale
+            // `cognito:groups` claim can't be used to reach (or
+            // stay out of) /admin for up to the token TTL. Without
+            // this, a demoted admin's cookie carried `admins` for
+            // another hour and a freshly-promoted operator saw 403.
+            // Best-effort — logs on failure but doesn't block the
+            // role-change response.
+            await globalSignOutByEmail(email);
           }
         } catch (err) {
           console.error('[admin/users] cognito group sync threw:', err);

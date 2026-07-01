@@ -72,11 +72,11 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
 
   const categoryName = (() => {
     const c = allCategories.find(c => c.id === productData.category_id);
-    return c ? (c.name?.[lang] || c.name?.kr || '') : '';
+    return c ? (c.name?.[lang] || c.name?.en || c.name?.kr || '') : '';
   })();
   const subcategoryName = (() => {
     const c = allCategories.find(c => c.id === productData.subcategory_id);
-    return c ? (c.name?.[lang] || c.name?.kr || '') : '';
+    return c ? (c.name?.[lang] || c.name?.en || c.name?.kr || '') : '';
   })();
 
   const discountPct = productData.originalPrice > productData.price

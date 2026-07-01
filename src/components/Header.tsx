@@ -364,7 +364,7 @@ export default function Header({
               {/* Dynamic menus from DB */}
               {navMenus.map(menu => {
                 const hasChildren = menu.children.length > 0;
-                const menuLabel = menu.title?.[lang] || menu.title?.kr || menu.title?.en || menu.slug;
+                const menuLabel = menu.title?.[lang] || menu.title?.en || menu.title?.kr || menu.slug;
                 if (!hasChildren) {
                   return (
                     <Link key={menu.slug} href={`/${lang}/menus/${menu.slug}`} className="px-4 h-full flex items-center kokkok-nav-menu-text font-semibold text-neutral-800 hover:text-black tracking-wide transition-colors">
@@ -502,7 +502,7 @@ export default function Header({
                     className="kokkok-header-submenu font-bold text-neutral-900 hover:text-brand-primary tracking-wide transition-colors"
                     onClick={() => setActiveMenu(null)}
                   >
-                    {child.title?.[lang] || child.title?.kr || child.title?.en || child.slug}
+                    {child.title?.[lang] || child.title?.en || child.title?.kr || child.slug}
                   </Link>
                 ))}
               </div>
@@ -515,7 +515,7 @@ export default function Header({
           <div className="lg:hidden bg-white border-t border-neutral-100 px-6 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
             <Link href={`/${lang}/products`} className="block kokkok-nav-menu-text font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{nav.product}</Link>
             {navMenus.map(menu => (
-              <Link key={menu.slug} href={`/${lang}/menus/${menu.slug}`} className="block kokkok-nav-menu-text font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{menu.title?.[lang] || menu.title?.kr || menu.title?.en || ''}</Link>
+              <Link key={menu.slug} href={`/${lang}/menus/${menu.slug}`} className="block kokkok-nav-menu-text font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{menu.title?.[lang] || menu.title?.en || menu.title?.kr || ''}</Link>
             ))}
             <Link href={`/${lang}/worldwide`} className="flex items-center gap-2 kokkok-nav-menu-text font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>
               <Globe className="w-4 h-4" /> {nav.worldwide}

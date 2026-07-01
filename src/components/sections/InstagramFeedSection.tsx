@@ -1,9 +1,9 @@
 import InstagramSection from '@/components/InstagramSection';
 import { getCachedInstagram } from '@/lib/cache/homepage';
 
-export default async function InstagramFeedSection() {
+export default async function InstagramFeedSection({ lang }: { lang?: string } = {}) {
   const data = await getCachedInstagram();
-  return <InstagramSection data={data} />;
+  return <InstagramSection data={data} lang={lang} />;
 }
 
 // Reserve the LARGER layout (embed grid) regardless of whether any post

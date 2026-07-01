@@ -115,11 +115,20 @@ export default async function Footer({ lang }: { lang: Lang }) {
   const showSocial  = !hidden.includes('social');
 
   const isKr = lang === 'kr';
-  const companyName = (isKr ? biz?.company_name_kr : biz?.company_name_en) || biz?.company_name_kr || BRAND;
-  const address     = (isKr ? biz?.address_kr     : biz?.address_en)     || biz?.address_kr     || '';
-  const csHours     = (isKr ? biz?.cs_hours_kr    : biz?.cs_hours_en)    || biz?.cs_hours_kr    || '';
-  const csLunch     = (isKr ? biz?.cs_lunch_kr    : biz?.cs_lunch_en)    || biz?.cs_lunch_kr    || '';
-  const csHoliday   = (isKr ? biz?.cs_holiday_kr  : biz?.cs_holiday_en)  || biz?.cs_holiday_kr  || '';
+  // No cross-language fallback below the primary picks. Prior code
+  // fell back to the Korean field when English was empty — meaning
+  // the /en footer silently rendered the Korean company name /
+  // address / customer-center hours to non-KR visitors. Now the
+  // English variant renders blank (or the BRAND constant) when
+  // admin hasn't filled the English field, which the operator will
+  // notice and complete (also matches the new PIPA warning banner
+  // pattern below). companyName still falls back to BRAND so the
+  // storefront never shows an empty company line.
+  const companyName = (isKr ? biz?.company_name_kr : biz?.company_name_en) || BRAND;
+  const address     = (isKr ? biz?.address_kr     : biz?.address_en)     || '';
+  const csHours     = (isKr ? biz?.cs_hours_kr    : biz?.cs_hours_en)    || '';
+  const csLunch     = (isKr ? biz?.cs_lunch_kr    : biz?.cs_lunch_en)    || '';
+  const csHoliday   = (isKr ? biz?.cs_holiday_kr  : biz?.cs_holiday_en)  || '';
 
   const repLabel       = isKr ? '대표' : 'CEO';
   const telLabel       = isKr ? '전화' : 'Tel';
