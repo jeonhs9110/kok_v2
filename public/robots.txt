@@ -12,4 +12,22 @@ Disallow: /cart
 Disallow: /*/menus/*/write
 Disallow: /*/menus/*/*/edit
 
+# Naver's crawler. Round 23 added an explicit stanza — Naver reads
+# User-agent: * fine, but Search Advisor recommends a dedicated Yeti
+# block so per-crawler Allow paths can diverge if we ever want them
+# to (e.g. exposing a Naver-only JSON feed). Identical policy today.
+User-agent: Yeti
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /auth/
+Disallow: /*/mypage
+Disallow: /*/recent
+Disallow: /cart
+Disallow: /*/menus/*/write
+Disallow: /*/menus/*/*/edit
+
 Sitemap: https://www.kokkokgarden.com/sitemap.xml

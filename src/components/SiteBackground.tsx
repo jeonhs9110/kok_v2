@@ -38,6 +38,12 @@ export default function SiteBackground({ initialBg }: Props) {
   // Scroll-driven playback: map scrollY to video.currentTime via rAF.
   // Only runs for videos with scroll_driven=true; auto-loop videos are
   // unaffected.
+  //
+  // Round 23: was previously re-arming rAF unconditionally at the end
+  // of every tick — main thread never idled, INP +5-15ms/interaction
+  // + measurable battery drain. Now rAF is only scheduled when a
+  // scroll event fires; the loop self-terminates when the user stops
+  // scrolling.
   useEffect(() => {
     if (!bg || bg.file_type !== 'video' || !bg.scroll_driven) return;
     const video = videoRef.current;
@@ -47,9 +53,8 @@ export default function SiteBackground({ initialBg }: Props) {
     let lastScroll = -1;
 
     const tick = () => {
+      rafId = null;
       const scrollY = window.scrollY;
-      // Only seek when scroll position actually changed — avoids hammering
-      // the decoder when the user isn't moving.
       if (scrollY !== lastScroll) {
         const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
         const ratio = Math.min(1, Math.max(0, scrollY / maxScroll));
@@ -59,20 +64,24 @@ export default function SiteBackground({ initialBg }: Props) {
         }
         lastScroll = scrollY;
       }
-      rafId = requestAnimationFrame(tick);
     };
 
-    // Kick a first tick once metadata is ready so duration is known.
-    const onReady = () => {
+    const schedule = () => {
       if (rafId === null) rafId = requestAnimationFrame(tick);
     };
+
+    // Kick one initial seek so the frame at scroll=0 lines up.
+    const onReady = () => schedule();
     if (video.readyState >= 1 /* HAVE_METADATA */) {
       onReady();
     } else {
       video.addEventListener('loadedmetadata', onReady, { once: true });
     }
 
+    window.addEventListener('scroll', schedule, { passive: true });
+
     return () => {
+      window.removeEventListener('scroll', schedule);
       if (rafId !== null) cancelAnimationFrame(rafId);
       video.removeEventListener('loadedmetadata', onReady);
     };

@@ -89,7 +89,13 @@ ${JSON.stringify(fields, null, 2)}`;
   }
 }
 
-// Cached wrapper – stores translation in Next.js data cache for 24 hours
+// Cached wrapper – stores translation in Next.js data cache for 30 days.
+// Product copy rarely changes; a 24-hour TTL was re-translating the
+// full catalog every day at 5 langs × N products = high OpenAI cost
+// with no benefit. Admin saves invalidate via the 'products' tag
+// (revalidateHomepageData('products') at useProductForm.ts), so
+// operator edits still flush the cache within a minute — the 30-day
+// TTL is a bound on drift for products the operator never touches.
 export const translateProduct = unstable_cache(
   async (
     _productId: string,
@@ -99,14 +105,10 @@ export const translateProduct = unstable_cache(
     description: string,
     ingredient: string
   ): Promise<TranslatableProduct> => {
-    // Was a console.log on every cache miss — flooded CloudWatch and
-    // also leaked OpenAI-key-presence into log searches. The
-    // unstable_cache wrapper already de-dupes within the 24h window;
-    // trust the cache metric rather than logging per-call.
     return callOpenAI({ name, summary, description, ingredient }, lang);
   },
   ['openai-product-translation-v2'], // Version 2 cache bust
-  { revalidate: 60 * 60 * 24 } // 24-hour cache
+  { revalidate: 60 * 60 * 24 * 30, tags: ['products'] } // 30-day cache, admin-save-invalidated
 );
 
 // Batch version for product listings (name + summary only, cheaper)
