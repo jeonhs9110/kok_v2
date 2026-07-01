@@ -34,31 +34,31 @@ export async function GET() {
     try {
       const { getPgPool } = await import('@/lib/db/pool');
       const pool = getPgPool();
+      // Round 32: collapsed the 15-parallel-query fan-out into 9. Prior
+      // state fired 15 `pool.query` calls in parallel and the pool max
+      // is 10 — a single admin loading /admin/homepage would acquire
+      // every slot, queue the remaining 5, and effectively serialize
+      // the entire site (customers + /api/health + any other admin
+      // action) behind one dashboard load. The (total, active) pairs
+      // per table now share one COUNT(*) FILTER scan instead of two
+      // sequential ones.
       const [
         sectionOrderRow, bannersRows,
-        carouselAll, carouselActive,
-        promoAll, promoActive,
-        productsAll, productsActive,
+        carouselCounts, promoCounts, productsCounts,
         shorts,
-        subHeroAll, subHeroActive,
-        igConfig, igPosts,
-        reviewsAll, reviewsActive,
+        subHeroCounts,
+        igConfig, igPosts, reviewsCounts,
       ] = await Promise.all([
         pool.query<{ value: string }>(`SELECT value FROM public.site_settings WHERE key = 'homepage_section_order' LIMIT 1`),
         pool.query<HubData['banners'][number]>(`SELECT id, text, bg_color, text_color, is_active FROM public.homepage_banners`),
-        pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.carousel_slides`),
-        pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.carousel_slides WHERE is_active = true`),
-        pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.promo_banners`),
-        pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.promo_banners WHERE is_active = true`),
-        pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.products`),
-        pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.products WHERE is_active = true`),
+        pool.query<{ total: string; active: string }>(`SELECT COUNT(*)::text AS total, COUNT(*) FILTER (WHERE is_active)::text AS active FROM public.carousel_slides`),
+        pool.query<{ total: string; active: string }>(`SELECT COUNT(*)::text AS total, COUNT(*) FILTER (WHERE is_active)::text AS active FROM public.promo_banners`),
+        pool.query<{ total: string; active: string }>(`SELECT COUNT(*)::text AS total, COUNT(*) FILTER (WHERE is_active)::text AS active FROM public.products`),
         pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.shorts`),
-        pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.sub_hero_banners`),
-        pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.sub_hero_banners WHERE is_active = true`),
+        pool.query<{ total: string; active: string }>(`SELECT COUNT(*)::text AS total, COUNT(*) FILTER (WHERE is_active)::text AS active FROM public.sub_hero_banners`),
         pool.query<{ handle: string }>(`SELECT handle FROM public.instagram_config LIMIT 1`),
         pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.instagram_posts WHERE is_active = true`),
-        pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.review_cards`),
-        pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM public.review_cards WHERE is_active = true`),
+        pool.query<{ total: string; active: string }>(`SELECT COUNT(*)::text AS total, COUNT(*) FILTER (WHERE is_active)::text AS active FROM public.review_cards`),
       ]);
 
       let sectionOrder: string[] | null = null;
@@ -76,19 +76,19 @@ export async function GET() {
         sectionOrder,
         banners: bannersRows.rows,
         counts: {
-          carouselTotal:      Number(carouselAll.rows[0]?.n ?? 0),
-          carouselActive:     Number(carouselActive.rows[0]?.n ?? 0),
-          promoBannersTotal:  Number(promoAll.rows[0]?.n ?? 0),
-          promoBannersActive: Number(promoActive.rows[0]?.n ?? 0),
-          productsTotal:      Number(productsAll.rows[0]?.n ?? 0),
-          productsActive:     Number(productsActive.rows[0]?.n ?? 0),
+          carouselTotal:      Number(carouselCounts.rows[0]?.total ?? 0),
+          carouselActive:     Number(carouselCounts.rows[0]?.active ?? 0),
+          promoBannersTotal:  Number(promoCounts.rows[0]?.total ?? 0),
+          promoBannersActive: Number(promoCounts.rows[0]?.active ?? 0),
+          productsTotal:      Number(productsCounts.rows[0]?.total ?? 0),
+          productsActive:     Number(productsCounts.rows[0]?.active ?? 0),
           shortsTotal:        Number(shorts.rows[0]?.n ?? 0),
-          subHeroTotal:       Number(subHeroAll.rows[0]?.n ?? 0),
-          subHeroActive:      Number(subHeroActive.rows[0]?.n ?? 0),
+          subHeroTotal:       Number(subHeroCounts.rows[0]?.total ?? 0),
+          subHeroActive:      Number(subHeroCounts.rows[0]?.active ?? 0),
           instagramHandle:    igConfig.rows[0]?.handle ?? null,
           instagramPosts:     Number(igPosts.rows[0]?.n ?? 0),
-          reviewsTotal:       Number(reviewsAll.rows[0]?.n ?? 0),
-          reviewsActive:      Number(reviewsActive.rows[0]?.n ?? 0),
+          reviewsTotal:       Number(reviewsCounts.rows[0]?.total ?? 0),
+          reviewsActive:      Number(reviewsCounts.rows[0]?.active ?? 0),
         },
       });
     } catch (err) {

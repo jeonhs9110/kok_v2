@@ -47,12 +47,24 @@ export default function ProductDetailComponents({ components }: Props) {
           );
         }
         return (
+          // Round 32: kept as plain <img> (not next/image) because these
+          // are user-uploaded product-detail images with unpredictable
+          // aspect ratios — a fixed width/height would either crop or
+          // stretch a tall infographic. But we can still buy back
+          // bandwidth + main-thread time with `loading="lazy"` and
+          // `decoding="async"`: every product-detail page renders 3-8
+          // of these stacked below-the-fold, and the prior eager+sync
+          // decode meant a Korean 4G visitor pulled 10-25MB of raw
+          // PNG/JPEG on every product-detail hit before the page
+          // could paint.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key={c.id}
             src={c.url}
             alt=""
             className="w-full block"
+            loading="lazy"
+            decoding="async"
           />
         );
       })}

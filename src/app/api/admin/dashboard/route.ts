@@ -46,6 +46,12 @@ interface RawData {
   usersCurr: number;
   usersPrev: number;
   wishAll: WishlistRow[];
+  // Round 32: pg path pre-aggregates these; supabase path returns
+  // undefined and the aggregator falls back to walking wishAll.
+  wishlistTotal?: number;
+  wishlistAdds?: number;
+  wishlistAddsPrev?: number;
+  wishRanks?: Array<{ product_id: string; wish_count: number }>;
 }
 
 async function fetchRawFromSupabase(
@@ -144,13 +150,18 @@ function aggregate(raw: RawData, rangeStart: string, rangeEnd: string, prevStart
   const rangeEndMs = new Date(rangeEnd).getTime();
   const prevStartMs = new Date(prevStart).getTime();
   const prevEndMs = new Date(prevEnd).getTime();
-  let wishlistAdds = 0;
-  let wishlistAddsPrev = 0;
-  for (const w of raw.wishAll) {
-    if (!w.created_at) continue;
-    const t = new Date(w.created_at).getTime();
-    if (t >= rangeStartMs && t < rangeEndMs) wishlistAdds++;
-    else if (t >= prevStartMs && t < prevEndMs) wishlistAddsPrev++;
+  // Round 32: prefer the pg-precomputed aggregates when present (RDS
+  // path); fall back to walking `wishAll` for the (dead-code) supabase
+  // path so the aggregator stays honest without a second migration.
+  let wishlistAdds = raw.wishlistAdds ?? 0;
+  let wishlistAddsPrev = raw.wishlistAddsPrev ?? 0;
+  if (raw.wishlistAdds === undefined) {
+    for (const w of raw.wishAll) {
+      if (!w.created_at) continue;
+      const t = new Date(w.created_at).getTime();
+      if (t >= rangeStartMs && t < rangeEndMs) wishlistAdds++;
+      else if (t >= prevStartMs && t < prevEndMs) wishlistAddsPrev++;
+    }
   }
 
   const nameMap: Record<string, string> = {};
@@ -161,12 +172,19 @@ function aggregate(raw: RawData, rangeStart: string, rangeEnd: string, prevStart
     .map(([id, clicks]) => ({ id, name: nameMap[id], clicks }))
     .sort((a, b) => b.clicks - a.clicks);
 
-  const wishMap: Record<string, number> = {};
-  for (const w of raw.wishAll) wishMap[w.product_id] = (wishMap[w.product_id] || 0) + 1;
-  const wishRanks = Object.entries(wishMap)
-    .filter(([id]) => nameMap[id])
-    .map(([id, wishCount]) => ({ id, name: nameMap[id], wishCount }))
-    .sort((a, b) => b.wishCount - a.wishCount);
+  // Round 32: prefer the pg-precomputed top-N when present.
+  const wishRanks = raw.wishRanks
+    ? raw.wishRanks
+        .filter(w => nameMap[w.product_id])
+        .map(w => ({ id: w.product_id, name: nameMap[w.product_id], wishCount: w.wish_count }))
+    : (() => {
+        const wishMap: Record<string, number> = {};
+        for (const w of raw.wishAll) wishMap[w.product_id] = (wishMap[w.product_id] || 0) + 1;
+        return Object.entries(wishMap)
+          .filter(([id]) => nameMap[id])
+          .map(([id, wishCount]) => ({ id, name: nameMap[id], wishCount }))
+          .sort((a, b) => b.wishCount - a.wishCount);
+      })();
 
   const searchKeywords = Array.from(keywordMap.values())
     .map(k => ({
@@ -188,7 +206,7 @@ function aggregate(raw: RawData, rangeStart: string, rangeEnd: string, prevStart
     activeProducts: raw.productsActive,
     totalProducts: raw.productsAll.length,
     totalMembers: raw.usersAll,
-    totalWishlist: raw.wishAll.length,
+    totalWishlist: raw.wishlistTotal ?? raw.wishAll.length,
     totalVisits: raw.analyticsTotal,
     productDetailViews,
     dailyVisits,

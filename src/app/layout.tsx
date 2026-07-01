@@ -147,21 +147,27 @@ export default async function RootLayout({
           media="print"
           data-media-swap="typekit"
         />
-        <Script id="typekit-media-swap" strategy="beforeInteractive">
-          {`document.querySelectorAll('link[data-media-swap="typekit"]').forEach(function(l){l.media='all';});`}
-        </Script>
-        <noscript>
-          <link rel="stylesheet" href="https://use.typekit.net/czr4kvy.css?display=swap" />
-        </noscript>
 
         {/* Optional admin-selectable fonts. Listed in src/lib/typography/options.ts
             and exposed to the admin via FONT_OPTIONS. Loaded with display=swap
             so the page renders in fallback fonts immediately; the chosen face
             paints in once it arrives. Only used on hero / sub-hero / carousel
             text so the network cost stays off the critical path of product
-            grids and the cart. */}
+            grids and the cart.
+
+            Round 32: applied the same `media="print"` + `data-media-swap`
+            non-blocking pattern used for Typekit above. Prior state was
+            two synchronous `<link rel="stylesheet">` blocks in <head>
+            (Google Fonts 5-family aggregate + Pretendard CDN) — render-
+            blocking on every page for every visitor, even ones whose
+            admin theme doesn't reference any of these families. Costs
+            200-500ms of FCP/LCP on 4G KakaoTalk WebView before ANY paint
+            fires. `beforeInteractive` script below then flips both
+            stylesheets to `media="all"` after the browser has queued
+            them non-blocking. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font --
             The @next/next/no-page-custom-font rule is Pages-Router-only
             advice ("put fonts in _document.js"). In App Router, the
@@ -171,12 +177,27 @@ export default async function RootLayout({
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Inter:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;700;900&family=Playfair+Display:wght@400;700;900&display=swap"
+          media="print"
+          data-media-swap="google-fonts"
         />
         {/* Pretendard isn't on Google Fonts; pulled from the official CDN. */}
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
+          media="print"
+          data-media-swap="pretendard"
         />
+        {/* Single beforeInteractive script flips media on every marked
+            stylesheet after the browser has stopped blocking on them. */}
+        <Script id="font-css-media-swap" strategy="beforeInteractive">
+          {`document.querySelectorAll('link[data-media-swap]').forEach(function(l){l.media='all';});`}
+        </Script>
+        <noscript>
+          <link rel="stylesheet" href="https://use.typekit.net/czr4kvy.css?display=swap" />
+          {/* eslint-disable-next-line @next/next/no-page-custom-font -- Pages-Router-only advice; see the earlier disable-comment for why. */}
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;700&family=Inter:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;700;900&family=Playfair+Display:wght@400;700;900&display=swap" />
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+        </noscript>
       </head>
       {/* Dropping freesentation.className from the body — that class set
           font-family directly on the body element and beat the
