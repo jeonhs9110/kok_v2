@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Search, ShoppingBag, User, Menu, X, Globe, Heart } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
 import LanguagePicker from '@/components/LanguagePicker';
@@ -70,6 +70,7 @@ export default function Header({
   // past the hero. Every other route keeps the classic white bar so the
   // change is contained to the storefront landing experience.
   const pathname = usePathname() || '';
+  const router = useRouter();
   const isHomepage = /^\/(kr|en)\/?$/.test(pathname);
   const [scrolledPastHero, setScrolledPastHero] = useState(false);
   // Escape closes the mobile drawer + returns focus to the hamburger.
@@ -86,6 +87,19 @@ export default function Header({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [mobileOpen]);
+
+  // Escape closes the search overlay too. Matches the mobile-drawer
+  // pattern — WCAG 2.1.1 Keyboard (A). Prior overlay had no
+  // dismiss-key; keyboard users were trapped until they mouse-clicked
+  // the tiny X.
+  useEffect(() => {
+    if (!searchOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSearchOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [searchOpen]);
 
   useEffect(() => {
     if (!isHomepage) return;
@@ -235,9 +249,19 @@ export default function Header({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchQuery.trim()) return;
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return;
     setSearchOpen(false);
-    window.location.href = `/${lang}/products?q=${encodeURIComponent(searchQuery.trim())}`;
+    // Cap the query at 100 chars — a legitimate product name is well
+    // under this. Anything longer is either a shared URL with a stale
+    // multi-word query or an attempt at layout abuse on the results
+    // chip (the chip also truncates for display).
+    const q = trimmed.slice(0, 100);
+    // router.push instead of window.location.href — hard reload
+    // hydrated the whole app, re-ran auth checks, blinked the cart
+    // badge. Round 26 audit measured ~1.5s perceived-search penalty
+    // on 3G. Client nav preserves scroll state and cart context.
+    router.push(`/${lang}/products?q=${encodeURIComponent(q)}`);
   };
 
   return (
@@ -567,12 +591,24 @@ export default function Header({
         )}
         {/* ── Search Overlay ─────────────────────────────────────────── */}
         {searchOpen && (
-          <div className="absolute top-full left-0 w-full bg-white border-t border-neutral-100 shadow-lg z-40 animate-in fade-in slide-in-from-top-1 duration-150">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={lang === 'kr' ? '상품 검색' : 'Product search'}
+            className="absolute top-full left-0 w-full bg-white border-t border-neutral-100 shadow-lg z-40 animate-in fade-in slide-in-from-top-1 duration-150"
+          >
             <form onSubmit={handleSearch} className="max-w-[1600px] mx-auto px-4 sm:px-8 py-4 flex items-center gap-3">
               <Search className="w-5 h-5 text-neutral-400 flex-shrink-0" />
               <input
                 ref={searchInputRef}
-                type="text"
+                // type=search enables the browser's native "clear" X
+                // on mobile keyboards + gives assistive tech a
+                // "search input" role. aria-label supplies an
+                // accessible name — placeholder disappears on typing
+                // and used to be the only naming.
+                type="search"
+                aria-label={lang === 'kr' ? '상품 검색' : 'Search products'}
+                maxLength={100}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder={lang === 'kr' ? '상품명, 성분, 키워드 검색...' : 'Search products...'}

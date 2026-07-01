@@ -19,6 +19,24 @@ interface Props {
   subSlug?: string;
 }
 
+// Compose /products URLs that preserve the active filters the caller
+// wants to keep. Prior code hardcoded category/sub/q into raw templates
+// that silently wiped whichever param wasn't named — Round 26 audit
+// found clicking Category-pill dropped the search, clicking Clear
+// dropped the category, etc. Every filter link on this page routes
+// through here.
+function buildFilterHref(
+  lang: string,
+  keep: { category?: string; sub?: string; q?: string },
+): string {
+  const params = new URLSearchParams();
+  if (keep.category) params.set('category', keep.category);
+  if (keep.sub) params.set('sub', keep.sub);
+  if (keep.q) params.set('q', keep.q);
+  const qs = params.toString();
+  return qs ? `/${lang}/products?${qs}` : `/${lang}/products`;
+}
+
 export default async function ProductsPage({ lang, canPurchase, searchQuery, categorySlug, subSlug }: Props) {
   const lb = labels[lang] ?? labels['en'];
 
@@ -108,11 +126,11 @@ export default async function ProductsPage({ lang, canPurchase, searchQuery, cat
         {categoriesTree.length > 0 && (
           <div className="mt-6 space-y-2">
             <div className="flex gap-2 overflow-x-auto pb-1">
-              <Link href={`/${lang}/products`} className={`${pillBase} ${isAll ? pillActive : pillInactive}`}>{lb.all}</Link>
+              <Link href={buildFilterHref(lang, { q: searchQuery })} className={`${pillBase} ${isAll ? pillActive : pillInactive}`}>{lb.all}</Link>
               {categoriesTree.map(cat => (
                 <Link
                   key={cat.slug}
-                  href={`/${lang}/products?category=${cat.slug}`}
+                  href={buildFilterHref(lang, { category: cat.slug, q: searchQuery })}
                   className={`${pillBase} ${activeCategory?.id === cat.id && !activeSub ? pillActive : pillInactive}`}
                 >
                   {cat.name[lang] || cat.name['en'] || cat.slug}
@@ -123,7 +141,7 @@ export default async function ProductsPage({ lang, canPurchase, searchQuery, cat
             {activeParent && activeParent.children.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
                 <Link
-                  href={`/${lang}/products?category=${activeParent.slug}`}
+                  href={buildFilterHref(lang, { category: activeParent.slug, q: searchQuery })}
                   className={`${pillBase} ${!activeSub && activeCategory ? pillActive : pillInactive}`}
                 >
                   {lb.all}
@@ -131,7 +149,7 @@ export default async function ProductsPage({ lang, canPurchase, searchQuery, cat
                 {activeParent.children.map(sub => (
                   <Link
                     key={sub.slug}
-                    href={`/${lang}/products?sub=${sub.slug}`}
+                    href={buildFilterHref(lang, { sub: sub.slug, category: activeParent.slug, q: searchQuery })}
                     className={`${pillBase} ${activeSub?.id === sub.id ? pillActive : pillInactive}`}
                   >
                     {sub.name[lang] || sub.name['en'] || sub.slug}
@@ -152,9 +170,18 @@ export default async function ProductsPage({ lang, canPurchase, searchQuery, cat
       {searchQuery && (
         <div className="mb-6 flex items-center gap-2">
           <span className="text-sm text-neutral-500">
-            {lang === 'kr' ? `"${searchQuery}" 검색 결과` : `Results for "${searchQuery}"`}
+            {/* Truncate the display to keep the chip on one line on
+                mobile. Cap at 40 chars — anything longer than a real
+                product name is either an attempt at layout abuse or a
+                shared URL with a stale multi-word query. */}
+            {lang === 'kr'
+              ? `"${searchQuery.length > 40 ? searchQuery.slice(0, 40) + '…' : searchQuery}" 검색 결과`
+              : `Results for "${searchQuery.length > 40 ? searchQuery.slice(0, 40) + '…' : searchQuery}"`}
           </span>
-          <Link href={`/${lang}/products`} className="text-xs text-neutral-400 hover:text-black underline underline-offset-2">
+          {/* Round 26: Clear preserves category+sub filters. Prior link
+              jumped to /products, silently wiping the customer's active
+              category narrowing along with the search. */}
+          <Link href={buildFilterHref(lang, { category: categorySlug, sub: subSlug })} className="text-xs text-neutral-400 hover:text-black underline underline-offset-2">
             {lang === 'kr' ? '초기화' : 'Clear'}
           </Link>
         </div>

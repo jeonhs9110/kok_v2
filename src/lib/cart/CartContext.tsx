@@ -23,6 +23,17 @@ interface CartContextValue {
 
 const STORAGE_KEY = 'kokkok_cart';
 
+/**
+ * Per-item quantity ceiling. 99 is generous for real customer intent —
+ * a customer legitimately buying 100+ of one SKU is the operator-side
+ * B2B path, not the storefront cart. Without a cap, a double-tap on
+ * mobile 3G / an autorepeated `+` key on a stuck keyboard / a scripted
+ * click could push quantity into overflow territory, breaking the
+ * price-total display (Number.toLocaleString of Number.MAX_SAFE_INTEGER
+ * spills out of the line-total column and pushes cart layout off-screen).
+ */
+const MAX_QTY_PER_ITEM = 99;
+
 function isValidCartItem(x: unknown): x is CartItem {
   if (!x || typeof x !== 'object') return false;
   const o = x as Record<string, unknown>;
@@ -75,8 +86,28 @@ function loadFromStorage(): CartItem[] {
   }
 }
 
+// Once per process — Safari private mode has 0 quota, and a suddenly-
+// full localStorage silently makes every cart write disappear on next
+// reload. Log ONCE so CloudWatch surfaces the class without one bad
+// tab spamming ingest, and structure it so a handoff engineer can key
+// on event=cart.storage.failed.
+let storageFailureLogged = false;
 function saveToStorage(items: CartItem[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch (err) {
+    if (!storageFailureLogged) {
+      storageFailureLogged = true;
+      try {
+        console.warn(JSON.stringify({
+          event: 'cart.storage.failed',
+          reason: err && typeof err === 'object' && 'name' in err
+            ? String((err as { name: unknown }).name)
+            : 'unknown',
+        }));
+      } catch { /* never let logging break the cart */ }
+    }
+  }
 }
 
 function getClientItems(): CartItem[] {
@@ -123,22 +154,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
   ) as CartItem[];
 
   const addItem = useCallback((item: Omit<CartItem, 'quantity'>, quantity = 1) => {
+    // Clamp any single add to the ceiling, and clamp the accumulated
+    // running total when a card is re-tapped for an already-carted
+    // product. Without the outer clamp, N re-taps produced a
+    // quantity of N; with the clamp, it stops at MAX_QTY_PER_ITEM.
+    const add = Math.max(1, Math.min(quantity, MAX_QTY_PER_ITEM));
     mutate(prev => {
       const existing = prev.find(i => i.productId === item.productId);
       if (existing) {
         return prev.map(i =>
           i.productId === item.productId
-            ? { ...i, quantity: i.quantity + quantity }
+            ? { ...i, quantity: Math.min(i.quantity + add, MAX_QTY_PER_ITEM) }
             : i,
         );
       }
-      return [...prev, { ...item, quantity }];
+      return [...prev, { ...item, quantity: add }];
     });
   }, []);
 
   const updateQuantity = useCallback((productId: string, quantity: number) => {
-    if (quantity < 1) return;
-    mutate(prev => prev.map(i => i.productId === productId ? { ...i, quantity } : i));
+    // Treat 0 (or negative) as "remove" — matches customer intent for
+    // any future editable-qty input (typing 0 to delete the line).
+    // Prior code silently no-op'd, leaving the item at its stale
+    // quantity — a classic silent-failure trap.
+    if (quantity < 1) {
+      mutate(prev => prev.filter(i => i.productId !== productId));
+      return;
+    }
+    const clamped = Math.min(quantity, MAX_QTY_PER_ITEM);
+    mutate(prev => prev.map(i => i.productId === productId ? { ...i, quantity: clamped } : i));
   }, []);
 
   const removeItem = useCallback((productId: string) => {
