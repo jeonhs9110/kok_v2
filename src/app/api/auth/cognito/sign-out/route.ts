@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * POST /api/auth/cognito/sign-out
@@ -9,7 +10,9 @@ import { NextResponse } from 'next/server';
  * (belt-and-suspenders), then clears the three auth cookies so the
  * browser can't reuse them after the redirect.
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   const jar = await cookies();
   const accessToken = jar.get('cognito_access_token')?.value;
 

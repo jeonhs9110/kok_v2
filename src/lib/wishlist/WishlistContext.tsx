@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
+import { authedFetch } from '@/lib/http/authedFetch';
 
 /**
  * Customer wishlist context. Reads + writes through /api/customer/wishlist,
@@ -34,7 +35,7 @@ type FetchResult =
  */
 async function fetchWishlist(): Promise<FetchResult> {
   try {
-    const res = await fetch('/api/customer/wishlist', { cache: 'no-store' });
+    const res = await authedFetch('/api/customer/wishlist', { cache: 'no-store' });
     if (res.status === 401) return { kind: 'unauthenticated' };
     if (!res.ok) return { kind: 'error' };
     const json = (await res.json()) as { productIds: string[] };
@@ -89,7 +90,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     });
 
     try {
-      const res = await fetch('/api/customer/wishlist', {
+      const res = await authedFetch('/api/customer/wishlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId }),

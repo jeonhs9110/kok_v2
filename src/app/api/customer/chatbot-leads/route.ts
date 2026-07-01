@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * POST /api/customer/chatbot-leads
@@ -42,6 +43,8 @@ const leadsLimiter = createRateLimiter({
 });
 
 export async function POST(req: Request) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   if (!leadsLimiter.check(getRequestIp(req))) {
     return NextResponse.json({ ok: false, error: 'too_many_requests' }, { status: 429 });
   }

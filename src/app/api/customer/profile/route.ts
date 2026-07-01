@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireCustomer } from '@/lib/auth/requireCustomer';
 import { auditLog, hashEmail } from '@/lib/audit/log';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -69,6 +70,8 @@ export async function GET() {
  * Upserts allow-listed columns on the customer's own row.
  */
 export async function PATCH(req: Request) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const auth = await requireCustomer();
   if (auth instanceof NextResponse) return auth;
 
@@ -166,7 +169,9 @@ export async function PATCH(req: Request) {
  * via /admin/users. The customer's email is freed up for re-register
  * only after the Cognito identity is gone.
  */
-export async function DELETE() {
+export async function DELETE(req: Request) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const auth = await requireCustomer();
   if (auth instanceof NextResponse) return auth;
 

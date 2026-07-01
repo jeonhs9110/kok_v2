@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkPasswordPolicy } from '@/lib/auth/passwordPolicy';
 import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * POST /api/auth/cognito/reset-password
@@ -25,6 +26,8 @@ const resetPasswordLimiter = createRateLimiter({
 });
 
 export async function POST(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   if (!resetPasswordLimiter.check(getRequestIp(request))) {
     return NextResponse.json({ error: 'too_many_requests' }, { status: 429 });
   }

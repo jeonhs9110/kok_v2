@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * POST /api/auth/cognito/confirm
@@ -23,6 +24,8 @@ const confirmLimiter = createRateLimiter({
 });
 
 export async function POST(request: NextRequest) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   if (!confirmLimiter.check(getRequestIp(request))) {
     return NextResponse.json({ error: 'too_many_requests' }, { status: 429 });
   }

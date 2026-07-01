@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireCustomer } from '@/lib/auth/requireCustomer';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -13,7 +14,9 @@ interface Ctx { params: Promise<{ wishlistId: string }> }
  * Removes a single wishlist row by its uuid. Only the row's owner can
  * delete (user_id must match auth.userId).
  */
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, { params }: Ctx) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const auth = await requireCustomer();
   if (auth instanceof NextResponse) return auth;
   const { wishlistId } = await params;

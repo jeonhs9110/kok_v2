@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import CountryPicker from '@/components/CountryPicker';
 import { DEFAULT_COUNTRY, findCountry, findCountryByDial } from '@/lib/geo/countries';
+import { authedFetch } from '@/lib/http/authedFetch';
 
 /**
  * Customer "my page". Reads + writes go through the dispatcher API
@@ -93,9 +94,9 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
     setLoadError(false);
     try {
       const [meRes, profileRes, wishRes] = await Promise.all([
-        fetch('/api/customer/me', { cache: 'no-store' }),
-        fetch('/api/customer/profile', { cache: 'no-store' }),
-        fetch('/api/customer/wishlist?details=1', { cache: 'no-store' }),
+        authedFetch('/api/customer/me', { cache: 'no-store' }),
+        authedFetch('/api/customer/profile', { cache: 'no-store' }),
+        authedFetch('/api/customer/wishlist?details=1', { cache: 'no-store' }),
       ]);
       if (!meRes.ok && !profileRes.ok && !wishRes.ok) {
         // All three endpoints down — treat as a load failure and
@@ -153,7 +154,7 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/customer/profile', {
+      const res = await authedFetch('/api/customer/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -180,7 +181,7 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
 
   const removeWish = async (id: string) => {
     try {
-      const res = await fetch(`/api/customer/wishlist/${id}`, { method: 'DELETE' });
+      const res = await authedFetch(`/api/customer/wishlist/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('http_' + res.status);
       setWishlist(prev => prev.filter(w => w.id !== id));
     } catch (err) {
@@ -215,7 +216,7 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
     if (!confirm(doubleConfirm)) return;
 
     try {
-      const res = await fetch('/api/customer/profile', { method: 'DELETE' });
+      const res = await authedFetch('/api/customer/profile', { method: 'DELETE' });
       if (!res.ok) throw new Error('http_' + res.status);
       await handleLogout();
       alert(isKr ? '계정이 삭제되었습니다.' : 'Your account has been deleted.');

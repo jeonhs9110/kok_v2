@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireCustomer } from '@/lib/auth/requireCustomer';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -14,6 +15,8 @@ interface Ctx { params: Promise<{ id: string }> }
  * for the simpler scope here we only support self-edits.
  */
 export async function PATCH(req: Request, { params }: Ctx) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const auth = await requireCustomer();
   if (auth instanceof NextResponse) return auth;
   const { id } = await params;
@@ -58,7 +61,9 @@ export async function PATCH(req: Request, { params }: Ctx) {
  * DELETE /api/customer/posts/[id]
  * Delete own post. Admin uses /api/admin/posts/[id] for any-post delete.
  */
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, { params }: Ctx) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const auth = await requireCustomer();
   if (auth instanceof NextResponse) return auth;
   const { id } = await params;
