@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext, useCallback } from 'react';
+import { useState, useEffect, useRef, createContext, useContext, useCallback } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 /**
@@ -36,9 +36,19 @@ interface PendingState {
 
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const [pending, setPending] = useState<PendingState | null>(null);
+  // Remember which element had focus when the dialog opened so we
+  // can restore it on close — WCAG 2.4.3 Focus Order requires the
+  // trigger regain focus after the modal dismisses. Without this,
+  // Tab drops back to <body> and the operator has to Tab through
+  // half the page to get back where they were.
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const confirm = useCallback<ConfirmFn>((arg) => {
     const opts: ConfirmOptions = typeof arg === 'string' ? { message: arg } : arg;
+    if (typeof document !== 'undefined') {
+      previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+    }
     return new Promise<boolean>((resolve) => {
       setPending({ opts, resolve });
     });
@@ -50,15 +60,49 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       current.resolve(result);
       return null;
     });
+    // Restore focus after the state flush completes so the closing
+    // animation doesn't yank focus while the dialog is still visible.
+    // requestAnimationFrame is enough to let React commit; the null
+    // guard covers cases where the trigger was itself unmounted.
+    if (typeof window !== 'undefined') {
+      requestAnimationFrame(() => {
+        const target = previouslyFocusedRef.current;
+        if (target && typeof target.focus === 'function' && document.contains(target)) {
+          target.focus();
+        }
+        previouslyFocusedRef.current = null;
+      });
+    }
   }, []);
 
-  // Escape closes the prompt as a "cancel" — matches every other
-  // modal in the admin surface and unblocks keyboard-first operators
-  // who hit Esc to back out of a destructive confirmation.
+  // Escape + Tab-trap. Escape closes as "cancel" (WCAG 2.1.1 keyboard).
+  // Tab / Shift+Tab wrap inside the dialog so keyboard users can't
+  // escape it into the background page while it's modal (WCAG 2.4.3
+  // Focus Order + 2.4.11 Focus Not Obscured, new in WCAG 2.2).
   useEffect(() => {
     if (!pending) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close(false);
+      if (e.key === 'Escape') {
+        close(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const container = dialogRef.current;
+      if (!container) return;
+      const focusables = container.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -75,6 +119,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
           onClick={() => close(false)}
         >
           <div
+            ref={dialogRef}
             className="bg-white rounded shadow-2xl w-full max-w-sm border border-[#e5e7eb] animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
             role="dialog"

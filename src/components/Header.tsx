@@ -47,6 +47,11 @@ export default function Header({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  // Ref on the hamburger button so we can return focus to it after the
+  // drawer closes — WCAG 2.4.3 Focus Order. Prior code dropped focus to
+  // <body> when the drawer dismissed and keyboard users had to Tab
+  // back through the whole page to get to the trigger.
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
   // Server-prefetched via [lang]/layout.tsx (lib/cache/header.ts). No setters
   // because we no longer refetch client-side after the initial render — the
   // ~60s cache TTL on the server is fresh enough, and refetching here would
@@ -67,6 +72,21 @@ export default function Header({
   const pathname = usePathname() || '';
   const isHomepage = /^\/(kr|en)\/?$/.test(pathname);
   const [scrolledPastHero, setScrolledPastHero] = useState(false);
+  // Escape closes the mobile drawer + returns focus to the hamburger.
+  // Also blur any focused link inside the drawer so returning focus
+  // doesn't fight with a link that just triggered navigation.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMobileOpen(false);
+        requestAnimationFrame(() => hamburgerRef.current?.focus());
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [mobileOpen]);
+
   useEffect(() => {
     if (!isHomepage) return;
     function onScroll() {
@@ -306,6 +326,7 @@ export default function Header({
                 reader users get "Close menu" when the drawer is open
                 instead of the stale "Menu" they used to hear. */}
             <button
+              ref={hamburgerRef}
               className="lg:hidden p-2 -ml-2 text-neutral-900"
               onClick={() => setMobileOpen(v => !v)}
               aria-label={mobileOpen ? (lang === 'en' ? 'Close menu' : '메뉴 닫기') : (lang === 'en' ? 'Open menu' : '메뉴 열기')}
@@ -524,7 +545,13 @@ export default function Header({
 
       {/* ── Mobile Menu Drawer ───────────────────────────────────────── */}
         {mobileOpen && (
-          <div className="lg:hidden bg-white border-t border-neutral-100 px-6 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200">
+          <div
+            id="mobile-nav-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label={lang === 'en' ? 'Site menu' : '사이트 메뉴'}
+            className="lg:hidden bg-white border-t border-neutral-100 px-6 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200"
+          >
             <Link href={`/${lang}/products`} className="block kokkok-nav-menu-text font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{nav.product}</Link>
             {navMenus.map(menu => (
               <Link key={menu.slug} href={`/${lang}/menus/${menu.slug}`} className="block kokkok-nav-menu-text font-bold text-neutral-800 py-2 border-b border-neutral-100" onClick={() => setMobileOpen(false)}>{menu.title?.[lang] || menu.title?.en || menu.title?.kr || ''}</Link>

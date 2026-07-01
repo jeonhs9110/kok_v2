@@ -5,15 +5,65 @@ import withBundleAnalyzer from '@next/bundle-analyzer';
 // against the obvious browser-side attack classes (clickjacking, MIME
 // sniffing, HTTPS downgrade). HSTS preload list eligibility requires
 // max-age >= 1y AND includeSubDomains AND preload — keep all three.
-// No CSP yet: building a non-breaking policy needs an audit of every
-// external script/font/image source; safer to ship without and add
-// after a separate hardening pass.
+//
+// Round 24 adds Content-Security-Policy-Report-Only alongside the
+// existing baseline. The Report-Only mode collects violation reports
+// at /api/csp-report without actually blocking anything, so the
+// handoff engineer can watch CloudWatch for a week of clean traffic
+// before flipping to enforcing mode via a one-line PR (change the
+// header key from Content-Security-Policy-Report-Only to
+// Content-Security-Policy).
+//
+// The policy allowlist is derived from Round 23's third-party audit +
+// Round 24's inline-script inventory (theme tokens style + GA consent
+// script + postMessage listeners). `'unsafe-inline'` stays in
+// script-src / style-src because Next.js 16 App Router requires it for
+// Script components emitted inline; a nonce-based migration is a
+// separate PR that needs middleware.ts.
+const cspReportOnly = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://use.typekit.net",
+  "script-src-attr 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://use.typekit.net https://p.typekit.net https://fonts.googleapis.com https://cdn.jsdelivr.net",
+  "style-src-attr 'unsafe-inline'",
+  "font-src 'self' https://use.typekit.net https://p.typekit.net https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
+  "img-src 'self' data: blob: https://www.kokkokgarden.com https://kokkokgarden.com https://*.supabase.co https://images.unsplash.com https://plus.unsplash.com https://flagcdn.com https://i.ytimg.com",
+  "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com",
+  "frame-src 'self' https://www.youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://www.instagram.com",
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+  "upgrade-insecure-requests",
+  "report-to csp-endpoint",
+  "report-uri /api/csp-report",
+].join('; ');
+
 const securityHeaders = [
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'X-Frame-Options',           value: 'SAMEORIGIN' },
   { key: 'X-Content-Type-Options',    value: 'nosniff' },
   { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=()' },
+  // Expanded to explicitly deny FLoC / browsing-topics / interest-cohort
+  // + payment/usb/serial/bluetooth (the storefront never needs any of
+  // these). fullscreen is kept as self so YouTube shorts embedded via
+  // ShortsFeed can go fullscreen; camera/mic/geolocation stay disabled.
+  { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), interest-cohort=(), browsing-topics=(), fullscreen=(self)' },
+  // Cross-Origin-Opener-Policy isolates window.opener so a target=_blank
+  // link can't be pivoted by a compromised destination page. rel="noopener"
+  // is already used on outbound links; COOP is defense-in-depth for any
+  // missed anchor.
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+  // Cross-Origin-Resource-Policy: /media/* + /_next/static/* embedded as
+  // <img> / <script> by any origin is currently allowed — this hardens
+  // against trivial hotlinking / attribution-stripping of brand assets.
+  { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
+  // Modern Reporting API v1: browsers send `application/reports+json`
+  // POSTs to this named endpoint when the CSP `report-to` directive
+  // names it. Firefox still needs the legacy `report-uri` fallback
+  // (also present in cspReportOnly above).
+  { key: 'Reporting-Endpoints',        value: 'csp-endpoint="/api/csp-report"' },
+  { key: 'Content-Security-Policy-Report-Only', value: cspReportOnly },
 ];
 
 const nextConfig: NextConfig = {
