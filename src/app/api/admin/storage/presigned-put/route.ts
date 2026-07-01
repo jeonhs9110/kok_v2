@@ -83,10 +83,17 @@ const ALLOWED_KEY_PREFIXES = [
   'assets/',
 ];
 
+function logReject(reason: string, ctx: Record<string, string | number | null> = {}): void {
+  try {
+    console.warn(JSON.stringify({ event: 'storage.put.rejected', reason, ...ctx }));
+  } catch { /* never fail on log */ }
+}
+
 export async function POST(request: NextRequest) {
   const denied = await requireAdmin();
   if (denied) return denied;
   if (!putLimiter.check(getRequestIp(request))) {
+    logReject('rate_limit');
     return NextResponse.json({ error: 'too_many_requests' }, { status: 429 });
   }
 
@@ -94,6 +101,7 @@ export async function POST(request: NextRequest) {
   try {
     body = await request.json();
   } catch {
+    logReject('invalid_json');
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
   }
 
@@ -101,25 +109,32 @@ export async function POST(request: NextRequest) {
   const contentType = typeof body.contentType === 'string' ? body.contentType.trim().toLowerCase() : '';
   const size = typeof body.size === 'number' && Number.isFinite(body.size) ? Math.floor(body.size) : null;
   if (!rawKey || !contentType) {
+    logReject('missing_key_or_content_type');
     return NextResponse.json({ error: 'key_and_contentType_required' }, { status: 400 });
   }
   if (rawKey.length > MAX_STORAGE_KEY_LEN) {
+    logReject('key_too_long', { length: rawKey.length });
     return NextResponse.json({ error: 'key_too_long' }, { status: 400 });
   }
   if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+    logReject('unsupported_content_type', { contentType });
     return NextResponse.json({ error: 'unsupported_content_type' }, { status: 400 });
   }
   if (size === null || size <= 0) {
+    logReject('size_required');
     return NextResponse.json({ error: 'size_required' }, { status: 400 });
   }
   if (size > MAX_UPLOAD_BYTES) {
+    logReject('file_too_large', { size, max: MAX_UPLOAD_BYTES });
     return NextResponse.json({ error: 'file_too_large', maxBytes: MAX_UPLOAD_BYTES }, { status: 413 });
   }
   const key = sanitizeStorageKey(rawKey);
   if (!key) {
+    logReject('invalid_key');
     return NextResponse.json({ error: 'invalid_key' }, { status: 400 });
   }
   if (!ALLOWED_KEY_PREFIXES.some(p => key.startsWith(p))) {
+    logReject('invalid_key_prefix', { key });
     return NextResponse.json({ error: 'invalid_key_prefix' }, { status: 400 });
   }
 

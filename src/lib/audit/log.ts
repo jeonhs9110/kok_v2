@@ -36,6 +36,7 @@
  * about *expected* actions we want the trail for, not errors.
  */
 import { createHash } from 'crypto';
+import { kstDateString } from '@/lib/formatKstDate';
 
 export type AuditEvent =
   | 'customer.account.deleted'
@@ -62,10 +63,17 @@ interface AuditPayload {
  */
 export function auditLog(event: AuditEvent, payload: AuditPayload): void {
   try {
+    const now = new Date();
     const record = {
       audit: true,
       event,
-      ts: new Date().toISOString(),
+      ts: now.toISOString(),
+      // KST calendar date alongside the UTC ISO ts. Handoff engineers
+      // reading CloudWatch will naturally read the operator-visible
+      // Korean date; without this they have to mentally subtract 9h
+      // every time they correlate an audit line with a "someone
+      // exported the CSV at 09:15 today" business report.
+      ts_kst_date: kstDateString(now),
       ...payload,
     };
     // Single line so CloudWatch treats it as one event. stdout, not
