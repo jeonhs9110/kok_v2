@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireSuperAdmin, getCallerUserId } from '@/lib/auth/requireAdmin';
 import { findCountry } from '@/lib/geo/countries';
 import { auditLog } from '@/lib/audit/log';
+import { kstDateString } from '@/lib/formatKstDate';
 
 /**
  * GET /api/admin/users/export
@@ -98,14 +99,17 @@ export async function GET() {
         r.skin_type ?? '',
         r.marketing_consent ? '동의' : '',
         r.is_verified ? '인증' : '미인증',
-        // ISO-8601 KST date — same shape as the admin user list display.
-        r.created_at ? new Date(r.created_at).toISOString().slice(0, 10) : '',
+        // KST calendar date — was UTC via toISOString().slice(0, 10),
+        // which put registrations between 15:00 UTC and 24:00 UTC into
+        // the previous day. A customer who signed up at 23:50 KST on
+        // Jan 2 showed up as Jan 1 in the CSV, breaking cohort filters.
+        r.created_at ? kstDateString(r.created_at) : '',
       ].map(escape).join(','));
     }
     // BOM so Excel auto-detects UTF-8 and the Korean headers survive.
     const body = '﻿' + lines.join('\r\n');
 
-    const filename = `kokkok-customers-${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = `kokkok-customers-${kstDateString()}.csv`;
     // PIPA trail — bulk PII pull. Rows count only (no per-row PII in
     // the log itself); the operator's audit question is "was there a
     // large export I didn't authorize" not "which rows did they see".

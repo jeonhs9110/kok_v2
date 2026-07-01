@@ -191,9 +191,15 @@ function aggregate(raw: RawData) {
   const bounceRate = totalSessions ? 1 - engaged / totalSessions : 0;
   const avgPagesPerSession = totalSessions ? totalPages / totalSessions : 0;
 
+  // Bucket sessions by KST calendar date, not UTC. Previously used
+  // toISOString().slice(0, 10) which put every session between 00:00
+  // and 09:00 KST into the previous UTC day — so the "sessions by day"
+  // chart landed a spike from 08:30 KST on 01-02 into the 01-01 bucket.
+  // sv-SE locale emits ISO-8601 YYYY-MM-DD so the shape the chart
+  // needs is preserved without a padStart dance.
   const byDay = new Map<string, number>();
   for (const s of sessions) {
-    const day = new Date(s.startMs).toISOString().slice(0, 10);
+    const day = new Date(s.startMs).toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
     byDay.set(day, (byDay.get(day) ?? 0) + 1);
   }
   const sessionsByDay = Array.from(byDay.entries())
@@ -337,10 +343,33 @@ function aggregate(raw: RawData) {
     avgPagesPerSession: priorTotal ? priorPages / priorTotal : 0,
   };
 
+  // Bucket the heatmap by KST day-of-week + hour. Previously
+  // `d.getDay()` / `d.getHours()` returned SERVER-local (UTC on EC2),
+  // so a real peak at 20:00 KST landed in the 11:00 UTC bucket — the
+  // operator saw a nonsensical "morning" traffic spike. Weekday
+  // boundaries shifted too: 06:00 KST Monday sessions leaked into
+  // Sunday's row.
+  //
+  // Extracting Asia/Seoul hour + weekday: Intl.DateTimeFormat with a
+  // narrow-weekday token gives us Sun-Sat 0-6 via a small lookup, and
+  // a 2-digit hour gives us 0-23 via parseInt. That's 100x cheaper
+  // than instantiating a new format object per iteration and it stays
+  // within a single tz-aware call.
   const heatmap: number[][] = Array.from({ length: 7 }, () => Array.from({ length: 24 }, () => 0));
+  const kstParts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul',
+    weekday: 'short',
+    hour: '2-digit',
+    hour12: false,
+  });
+  const DOW_INDEX: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
   for (const s of sessions) {
-    const d = new Date(s.startMs);
-    heatmap[d.getDay()][d.getHours()]++;
+    const parts = kstParts.formatToParts(new Date(s.startMs));
+    const weekdayPart = parts.find(p => p.type === 'weekday')?.value ?? 'Sun';
+    const hourPart = parts.find(p => p.type === 'hour')?.value ?? '00';
+    const dow = DOW_INDEX[weekdayPart] ?? 0;
+    const hour = parseInt(hourPart, 10) % 24;
+    heatmap[dow][hour]++;
   }
   let peakHour: number | null = null;
   let peakDow: number | null = null;

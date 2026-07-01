@@ -340,11 +340,22 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
     if (resendCooldown > 0) return;
     setError('');
     setResendNotice('');
+    // Guard against empty / malformed email BEFORE the network round-
+    // trip. Cognito would reject it anyway, but the operator gets a
+    // faster + more helpful signal, and the /api/auth/cognito/
+    // resend-code rate limit doesn't get burned on a call the client
+    // could have prevented. Same shape as the sign-up path's own
+    // pre-flight validation.
+    const trimmedEmail = formData.email?.trim() ?? '';
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setError(lang === 'kr' ? '이메일 주소를 먼저 입력해주세요.' : 'Enter your email address first.');
+      return;
+    }
     try {
       const res = await fetch('/api/auth/cognito/resend-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email?.trim() }),
+        body: JSON.stringify({ email: trimmedEmail }),
       });
       if (!res.ok) {
         setError(lang === 'kr' ? '인증번호 재전송에 실패했습니다.' : 'Failed to resend the code.');

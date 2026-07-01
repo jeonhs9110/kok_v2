@@ -7,6 +7,7 @@ import {
   type DateRange,
   type RangePreset,
 } from './useDashboardData';
+import { kstDateString } from '@/lib/formatKstDate';
 
 const PRESET_LABEL: Record<Exclude<RangePreset, 'custom'>, string> = {
   today: '오늘',
@@ -36,11 +37,16 @@ export default function DateRangeControl({
   // Initial date strings live inside lazy useState initializers so
   // Date.now() / new Date() never runs during render — the
   // react-hooks/purity rule rejects impure calls in the render body.
-  const [today] = useState(() => new Date().toISOString().slice(0, 10));
+  //
+  // KST (not UTC) — the operator's brain works in Asia/Seoul; the
+  // presets ("last 30 days", "today") also anchor there. Previously
+  // used toISOString().slice(0, 10) which returned the UTC date and
+  // was off by one during the 9-hour 00:00-09:00 KST window.
+  const [today] = useState(() => kstDateString());
   const [customStart, setCustomStart] = useState(() =>
-    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    kstDateString(Date.now() - 30 * 24 * 60 * 60 * 1000),
   );
-  const [customEnd, setCustomEnd] = useState(() => new Date().toISOString().slice(0, 10));
+  const [customEnd, setCustomEnd] = useState(() => kstDateString());
 
   function applyCustom() {
     if (!customStart || !customEnd) return;
