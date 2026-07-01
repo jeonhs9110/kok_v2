@@ -593,13 +593,19 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
 
             const isPassword = f.type === 'password' && f.key === 'password';
 
+            // htmlFor + id pair the label to the input so screen
+            // readers announce the label when the input is focused —
+            // without this, the visual label is just orphan text and
+            // the input was effectively unlabeled (WCAG 1.3.1).
+            const inputId = `register-field-${f.key}`;
             return (
               <div key={f.key}>
-                <label className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 mb-1">
+                <label htmlFor={inputId} className="text-[11px] text-gray-500 font-semibold flex items-center gap-1 mb-1">
                   {label}
                   {f.required ? <span className="text-red-400">*</span> : <span className="text-gray-300">({t.optional})</span>}
                 </label>
                 <input
+                  id={inputId}
                   type={f.type}
                   value={formData[f.key] || ''}
                   onChange={e => setFormData(p => ({ ...p, [f.key]: e.target.value }))}

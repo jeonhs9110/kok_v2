@@ -83,7 +83,8 @@ export default function CookieConsent() {
       style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom, 0))' }}
       className="fixed bottom-0 left-0 right-0 z-40 px-4 pt-4 animate-in slide-in-from-bottom-4 duration-300"
       role="region"
-      aria-label={t.message}
+      aria-label={lang === 'en' ? 'Cookie consent' : '쿠키 동의'}
+      aria-live="polite"
     >
       <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.12)] border border-gray-200 p-4 flex flex-col sm:flex-row items-center gap-3">
         <p className="text-sm text-gray-600 flex-1">

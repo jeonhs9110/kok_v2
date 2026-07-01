@@ -302,11 +302,15 @@ export default function Header({
             }}
           >
 
-            {/* Mobile hamburger */}
+            {/* Mobile hamburger. aria-label flips with state so screen
+                reader users get "Close menu" when the drawer is open
+                instead of the stale "Menu" they used to hear. */}
             <button
               className="lg:hidden p-2 -ml-2 text-neutral-900"
               onClick={() => setMobileOpen(v => !v)}
-              aria-label="Menu"
+              aria-label={mobileOpen ? (lang === 'en' ? 'Close menu' : '메뉴 닫기') : (lang === 'en' ? 'Open menu' : '메뉴 열기')}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-nav-drawer"
             >
               {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>

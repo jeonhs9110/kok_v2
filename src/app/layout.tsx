@@ -5,6 +5,7 @@ import StorefrontLayoutWrapper from '@/components/StorefrontLayoutWrapper';
 import SiteBackground from '@/components/SiteBackground';
 import TailwindSafelist from '@/components/TailwindSafelist';
 import { getActiveSiteBackground } from '@/lib/api/siteBackground';
+import { detectLangServer } from '@/lib/i18n/detectServer';
 
 // Only 400 (Regular) and 700 (Bold) are preloaded. Those are the two
 // weights the homepage paints on the critical path (body copy + menu
@@ -82,8 +83,14 @@ export default async function RootLayout({
   // unstable_cache; tag-evicted when the admin saves a new background.
   // Replaces the 1.3s client-side fetch SiteBackground used to do.
   const initialBg = await getActiveSiteBackground();
+  // Dynamic <html lang>. Was hardcoded to "ko" — that broke screen
+  // reader pronunciation for English visitors AND told Google/Naver
+  // the /en pages were Korean (contradicting the hreflang alternates).
+  // detectLangServer reads kokkok_lang cookie → accept-language → 'kr',
+  // matching what the [lang]/ routes themselves use.
+  const lang = await detectLangServer();
   return (
-    <html lang="ko" className={`${freesentation.variable} ${freesentationExtras.variable}`}>
+    <html lang={lang === 'en' ? 'en-US' : 'ko-KR'} className={`${freesentation.variable} ${freesentationExtras.variable}`}>
       <head>
         {/* Preload the critical Regular weight so it starts downloading
             during HTML parse instead of waiting for the CSS to declare
@@ -144,6 +151,16 @@ export default async function RootLayout({
           customers who haven't picked an admin font still see
           Freesentation as before. */}
       <body className="text-neutral-950 antialiased min-h-screen">
+        {/* Skip-to-content link — keyboard users can press Tab once on
+            any page to bypass the 20+ header links and jump straight
+            to the main content. Hidden visually until focused.
+            WCAG 2.4.1 Bypass Blocks. */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-3 focus:py-2 focus:bg-black focus:text-white focus:text-sm focus:rounded focus:no-underline"
+        >
+          {lang === 'en' ? 'Skip to content' : '본문으로 건너뛰기'}
+        </a>
         <SiteBackground initialBg={initialBg} />
         <TailwindSafelist />
         <StorefrontLayoutWrapper>

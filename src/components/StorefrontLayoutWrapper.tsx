@@ -16,7 +16,7 @@ export default function StorefrontLayoutWrapper({ children }: { children: React.
 
   return (
     <div className="flex flex-col min-h-screen font-sans">
-      <main className="flex-1 w-full bg-white">{children}</main>
+      <main id="main-content" className="flex-1 w-full bg-white">{children}</main>
     </div>
   );
 }

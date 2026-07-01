@@ -34,6 +34,15 @@ export async function generateMetadata({
       locale: lang === 'kr' ? 'ko_KR' : 'en_US',
       siteName: 'KOKKOK GARDEN',
       authors: post.author_name ? [post.author_name] : undefined,
+      // Same KakaoTalk/Naver fallback as menu listings — when posts
+      // start carrying a featured_image_url this can prefer that.
+      images: [{ url: 'https://www.kokkokgarden.com/kokkokgarden_primary.svg', alt: post.title }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: post.title,
+      description: desc,
+      images: ['https://www.kokkokgarden.com/kokkokgarden_primary.svg'],
     },
   };
 }
