@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireSuperAdmin, getCallerUserId } from '@/lib/auth/requireAdmin';
+import { auditLog, hashEmail } from '@/lib/audit/log';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -93,9 +94,25 @@ export async function PATCH(req: Request, { params }: RouteContext) {
           };
         }
       }
+      auditLog('admin.user.role_changed', {
+        actor: callerId,
+        target: id,
+        outcome: cognitoWarning ? 'partial' : (ok ? 'success' : 'failure'),
+        metadata: {
+          new_role: role,
+          target_email_hash: hashEmail(email),
+          cognito_synced: cognitoWarning === null,
+        },
+      });
       return NextResponse.json({ ok, cognitoWarning });
     } catch (err) {
       console.error('[admin/users] pg role update failed:', err);
+      auditLog('admin.user.role_changed', {
+        actor: callerId,
+        target: id,
+        outcome: 'failure',
+        metadata: { new_role: role, error: err instanceof Error ? err.message : String(err) },
+      });
       return NextResponse.json({ ok: false }, { status: 500 });
     }
   }
@@ -157,12 +174,30 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
       dbOk = await deleteUserInPg(id, email);
     } catch (err) {
       console.error('[admin/users] pg delete failed:', err);
+      auditLog('admin.user.deleted', {
+        actor: callerId,
+        target: id,
+        outcome: 'failure',
+        metadata: {
+          target_email_hash: hashEmail(email),
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
       return NextResponse.json({ ok: false }, { status: 500 });
     }
   } else if (supabase) {
     const { error } = await supabase.from('users').delete().eq('id', id);
     if (error) {
       console.error('[admin/users] supabase delete failed:', error);
+      auditLog('admin.user.deleted', {
+        actor: callerId,
+        target: id,
+        outcome: 'failure',
+        metadata: {
+          target_email_hash: hashEmail(email),
+          error: (error as { message?: string }).message ?? 'unknown',
+        },
+      });
       return NextResponse.json({ ok: false }, { status: 500 });
     }
     dbOk = true;
@@ -189,5 +224,14 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
     }
   }
 
+  auditLog('admin.user.deleted', {
+    actor: callerId,
+    target: id,
+    outcome: cognitoWarning ? 'partial' : (dbOk ? 'success' : 'failure'),
+    metadata: {
+      target_email_hash: hashEmail(email),
+      cognito_cleared: cognitoWarning === null,
+    },
+  });
   return NextResponse.json({ ok: dbOk, cognitoWarning });
 }

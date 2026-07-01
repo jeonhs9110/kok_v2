@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { requireSuperAdmin } from '@/lib/auth/requireAdmin';
+import { requireSuperAdmin, getCallerUserId } from '@/lib/auth/requireAdmin';
 import { findCountry } from '@/lib/geo/countries';
+import { auditLog } from '@/lib/audit/log';
 
 /**
  * GET /api/admin/users/export
@@ -26,6 +27,10 @@ import { findCountry } from '@/lib/geo/countries';
 export async function GET() {
   const denied = await requireSuperAdmin();
   if (denied) return denied;
+  // Capture the caller's Cognito sub for the audit line. requireSuperAdmin
+  // has already verified the JWT so this only fails on the unhealthy
+  // no-cookie edge case, which we treat as a null actor.
+  const callerId = await getCallerUserId();
 
   try {
     const { getPgPool } = await import('@/lib/db/pool');
@@ -101,6 +106,14 @@ export async function GET() {
     const body = '﻿' + lines.join('\r\n');
 
     const filename = `kokkok-customers-${new Date().toISOString().slice(0, 10)}.csv`;
+    // PIPA trail — bulk PII pull. Rows count only (no per-row PII in
+    // the log itself); the operator's audit question is "was there a
+    // large export I didn't authorize" not "which rows did they see".
+    auditLog('admin.users.csv_exported', {
+      actor: callerId,
+      outcome: 'success',
+      metadata: { row_count: rows.length },
+    });
     return new NextResponse(body, {
       status: 200,
       headers: {
@@ -111,6 +124,11 @@ export async function GET() {
     });
   } catch (err) {
     console.error('[admin/users/export] failed:', err);
+    auditLog('admin.users.csv_exported', {
+      actor: callerId,
+      outcome: 'failure',
+      metadata: { error: err instanceof Error ? err.message : String(err) },
+    });
     return NextResponse.json({ error: 'export_failed' }, { status: 500 });
   }
 }

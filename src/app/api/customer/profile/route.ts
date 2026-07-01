@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireCustomer } from '@/lib/auth/requireCustomer';
+import { auditLog, hashEmail } from '@/lib/audit/log';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -247,6 +248,15 @@ export async function DELETE() {
       }
     } catch (err) {
       console.error('[customer/profile] pg delete failed:', err);
+      auditLog('customer.account.deleted', {
+        actor: auth.userId,
+        target: auth.userId,
+        outcome: 'failure',
+        metadata: {
+          target_email_hash: hashEmail(auth.email),
+          error: err instanceof Error ? err.message : String(err),
+        },
+      });
       return NextResponse.json({ ok: false }, { status: 500 });
     }
   } else if (supabase) {
@@ -281,5 +291,16 @@ export async function DELETE() {
     }
   }
 
+  // PIPA trail — customer self-service account close. Emits a single
+  // audit line via console.log; queryable via CloudWatch Insights.
+  auditLog('customer.account.deleted', {
+    actor: auth.userId,
+    target: auth.userId,
+    outcome: dbOk ? (cognitoCleared ? 'success' : 'partial') : 'failure',
+    metadata: {
+      target_email_hash: hashEmail(auth.email),
+      cognito_cleared: cognitoCleared,
+    },
+  });
   return NextResponse.json({ ok: dbOk, cognitoCleared });
 }
