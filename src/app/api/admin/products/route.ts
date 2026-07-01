@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { assertSameOrigin } from '@/lib/http/csrf';
 import type { AdminProductUpsertInput } from '@/lib/db/admin-writes';
 
 /**
@@ -41,6 +42,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  // Round 31: CSRF gap fix. A cross-origin POST while an admin was
+  // logged in could create a joke SKU and land it on the storefront
+  // homepage; DELETE could remove a live product; PATCH could flip
+  // a product to inactive.
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   let body: AdminProductUpsertInput;
@@ -63,6 +70,8 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   const url = new URL(request.url);
@@ -103,6 +112,8 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   const url = new URL(request.url);

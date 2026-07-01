@@ -23,36 +23,51 @@ export default function ChatbotAdminPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Round 31: track load failure so an RDS blip stops rendering
+  // "0 leads" (indistinguishable from a genuinely quiet day) — same
+  // pattern R29 wired into CommentSection. Prior silent `catch {}` on
+  // both loaders hid transient outages from the operator.
+  const [loadError, setLoadError] = useState(false);
 
   async function loadConfig() {
     try {
       const res = await fetch('/api/admin/crud/chatbot_config?orderBy=id&direction=ASC', { cache: 'no-store' });
-      if (res.ok) {
-        const j = (await res.json()) as { rows?: ChatbotConfig[] };
-        const data = (j.rows ?? [])[0];
-        if (data) {
-          setConfig({
-            is_enabled: data.is_enabled ?? true,
-            show_global: data.show_global ?? true,
-            show_domestic: data.show_domestic ?? false,
-            model: data.model ?? 'gpt-4o-mini',
-            greeting_en: data.greeting_en ?? DEFAULT_GREETING_EN,
-            greeting_kr: data.greeting_kr ?? DEFAULT_GREETING_KR,
-          });
-        }
+      if (!res.ok) throw new Error('http_' + res.status);
+      const j = (await res.json()) as { rows?: ChatbotConfig[] };
+      const data = (j.rows ?? [])[0];
+      if (data) {
+        setConfig({
+          is_enabled: data.is_enabled ?? true,
+          show_global: data.show_global ?? true,
+          show_domestic: data.show_domestic ?? false,
+          model: data.model ?? 'gpt-4o-mini',
+          greeting_en: data.greeting_en ?? DEFAULT_GREETING_EN,
+          greeting_kr: data.greeting_kr ?? DEFAULT_GREETING_KR,
+        });
       }
-    } catch { /* table may not exist yet */ }
+    } catch (err) {
+      console.error('[admin/chatbot] loadConfig failed', err);
+      setLoadError(true);
+    }
     setLoading(false);
   }
 
   async function loadLeads() {
     try {
       const res = await fetch('/api/admin/crud/chatbot_leads?orderBy=created_at&direction=DESC', { cache: 'no-store' });
-      if (res.ok) {
-        const j = (await res.json()) as { rows?: ChatbotLead[] };
-        if (j.rows) setLeads(j.rows.slice(0, 50));
-      }
-    } catch { /* table may not exist */ }
+      if (!res.ok) throw new Error('http_' + res.status);
+      const j = (await res.json()) as { rows?: ChatbotLead[] };
+      if (j.rows) setLeads(j.rows.slice(0, 50));
+    } catch (err) {
+      console.error('[admin/chatbot] loadLeads failed', err);
+      setLoadError(true);
+    }
+  }
+
+  async function retryLoad() {
+    setLoadError(false);
+    setLoading(true);
+    await Promise.all([loadConfig(), loadLeads()]);
   }
 
   // One-shot fetch on mount; explicit refetch in handleSave keeps it fresh.
@@ -111,6 +126,18 @@ export default function ChatbotAdminPage() {
         title="챗봇"
         description="AI 채팅 위젯의 활성화 · 모델 · 노출 페이지를 관리합니다"
       />
+      {loadError && (
+        <div className="rounded border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-800 flex items-center justify-between">
+          <span>일부 데이터를 불러오지 못했습니다. 아래 값이 최신이 아닐 수 있습니다.</span>
+          <button
+            type="button"
+            onClick={() => { void retryLoad(); }}
+            className="ml-4 px-3 py-1 rounded border border-amber-300 bg-white text-amber-800 text-xs font-semibold hover:bg-amber-100 transition-colors"
+          >
+            다시 시도
+          </button>
+        </div>
+      )}
       <ChatbotConfigCard
         config={config}
         saving={saving}

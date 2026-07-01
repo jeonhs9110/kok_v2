@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireSuperAdmin, getCallerUserId } from '@/lib/auth/requireAdmin';
 import { auditLog, hashEmail } from '@/lib/audit/log';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -20,6 +21,12 @@ interface RouteContext {
  * one side fails the operator notices on next sign-in and re-runs.
  */
 export async function PATCH(req: Request, { params }: RouteContext) {
+  // Round 31: highest-privilege operation on the site — super-admin
+  // role toggle. A CSRF against a super-admin's cookie could promote
+  // any attacker-owned row to admin. Guard MUST run before requireX
+  // so the response envelope stays consistent with rejected calls.
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const denied = await requireSuperAdmin();
   if (denied) return denied;
 
@@ -72,7 +79,7 @@ export async function PATCH(req: Request, { params }: RouteContext) {
       // means the user can't actually reach /admin even though the
       // database says they're admin. Surface the failure so the operator
       // sees it instead of having to debug a 403 later.
-      let cognitoWarning: { message: string; cli: string } | null = null;
+      let cognitoWarning: { message: string; cli: string | null } | null = null;
       if (email && process.env.USE_COGNITO === 'true') {
         try {
           const { addUserToGroup, removeUserFromGroup, globalSignOutByEmail } = await import('@/lib/auth/cognito-admin');
@@ -81,9 +88,20 @@ export async function PATCH(req: Request, { params }: RouteContext) {
             : await removeUserFromGroup(email, 'admins');
           if (!cognitoOk) {
             const verb = role === 'admin' ? 'admin-add-user-to-group' : 'admin-remove-user-from-group';
+            // Round 31: if COGNITO_USER_POOL_ID isn't set on the server,
+            // don't build a broken CLI (would render as
+            // `--user-pool-id ""` and either fail silently or, worse,
+            // hit the AWS CLI's default-region pool). Return null +
+            // an explicit message so the operator sees the config gap.
+            const poolId = process.env.COGNITO_USER_POOL_ID;
+            const region = process.env.AWS_REGION ?? 'ap-northeast-2';
             cognitoWarning = {
-              message: `RDS 권한은 변경되었지만 Cognito 그룹 동기화에 실패했습니다. 이 사용자는 다음 로그인 시 /admin에 접근할 수 없습니다.`,
-              cli: `aws cognito-idp ${verb} --user-pool-id ${process.env.COGNITO_USER_POOL_ID ?? ''} --username "${email}" --group-name admins --region ${process.env.AWS_REGION ?? 'ap-northeast-2'}`,
+              message: poolId
+                ? `RDS 권한은 변경되었지만 Cognito 그룹 동기화에 실패했습니다. 이 사용자는 다음 로그인 시 /admin에 접근할 수 없습니다.`
+                : `RDS 권한은 변경되었지만 Cognito 그룹 동기화에 실패했습니다. 서버에 COGNITO_USER_POOL_ID 환경 변수가 설정되지 않아 수동 CLI 명령을 생성할 수 없습니다.`,
+              cli: poolId
+                ? `aws cognito-idp ${verb} --user-pool-id ${poolId} --username "${email}" --group-name admins --region ${region}`
+                : null,
             };
           } else {
             // Force re-auth on the target so their JWT's stale
@@ -120,7 +138,12 @@ export async function PATCH(req: Request, { params }: RouteContext) {
         actor: callerId,
         target: id,
         outcome: 'failure',
-        metadata: { new_role: role, error: err instanceof Error ? err.message : String(err) },
+        // Round 31: log only the error CLASS in the structured audit
+        // record. pg driver messages often embed the failing SQL +
+        // column values, which would leak internal schema through
+        // CloudWatch to anyone with audit-log read. Full stringified
+        // error still goes to `console.error` above (operator log).
+        metadata: { new_role: role, error_class: err instanceof Error ? err.name : 'unknown' },
       });
       return NextResponse.json({ ok: false }, { status: 500 });
     }
@@ -142,7 +165,9 @@ export async function PATCH(req: Request, { params }: RouteContext) {
  * returns 200 as soon as that succeeds even if Cognito-side deletion
  * fails (operator can re-run via aws cognito-idp admin-delete-user).
  */
-export async function DELETE(_req: Request, { params }: RouteContext) {
+export async function DELETE(req: Request, { params }: RouteContext) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const denied = await requireSuperAdmin();
   if (denied) return denied;
 
@@ -189,7 +214,9 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
         outcome: 'failure',
         metadata: {
           target_email_hash: hashEmail(email),
-          error: err instanceof Error ? err.message : String(err),
+          // Round 31: error CLASS only — see the role-change branch
+          // above for reasoning.
+          error_class: err instanceof Error ? err.name : 'unknown',
         },
       });
       return NextResponse.json({ ok: false }, { status: 500 });
@@ -212,16 +239,22 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
     dbOk = true;
   }
 
-  let cognitoWarning: { message: string; cli: string } | null = null;
+  let cognitoWarning: { message: string; cli: string | null } | null = null;
   if (email && process.env.USE_COGNITO === 'true') {
     try {
       const { deleteCognitoUserByEmail } = await import('@/lib/auth/cognito-admin');
       const cognitoOk = await deleteCognitoUserByEmail(email);
       if (!cognitoOk) {
+        // Round 31: same env-guarded CLI pattern as the role branch.
+        const poolId = process.env.COGNITO_USER_POOL_ID;
+        const region = process.env.AWS_REGION ?? 'ap-northeast-2';
         cognitoWarning = {
-          message:
-            'RDS 행은 삭제됐지만 Cognito 계정 삭제에 실패했습니다. 이 이메일로 다시 회원가입을 시도하면 "이미 존재하는 사용자" 오류가 납니다.',
-          cli: `aws cognito-idp admin-delete-user --user-pool-id ${process.env.COGNITO_USER_POOL_ID ?? ''} --username "${email}" --region ${process.env.AWS_REGION ?? 'ap-northeast-2'}`,
+          message: poolId
+            ? 'RDS 행은 삭제됐지만 Cognito 계정 삭제에 실패했습니다. 이 이메일로 다시 회원가입을 시도하면 "이미 존재하는 사용자" 오류가 납니다.'
+            : 'RDS 행은 삭제됐지만 Cognito 계정 삭제에 실패했습니다. 서버에 COGNITO_USER_POOL_ID 환경 변수가 설정되지 않아 수동 CLI 명령을 생성할 수 없습니다.',
+          cli: poolId
+            ? `aws cognito-idp admin-delete-user --user-pool-id ${poolId} --username "${email}" --region ${region}`
+            : null,
         };
       }
     } catch (err) {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * shorts_config is a singleton row (one config record total). The
@@ -42,6 +43,8 @@ export async function GET() {
  * present, otherwise inserts. Either path yields the same end-state.
  */
 export async function PUT(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   let body: unknown;

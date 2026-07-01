@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { sanitizeStorageKey, MAX_STORAGE_KEY_LEN } from '@/lib/storage/keyGuard';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * DELETE /api/admin/storage/delete?bucket=<id>&key=<key>
@@ -14,6 +15,10 @@ import { sanitizeStorageKey, MAX_STORAGE_KEY_LEN } from '@/lib/storage/keyGuard'
 const ALLOWED_BUCKETS = new Set(['product-images', 'site-assets']);
 
 export async function DELETE(request: Request) {
+  // Round 31: prevent cross-origin S3 defacement — a phished admin's
+  // cookie was enough to remove any storage object.
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
 

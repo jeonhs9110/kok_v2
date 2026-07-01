@@ -45,7 +45,13 @@ function getRequestOrigin(request: NextRequest): string {
   const host =
     request.headers.get('x-forwarded-host') ||
     request.headers.get('host') ||
-    'www.kokkokgarden.com';
+    // Round 31: fall back to NEXT_PUBLIC_SITE_URL (env-driven) before
+    // baking the prod hostname in. Prior hardcode meant a misconfigured
+    // preview/staging environment (ALB drops the host header on a
+    // Cloudfront misroute) leaked users back to prod on the callback.
+    (process.env.NEXT_PUBLIC_SITE_URL
+      ? new URL(process.env.NEXT_PUBLIC_SITE_URL).host
+      : 'www.kokkokgarden.com');
   const proto = request.headers.get('x-forwarded-proto') || 'https';
   return `${proto}://${host}`;
 }

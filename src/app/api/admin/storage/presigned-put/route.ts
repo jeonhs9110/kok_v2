@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 import { sanitizeStorageKey, MAX_STORAGE_KEY_LEN } from '@/lib/storage/keyGuard';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * POST /api/admin/storage/presigned-put
@@ -90,6 +91,11 @@ function logReject(reason: string, ctx: Record<string, string | number | null> =
 }
 
 export async function POST(request: NextRequest) {
+  // Round 31: presigned uploads are the vector for arbitrary S3 write —
+  // require same-origin so a phished admin can't hand a cross-origin
+  // page a signed URL that then uploads defacement content.
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   if (!putLimiter.check(getRequestIp(request))) {

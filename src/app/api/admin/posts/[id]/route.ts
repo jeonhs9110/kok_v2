@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -15,6 +16,8 @@ const UPDATABLE = ['title', 'content', 'is_admin_post', 'is_published'] as const
  * Admin can edit any post + flip pin/publish flags.
  */
 export async function PATCH(req: Request, { params }: Ctx) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   const { id } = await params;
@@ -56,7 +59,9 @@ export async function PATCH(req: Request, { params }: Ctx) {
  * DELETE /api/admin/posts/[id]
  * Admin deletes any post regardless of author.
  */
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, { params }: Ctx) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   const { id } = await params;

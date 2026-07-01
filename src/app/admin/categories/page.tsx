@@ -132,16 +132,28 @@ export default function CategoriesAdminPage() {
       : '이 카테고리를 삭제하시겠습니까?';
     const ok = await confirm({ message: msg, tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    let deleted = true;
-    if (USE_RDS_FROM_BROWSER) {
-      const res = await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-      deleted = res.ok;
-    } else if (supabase) {
-      const { error } = await supabase.from('categories').delete().eq('id', id);
-      deleted = !error;
+    // Round 31: start `deleted = false`. The prior default of `true`
+    // meant an env misconfig (neither USE_RDS_FROM_BROWSER nor the
+    // Supabase fallback active) silently fell through, kept
+    // `deleted=true`, showed a success toast — but nothing was
+    // deleted. Now the flag can only flip inside a branch that
+    // actually made a delete call.
+    let deleted = false;
+    try {
+      if (USE_RDS_FROM_BROWSER) {
+        const res = await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+        deleted = res.ok;
+      } else if (supabase) {
+        const { error } = await supabase.from('categories').delete().eq('id', id);
+        deleted = !error;
+      }
+    } catch (err) {
+      console.error('[admin/categories] delete failed', err);
     }
-    await revalidateHeaderData();
-    fetchAll();
+    if (deleted) {
+      await revalidateHeaderData();
+      fetchAll();
+    }
     toast.show(deleted ? '카테고리가 삭제되었습니다.' : '삭제에 실패했습니다.', deleted ? 'success' : 'error');
   };
 

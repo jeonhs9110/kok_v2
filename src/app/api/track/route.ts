@@ -65,12 +65,21 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
-// Warn ONCE per cold start if the salt isn't configured. Falling back to
-// a hardcoded literal makes the hash trivially reversible by anyone with
-// the source — we don't want that to slip past silently.
+// Round 31: fail loudly in production when the salt is missing. Prior
+// state warned ONCE per cold-start (one line in CloudWatch, easy to
+// scroll past) and continued writing `ip_hash` rows with the hardcoded
+// `'kokkok-noop-salt'` fallback — anyone with the source could
+// trivially reverse every prod row's IP. Dev keeps the warn-only
+// behavior so local runs don't need the var. Prod: writes are skipped
+// (safer than persisting a compromised hash).
 const ANALYTICS_IP_SALT = process.env.ANALYTICS_IP_SALT || '';
-if (!ANALYTICS_IP_SALT && supabaseUrl) {
-  console.warn('[track] ANALYTICS_IP_SALT is not set; ip_hash will use a low-entropy fallback. Set the env var in EC2 user-data.');
+const IS_PROD = process.env.NODE_ENV === 'production';
+if (!ANALYTICS_IP_SALT) {
+  if (IS_PROD) {
+    console.error('[track] ANALYTICS_IP_SALT is not set in production — ip_hash writes will be SKIPPED to avoid persisting a reversible hash. Set the env var in EC2 user-data.');
+  } else {
+    console.warn('[track] ANALYTICS_IP_SALT is not set; ip_hash will use a low-entropy fallback. Set the env var in EC2 user-data.');
+  }
 }
 
 /**
@@ -191,7 +200,11 @@ export async function POST(req: NextRequest) {
     }
     if (!country) country = 'UNKNOWN';
 
-    const ip_hash = ip ? hashIp(ip) : null;
+    // Round 31: in prod, skip storing an ip_hash when the salt is
+    // missing rather than persist a reversible hash from the
+    // hardcoded fallback. Row still writes with the rest of the
+    // analytics context; only the IP-derived column drops to null.
+    const ip_hash = ip && (ANALYTICS_IP_SALT || !IS_PROD) ? hashIp(ip) : null;
 
     // Migration 45 (2026-06-24): categorize at write time so the
     // dashboard can group/filter without re-parsing every row. Both

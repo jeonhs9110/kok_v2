@@ -136,10 +136,26 @@ export function useMenus() {
     const msg = hasChildren ? '이 메뉴와 모든 서브메뉴가 삭제됩니다. 계속하시겠습니까?' : '이 메뉴를 삭제하시겠습니까?';
     const ok = await confirm({ message: msg, tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    const res = await fetch(`/api/admin/crud/menus?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-    await revalidateHeaderData();
-    fetchAll();
-    toast.show(res.ok ? '메뉴가 삭제되었습니다.' : '메뉴 삭제에 실패했습니다.', res.ok ? 'success' : 'error');
+    // Round 31: prior state was a bare `fetch(...)` outside any
+    // try/catch — a network failure (offline, DNS blip, EC2 restart)
+    // threw and skipped the entire toast + refetch. Operator saw
+    // absolutely nothing, clicked Delete again, still nothing, gave
+    // up. And `fetchAll()` fired BEFORE `res.ok` was inspected, so
+    // a failed delete triggered a wasted refetch even when the list
+    // hadn't changed. Now the fetch throws are caught, refetch only
+    // runs on success, and the toast always fires.
+    let deleted = false;
+    try {
+      const res = await fetch(`/api/admin/crud/menus?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      deleted = res.ok;
+    } catch (err) {
+      console.error('[admin/menus] delete failed', err);
+    }
+    if (deleted) {
+      await revalidateHeaderData();
+      fetchAll();
+    }
+    toast.show(deleted ? '메뉴가 삭제되었습니다.' : '메뉴 삭제에 실패했습니다.', deleted ? 'success' : 'error');
   };
 
   return {

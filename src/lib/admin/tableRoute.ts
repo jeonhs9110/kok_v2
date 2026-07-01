@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * Phase C2b — generic admin table route factory.
@@ -82,6 +83,18 @@ export function makeAdminTableRoute(config: AdminTableConfig) {
     },
 
     async POST(request: Request) {
+      // Round 31: fix a CRITICAL CSRF gap. The 10+ admin-config
+      // tables routed through this factory (carousel-slides,
+      // promo-banners, homepage-banners, review-cards, sub-hero-
+      // banners, site-backgrounds, shorts, instagram-posts,
+      // categories, media-stories, ...) all accepted cross-origin
+      // POST/PATCH/DELETE while an admin cookie was live. A phishing
+      // page could delete a banner, tamper with a review card, or
+      // inject rows in the operator's name. R29 fixed comments; this
+      // factory is the wider surface. Same envelope as the customer
+      // routes: return the failure response before touching auth.
+      const csrf = assertSameOrigin(request);
+      if (csrf) return csrf;
       const denied = await requireAdmin();
       if (denied) return denied;
       let body: unknown;
@@ -107,6 +120,8 @@ export function makeAdminTableRoute(config: AdminTableConfig) {
     },
 
     async PATCH(request: Request) {
+      const csrf = assertSameOrigin(request);
+      if (csrf) return csrf;
       const denied = await requireAdmin();
       if (denied) return denied;
       const url = new URL(request.url);
@@ -161,6 +176,8 @@ export function makeAdminTableRoute(config: AdminTableConfig) {
     },
 
     async DELETE(request: Request) {
+      const csrf = assertSameOrigin(request);
+      if (csrf) return csrf;
       const denied = await requireAdmin();
       if (denied) return denied;
       const url = new URL(request.url);

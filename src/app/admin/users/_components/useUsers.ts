@@ -90,7 +90,9 @@ export function useUsers() {
     try {
       const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('http_' + res.status);
-      const json = (await res.json()) as { ok: boolean; cognitoWarning?: { message: string; cli: string } | null };
+      // Round 31: `cli` may now be null when the server can't build a
+      // safe CLI (e.g. COGNITO_USER_POOL_ID is not set on the box).
+      const json = (await res.json()) as { ok: boolean; cognitoWarning?: { message: string; cli: string | null } | null };
       if (json.cognitoWarning) {
         const w = json.cognitoWarning;
         // Track whether the copy actually succeeded — the previous silent
@@ -99,14 +101,16 @@ export function useUsers() {
         // into pasting nothing into their terminal.
         let copied = false;
         try {
-          if (navigator.clipboard?.writeText) {
+          if (w.cli && navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(w.cli);
             copied = true;
           }
         } catch { /* clipboard may not be available */ }
-        const suffix = copied
-          ? `\n\n다음 명령어가 클립보드에 복사되었습니다:\n${w.cli}`
-          : `\n\n아래 명령어를 직접 복사해 터미널에서 실행하세요:\n${w.cli}`;
+        const suffix = !w.cli
+          ? ''
+          : copied
+            ? `\n\n다음 명령어가 클립보드에 복사되었습니다:\n${w.cli}`
+            : `\n\n아래 명령어를 직접 복사해 터미널에서 실행하세요:\n${w.cli}`;
         toast.show(`${w.message}${suffix}`, 'warning');
       } else {
         // Row already vanished optimistically above; without an
@@ -114,6 +118,11 @@ export function useUsers() {
         // it actually persisted or just did an optimistic UI dance.
         toast.show('사용자가 삭제되었습니다.', 'success');
       }
+      // Round 31: refetch after any completion path — server state
+      // may have shifted (RDS delete succeeded, Cognito failed →
+      // row gone, cognito zombie). Optimistic + refetch keeps the
+      // local list honest without waiting for the operator to reload.
+      await fetchUsers();
     } catch (err) {
       console.warn('삭제 실패:', err);
       setUsers(snapshot);

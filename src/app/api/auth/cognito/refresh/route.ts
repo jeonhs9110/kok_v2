@@ -81,10 +81,16 @@ export async function POST(request: NextRequest) {
   // gone for 30 days re-authenticates.
   res.cookies.set('cognito_refresh_token', result.refreshToken, {
     httpOnly: true, sameSite: 'lax', secure: isProd,
-    // Scope to just the refresh + sign-out routes so this cookie
-    // isn't sent on every /api/track or storefront GET. httpOnly
-    // already blocks JS reads; path scope tightens the surface.
-    path: '/api/auth/cognito',
+    // Round 31: match sign-in's `path: '/'`. Two different paths
+    // for the same cookie name (sign-in set /, refresh set
+    // /api/auth/cognito) meant the browser stored BOTH cookies —
+    // on every sliding refresh the path=/ variant grew stale but
+    // stuck around for 30 days, and sign-out (which clears path=/)
+    // never wiped the path-scoped copy, leaving credential material
+    // in the browser after logout. Also R28 flagged that Kakao /
+    // Instagram in-app WebViews filter path-scoped cookies, so
+    // narrowing this cookie's path silently broke refresh in-app.
+    path: '/',
     maxAge: 60 * 60 * 24 * 30,
   });
   res.cookies.set('kokkok_auth', 'true', {
