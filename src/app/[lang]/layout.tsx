@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
-import { headers, cookies } from 'next/headers';
+import { headers } from 'next/headers';
+import { connection } from 'next/server';
 import { isValidLang } from '@/lib/i18n/types';
 import { I18nProvider } from '@/lib/i18n/context';
 import Header from '@/components/Header';
@@ -73,8 +74,12 @@ export default async function LangLayout({
   // consent-banner UX and an acceptable cost for actual compliance.
   // Consent state is now handled client-side via Google Consent
   // Mode v2 (see the gtag('consent','default') block in <head> +
-  // the update calls in CookieConsent.tsx). No longer needed here.
-  await cookies(); // preserve the cookies() call so Next treats this route as dynamic.
+  // the update calls in CookieConsent.tsx). Round 27: swapped the
+  // no-op `await cookies()` dynamic-marker hack for connection() —
+  // the intended primitive for "opt this route out of static
+  // prerendering." @next/eslint-config 16.3 adds a lint that fails
+  // on unused cookies() calls.
+  await connection();
 
   // SSR the header's dynamic data so the initial HTML already has the
   // full nav, mega-categories, and logo. Without this, the client-side

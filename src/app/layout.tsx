@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import localFont from 'next/font/local';
 import './globals.css';
 import StorefrontLayoutWrapper from '@/components/StorefrontLayoutWrapper';
@@ -117,12 +118,21 @@ export default async function RootLayout({
             LCP win (-150–350ms on cold visits). */}
         <link rel="preconnect" href="https://use.typekit.net" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://p.typekit.net" crossOrigin="anonymous" />
+        {/* Round 27: replaced the `onLoad="this.media='all'"` string-
+            cast hack with a real Script that flips the media attribute
+            on the print-media stylesheet after it loads. React 19 +
+            Next 16 strip unknown DOM attributes on Server Components,
+            so the prior string-cast onLoad silently disappeared —
+            Typekit CSS was blocking first paint again. */}
         <link
           rel="stylesheet"
           href="https://use.typekit.net/czr4kvy.css?display=swap"
           media="print"
-          onLoad={"this.media='all'" as unknown as undefined}
+          data-media-swap="typekit"
         />
+        <Script id="typekit-media-swap" strategy="beforeInteractive">
+          {`document.querySelectorAll('link[data-media-swap="typekit"]').forEach(function(l){l.media='all';});`}
+        </Script>
         <noscript>
           <link rel="stylesheet" href="https://use.typekit.net/czr4kvy.css?display=swap" />
         </noscript>

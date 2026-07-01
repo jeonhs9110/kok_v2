@@ -6,9 +6,9 @@ import { Clock, X } from 'lucide-react';
 import { useRecentItems, clearRecentItems, removeRecentItem } from '@/components/RecentViewTracker';
 import { useI18n } from '@/lib/i18n/context';
 
-const labels: Record<string, { title: string; sub: string; empty: string; emptyDesc: string; shop: string; clear: string; clearConfirm: string }> = {
-  kr: { title: '최근 본 상품', sub: '최근에 살펴본 상품들입니다.', empty: '최근 본 상품이 없습니다', emptyDesc: '상품을 둘러보세요!', shop: '쇼핑하러 가기', clear: '전체 삭제', clearConfirm: '최근 본 상품 목록을 삭제하시겠습니까?' },
-  en: { title: 'Recently Viewed', sub: 'Products you recently browsed.', empty: 'No recently viewed products', emptyDesc: 'Start browsing products!', shop: 'Go Shopping', clear: 'Clear All', clearConfirm: 'Clear all recently viewed items?' },
+const labels: Record<string, { title: string; sub: string; empty: string; emptyDesc: string; deviceNote: string; shop: string; clear: string; clearConfirm: string }> = {
+  kr: { title: '최근 본 상품', sub: '최근에 살펴본 상품들입니다.', empty: '최근 본 상품이 없습니다', emptyDesc: '상품을 둘러보세요!', deviceNote: '최근 본 상품은 이 기기에만 저장됩니다.', shop: '쇼핑하러 가기', clear: '전체 삭제', clearConfirm: '최근 본 상품 목록을 삭제하시겠습니까?' },
+  en: { title: 'Recently Viewed', sub: 'Products you recently browsed.', empty: 'No recently viewed products', emptyDesc: 'Start browsing products!', deviceNote: 'Recently viewed items are stored on this device only.', shop: 'Go Shopping', clear: 'Clear All', clearConfirm: 'Clear all recently viewed items?' },
 };
 
 function formatTimeAgo(timestamp: number, lang: string): string {
@@ -52,7 +52,11 @@ export default function RecentPage() {
             <Clock className="w-8 h-8 text-neutral-300" />
           </div>
           <h2 className="text-lg font-bold text-neutral-800 mb-1.5">{lb.empty}</h2>
-          <p className="text-sm text-neutral-400 mb-8">{lb.emptyDesc}</p>
+          <p className="text-sm text-neutral-400 mb-2">{lb.emptyDesc}</p>
+          {/* Round 27: explain that the list is device-local so a
+              returning customer who cleared cookies isn't confused
+              that "the site deleted their history." */}
+          <p className="text-xs text-neutral-300 mb-8 max-w-xs">{lb.deviceNote}</p>
           <Link
             href={`/${lang}/products`}
             className="inline-flex items-center gap-2 px-8 py-3.5 bg-brand-ink text-white text-[13px] font-bold tracking-wider hover:bg-black transition-colors"

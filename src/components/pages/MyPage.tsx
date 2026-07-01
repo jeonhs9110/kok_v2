@@ -25,9 +25,10 @@ const L: Record<string, {
   name: string; phone: string; gender: string; birthday: string; country: string;
   skinType: string; marketingConsent: string; cancel: string;
   loading: string; loadFailed: string; retry: string;
+  wishEmptyHint: string; startShopping: string;
 }> = {
-  kr: { title: '마이페이지', profile: '프로필', orders: '주문내역', wishlist: '위시리스트', email: '이메일', joined: '가입일', changePw: '비밀번호 변경', logout: '로그아웃', ordersEmpty: '주문 내역이 없습니다', ordersPhase2: '결제 연동 후 주문 내역이 표시됩니다.', wishEmpty: '위시리스트가 비어 있습니다', remove: '삭제', viewProduct: '상품 보기', edit: '수정', save: '저장', saved: '저장 완료', name: '이름', phone: '전화번호', gender: '성별', birthday: '생년월일', country: '국가', skinType: '피부 타입', marketingConsent: '마케팅 수신 동의', cancel: '취소', loading: '불러오는 중...', loadFailed: '계정 정보를 불러오지 못했습니다.', retry: '다시 시도' },
-  en: { title: 'My Page', profile: 'Profile', orders: 'Orders', wishlist: 'Wishlist', email: 'Email', joined: 'Joined', changePw: 'Change Password', logout: 'Logout', ordersEmpty: 'No orders yet', ordersPhase2: 'Orders will be shown after payment integration.', wishEmpty: 'Your wishlist is empty', remove: 'Remove', viewProduct: 'View Product', edit: 'Edit', save: 'Save', saved: 'Saved', name: 'Name', phone: 'Phone', gender: 'Gender', birthday: 'Birthday', country: 'Country', skinType: 'Skin Type', marketingConsent: 'Marketing Consent', cancel: 'Cancel', loading: 'Loading...', loadFailed: "Couldn't load your account.", retry: 'Retry' },
+  kr: { title: '마이페이지', profile: '프로필', orders: '주문내역', wishlist: '위시리스트', email: '이메일', joined: '가입일', changePw: '비밀번호 변경', logout: '로그아웃', ordersEmpty: '주문 내역이 없습니다', ordersPhase2: '결제 연동 후 주문 내역이 표시됩니다.', wishEmpty: '위시리스트가 비어 있습니다', remove: '삭제', viewProduct: '상품 보기', edit: '수정', save: '저장', saved: '저장 완료', name: '이름', phone: '전화번호', gender: '성별', birthday: '생년월일', country: '국가', skinType: '피부 타입', marketingConsent: '마케팅 수신 동의', cancel: '취소', loading: '불러오는 중...', loadFailed: '계정 정보를 불러오지 못했습니다.', retry: '다시 시도', wishEmptyHint: '마음에 드는 상품을 위시리스트에 담아보세요.', startShopping: '쇼핑하러 가기' },
+  en: { title: 'My Page', profile: 'Profile', orders: 'Orders', wishlist: 'Wishlist', email: 'Email', joined: 'Joined', changePw: 'Change Password', logout: 'Logout', ordersEmpty: 'No orders yet', ordersPhase2: 'Orders will be shown after payment integration.', wishEmpty: 'Your wishlist is empty', remove: 'Remove', viewProduct: 'View Product', edit: 'Edit', save: 'Save', saved: 'Saved', name: 'Name', phone: 'Phone', gender: 'Gender', birthday: 'Birthday', country: 'Country', skinType: 'Skin Type', marketingConsent: 'Marketing Consent', cancel: 'Cancel', loading: 'Loading...', loadFailed: "Couldn't load your account.", retry: 'Retry', wishEmptyHint: 'Save items you love for later.', startShopping: 'Start shopping' },
 };
 
 interface CustomerProfile {
@@ -415,7 +416,17 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
             <div className="py-16 text-center">
               <Package className="w-12 h-12 mx-auto mb-4 text-neutral-200" />
               <p className="text-neutral-500 font-semibold">{t.ordersEmpty}</p>
-              <p className="text-sm text-neutral-400 mt-2">{t.ordersPhase2}</p>
+              <p className="text-sm text-neutral-400 mt-2 mb-6">{t.ordersPhase2}</p>
+              {/* Round 27: give the operator's stranded Phase-2 tab a
+                  useful exit. Prior version was a dead-end area with no
+                  path forward — customer had to hunt back to the header
+                  nav. */}
+              <Link
+                href={`/${lang}/products`}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-brand-ink text-white text-xs font-bold tracking-widest hover:bg-black transition-colors"
+              >
+                {t.startShopping}
+              </Link>
             </div>
           )}
 
@@ -425,6 +436,16 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
                 <div className="py-16 text-center">
                   <Heart className="w-12 h-12 mx-auto mb-4 text-neutral-200" />
                   <p className="text-neutral-500 font-semibold">{t.wishEmpty}</p>
+                  {/* Round 27: added hint + CTA to match the empty-cart
+                      pattern. Prior state was icon + label with no path
+                      out — first-time customer bounced back to header. */}
+                  <p className="text-sm text-neutral-400 mt-2 mb-6">{t.wishEmptyHint}</p>
+                  <Link
+                    href={`/${lang}/products`}
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-brand-ink text-white text-xs font-bold tracking-widest hover:bg-black transition-colors"
+                  >
+                    {t.startShopping}
+                  </Link>
                 </div>
               ) : (
                 <div className="space-y-3">

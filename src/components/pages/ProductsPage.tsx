@@ -190,7 +190,30 @@ export default async function ProductsPage({ lang, canPurchase, searchQuery, cat
       {formattedProducts.length === 0 ? (
         <div className="py-20 text-center text-neutral-400">
           <p className="text-lg font-semibold">{lang === 'kr' ? '검색 결과가 없습니다' : 'No products found'}</p>
-          <p className="text-sm mt-2">{lang === 'kr' ? '다른 키워드로 검색해보세요.' : 'Try a different keyword.'}</p>
+          <p className="text-sm mt-2 mb-6">{lang === 'kr' ? '다른 키워드로 검색해보세요.' : 'Try a different keyword.'}</p>
+          {/* Round 27: give the customer an actual next action instead
+              of a dead-end. Primary is always "view all products"
+              (drops both search + filter); when a category filter is
+              also active, a secondary link keeps the search but drops
+              the category. R26's Clear link at the top only wiped the
+              search — this empty-state block is the fallback when the
+              customer has already scanned the whole page. */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              href={buildFilterHref(lang, {})}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-brand-ink text-white text-xs font-bold tracking-widest hover:bg-black transition-colors"
+            >
+              {lang === 'kr' ? '전체 상품 보기' : 'View all products'}
+            </Link>
+            {(categorySlug || subSlug) && searchQuery && (
+              <Link
+                href={buildFilterHref(lang, { q: searchQuery })}
+                className="inline-flex items-center gap-2 px-6 py-3 border border-neutral-200 text-neutral-600 text-xs font-semibold tracking-widest hover:bg-neutral-50 transition-colors"
+              >
+                {lang === 'kr' ? '카테고리 필터만 지우기' : 'Clear category filter'}
+              </Link>
+            )}
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
