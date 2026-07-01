@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -46,6 +47,10 @@ export async function GET(req: Request) {
  * payloads first).
  */
 export async function POST(req: Request) {
+  // Round 31: site_settings drives theme tokens + homepage section
+  // order; a CSRF here scrambles the storefront chrome and layout.
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
 

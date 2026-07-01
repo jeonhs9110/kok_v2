@@ -93,8 +93,20 @@ export function getPgPool(): Pool {
  * Supabase. Controlled by the `USE_RDS` env var (read-once at module
  * load — flipping requires a restart).
  *
- * Migration plan: stays `false` through C1/C2/C3 development, gets
- * flipped to `true` in the cutover phase (F) once all services have
- * a pg implementation behind the flag.
+ * Round 31: normalize the env value so `'TRUE'`, `'True'`, `' true '`
+ * and `'true\n'` (common `/etc/kokkok/env` typos) all resolve to the
+ * intended `true` — the prior strict `=== 'true'` compare silently
+ * fell through to the Supabase branch on any variant. After the
+ * 2026-06-27 Supabase decommission that fallback returns null and
+ * the storefront serves empty grids. Also log the resolution once at
+ * module load so a handoff engineer can grep the boot log to confirm.
  */
-export const USE_RDS = process.env.USE_RDS === 'true';
+const USE_RDS_RAW = process.env.USE_RDS ?? '';
+export const USE_RDS = USE_RDS_RAW.trim().toLowerCase() === 'true';
+if (process.env.NODE_ENV !== 'test') {
+  console.log(JSON.stringify({
+    event: 'db.pool.boot',
+    use_rds_raw: USE_RDS_RAW.slice(0, 20),
+    use_rds_resolved: USE_RDS,
+  }));
+}

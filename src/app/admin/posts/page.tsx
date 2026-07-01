@@ -52,9 +52,20 @@ export default function AllPostsAdminPage() {
   const handleDelete = async (id: string) => {
     const ok = await confirm({ message: '이 게시글을 삭제하시겠습니까?', tone: 'danger', confirmText: '삭제' });
     if (!ok) return;
-    const res = await fetch(`/api/admin/crud/posts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
-    fetchAll();
-    toast.show(res.ok ? '게시글이 삭제되었습니다.' : '삭제에 실패했습니다.', res.ok ? 'success' : 'error');
+    // Round 31: same silent-network-failure hole as useMenus — bare
+    // fetch outside try/catch, fetchAll before res.ok check. On
+    // network failure the handler crashed with no toast and no
+    // refetch trigger; on success we still refetched unconditionally
+    // even when the DELETE 404'd (row already gone).
+    let deleted = false;
+    try {
+      const res = await fetch(`/api/admin/crud/posts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      deleted = res.ok;
+    } catch (err) {
+      console.error('[admin/posts] delete failed', err);
+    }
+    if (deleted) fetchAll();
+    toast.show(deleted ? '게시글이 삭제되었습니다.' : '삭제에 실패했습니다.', deleted ? 'success' : 'error');
   };
 
   const filtered = useMemo(() => {

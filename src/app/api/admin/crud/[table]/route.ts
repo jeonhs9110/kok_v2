@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -86,6 +87,11 @@ export async function GET(req: Request, { params }: Ctx) {
     const col = filterRaw.slice(0, idx);
     const val = filterRaw.slice(idx + 1);
     if (!SAFE_IDENT.test(col)) return null;
+    // Round 31: cap `val` at 200 chars so a `filter=content:<20MB>`
+    // request can't tie up a pool connection on an unbounded jsonb
+    // scan. Genuine filter values are IDs / short enums / ISO
+    // timestamps — well under this cap.
+    if (val.length > 200) return null;
     return { col, val };
   })();
 
@@ -112,6 +118,14 @@ export async function GET(req: Request, { params }: Ctx) {
 }
 
 export async function POST(req: Request, { params }: Ctx) {
+  // Round 31: R29 wired assertSameOrigin on the customer twins; this
+  // is the widest-blast-radius admin write endpoint (25 allow-listed
+  // tables: menus, pages, posts, legal_pages, categories, config
+  // tables including payment_providers_config, chatbot_leads, ...).
+  // A CSRF POST while an admin cookie was live could insert rows in
+  // the operator's name across any of them.
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   const { table } = await params;
@@ -147,6 +161,8 @@ export async function POST(req: Request, { params }: Ctx) {
 }
 
 export async function PATCH(req: Request, { params }: Ctx) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   const { table } = await params;
@@ -195,6 +211,8 @@ export async function PATCH(req: Request, { params }: Ctx) {
 const CASCADE_PARENT_ID_TABLES = new Set<string>(['menus']);
 
 export async function DELETE(req: Request, { params }: Ctx) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   const { table } = await params;
@@ -206,6 +224,12 @@ export async function DELETE(req: Request, { params }: Ctx) {
     try {
       const { getPgPool } = await import('@/lib/db/pool');
       const pool = getPgPool();
+      // Round 31: track rowCount from the parent DELETE so an
+      // already-gone id (parallel-operator delete race, stale row
+      // in the list, wrong id) surfaces as 404 instead of the
+      // prior "success" that let the operator diverge from server
+      // state. Matches the pattern makeAdminTableRoute uses.
+      let parentRowCount = 0;
       if (CASCADE_PARENT_ID_TABLES.has(table)) {
         // Transactional cascade — children first, then parent. If the
         // parent delete fails the whole thing rolls back so we don't
@@ -218,10 +242,11 @@ export async function DELETE(req: Request, { params }: Ctx) {
             `DELETE FROM public.${quoteIdent(table)} WHERE parent_id = $1`,
             [id],
           );
-          await client.query(
+          const parentResult = await client.query(
             `DELETE FROM public.${quoteIdent(table)} WHERE id = $1`,
             [id],
           );
+          parentRowCount = parentResult.rowCount ?? 0;
           await client.query('COMMIT');
         } catch (err) {
           await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
@@ -230,7 +255,14 @@ export async function DELETE(req: Request, { params }: Ctx) {
           client.release();
         }
       } else {
-        await pool.query(`DELETE FROM public.${quoteIdent(table)} WHERE id = $1`, [id]);
+        const { rowCount } = await pool.query(
+          `DELETE FROM public.${quoteIdent(table)} WHERE id = $1`,
+          [id],
+        );
+        parentRowCount = rowCount ?? 0;
+      }
+      if (parentRowCount === 0) {
+        return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
       }
       return NextResponse.json({ ok: true });
     } catch (err) {

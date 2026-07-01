@@ -21,15 +21,37 @@ import { NextResponse } from 'next/server';
 // kokkokgarden.com and its www subdomain are the only public storefront
 // origins. Localhost is allowed in dev; env-var-driven so a preview
 // deploy on a temporary host can add its own without a code change.
+//
+// Round 31: parse CSRF_ALLOWED_ORIGIN as a COMMA-SEPARATED list so
+// staging + preview + tunnel URLs can be added together. Prior state
+// treated the entire string as one origin — an operator setting
+// `staging.kokkokgarden.com,preview.kokkokgarden.com` got 403s on
+// both hosts with no diagnostic. Each entry is validated to start
+// with `https://` (or `http://localhost:` for local tunnels) so a
+// malformed entry doesn't silently open a wildcard match.
+function parseAllowedFromEnv(raw: string | undefined): string[] {
+  if (!raw) return [];
+  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+  const valid: string[] = [];
+  for (const p of parts) {
+    if (/^https:\/\/[a-z0-9.-]+/i.test(p) || /^http:\/\/localhost(?::\d+)?$/i.test(p)) {
+      valid.push(p);
+    } else {
+      // Emit at module load so the misconfig shows up in CloudWatch
+      // once, not on every request.
+      console.warn(JSON.stringify({ event: 'csrf.env.rejected', value: p.slice(0, 100) }));
+    }
+  }
+  return valid;
+}
+
 const ALLOWED_ORIGINS: string[] = [
   'https://www.kokkokgarden.com',
   'https://kokkokgarden.com',
   ...(process.env.NODE_ENV !== 'production'
     ? ['http://localhost:3000', 'http://localhost:3001']
     : []),
-  ...(process.env.CSRF_ALLOWED_ORIGIN
-    ? [process.env.CSRF_ALLOWED_ORIGIN]
-    : []),
+  ...parseAllowedFromEnv(process.env.CSRF_ALLOWED_ORIGIN),
 ];
 
 /**
@@ -69,8 +91,14 @@ export function assertSameOrigin(request: Request): NextResponse | null {
     }
   }
 
-  // No Origin, no Referer. Allow in dev; deny in prod.
-  if (process.env.NODE_ENV !== 'production') return null;
+  // No Origin, no Referer. Round 31: invert the check — only allow
+  // this exemption when NODE_ENV is explicitly `development`. Prior
+  // `!== 'production'` opened the gate on ANY unset / misspelled /
+  // typo'd value (systemd unit with a broken env file leaves
+  // NODE_ENV empty; Next.js's own server-code treats that as prod
+  // internally but this check would silently accept header-less
+  // POSTs). Anything not exactly `development` now denies.
+  if (process.env.NODE_ENV === 'development') return null;
   logDenial('no_origin_no_referer', null);
   return NextResponse.json({ error: 'csrf_forbidden' }, { status: 403 });
 }

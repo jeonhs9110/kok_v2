@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { makeAdminTableRoute } from '@/lib/admin/tableRoute';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 const route = makeAdminTableRoute({
   table: 'categories',
@@ -41,6 +42,8 @@ export const PATCH = route.PATCH;
  * want the affected rows cleaned up.
  */
 export async function DELETE(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   const url = new URL(request.url);

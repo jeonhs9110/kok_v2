@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * instagram_config is a singleton row. Same shape as shorts-config.
@@ -47,6 +48,8 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   let body: unknown;

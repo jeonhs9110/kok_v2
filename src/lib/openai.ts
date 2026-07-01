@@ -1,6 +1,23 @@
 import { unstable_cache } from 'next/cache';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
+/**
+ * Round 31: validate the OpenAI key at module load. A stray whitespace,
+ * quote, or leftover `sk-...` placeholder from `.env.example` reaches
+ * `Authorization: Bearer` verbatim, so every OpenAI call 401s and
+ * the route silently returns un-translated Korean copy — indistinguishable
+ * from a missing key. Now we treat a mis-formatted key as missing (with
+ * a distinct `error`-level log) so the handoff engineer sees the format
+ * gap without hunting through 401 lines in CloudWatch.
+ */
+const OPENAI_API_KEY_RAW = process.env.OPENAI_API_KEY ?? '';
+const OPENAI_KEY_RE = /^sk-[A-Za-z0-9_-]{20,}$/;
+const OPENAI_API_KEY = OPENAI_KEY_RE.test(OPENAI_API_KEY_RAW) ? OPENAI_API_KEY_RAW : '';
+if (OPENAI_API_KEY_RAW && !OPENAI_API_KEY) {
+  console.error('[openai] OPENAI_API_KEY does not match the expected `sk-...` shape — treating as unset. Check for placeholder / whitespace / stray quote in the env var.');
+} else if (!OPENAI_API_KEY_RAW && process.env.NODE_ENV === 'production') {
+  // Prod: promote to error so CloudWatch alarms fire. Dev keeps warn.
+  console.error('[openai] OPENAI_API_KEY is not set in production — /en, /cn, /jp, /vn, /th pages will render untranslated Korean copy.');
+}
 
 // Suppress the "OPENAI_API_KEY not set" warning after the first emit
 // per process — every product-detail request hits this path in dev
