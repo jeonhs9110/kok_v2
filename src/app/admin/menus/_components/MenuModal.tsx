@@ -28,6 +28,7 @@ interface Props {
   onFormChange: (next: MenuFormData) => void;
   onClose: () => void;
   onSave: () => void;
+  isSaving?: boolean;
 }
 
 export default function MenuModal({
@@ -40,6 +41,7 @@ export default function MenuModal({
   onFormChange,
   onClose,
   onSave,
+  isSaving = false,
 }: Props) {
   const dialogRef = useModalA11y(open, onClose);
 
@@ -155,8 +157,12 @@ export default function MenuModal({
 
         <div className="p-4 border-t border-[#e5e7eb] bg-[#fafbfc] flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2.5 border border-[#d1d5db] text-[#374151] rounded text-sm font-semibold bg-white hover:bg-[#f9fafb] transition-colors kokkok-keep-border">취소</button>
-          <button onClick={onSave} className="px-6 py-2.5 bg-[#3b82f6] text-white text-sm font-semibold rounded-lg hover:bg-[#2563eb] transition-colors">
-            {editingId ? '수정' : '추가'}
+          <button
+            onClick={onSave}
+            disabled={isSaving}
+            className="px-6 py-2.5 bg-[#3b82f6] text-white text-sm font-semibold rounded-lg hover:bg-[#2563eb] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {isSaving ? '저장 중...' : editingId ? '수정' : '추가'}
           </button>
         </div>
       </div>

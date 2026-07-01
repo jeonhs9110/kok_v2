@@ -15,18 +15,41 @@ const FOOTER_GROUPS: { key: string; label: string; desc: string }[] = [
   { key: 'social',   label: 'SNS 아이콘',    desc: 'Instagram / YouTube 아이콘' },
 ];
 
-const BIZ_FIELDS: [string, string][] = [
-  ['company_name_kr', '상호 (한국어)'], ['company_name_en', 'Company Name (EN)'],
-  ['ceo_name', '대표자명'], ['business_reg_number', '사업자등록번호'],
-  ['mail_order_number', '통신판매업신고번호'], ['phone', '대표 전화번호'],
-  ['email', '대표 이메일'], ['address_kr', '주소 (한국어)'],
-  ['address_en', 'Address (EN)'], ['bank_name', '은행명'],
-  ['bank_account', '계좌번호'], ['bank_holder', '예금주'],
-  ['instagram_url', 'Instagram URL'], ['youtube_url', 'YouTube URL'],
-  ['cs_hours_kr', '고객센터 운영시간 (KR)'], ['cs_hours_en', 'CS Hours (EN)'],
-  ['cs_lunch_kr', '점심시간 (KR)'], ['cs_lunch_en', 'Lunch (EN)'],
-  ['cs_holiday_kr', '휴무일 (KR)'], ['cs_holiday_en', 'Holiday (EN)'],
-  ['privacy_officer_name', '개인정보 보호책임자'], ['privacy_officer_email', '보호책임자 이메일'],
+type BizFieldType = 'text' | 'email' | 'url' | 'tel';
+interface BizFieldSpec {
+  key: string;
+  label: string;
+  type: BizFieldType;
+  placeholder?: string;
+}
+// Typed field defs so the operator gets the right mobile keyboard
+// and format hint for URLs / emails / phones. Prior version was all
+// bare text inputs — instagram_url = "www.instagram.com/kokkok" (no
+// scheme) rendered as a broken relative link on the storefront
+// footer, and the operator had no format hint to catch the mistake.
+const BIZ_FIELDS: BizFieldSpec[] = [
+  { key: 'company_name_kr', label: '상호 (한국어)', type: 'text' },
+  { key: 'company_name_en', label: 'Company Name (EN)', type: 'text' },
+  { key: 'ceo_name', label: '대표자명', type: 'text' },
+  { key: 'business_reg_number', label: '사업자등록번호', type: 'text' },
+  { key: 'mail_order_number', label: '통신판매업신고번호', type: 'text' },
+  { key: 'phone', label: '대표 전화번호', type: 'tel', placeholder: '02-1234-5678' },
+  { key: 'email', label: '대표 이메일', type: 'email', placeholder: 'hello@kokkokgarden.com' },
+  { key: 'address_kr', label: '주소 (한국어)', type: 'text' },
+  { key: 'address_en', label: 'Address (EN)', type: 'text' },
+  { key: 'bank_name', label: '은행명', type: 'text' },
+  { key: 'bank_account', label: '계좌번호', type: 'text' },
+  { key: 'bank_holder', label: '예금주', type: 'text' },
+  { key: 'instagram_url', label: 'Instagram URL', type: 'url', placeholder: 'https://www.instagram.com/kokkok' },
+  { key: 'youtube_url', label: 'YouTube URL', type: 'url', placeholder: 'https://www.youtube.com/@kokkok' },
+  { key: 'cs_hours_kr', label: '고객센터 운영시간 (KR)', type: 'text' },
+  { key: 'cs_hours_en', label: 'CS Hours (EN)', type: 'text' },
+  { key: 'cs_lunch_kr', label: '점심시간 (KR)', type: 'text' },
+  { key: 'cs_lunch_en', label: 'Lunch (EN)', type: 'text' },
+  { key: 'cs_holiday_kr', label: '휴무일 (KR)', type: 'text' },
+  { key: 'cs_holiday_en', label: 'Holiday (EN)', type: 'text' },
+  { key: 'privacy_officer_name', label: '개인정보 보호책임자', type: 'text' },
+  { key: 'privacy_officer_email', label: '보호책임자 이메일', type: 'email' },
 ];
 
 function SectionBtn({
@@ -127,10 +150,16 @@ export default function LegalAdminPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              {BIZ_FIELDS.map(([key, label]) => (
+              {BIZ_FIELDS.map(({ key, label, type, placeholder }) => (
                 <div key={key}>
                   <label className="text-[10px] font-bold text-[#6b7280] uppercase">{label}</label>
-                  <input type="text" value={(biz as unknown as Record<string, string>)[key] || ''} onChange={e => setBiz(prev => ({ ...prev, [key]: e.target.value }))} className="w-full mt-1 rounded-lg px-3 py-2 text-xs" />
+                  <input
+                    type={type}
+                    value={(biz as unknown as Record<string, string>)[key] || ''}
+                    onChange={e => setBiz(prev => ({ ...prev, [key]: e.target.value }))}
+                    placeholder={placeholder}
+                    className="w-full mt-1 rounded-lg px-3 py-2 text-xs"
+                  />
                 </div>
               ))}
             </div>

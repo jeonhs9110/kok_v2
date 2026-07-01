@@ -108,6 +108,11 @@ export function useUsers() {
           ? `\n\n다음 명령어가 클립보드에 복사되었습니다:\n${w.cli}`
           : `\n\n아래 명령어를 직접 복사해 터미널에서 실행하세요:\n${w.cli}`;
         toast.show(`${w.message}${suffix}`, 'warning');
+      } else {
+        // Row already vanished optimistically above; without an
+        // explicit success toast the operator couldn't tell whether
+        // it actually persisted or just did an optimistic UI dance.
+        toast.show('사용자가 삭제되었습니다.', 'success');
       }
     } catch (err) {
       console.warn('삭제 실패:', err);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, createContext, useContext, useCallback } from 'react';
+import { useState, useEffect, createContext, useContext, useCallback } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 /**
@@ -44,11 +44,25 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const close = (result: boolean) => {
+  const close = useCallback((result: boolean) => {
+    setPending(current => {
+      if (!current) return null;
+      current.resolve(result);
+      return null;
+    });
+  }, []);
+
+  // Escape closes the prompt as a "cancel" — matches every other
+  // modal in the admin surface and unblocks keyboard-first operators
+  // who hit Esc to back out of a destructive confirmation.
+  useEffect(() => {
     if (!pending) return;
-    pending.resolve(result);
-    setPending(null);
-  };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pending, close]);
 
   const isDanger = pending?.opts.tone === 'danger';
 
