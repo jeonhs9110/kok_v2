@@ -6,7 +6,24 @@ import { User, Package, Heart, LogOut, Save, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import CountryPicker from '@/components/CountryPicker';
-import { DEFAULT_COUNTRY, findCountry, findCountryByDial } from '@/lib/geo/countries';
+import { COUNTRIES, DEFAULT_COUNTRY, findCountry, findCountryByDial } from '@/lib/geo/countries';
+
+/**
+ * Look up a country row for display. Extends `findCountry` (ISO-code
+ * only) with a name-based fallback for Supabase-era rows written before
+ * the code-based picker, e.g. `"United States"` or `"대한민국"` — those
+ * used to render as the raw string ("Country: United States" mixed
+ * into the KR UI). Round 29.
+ */
+function displayCountry(value: string | null | undefined) {
+  if (!value) return null;
+  const byCode = findCountry(value);
+  if (byCode) return byCode;
+  const trimmed = value.trim();
+  return COUNTRIES.find(c =>
+    c.nameEn.toLowerCase() === trimmed.toLowerCase() || c.nameKr === trimmed,
+  ) ?? null;
+}
 import { authedFetch } from '@/lib/http/authedFetch';
 
 /**
@@ -277,8 +294,15 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
                     <ProfileRow label={t.gender} value={profile.gender} />
                     <ProfileRow label={t.birthday} value={profile.birthday} />
                     <ProfileRow label={t.country} value={(() => {
-                      const c = findCountry(profile.country);
-                      return c ? (isKr ? c.nameKr : c.nameEn) : profile.country;
+                      const c = displayCountry(profile.country);
+                      // Round 29: fall back to '—' (already rendered
+                      // for empty strings by ProfileRow) instead of
+                      // the raw pre-cutover value. displayCountry
+                      // handles English/Korean-name legacy rows; if
+                      // it still returns null the DB row is genuine
+                      // garbage and rendering it verbatim just erodes
+                      // customer trust.
+                      return c ? (isKr ? c.nameKr : c.nameEn) : '';
                     })()} />
                     <ProfileRow label={t.skinType} value={profile.skin_type} />
                     <ProfileRow label={t.marketingConsent} value={profile.marketing_consent ? '✓' : '—'} />
@@ -375,7 +399,19 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.birthday}</label>
-                    <input type="date" value={editForm.birthday} onChange={e => setEditForm(p => ({ ...p, birthday: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-base sm:text-sm outline-none focus:border-black" />
+                    {/* Round 29: min/max bounds so the native picker
+                        can't submit `2099-12-31` or `1750-01-01`.
+                        Matches the server-side `coerceBirthday` range
+                        so client-side rejection is instant instead of
+                        surfacing after Save round-trip. */}
+                    <input
+                      type="date"
+                      value={editForm.birthday}
+                      min="1900-01-01"
+                      max={new Date().toISOString().slice(0, 10)}
+                      onChange={e => setEditForm(p => ({ ...p, birthday: e.target.value }))}
+                      className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-base sm:text-sm outline-none focus:border-black"
+                    />
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.country}</label>

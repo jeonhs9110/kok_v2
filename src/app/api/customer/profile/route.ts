@@ -38,6 +38,72 @@ const FIELD_MAX_LEN: Record<string, number> = {
   skin_type: 40,
 };
 
+// Round 29: PIPA §3(3) "정확성·최신성" — customer_profiles rows must
+// stay parseable + sane. Without server-side format enforcement a
+// client could PATCH `birthday: "not your business"`, `country: "korea"`
+// (breaking `findCountry()` at render time), or `phone: "call me"` —
+// downstream flows that trust the shape (SMS routing, CSV export,
+// analytics) then silently degrade. R28's slice() cap only bounded
+// the byte count; this is the type check the previous round skipped.
+const BIRTHDAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MIN_BIRTH_YEAR = 1900;
+
+/**
+ * Normalize + validate a birthday string. Accepts 'YYYY-MM-DD' inside
+ * a plausible human range (1900 → today). Returns the ISO string on
+ * success, null on reject.
+ */
+function coerceBirthday(v: unknown): string | null | undefined {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== 'string' || v.length === 0) return null;
+  if (!BIRTHDAY_RE.test(v)) return undefined;
+  const t = Date.parse(v + 'T00:00:00Z');
+  if (Number.isNaN(t)) return undefined;
+  const d = new Date(t);
+  if (d.getUTCFullYear() < MIN_BIRTH_YEAR) return undefined;
+  if (t > Date.now()) return undefined;
+  return v;
+}
+
+/**
+ * Canonicalize a phone string to a permissive E.164-ish form:
+ * `+<dial><digits>` with any spaces / dashes stripped. Downstream SMS
+ * routing (Naver Cloud SENS) requires strict E.164, and rows with
+ * ad-hoc separators would otherwise need a data-cleanup pass later.
+ * Returns null for empty input, undefined for structurally invalid
+ * (so the PATCH can reject rather than persist garbage).
+ */
+function coercePhone(v: unknown): string | null | undefined {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== 'string' || v.trim().length === 0) return null;
+  const m = v.trim().match(/^\+?(\d{1,4})[\s-]*([\d\s-]{4,20})$/);
+  if (!m) return undefined;
+  const dial = m[1]!;
+  const rest = m[2]!.replace(/[\s-]/g, '');
+  const digits = dial + rest;
+  if (digits.length < 8 || digits.length > 15) return undefined;
+  return '+' + digits;
+}
+
+/**
+ * Coerce a country code to lowercase alpha-2 + validate against the
+ * `COUNTRIES` allowlist. Also accepts the English or Korean name as a
+ * back-compat path for rows written before /register + /my-page moved
+ * to the code-based picker (e.g. Supabase-era "United States").
+ */
+async function coerceCountry(v: unknown): Promise<string | null | undefined> {
+  if (v === null || v === undefined) return null;
+  if (typeof v !== 'string' || v.trim().length === 0) return null;
+  const { COUNTRIES } = await import('@/lib/geo/countries');
+  const lower = v.trim().toLowerCase();
+  if (COUNTRIES.some(c => c.code === lower)) return lower;
+  const byName = COUNTRIES.find(c =>
+    c.nameEn.toLowerCase() === lower || c.nameKr === v.trim(),
+  );
+  if (byName) return byName.code;
+  return undefined;
+}
+
 /**
  * GET /api/customer/profile → the signed-in customer's profile row.
  */
@@ -49,8 +115,19 @@ export async function GET() {
     try {
       const { getPgPool } = await import('@/lib/db/pool');
       const pool = getPgPool();
+      // Round 29: explicit column list instead of `SELECT *`. The row
+      // carries fields the MyPage UI never uses (custom_fields,
+      // is_verified, auth_provider, privacy_consent, updated_at) —
+      // shipping them to the browser expands the attack surface if a
+      // future custom_field ever holds sensitive PII, and defeats
+      // /register's post-signup ROLLBACK-on-conflict guard. Fields
+      // listed match the MyPage `CustomerProfile` interface exactly.
       const { rows } = await pool.query(
-        `SELECT * FROM public.customer_profiles WHERE id = $1 LIMIT 1`,
+        `SELECT id, email, name, phone, gender, birthday, country,
+                skin_type, marketing_consent, created_at
+           FROM public.customer_profiles
+          WHERE id = $1
+          LIMIT 1`,
         [auth.userId],
       );
       return NextResponse.json({ profile: rows[0] ?? null });
@@ -61,7 +138,11 @@ export async function GET() {
   }
 
   if (!supabase) return NextResponse.json({ profile: null }, { status: 500 });
-  const { data } = await supabase.from('customer_profiles').select('*').eq('id', auth.userId).maybeSingle();
+  const { data } = await supabase
+    .from('customer_profiles')
+    .select('id, email, name, phone, gender, birthday, country, skin_type, marketing_consent, created_at')
+    .eq('id', auth.userId)
+    .maybeSingle();
   return NextResponse.json({ profile: data ?? null });
 }
 
@@ -83,11 +164,42 @@ export async function PATCH(req: Request) {
   for (const k of ALLOWED_FIELDS) {
     if (!(k in payload)) continue;
     const v = payload[k];
+    // Round 29: format-check the typed fields (birthday / country /
+    // phone). A reject here returns 400 rather than the prior
+    // silent-truncate. The remaining string fields (name, gender,
+    // skin_type) fall through to the size cap because their allowed
+    // values are operator-configurable via registration_config —
+    // enforcing an enum here would tie the API to a snapshot of that
+    // config and break next-week's admin-added skin type.
+    if (k === 'birthday') {
+      const coerced = coerceBirthday(v);
+      if (coerced === undefined) {
+        return NextResponse.json({ ok: false, error: 'invalid_birthday' }, { status: 400 });
+      }
+      fields[k] = coerced;
+      continue;
+    }
+    if (k === 'phone') {
+      const coerced = coercePhone(v);
+      if (coerced === undefined) {
+        return NextResponse.json({ ok: false, error: 'invalid_phone' }, { status: 400 });
+      }
+      fields[k] = coerced;
+      continue;
+    }
+    if (k === 'country') {
+      const coerced = await coerceCountry(v);
+      if (coerced === undefined) {
+        return NextResponse.json({ ok: false, error: 'invalid_country' }, { status: 400 });
+      }
+      fields[k] = coerced;
+      continue;
+    }
     // Enforce per-field caps. Strings get sliced (silently truncated
     // is better UX than 400-ing the form on a stray paste with a
     // trailing newline). Non-string values pass through unchanged —
-    // marketing_consent is a boolean, birthday may be null. Anything
-    // that isn't a string and isn't in FIELD_MAX_LEN falls through.
+    // marketing_consent is a boolean. Anything that isn't a string
+    // and isn't in FIELD_MAX_LEN falls through.
     const cap = FIELD_MAX_LEN[k];
     if (cap !== undefined && typeof v === 'string') {
       fields[k] = v.slice(0, cap);
@@ -148,6 +260,21 @@ export async function PATCH(req: Request) {
       } finally {
         client.release();
       }
+      // Round 29: PIPA §29(1) audit trail. DELETE was already logged;
+      // PATCH — which mutates the same PII — was invisible. Log the
+      // set of field NAMES touched, never the values (would double
+      // the PII surface). Downstream forensics on a stolen-cookie
+      // scenario can now correlate profile edits with the actor.
+      auditLog('customer.profile.updated', {
+        actor: auth.userId,
+        target: auth.userId,
+        outcome: 'success',
+        metadata: {
+          target_email_hash: hashEmail(auth.email),
+          fields: cols.join(','),
+          field_count: cols.length,
+        },
+      });
       return NextResponse.json({ ok: true });
     } catch (err) {
       console.error('[customer/profile] pg upsert failed:', err);
@@ -158,6 +285,16 @@ export async function PATCH(req: Request) {
   if (!supabase) return NextResponse.json({ ok: false }, { status: 500 });
   const { error } = await supabase.from('customer_profiles').upsert({ id: auth.userId, ...fields });
   if (error) return NextResponse.json({ ok: false }, { status: 500 });
+  auditLog('customer.profile.updated', {
+    actor: auth.userId,
+    target: auth.userId,
+    outcome: 'success',
+    metadata: {
+      target_email_hash: hashEmail(auth.email),
+      fields: Object.keys(fields).join(','),
+      field_count: Object.keys(fields).length,
+    },
+  });
   return NextResponse.json({ ok: true });
 }
 

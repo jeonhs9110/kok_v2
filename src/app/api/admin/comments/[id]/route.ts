@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -11,7 +12,13 @@ interface Ctx { params: Promise<{ id: string }> }
 /**
  * DELETE /api/admin/comments/[id] — admin deletes any comment.
  */
-export async function DELETE(_req: Request, { params }: Ctx) {
+export async function DELETE(req: Request, { params }: Ctx) {
+  // Round 29: admin DELETE was riding the operator cookie without an
+  // origin check. A phishing page open in another tab could delete
+  // arbitrary comments while `kokkok_admin_auth` was live. Matches
+  // the customer route + all other admin write routes touched in R22.
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const denied = await requireAdmin();
   if (denied) return denied;
   const { id } = await params;

@@ -34,6 +34,13 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
   const [submitting, setSubmitting] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authState, setAuthState] = useState<'loading' | 'authenticated' | 'unauthenticated'>('loading');
+  // Round 29: mirror the server-side caps so a paste-of-a-novel
+  // gets rejected inline with a counter instead of surfacing as a
+  // generic alert() after the round-trip.
+  const TITLE_MAX = 200;
+  const CONTENT_MAX = 50_000;
+  const titleOverLimit = title.length > TITLE_MAX;
+  const contentOverLimit = content.length > CONTENT_MAX;
 
   useEffect(() => {
     (async () => {
@@ -44,9 +51,18 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
       try {
         const meRes = await fetch('/api/customer/me', { cache: 'no-store' });
         if (meRes.ok) {
-          const me = (await meRes.json()) as { userId: string; email: string | null };
+          // Round 29: DON'T prefill authorName with the email
+          // local-part. `me.email?.split('@')[0]` used to seed the
+          // display-name field with the customer's email prefix
+          // (e.g. `kimhs1985@naver.com` → `kimhs1985`) — which is
+          // neither empty nor email-shaped, so `deriveStoredAuthorName`
+          // stored it verbatim and every subsequent board post
+          // published the customer's email handle publicly. Leaving
+          // authorName blank falls through to the server's pseudonym
+          // path (`회원_xxxxxx`) which is the PIPA-safe default. Admin
+          // path below still surfaces the label so the admin badge
+          // renders as-authored.
           signedIn = true;
-          setAuthorName(me.email?.split('@')[0] ?? '사용자');
         }
       } catch { /* ignore */ }
 
@@ -79,6 +95,26 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
       }
     })();
   }, [postId]);
+
+  // Round 29: guard against accidental navigation while there's
+  // unsaved input. Applies once the customer has typed something and
+  // the form isn't currently submitting. The Cancel link and browser
+  // back / tab-close all go through beforeunload. YouTube / Medium /
+  // Notion all guard against this — otherwise a customer typing a
+  // long post loses everything to a stray Cmd+W.
+  useEffect(() => {
+    const dirty = (title.trim().length + content.trim().length) > 0;
+    if (!dirty || submitting) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Chrome ignores the returnValue string these days, but the
+      // deprecated assignment is still what triggers the confirm
+      // in Safari / Firefox. Empty string is enough.
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [title, content, submitting]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,7 +213,18 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
         )}
         <div>
           <label className="block text-xs font-semibold text-neutral-600 mb-1.5">{lang === 'kr' ? '제목 *' : 'Title *'}</label>
-          <input type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder={lang === 'kr' ? '제목을 입력하세요' : 'Post title'} className="w-full border border-neutral-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/5" />
+          <input
+            type="text"
+            required
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            maxLength={TITLE_MAX}
+            placeholder={lang === 'kr' ? '제목을 입력하세요' : 'Post title'}
+            className="w-full border border-neutral-200 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black/5"
+          />
+          <p className={`text-[11px] mt-1 ${titleOverLimit ? 'text-red-500' : 'text-neutral-400'}`}>
+            {title.length} / {TITLE_MAX}
+          </p>
         </div>
         <div>
           <label className="block text-xs font-semibold text-neutral-600 mb-1.5">{lang === 'kr' ? '내용' : 'Content'}</label>
@@ -188,12 +235,19 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
             minHeight={320}
           />
           <p className="text-[11px] text-neutral-400 mt-2">{lang === 'kr' ? '이미지는 드래그 또는 붙여넣기, 동영상/유튜브/HTML은 상단 버튼을 사용하세요.' : 'Drag or paste images. Use the toolbar for videos, YouTube, and raw HTML.'}</p>
+          <p className={`text-[11px] mt-1 ${contentOverLimit ? 'text-red-500' : 'text-neutral-400'}`}>
+            {content.length.toLocaleString()} / {CONTENT_MAX.toLocaleString()}
+          </p>
         </div>
         <div className="flex gap-3 pt-4">
           <Link href={`/${lang}/menus/${menuSlug}`} className="px-6 py-3 border border-neutral-200 text-neutral-600 text-sm font-semibold hover:bg-neutral-50 transition-colors">
             {lang === 'kr' ? '취소' : 'Cancel'}
           </Link>
-          <button type="submit" disabled={submitting} className="px-8 py-3 bg-brand-ink text-white text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-50">
+          <button
+            type="submit"
+            disabled={submitting || titleOverLimit || contentOverLimit}
+            className="px-8 py-3 bg-brand-ink text-white text-sm font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-50"
+          >
             {submitting
               ? (lang === 'kr' ? '저장 중...' : 'Saving...')
               : isEdit

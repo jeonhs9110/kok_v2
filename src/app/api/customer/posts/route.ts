@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { requireCustomer } from '@/lib/auth/requireCustomer';
 import { deriveStoredAuthorName } from '@/lib/customer/maskAuthor';
 import { assertSameOrigin } from '@/lib/http/csrf';
+import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -11,6 +12,17 @@ const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabase
 const MAX_TITLE = 200;
 const MAX_CONTENT = 50_000;
 
+// Round 29: post creation is heavier than a comment so the ceiling is
+// tighter — 5 posts/min is well above any human write cadence and
+// stops one leaked credential from flooding every community board
+// with duplicate rows. Author gets a 429 with the same handling as
+// the R28 chatbot leads throttle.
+const postsPostLimiter = createRateLimiter({
+  name: 'customer_posts_post',
+  limit: 5,
+  windowMs: 60_000,
+});
+
 /**
  * POST /api/customer/posts { menu_id, title, content, author_name? }
  * Create a new community-board post as the signed-in customer.
@@ -18,6 +30,9 @@ const MAX_CONTENT = 50_000;
 export async function POST(req: Request) {
   const csrf = assertSameOrigin(req);
   if (csrf) return csrf;
+  if (!postsPostLimiter.check(getRequestIp(req))) {
+    return NextResponse.json({ ok: false, error: 'rate_limited' }, { status: 429 });
+  }
   const auth = await requireCustomer();
   if (auth instanceof NextResponse) return auth;
 
