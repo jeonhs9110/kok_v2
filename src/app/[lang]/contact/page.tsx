@@ -48,6 +48,9 @@ async function fetchBusinessInfo(): Promise<BusinessInfoRow | null> {
   return (data as BusinessInfoRow | null) ?? null;
 }
 
+// isValidLang gates the [lang] segment to 'kr' | 'en' at the layout,
+// so cn/jp/vn/th used to be dead entries here. Removed 2026-07-01
+// during Round 16 SEO audit — never rendered.
 const LABELS: Record<string, {
   title: string; subtitle: string; home: string; contact: string;
   hours: string; address: string; phone: string; email: string; overseas: string;
@@ -67,34 +70,6 @@ const LABELS: Record<string, {
     email: 'Email', overseas: 'Overseas Inquiries',
     empty: 'Contact information has not been configured yet.',
   },
-  cn: {
-    title: '联系我们', subtitle: 'Contact',
-    home: '首页', contact: '联系我们',
-    hours: '营业时间', address: '地址', phone: '电话',
-    email: '邮箱', overseas: '海外咨询',
-    empty: '联系信息尚未配置。',
-  },
-  jp: {
-    title: 'お問い合わせ', subtitle: 'Contact',
-    home: 'ホーム', contact: 'お問い合わせ',
-    hours: '営業時間', address: '住所', phone: 'お電話',
-    email: 'メール', overseas: '海外のお問い合わせ',
-    empty: '連絡先情報はまだ登録されていません。',
-  },
-  vn: {
-    title: 'Liên hệ', subtitle: 'Contact',
-    home: 'TRANG CHỦ', contact: 'LIÊN HỆ',
-    hours: 'Giờ làm việc', address: 'Địa chỉ', phone: 'Điện thoại',
-    email: 'Email', overseas: 'Yêu cầu nước ngoài',
-    empty: 'Thông tin liên hệ chưa được cấu hình.',
-  },
-  th: {
-    title: 'ติดต่อเรา', subtitle: 'Contact',
-    home: 'หน้าหลัก', contact: 'ติดต่อเรา',
-    hours: 'เวลาทำการ', address: 'ที่อยู่', phone: 'โทรศัพท์',
-    email: 'อีเมล', overseas: 'สอบถามจากต่างประเทศ',
-    empty: 'ยังไม่ได้ตั้งค่าข้อมูลการติดต่อ',
-  },
 };
 
 interface BusinessInfoRow {
@@ -113,10 +88,6 @@ interface BusinessInfoRow {
 const META: Record<string, { title: string; description: string }> = {
   kr: { title: '문의 · KOKKOK GARDEN', description: 'KOKKOK GARDEN 고객센터 운영시간, 대표 번호, 이메일, 주소 안내.' },
   en: { title: 'Contact · KOKKOK GARDEN', description: 'KOKKOK GARDEN customer service hours, phone, email, and address.' },
-  cn: { title: '联系我们 · KOKKOK GARDEN', description: 'KOKKOK GARDEN 客服时间、电话、邮箱、地址。' },
-  jp: { title: 'お問い合わせ · KOKKOK GARDEN', description: 'KOKKOK GARDEN カスタマーサポートの営業時間・電話・メール・住所のご案内。' },
-  vn: { title: 'Liên hệ · KOKKOK GARDEN', description: 'Giờ làm việc, số điện thoại, email và địa chỉ chăm sóc khách hàng KOKKOK GARDEN.' },
-  th: { title: 'ติดต่อเรา · KOKKOK GARDEN', description: 'เวลาทำการ โทรศัพท์ อีเมล และที่อยู่ของ KOKKOK GARDEN' },
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {

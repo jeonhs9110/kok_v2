@@ -16,13 +16,20 @@ import TopStripeBanner from '@/components/TopStripeBanner';
 import { tokensToCss, isValidGaMeasurementId } from '@/lib/theme/tokens';
 import Script from 'next/script';
 
-export async function generateMetadata() {
-  const headersList = await headers();
-  const country = headersList.get('x-vercel-ip-country') || headersList.get('x-user-country') || 'KR';
-  const isKorea = country === 'KR';
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  const isKr = lang === 'kr';
+  // Derive the layout-default title from the URL segment, NOT the
+  // visitor's IP country. Prior IP-derived title emitted a different
+  // <title> for the same URL depending on the crawler's location —
+  // Naver on /en saw "— Korea", Google's US crawler on /kr saw
+  // "— Global" — which fragments the hreflang cluster and downranks
+  // both variants for duplicate/contradictory canonical signals.
   return {
-    title: isKorea ? 'Kokkok Garden — Korea' : 'Kokkok Garden — Global',
-    description: 'Premium Korean Skincare — Shop Heartleaf, Jericho Rose, and Sedum skincare.',
+    title: isKr ? 'KOKKOK GARDEN · 콕콕가든' : 'KOKKOK GARDEN · Korean Skincare',
+    description: isKr
+      ? '어성초, 여리고 장미, 세덤 성분의 프리미엄 한국 스킨케어 · 콕콕가든.'
+      : 'Premium Korean skincare with Heartleaf, Jericho Rose, and Sedum. KOKKOK GARDEN.',
   };
 }
 

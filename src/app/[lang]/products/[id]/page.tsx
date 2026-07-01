@@ -59,7 +59,12 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
       description: desc,
       url,
       type: 'website',
-      images: image ? [{ url: image, width: 1200, height: 1200, alt: imageAlt }] : undefined,
+      // Let scrapers auto-detect dimensions. Product images are 1:1
+      // in storage; hardcoding 1200x1200 caused Facebook/LinkedIn to
+      // center-crop the bottle labels off when they enforce a 1.91:1
+      // preview card. Omitting width/height lets each platform pick
+      // a strategy that keeps the label visible.
+      images: image ? [{ url: image, alt: imageAlt }] : undefined,
       locale: lang === 'kr' ? 'ko_KR' : 'en_US',
       siteName: 'KOKKOK GARDEN',
     },

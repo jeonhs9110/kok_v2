@@ -68,21 +68,12 @@ export async function generateMetadata(
     ? '제주 동백 PDRN 성분의 K-뷰티 스킨케어. 1회 사용으로 완성하는 보습 케어.'
     : 'Korean skincare powered by Jeju Camellia PDRN. One-step deep hydration.';
   const url = `https://www.kokkokgarden.com/${lang}`;
-  // OG image fallback chain (Kakao / Facebook crawlers walk it from the
-  // top and use the first URL that returns 200):
-  //   1. /og-default.png — 1200×630 raster card. Ships when the design
-  //                        team delivers (operator request 2026-06-30).
-  //                        Kakao + Facebook both prefer raster.
-  //   2. /kokkokgarden_primary.svg — existing wordmark; keeps shares
-  //                                  working today while the PNG is
-  //                                  in design. Some Kakao client
-  //                                  versions skip SVG entirely.
-  //
-  // Drop-in is literally: copy og-default.png into /public/ and
-  // redeploy. No code change needed — the order below makes the PNG
-  // authoritative as soon as it exists.
+  // OG image: SVG-only until a real 1200x630 raster ships. The prior
+  // fallback listed /og-default.png first, but that file was never
+  // deployed to /public — Kakao/FB crawlers hit the SVG anyway after
+  // one wasted 404. Ship the PNG when design delivers, then re-add
+  // it above the SVG entry.
   const ogImages = [
-    { url: 'https://www.kokkokgarden.com/og-default.png', alt: isKr ? '콕콕가든' : 'Kokkok Garden' },
     { url: 'https://www.kokkokgarden.com/kokkokgarden_primary.svg', alt: isKr ? '콕콕가든' : 'Kokkok Garden' },
   ];
   return {
@@ -90,7 +81,13 @@ export async function generateMetadata(
     description,
     alternates: {
       canonical: `/${lang}`,
-      languages: { 'ko-KR': '/kr', 'en-US': '/en' },
+      languages: {
+        'ko-KR': '/kr',
+        'en-US': '/en',
+        // x-default so non-kr/en locales (zh, ja, th, etc.) get an
+        // explicit signal instead of Google guessing.
+        'x-default': '/en',
+      },
     },
     openGraph: {
       title: isKr ? '콕콕가든' : 'Kokkok Garden',

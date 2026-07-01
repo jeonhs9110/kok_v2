@@ -322,11 +322,18 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         }),
       });
       if (!completeRes.ok) {
+        // Previously we also called setSuccess(true) here on the theory
+        // that the account existed and the user could re-fill their
+        // profile on My Page. In practice the success screen hides the
+        // error entirely — customer clicked "Go to Login" without ever
+        // seeing the failure notice and had no idea their profile row
+        // was blank. Now we stop on failure and render the error line
+        // where they'll actually see it; they can retry the profile
+        // save or contact support.
         setError(lang === 'kr'
           ? '계정은 생성됐지만 프로필 저장에 실패했습니다. 로그인 후 마이페이지에서 정보를 다시 입력해주세요.'
           : 'Account created but profile save failed. Please complete your profile from My Page after signing in.');
-        // Still show success so the user can move to login; the missing
-        // profile row will surface on /me and they can fill it in there.
+        return;
       }
       setSuccess(true);
     } catch {
