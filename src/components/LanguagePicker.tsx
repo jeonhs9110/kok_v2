@@ -20,6 +20,18 @@ export default function LanguagePicker() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  // Escape closes the picker for keyboard-first users. WCAG 2.1.1
+  // Keyboard (A) — the picker exists as a menu-shaped disclosure and
+  // must be dismissable without a pointing device.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen]);
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -27,6 +39,9 @@ export default function LanguagePicker() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-full sm:border sm:border-neutral-200 sm:hover:border-neutral-400 transition-colors text-sm text-neutral-700 sm:bg-white/80 sm:backdrop-blur-sm"
         aria-label="Language selector"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        aria-controls="language-picker-dropdown"
       >
         <Globe className="w-3.5 h-3.5 text-neutral-500 hidden sm:block" />
         <span className="text-base leading-none">{LANG_FLAGS[lang]}</span>
@@ -37,6 +52,8 @@ export default function LanguagePicker() {
       {isOpen && (
         <div
           id="language-picker-dropdown"
+          role="menu"
+          aria-labelledby="language-picker-btn"
           className="absolute top-full right-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-[100] animate-in fade-in slide-in-from-top-2 duration-150"
         >
           {SUPPORTED_LANGS.map((l) => (

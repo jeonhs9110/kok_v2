@@ -194,6 +194,30 @@ input[type="button"]:not(.kokkok-keep-font) {
   .kokkok-builder-highlight {
     animation: none;
   }
+  /* Round 24 a11y sweep: honour prefers-reduced-motion across every
+     Tailwind `animate-in` / `fade-in` / `slide-in-*` / `zoom-*` /
+     `animate-pulse` transition used in cards, modals, cookie banner,
+     toast, admin drawers, etc. Prior to this only the theme-builder
+     highlight opted out — every other animation ran full speed for
+     motion-sensitive users. WCAG 2.3.3 Animation from Interactions
+     (AAA) + defensive coverage for 2.3.1 Three Flashes (A).
+     Selectors match Tailwind's generated animation class names, not
+     any specific class we author, so future components inherit this
+     protection automatically. */
+  [class*="animate-in"],
+  [class*="animate-out"],
+  [class*="fade-in"],
+  [class*="fade-out"],
+  [class*="slide-in"],
+  [class*="slide-out"],
+  [class*="zoom-in"],
+  [class*="zoom-out"],
+  [class*="animate-pulse"],
+  [class*="animate-spin"] {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
 }
 
 /* ──────────────────────────────────────────────────────────

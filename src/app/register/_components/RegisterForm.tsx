@@ -673,8 +673,19 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         )}
 
         <div className="border-t border-gray-100 pt-4 space-y-3">
-          <label className="flex items-center gap-2 cursor-pointer" onClick={handleAgreeAll}>
-            <input type="checkbox" checked={privacyChecked && marketingChecked} readOnly className="w-4 h-4 rounded border-gray-300" />
+          <label className="flex items-center gap-2 cursor-pointer">
+            {/* Round 24 a11y: moved handler from the wrapping <label>
+                onClick to the input's onChange + removed readOnly so
+                keyboard users pressing Space on the focused checkbox
+                actually toggle the state. The prior anti-pattern
+                (readOnly input + label onClick) fires nothing on
+                keyboard activation. WCAG 2.1.1 Keyboard (A). */}
+            <input
+              type="checkbox"
+              checked={privacyChecked && marketingChecked}
+              onChange={handleAgreeAll}
+              className="w-4 h-4 rounded border-gray-300"
+            />
             <span className="text-sm font-semibold text-gray-800">{t.agreeAll}</span>
           </label>
           <div className="ml-6 space-y-2">
