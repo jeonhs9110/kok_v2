@@ -27,8 +27,13 @@ export async function PATCH(req: Request, { params }: Ctx) {
   const { title, content } = body as { title?: string; content?: string };
 
   const fields: Record<string, unknown> = {};
-  if (typeof title === 'string' && title.length > 0 && title.length <= 200) fields.title = title;
-  if (typeof content === 'string' && content.length > 0 && content.length <= 50_000) fields.content = content;
+  // Round 29: mirror the POST validator's trim check. Previously PATCH
+  // accepted `title: "   "` (a valid non-empty string) which then
+  // rendered as an empty row in the board list — the customer could
+  // "hide" their post from the list without deleting it. Same for
+  // content.
+  if (typeof title === 'string' && title.trim().length > 0 && title.length <= 200) fields.title = title;
+  if (typeof content === 'string' && content.trim().length > 0 && content.length <= 50_000) fields.content = content;
   if (Object.keys(fields).length === 0) return NextResponse.json({ ok: false, error: 'no updatable fields' }, { status: 400 });
 
   if (process.env.USE_RDS === 'true') {

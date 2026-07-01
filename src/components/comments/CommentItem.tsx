@@ -14,14 +14,19 @@ interface CommentItemProps {
   isReply?: boolean;
 }
 
-const lb: Record<string, { reply: string; delete: string; confirmDelete: string; admin: string }> = {
-  kr: { reply: '답글', delete: '삭제', confirmDelete: '댓글을 삭제하시겠습니까?', admin: '관리자' },
-  en: { reply: 'Reply', delete: 'Delete', confirmDelete: 'Delete this comment?', admin: 'Admin' },
+const lb: Record<string, { reply: string; delete: string; confirmDelete: string; admin: string; deleteFailed: string }> = {
+  kr: { reply: '답글', delete: '삭제', confirmDelete: '댓글을 삭제하시겠습니까?', admin: '관리자', deleteFailed: '삭제에 실패했습니다. 잠시 후 다시 시도해주세요.' },
+  en: { reply: 'Reply', delete: 'Delete', confirmDelete: 'Delete this comment?', admin: 'Admin', deleteFailed: 'Delete failed. Please try again.' },
 };
 
 export default function CommentItem({ comment, replies, lang, postId, onRefresh, isReply }: CommentItemProps) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Round 29: previously any non-ok DELETE response (403 CSRF, 500 DB,
+  // network) left the button re-enabled with no signal — the admin
+  // clicked again, still nothing, gave up. Surface the failure inline
+  // so they can retry / refresh instead.
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const l = lb[lang] ?? lb['en'];
 
   const isAdmin = useMemo(() =>
@@ -31,12 +36,20 @@ export default function CommentItem({ comment, replies, lang, postId, onRefresh,
   const handleDelete = async () => {
     if (!confirm(l.confirmDelete)) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       // Admins delete any comment via /api/admin/comments; the
       // customer-owned delete route requires author match. Since this
       // delete button only renders for admins, hit the admin route.
       const res = await fetch(`/api/admin/comments/${comment.id}`, { method: 'DELETE' });
-      if (res.ok) onRefresh();
+      if (res.ok) {
+        onRefresh();
+      } else {
+        setDeleteError(l.deleteFailed);
+      }
+    } catch (err) {
+      console.error('[comments] delete failed:', err);
+      setDeleteError(l.deleteFailed);
     } finally {
       setDeleting(false);
     }
@@ -79,6 +92,11 @@ export default function CommentItem({ comment, replies, lang, postId, onRefresh,
             </button>
           )}
         </div>
+        {deleteError && (
+          <p role="alert" aria-live="polite" className="mt-2 text-xs text-red-500 font-semibold">
+            {deleteError}
+          </p>
+        )}
 
         {/* Reply Form */}
         {showReplyForm && (

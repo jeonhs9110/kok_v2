@@ -52,6 +52,17 @@ const HTML_ENTITY_MAP: Record<string, string> = {
   '&colon;': ':',
 };
 
+// Round 29: iframe embed whitelist for the community-board post
+// renderer. RichEditor's YouTube/Vimeo toolbar buttons emit iframes
+// against these hosts; the prior blanket `<iframe>` strip vaporized
+// them at render time — the customer wrote a post with a plant-care
+// video, saw it play in the editor preview, submitted, and the
+// embed silently disappeared on the live page. Mirrors the pattern
+// MenuPage.tsx uses for the same RichEditor output. Only src values
+// pointing at whitelisted hosts pass; everything else (data: URLs,
+// arbitrary origins, missing src) still gets stripped.
+const IFRAME_ALLOWED_HOST_RE = /^(?:https?:)?\/\/(?:www\.)?(?:youtube\.com|youtube-nocookie\.com|youtu\.be|vimeo\.com|player\.vimeo\.com)(?:\/|$)/i;
+
 function decodeCommonEntities(input: string): string {
   return input
     // Numeric decimal entities (&#NNN;)
@@ -81,7 +92,15 @@ export function sanitizeHtml(html: string): string {
   return decoded
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     .replace(/on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-    .replace(/<iframe\b[^>]*>/gi, '')
+    // Round 29: keep YouTube/Vimeo iframe embeds, strip anything else.
+    // The prior blanket strip vaporized RichEditor's own legitimate
+    // embed output on customer posts. Attribute check uses the
+    // decoded string so entity-encoded src bypasses can't sneak in.
+    .replace(/<iframe\b([^>]*)>/gi, (match, attrs: string) => {
+      const srcMatch = attrs.match(/\bsrc\s*=\s*("([^"]*)"|'([^']*)')/i);
+      const src = srcMatch ? (srcMatch[2] ?? srcMatch[3] ?? '') : '';
+      return IFRAME_ALLOWED_HOST_RE.test(src) ? match : '';
+    })
     .replace(/<object\b[^>]*>/gi, '')
     .replace(/<embed\b[^>]*>/gi, '')
     // CSS injection surfaces — <style> blocks + <link rel="stylesheet">.

@@ -15,6 +15,10 @@ const lb: Record<string, { name: string; content: string; submit: string; cancel
   en: { name: 'Name', content: 'Comment', submit: 'Submit', cancel: 'Cancel', namePh: 'Enter your name', contentPh: 'Enter your comment', error: 'Could not submit your comment. Please try again.' },
 };
 
+// Mirrors the server-side cap in /api/customer/comments and
+// /api/admin/comments so a live counter can warn before the round-trip.
+const CONTENT_MAX = 4000;
+
 export default function CommentForm({ postId, parentId, lang, onSubmitted, onCancel }: CommentFormProps) {
   const [authorName, setAuthorName] = useState('');
   const [content, setContent] = useState('');
@@ -78,12 +82,19 @@ export default function CommentForm({ postId, parentId, lang, onSubmitted, onCan
         onChange={(e) => setContent(e.target.value)}
         placeholder={l.contentPh}
         rows={parentId ? 2 : 3}
+        maxLength={CONTENT_MAX}
         className="w-full border border-neutral-200 px-3 py-2 text-sm rounded bg-neutral-50 focus:bg-white focus:border-[#111] transition outline-none resize-none"
       />
+      {/* Round 29: character counter — the prior UX gave no signal
+          that 4000 was the ceiling, so a customer pasting a 50KB
+          rant hit an opaque "Could not submit" and gave up. */}
+      <p className={`text-[11px] ${content.length > CONTENT_MAX * 0.9 ? 'text-red-500' : 'text-neutral-400'}`}>
+        {content.length.toLocaleString()} / {CONTENT_MAX.toLocaleString()}
+      </p>
       <div className="flex gap-2">
         <button
           onClick={handleSubmit}
-          disabled={submitting || !authorName.trim() || !content.trim()}
+          disabled={submitting || !authorName.trim() || !content.trim() || content.length > CONTENT_MAX}
           className="px-4 py-2 bg-brand-ink text-white text-xs font-bold tracking-wider hover:bg-black transition-colors disabled:opacity-40 disabled:cursor-not-allowed rounded"
         >
           {submitting ? '...' : l.submit}

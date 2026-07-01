@@ -26,6 +26,34 @@
 const MAX_NAME = 60;
 const EMAIL_LIKE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Round 29: reserved handles that MUST fall back to a pseudonym even
+// when the customer supplied them. Before this, any signed-in customer
+// could POST `author_name: "관리자"` and post as staff — the admin
+// badge (is_admin_comment) stays false, but the display name is what
+// most customers read at a glance. Blocklist matches the storefront's
+// operator-facing labels + the brand + common ambiguity vectors.
+// Case + width-normalized before compare so "ADMIN", "Admin", "ａｄｍｉｎ"
+// all resolve the same way.
+const RESERVED_NAMES = new Set([
+  '관리자', '운영자', '고객센터', '문의', '공지', '공식', '스태프',
+  'admin', 'administrator', 'staff', 'support', 'moderator', 'mod',
+  'kokkok', 'kokkokgarden', 'kokkok garden', 'kokkokgarden.com',
+  'system', 'root', 'operator',
+]);
+
+function isReservedName(raw: string): boolean {
+  // Strip zero-width + bidi controls that could be used to smuggle
+  // a visually-identical "관리자" past a naive compare, then compare
+  // case- and whitespace-collapsed.
+  const cleaned = raw
+    .normalize('NFKC')
+    .replace(/[​-‏‪-‮⁠-⁯﻿]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+  return RESERVED_NAMES.has(cleaned);
+}
+
 function pseudonym(userId: string): string {
   // Stable hash of the user id (last 6 base-36 chars of the FNV-1a
   // 32-bit hash) — ~2.2B possible suffixes. Earlier 4-char output gave
@@ -57,8 +85,10 @@ export function deriveStoredAuthorName(opts: {
   const raw = (opts.supplied ?? '').trim();
   // Reject empty AND reject email-shaped supplied names — a customer
   // pasting their email into the display-name field would otherwise
-  // bypass the mask.
-  if (raw.length > 0 && !EMAIL_LIKE.test(raw)) {
+  // bypass the mask. Round 29: also reject reserved / staff-shaped
+  // names so a customer can't POST author_name: "관리자" and
+  // impersonate operator/staff on the storefront threads.
+  if (raw.length > 0 && !EMAIL_LIKE.test(raw) && !isReservedName(raw)) {
     return raw.slice(0, MAX_NAME);
   }
   return pseudonym(opts.userId);

@@ -73,6 +73,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'invalid_json' }, { status: 400 });
   }
 
+  // Round 29: cap custom_fields. RegisterForm harvests every
+  // non-standard formData key into this bag, which means a
+  // compromised browser extension or a bookmarklet on a shared PC
+  // can inject arbitrary keys — `custom_fields: {ssn: "...",
+  // national_id: "...", 5MB_string: "..."}` — that bypass the fixed
+  // FIELD_MAX_LEN caps on the typed columns. If the operator later
+  // renders custom_fields in admin (planned), a large payload also
+  // becomes a stored-XSS surface. Cap keys at 20, values at 200
+  // chars; drop the rest silently so a legit registration with a
+  // couple of custom questions still succeeds.
+  const CUSTOM_MAX_KEYS = 20;
+  const CUSTOM_MAX_VAL = 200;
+  const CUSTOM_KEY_RE = /^[a-zA-Z0-9_-]{1,64}$/;
+  let sanitizedCustomFields: Record<string, string> | null = null;
+  if (body.custom_fields && typeof body.custom_fields === 'object') {
+    const entries = Object.entries(body.custom_fields).slice(0, CUSTOM_MAX_KEYS);
+    const acc: Record<string, string> = {};
+    for (const [k, v] of entries) {
+      if (typeof k !== 'string' || !CUSTOM_KEY_RE.test(k)) continue;
+      if (typeof v !== 'string') continue;
+      acc[k] = v.slice(0, CUSTOM_MAX_VAL);
+    }
+    if (Object.keys(acc).length > 0) sanitizedCustomFields = acc;
+  }
+
   try {
     const { getPgPool } = await import('@/lib/db/pool');
     const pool = getPgPool();
@@ -148,7 +173,7 @@ export async function POST(request: Request) {
           body.skin_type || null,
           body.marketing_consent ?? false,
           body.privacy_consent ?? false,
-          body.custom_fields ? JSON.stringify(body.custom_fields) : null,
+          sanitizedCustomFields ? JSON.stringify(sanitizedCustomFields) : null,
         ],
       );
       await client.query('COMMIT');
