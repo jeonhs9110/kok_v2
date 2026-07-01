@@ -30,6 +30,15 @@
    the Kakao + Naver login buttons render as unstyled rectangles. */
 @source inline("bg-[#FEE500] bg-[#FDD800] bg-[#03C75A] bg-[#02b350] hover:bg-[#FDD800] hover:bg-[#02b350] text-[#391B1B]");
 
+/* iOS Safari tap flash — the default translucent iOS blue overlay
+   flashes across every button / anchor / role=button and reads as a
+   broken hover state on the brand-neutral surface. Neutralize with
+   a subtle ink-tinted highlight that fits the palette; on desktop
+   this rule is a no-op. */
+html {
+  -webkit-tap-highlight-color: rgba(17, 17, 17, 0.05);
+}
+
 
 /* ──────────────────────────────────────────────────────────
    Header navigation menu font size — adjustable from /admin/theme

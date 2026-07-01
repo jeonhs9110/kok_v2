@@ -115,13 +115,23 @@ export async function PATCH(req: Request) {
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
-        await client.query(
-          `INSERT INTO public.users (id, email, role, is_verified, created_at)
-             VALUES ($1, $2, 'user', true, NOW())
-             ON CONFLICT (id) DO UPDATE
-               SET email = COALESCE(EXCLUDED.email, public.users.email)`,
-          [auth.userId, auth.email ?? null],
-        );
+        // Only self-heal the users row when we have an email to
+        // insert with — public.users.email is NOT NULL, and a
+        // federated Cognito login (e.g. Kakao) whose token lacks
+        // the email scope would otherwise 500 the entire PATCH with
+        // a 23502 constraint violation and silently lose the
+        // customer's profile edit. ON CONFLICT still updates the
+        // email in place when the row already exists, so a later
+        // token with the claim present will heal.
+        if (auth.email) {
+          await client.query(
+            `INSERT INTO public.users (id, email, role, is_verified, created_at)
+               VALUES ($1, $2, 'user', true, NOW())
+               ON CONFLICT (id) DO UPDATE
+                 SET email = COALESCE(EXCLUDED.email, public.users.email)`,
+            [auth.userId, auth.email],
+          );
+        }
         await client.query(
           `INSERT INTO public.customer_profiles (id, ${cols.join(', ')})
              VALUES ($1, ${placeholders})

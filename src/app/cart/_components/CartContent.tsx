@@ -108,7 +108,7 @@ export default function CartContent() {
         </div>
         <button
           onClick={() => { if (confirm(lb.clearConfirm)) clearCart(); }}
-          className="text-[11px] text-neutral-400 hover:text-red-500 font-semibold tracking-wide transition-colors"
+          className="text-[11px] text-neutral-400 hover:text-red-500 font-semibold tracking-wide transition-colors min-h-[44px] px-3 -mx-3 inline-flex items-center"
         >
           {lb.clearAll}
         </button>
@@ -146,7 +146,7 @@ export default function CartContent() {
                     </Link>
                     <div className="flex flex-col justify-center min-w-0">
                       <Link href={productHref(item.productId)} className="hover:underline underline-offset-2">
-                        <h3 className="text-[13px] font-bold text-brand-ink leading-snug line-clamp-2">{item.name}</h3>
+                        <h3 title={item.name} className="text-[13px] font-bold text-brand-ink leading-snug line-clamp-2">{item.name}</h3>
                       </Link>
                       <div className="flex items-center gap-2 mt-2">
                         {discount > 0 && (
@@ -204,8 +204,9 @@ export default function CartContent() {
                       {formatPrice(item.price * item.quantity, lang)}
                     </span>
                     <button
+                      aria-label={lb.del}
                       onClick={() => { if (confirm(lb.removeConfirm(item.name))) removeItem(item.productId); }}
-                      className="p-1 text-neutral-300 hover:text-red-500 transition-colors"
+                      className="min-w-[44px] min-h-[44px] -mr-2 flex items-center justify-center text-neutral-300 hover:text-red-500 transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

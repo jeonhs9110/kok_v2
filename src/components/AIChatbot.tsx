@@ -466,7 +466,7 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={handleKey}
                 placeholder={L.chatPlaceholder}
-                className="flex-1 bg-transparent text-sm outline-none text-gray-800 placeholder:text-gray-400"
+                className="flex-1 bg-transparent text-base sm:text-sm outline-none text-gray-800 placeholder:text-gray-400"
                 disabled={isTyping}
               />
               <button

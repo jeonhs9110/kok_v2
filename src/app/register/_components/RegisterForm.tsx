@@ -442,7 +442,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
             placeholder={lang === 'kr' ? '인증번호' : 'Verification code'}
             autoComplete="one-time-code"
             required
-            className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-sm text-brand-ink placeholder:text-gray-400 tracking-widest text-center"
+            className="w-full bg-white border-b border-gray-200 px-2 py-3 focus:outline-none focus:border-black transition text-base sm:text-sm text-brand-ink placeholder:text-gray-400 tracking-widest text-center"
           />
           {error && <p className="text-red-500 text-xs font-bold text-center">{error}</p>}
           {resendNotice && <p className="text-green-600 text-xs font-semibold text-center">{resendNotice}</p>}
@@ -552,7 +552,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
                       required={f.required}
                       placeholder={lang === 'kr' ? '10-1234-5678' : '10-1234-5678'}
                       autoComplete="tel-national"
-                      className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-brand-ink placeholder:text-gray-400 outline-none focus:border-black transition"
+                      className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-3 text-base sm:text-sm text-brand-ink placeholder:text-gray-400 outline-none focus:border-black transition"
                     />
                   </div>
                 </div>
@@ -600,7 +600,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
                     value={formData[f.key] || ''}
                     onChange={e => setFormData(p => ({ ...p, [f.key]: e.target.value }))}
                     required={f.required}
-                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-brand-ink outline-none focus:border-black transition"
+                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-base sm:text-sm text-brand-ink outline-none focus:border-black transition"
                   >
                     <option value="">{lang === 'kr' ? '선택해주세요' : 'Select...'}</option>
                     {renderedOptions.map(o => <option key={o} value={o}>{o}</option>)}
@@ -659,7 +659,7 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
                       required
                       placeholder={t.passwordConfirmPlaceholder}
                       autoComplete="new-password"
-                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-sm text-brand-ink placeholder:text-gray-400 outline-none focus:border-black transition"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-3 text-base sm:text-sm text-brand-ink placeholder:text-gray-400 outline-none focus:border-black transition"
                     />
                     {(formData.password_confirm?.length ?? 0) > 0
                       && formData.password_confirm !== formData.password && (
