@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
 
 /**
  * POST /api/auth/cognito/complete-registration
@@ -21,6 +22,16 @@ import { NextResponse } from 'next/server';
  * the only trusted source.
  */
 
+// Per-IP brake matching the other Cognito mutation endpoints
+// (sign-up / reset-password / confirm all cap at 10/hour). Without
+// this a token holder could iterate on custom_fields / marketing_
+// consent / skin_type churn — cheap per call but abusive in a loop.
+const completeLimiter = createRateLimiter({
+  name: 'complete-registration',
+  limit: 10,
+  windowMs: 60 * 60 * 1000,
+});
+
 interface RegistrationPayload {
   name?: string | null;
   phone?: string | null;
@@ -35,6 +46,12 @@ interface RegistrationPayload {
 }
 
 export async function POST(request: Request) {
+  if (!completeLimiter.check(getRequestIp(request))) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please wait a moment.' },
+      { status: 429 },
+    );
+  }
   const jar = await cookies();
   const idToken = jar.get('cognito_id_token')?.value;
   if (!idToken) {
