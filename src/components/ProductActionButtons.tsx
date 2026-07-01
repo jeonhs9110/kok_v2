@@ -28,7 +28,13 @@ export default function ProductActionButtons({ productId, productName, price, or
     naver: isKr ? '네이버 스토어에서 구매 ↗' : 'Buy on Naver Store ↗',
   };
 
-  const increase = () => setQuantity(prev => prev + 1);
+  // Match the cart-side ceiling (CartContext MAX_QTY_PER_ITEM) so a
+  // customer can't build a product-detail quantity that gets
+  // truncated on add. Also protects the total-price preview at
+  // line 65 from overflowing into scientific notation on a stuck
+  // Android autorepeat `+` key.
+  const MAX_QTY = 99;
+  const increase = () => setQuantity(prev => Math.min(prev + 1, MAX_QTY));
   const decrease = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
 
   const handleAddToCart = () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowLeft, X, ChevronRight } from 'lucide-react';
 import { useCart } from '@/lib/cart/CartContext';
@@ -48,6 +48,11 @@ function formatPrice(n: number, lang: Lang) {
   return `${lb.currency} ${n.toLocaleString()}`;
 }
 
+// useSyncExternalStore needs a stable subscribe reference. We don't
+// actually subscribe to anything — the hook is only used as a
+// "mounted?" flag (server → false, client → true) — so no-op.
+function subscribeNoop(): () => void { return () => {}; }
+
 export default function CartContent() {
   const { lang } = useI18n();
   const lb = LABELS[lang];
@@ -62,7 +67,14 @@ export default function CartContent() {
   // while the messaging matches the rest of the site's inline UX.
   const [showCheckoutNotice, setShowCheckoutNotice] = useState(false);
 
-  if (items.length === 0) {
+  // Mount flag via useSyncExternalStore: server returns false, client
+  // returns true. Prevents the empty-state UI from flashing for one
+  // paint before hydration reads the localStorage cart. Using the
+  // external-store hook here avoids the react-hooks/set-state-in-effect
+  // lint that a useEffect(setMounted(true)) pattern trips in Next.js 16.
+  const mounted = useSyncExternalStore(subscribeNoop, () => true, () => false);
+
+  if (mounted && items.length === 0) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-in fade-in duration-500">
         <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
@@ -257,9 +269,22 @@ export default function CartContent() {
                 id="checkout-wip-notice"
                 role="status"
                 aria-live="polite"
-                className="rounded border border-neutral-200 bg-neutral-50 px-4 py-3 text-[12px] text-neutral-600 leading-relaxed"
+                className="rounded border border-neutral-200 bg-neutral-50 px-4 py-3 text-[12px] text-neutral-600 leading-relaxed flex items-start gap-2"
               >
-                {lb.checkoutWip}
+                <span className="flex-1">{lb.checkoutWip}</span>
+                {/* Round 26: dismissable so a customer who accidentally
+                    tapped Checkout can clear the notice. Prior version
+                    was permanent — a second tap did nothing and the
+                    notice sat in the summary block for the rest of the
+                    session, feeling frozen. */}
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutNotice(false)}
+                  aria-label={lang === 'kr' ? '닫기' : 'Dismiss'}
+                  className="text-neutral-400 hover:text-neutral-800 transition-colors flex-shrink-0"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
             <Link
