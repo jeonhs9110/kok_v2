@@ -104,10 +104,10 @@ export default function CookieConsent() {
           <Link href={`/${lang}/privacy`} className="text-blue-500 underline underline-offset-2 text-xs">{t.link}</Link>
         </p>
         <div className="flex gap-2 flex-shrink-0">
-          <button onClick={handleDecline} className="px-4 py-2 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+          <button onClick={handleDecline} className="min-h-[44px] px-4 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
             {t.decline}
           </button>
-          <button onClick={handleAccept} className="px-4 py-2 text-xs font-semibold text-white bg-brand-ink rounded-lg hover:bg-black transition">
+          <button onClick={handleAccept} className="min-h-[44px] px-4 text-xs font-semibold text-white bg-brand-ink rounded-lg hover:bg-black transition">
             {t.accept}
           </button>
         </div>

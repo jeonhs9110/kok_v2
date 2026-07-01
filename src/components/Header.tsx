@@ -537,7 +537,7 @@ export default function Header({
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder={lang === 'kr' ? '상품명, 성분, 키워드 검색...' : 'Search products...'}
-                className="flex-1 text-sm bg-transparent outline-none placeholder:text-neutral-400"
+                className="flex-1 text-base sm:text-sm bg-transparent outline-none placeholder:text-neutral-400"
               />
               <button type="submit" className="px-4 py-2 bg-brand-ink text-white text-xs font-bold tracking-widest rounded hover:bg-black transition-colors">
                 {lang === 'kr' ? '검색' : 'Search'}

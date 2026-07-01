@@ -72,7 +72,7 @@ export default function ProductActionButtons({ productId, productName, price, or
           {showCartButton && (
             <button
               onClick={handleAddToCart}
-              className={`flex-1 border py-4.5 font-bold tracking-widest text-[13px] transition-colors ${
+              className={`flex-1 border py-[18px] font-bold tracking-widest text-[13px] transition-colors ${
                 added ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-[#111111] text-brand-ink hover:bg-neutral-50'
               }`}
             >
@@ -82,7 +82,7 @@ export default function ProductActionButtons({ productId, productName, price, or
           {showBuyButton && (
             <button
               onClick={handleBuyNow}
-              className="flex-1 bg-brand-ink text-white py-4.5 font-bold tracking-widest text-[13px] hover:bg-black transition-colors shadow-lg shadow-black/10"
+              className="flex-1 bg-brand-ink text-white py-[18px] font-bold tracking-widest text-[13px] hover:bg-black transition-colors shadow-lg shadow-black/10"
             >
               {t('product.buyNow')}
             </button>

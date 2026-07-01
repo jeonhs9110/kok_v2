@@ -327,11 +327,11 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
                 <div className="bg-neutral-50 rounded-xl p-6 space-y-4">
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.email}</label>
-                    <input type="text" value={userEmail} disabled className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm bg-neutral-100 text-neutral-400" />
+                    <input type="text" value={userEmail} disabled className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-base sm:text-sm bg-neutral-100 text-neutral-400" />
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.name}</label>
-                    <input type="text" value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-black" />
+                    <input type="text" value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-base sm:text-sm outline-none focus:border-black" />
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.phone}</label>
@@ -358,7 +358,7 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
                               const cleaned = e.target.value.replace(/[^\d\s-]/g, '');
                               setEditForm(p => ({ ...p, phone: `+${selectedCountry.dialCode} ${cleaned}` }));
                             }}
-                            className="flex-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-black"
+                            className="flex-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-base sm:text-sm outline-none focus:border-black"
                           />
                         </div>
                       );
@@ -366,14 +366,14 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.gender}</label>
-                    <select value={editForm.gender} onChange={e => setEditForm(p => ({ ...p, gender: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-black">
+                    <select value={editForm.gender} onChange={e => setEditForm(p => ({ ...p, gender: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-base sm:text-sm outline-none focus:border-black">
                       <option value="">—</option>
                       {(isKr ? GENDER_OPTIONS_KR : GENDER_OPTIONS_EN).map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.birthday}</label>
-                    <input type="date" value={editForm.birthday} onChange={e => setEditForm(p => ({ ...p, birthday: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-black" />
+                    <input type="date" value={editForm.birthday} onChange={e => setEditForm(p => ({ ...p, birthday: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-base sm:text-sm outline-none focus:border-black" />
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.country}</label>
@@ -388,7 +388,7 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
                   </div>
                   <div>
                     <label className="text-xs text-neutral-500 font-semibold">{t.skinType}</label>
-                    <select value={editForm.skin_type} onChange={e => setEditForm(p => ({ ...p, skin_type: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-black">
+                    <select value={editForm.skin_type} onChange={e => setEditForm(p => ({ ...p, skin_type: e.target.value }))} className="w-full mt-1 border border-neutral-200 rounded-lg px-3 py-2.5 text-base sm:text-sm outline-none focus:border-black">
                       <option value="">—</option>
                       {(isKr ? SKIN_OPTIONS_KR : SKIN_OPTIONS_EN).map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
@@ -433,16 +433,16 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
                         {item.product_image && <Image src={item.product_image} alt={item.product_name} fill sizes="64px" className="object-cover" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-brand-ink truncate">{item.product_name}</p>
+                        <p title={item.product_name} className="font-semibold text-sm text-brand-ink truncate">{item.product_name}</p>
                         <p className="text-sm text-neutral-500 mt-0.5">
                           {lang === 'kr' ? `${item.product_price.toLocaleString()}원` : `KRW ${item.product_price.toLocaleString()}`}
                         </p>
                       </div>
                       <div className="flex gap-2 flex-shrink-0">
-                        <Link href={`/${lang}/products/${item.product_id}`} className="px-3 py-1.5 text-xs font-semibold text-neutral-600 border border-neutral-200 rounded hover:bg-neutral-100 transition-colors">
+                        <Link href={`/${lang}/products/${item.product_id}`} className="min-h-[44px] px-3 inline-flex items-center text-xs font-semibold text-neutral-600 border border-neutral-200 rounded hover:bg-neutral-100 transition-colors">
                           {t.viewProduct}
                         </Link>
-                        <button onClick={() => removeWish(item.id)} className="px-3 py-1.5 text-xs font-semibold text-red-500 border border-red-200 rounded hover:bg-red-50 transition-colors">
+                        <button onClick={() => removeWish(item.id)} className="min-h-[44px] px-3 inline-flex items-center text-xs font-semibold text-red-500 border border-red-200 rounded hover:bg-red-50 transition-colors">
                           {t.remove}
                         </button>
                       </div>

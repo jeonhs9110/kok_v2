@@ -71,13 +71,29 @@ export async function POST(req: Request) {
       const { getPgPool } = await import('@/lib/db/pool');
       const pool = getPgPool();
       const now = new Date();
-      for (const it of clean) {
-        await pool.query(
-          `INSERT INTO public.site_settings (key, value, updated_at)
-             VALUES ($1, $2, $3)
-             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`,
-          [it.key, it.value, now],
-        );
+      // One transaction over all upserts so a mid-loop failure
+      // rolls back cleanly. Prior code issued N sequential
+      // pool.query calls with no BEGIN — a network blip on the 3rd
+      // of 4 keys left site_settings in a torn state where some
+      // keys got the new value and others didn't, which is worse
+      // than either state alone.
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        for (const it of clean) {
+          await client.query(
+            `INSERT INTO public.site_settings (key, value, updated_at)
+               VALUES ($1, $2, $3)
+               ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`,
+            [it.key, it.value, now],
+          );
+        }
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
+        throw err;
+      } finally {
+        client.release();
       }
       return NextResponse.json({ ok: true });
     } catch (err) {

@@ -404,11 +404,35 @@ export async function setProductActiveInPg(productId: string, isActive: boolean)
 
 export async function deleteProductInPg(productId: string): Promise<boolean> {
   const pool = getPgPool();
-  const { rowCount } = await pool.query(
-    `DELETE FROM public.products WHERE id = $1`,
-    [productId],
-  );
-  return (rowCount ?? 0) > 0;
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    // wishlist(product_id) has ON DELETE CASCADE so it clears
+    // automatically. cart_items(product_id) has no ON DELETE clause,
+    // so a delete against a product currently in any customer's
+    // cart would raise a FK violation and 500 the whole admin
+    // action. Purge those rows first — the cart is per-visitor
+    // ephemeral state, no data loss beyond "that item vanished
+    // from your cart" which is the correct outcome when the
+    // operator discontinues a product.
+    await client.query(`DELETE FROM public.cart_items WHERE product_id = $1`, [productId]);
+    // shorts.product_id has no FK constraint but is treated as an
+    // optional pointer for the homepage shorts strip. Null it out
+    // so an operator-authored short doesn't render "product not
+    // found" tiles after the delete.
+    await client.query(`UPDATE public.shorts SET product_id = NULL WHERE product_id = $1`, [productId]);
+    const { rowCount } = await client.query(
+      `DELETE FROM public.products WHERE id = $1`,
+      [productId],
+    );
+    await client.query('COMMIT');
+    return (rowCount ?? 0) > 0;
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => { /* connection may be gone */ });
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 // ─── users (admin role + delete) ─────────────────────────────────
@@ -520,6 +544,15 @@ export async function deleteUserInPg(userId: string, email: string | null): Prom
     await client.query(`UPDATE public.orders SET user_id = NULL WHERE user_id = $1`, [userId]);
     // Cart is ephemeral — drop it.
     await client.query(`DELETE FROM public.cart_items WHERE user_id = $1`, [userId]);
+    // Chatbot leads carry PII (email + name + skin_type + country)
+    // from the pre-registration lead-capture form. Customer-side
+    // /api/customer/profile DELETE already scrubs these; the admin
+    // path must too, or the same PII survives whenever an operator
+    // deletes the account instead of the customer self-serving —
+    // PIPA §21 (duty to destroy) doesn't distinguish who initiated.
+    if (email) {
+      await client.query(`DELETE FROM public.chatbot_leads WHERE email = $1`, [email]);
+    }
     // Row deletions.
     await client.query(`DELETE FROM public.wishlist WHERE user_id = $1`, [userId]);
     await client.query(`DELETE FROM public.customer_profiles WHERE id = $1`, [userId]);

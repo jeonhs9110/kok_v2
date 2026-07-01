@@ -96,7 +96,11 @@ export default function ShopWorldwide({ labels, retailers }: ShopWorldwideProps)
       </div>
 
       {/* ── Breadcrumb + Filter Tabs ───────────────────────────────────── */}
-      <div className="sticky top-[66px] z-30 bg-white border-b border-neutral-100 shadow-sm">
+      {/* Header height varies with the operator-chosen logo/menu font
+          scale (60–105px). Anchoring the filter bar to the CSS var
+          keeps it flush with the header on every device / theme
+          combo instead of sliding under it. */}
+      <div className="sticky z-30 bg-white border-b border-neutral-100 shadow-sm" style={{ top: 'var(--kokkok-header-h, 80px)' }}>
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex items-center gap-1 py-1 text-[11px] text-neutral-400 font-semibold mb-2 pt-3">
             <span>{labels.breadcrumb_home}</span><span className="mx-1">›</span>
@@ -108,7 +112,7 @@ export default function ShopWorldwide({ labels, retailers }: ShopWorldwideProps)
               <button
                 key={r}
                 onClick={() => { setActiveRegion(r); setSelectedCountry(null); }}
-                className={`flex-none px-4 py-1.5 rounded-full text-[11px] font-bold tracking-wider transition-all whitespace-nowrap ${
+                className={`flex-none min-h-[40px] inline-flex items-center justify-center px-4 py-2 rounded-full text-[11px] font-bold tracking-wider transition-all whitespace-nowrap ${
                   activeRegion === r
                     ? 'bg-black text-white'
                     : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
