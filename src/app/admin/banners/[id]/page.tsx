@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Trash2 } from 'lucide-react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
@@ -41,6 +41,13 @@ export default function BannerEditPage() {
   const [saved, setSaved] = useState<BannerRow>(DEFAULT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Ref-guard for double-submits. The button's `disabled={!dirty || saving}`
+  // prop reacts on the next render, so a fast double-click (or Enter
+  // held while the browser retries) can slip a second PATCH through
+  // before React re-renders. A ref-check runs synchronously and cuts
+  // the second call at the source. Same pattern useReviews already
+  // uses (though there it's implicit via the setSavingId('id') gate).
+  const submittingRef = useRef(false);
   const [savedFlash, setSavedFlash] = useState(false);
   const [activeLang, setActiveLang] = useState<Lang>('kr');
 
@@ -79,6 +86,12 @@ export default function BannerEditPage() {
 
   async function handleSave() {
     if (!id) return;
+    // Synchronous double-submit guard. Return silently if a save is
+    // already in flight so a double-click doesn't send two PATCHes
+    // that race — the second would land after the first and could
+    // clobber the response echo the first was reconciling to.
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSaving(true);
     try {
       const payload = {
@@ -109,6 +122,7 @@ export default function BannerEditPage() {
       console.error('[admin/banners] save failed:', err);
       toast.show('저장에 실패했습니다.', 'error');
     } finally {
+      submittingRef.current = false;
       setSaving(false);
     }
   }
