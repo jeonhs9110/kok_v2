@@ -2,6 +2,14 @@ import { unstable_cache } from 'next/cache';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
 
+// Suppress the "OPENAI_API_KEY not set" warning after the first emit
+// per process — every product-detail request hits this path in dev
+// deploys that don't ship the key, and a chatbot outage / config
+// drift can push thousands of duplicate warnings/minute through
+// CloudWatch ingest. One line per process cold-start is enough to
+// tell an operator the config isn't wired.
+let missingKeyLogged = false;
+
 const LANG_NAMES: Record<string, string> = {
   en: 'English',
   cn: 'Simplified Chinese',
@@ -23,7 +31,10 @@ async function callOpenAI(
   targetLang: string
 ): Promise<TranslatableProduct> {
   if (!OPENAI_API_KEY) {
-    console.warn('[translate] OPENAI_API_KEY not set – returning original.');
+    if (!missingKeyLogged) {
+      console.warn('[translate] OPENAI_API_KEY not set – returning original.');
+      missingKeyLogged = true;
+    }
     return fields;
   }
 

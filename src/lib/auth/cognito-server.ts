@@ -86,8 +86,19 @@ export async function signInWithCognito(
     // Cognito throws a typed exception for "bad credentials"
     // (NotAuthorizedException) — same surface as a wrong password
     // OR a missing user. Return null in both cases so the caller
-    // doesn't leak which one to the UI.
-    console.error('[auth/cognito-server] signIn failed:', err);
+    // doesn't leak which one to the UI. Structured log emits the
+    // `.name` field only (NotAuthorized / UserNotFound / TooManyRequests
+    // / NotConfirmed) so a handoff engineer triaging a sign-in spike
+    // can distinguish credential-stuffing (repeated NotAuthorized from
+    // a spread of hashed emails) from a JWKS/config break (Internal
+    // Error) without staring at a wall of stack traces.
+    const name = err && typeof err === 'object' && 'name' in err
+      ? String((err as { name: unknown }).name)
+      : 'unknown';
+    console.warn(JSON.stringify({
+      event: 'auth.signin.failed',
+      reason: name,
+    }));
     return null;
   }
 }

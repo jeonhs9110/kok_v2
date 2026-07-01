@@ -71,19 +71,23 @@ export async function requireSuperAdmin(): Promise<NextResponse | null> {
     const jar = await cookies();
     const idToken = jar.get('cognito_id_token')?.value;
     if (!idToken) {
+      logAdminDenial({ reason: 'no_cookie', variant: 'super_admin' });
       return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
     }
     const { verifyCognitoIdToken, isSuperAdminFromCognito } = await import('./cognito');
     const claims = await verifyCognitoIdToken(idToken);
     if (!claims) {
+      logAdminDenial({ reason: 'invalid_token', variant: 'super_admin' });
       return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
     }
     if (!isSuperAdminFromCognito(claims)) {
+      logAdminDenial({ reason: 'forbidden', variant: 'super_admin', actor: claims.sub ?? null });
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
     return null;
   } catch (err) {
     console.error('[requireSuperAdmin] unexpected error:', err);
+    logAdminDenial({ reason: 'exception', variant: 'super_admin' });
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 }
@@ -93,21 +97,45 @@ async function requireAdminCognito(): Promise<NextResponse | null> {
     const jar = await cookies();
     const idToken = jar.get('cognito_id_token')?.value;
     if (!idToken) {
+      logAdminDenial({ reason: 'no_cookie', variant: 'admin' });
       return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
     }
     const { verifyCognitoIdToken, isAdminFromCognito } = await import('./cognito');
     const claims = await verifyCognitoIdToken(idToken);
     if (!claims) {
+      logAdminDenial({ reason: 'invalid_token', variant: 'admin' });
       return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
     }
     if (!isAdminFromCognito(claims)) {
+      logAdminDenial({ reason: 'forbidden', variant: 'admin', actor: claims.sub ?? null });
       return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     }
     return null;
   } catch (err) {
     console.error('[requireAdmin/cognito] unexpected error:', err);
+    logAdminDenial({ reason: 'exception', variant: 'admin' });
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
+}
+
+/**
+ * Structured denial log — CloudWatch metric filter keys on
+ * `event=admin.denied` so Dynamic Solution can alarm on burst
+ * (bot fuzzing /api/admin/*). Prior code returned 401/403 silently
+ * with no server-side breadcrumb; no forensic surface after a
+ * "someone tried to break into /admin" report.
+ */
+function logAdminDenial(fields: {
+  reason: 'no_cookie' | 'invalid_token' | 'forbidden' | 'exception';
+  variant: 'admin' | 'super_admin';
+  actor?: string | null;
+}): void {
+  try {
+    console.warn(JSON.stringify({
+      event: 'admin.denied',
+      ...fields,
+    }));
+  } catch { /* never let logging break auth */ }
 }
 
 async function requireAdminSupabase(): Promise<NextResponse | null> {
