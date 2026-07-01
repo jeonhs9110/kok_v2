@@ -52,6 +52,15 @@ const POOL_CONFIG: PoolConfig = {
   max: 10,
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 5_000,
+  // Round 28: per-query 15s ceiling so a rogue slow query can't hold
+  // a pool connection open indefinitely + drain the 10-slot pool.
+  // Prior state relied on the ALB 60s idle timeout — but by then 10
+  // stuck queries had already pinned every slot and /api/health's
+  // `SELECT 1` timed out too, draining the whole instance from the
+  // target pool. 15s is generous for every read path we ship today
+  // (heaviest is the analytics dashboard at ~2s).
+  query_timeout: 15_000,
+  statement_timeout: 15_000,
   // Reject the connection rather than queue it forever — surfacing a
   // pool exhaustion as a fast 500 is better than silent latency.
   allowExitOnIdle: false,

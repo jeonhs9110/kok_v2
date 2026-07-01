@@ -155,7 +155,9 @@ async function ContactInfoView({ lang, displayTitle }: { lang: string; displayTi
   const rows: { label: string; value: string; href?: string }[] = [
     { label: lb.hours,   value: hours },
     { label: lb.address, value: address },
-    { label: lb.phone,   value: biz?.phone || '', href: biz?.phone ? `tel:${biz.phone.replace(/\s+/g, '')}` : undefined },
+    // Round 28: strip non-digits (keep leading +) so Naver Whale iOS
+    // still dials — its parser refuses parens in tel: URIs.
+    { label: lb.phone,   value: biz?.phone || '', href: biz?.phone ? `tel:${biz.phone.replace(/[^\d+]/g, '')}` : undefined },
     { label: lb.email,   value: biz?.email || '', href: biz?.email ? `mailto:${biz.email}` : undefined },
   ].filter(r => r.value);
 
