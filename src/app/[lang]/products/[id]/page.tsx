@@ -1,7 +1,15 @@
 import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import ProductDetailPage from '@/components/pages/ProductDetailPage';
 import { getProducts } from '@/lib/api/products';
+
+// UUID v4 (or general lowercase-hex UUID) shape. Guards `[id]` from
+// bot scans that guess random strings — without this, every
+// `/kr/products/aaaaa` request pulled the full products cache to
+// find nothing, and returned 200 with a not-found body. UUID-shape
+// mismatch → immediate 404 → no wasted fetch + correct HTTP status.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Per-product metadata. Without this, Google/Kakao/Slack previews show the
@@ -12,7 +20,21 @@ import { getProducts } from '@/lib/api/products';
  */
 export async function generateMetadata({ params }: { params: Promise<{ lang: string; id: string }> }): Promise<Metadata> {
   const { lang, id } = await params;
-  const products = await getProducts();
+  if (!UUID_RE.test(id)) {
+    return { title: '상품을 찾을 수 없습니다 · KOKKOK GARDEN', robots: { index: false, follow: true } };
+  }
+  // getProducts() throws on transient RDS/pool failures. A throw
+  // inside generateMetadata is NOT caught by error.tsx — Next.js
+  // drops the page with a bare 500 and no branded chrome. Fall
+  // back to the layout-default metadata so the page body (which
+  // reads the same cached fetch) can still render.
+  let products;
+  try {
+    products = await getProducts();
+  } catch (err) {
+    console.error('[products/[id]] generateMetadata getProducts threw', err);
+    return {};
+  }
   // Mirror the page-body filter: an inactive product is "gone" for the
   // storefront, including its OG metadata. Without this Google etc.
   // keep the rich snippet (price/availability) alive after admin marks
@@ -79,6 +101,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 
 export default async function ProductDetailRoute({ params }: { params: Promise<{ lang: string; id: string }> }) {
   const { lang, id } = await params;
+  if (!UUID_RE.test(id)) notFound();
   const headersList = await headers();
   const country = headersList.get('x-vercel-ip-country') || headersList.get('x-user-country') || 'KR';
 

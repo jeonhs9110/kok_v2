@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import { uploadFileToS3, USE_S3_FROM_BROWSER } from '@/lib/admin/uploadFile';
 import type { SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
@@ -33,6 +34,7 @@ function extractPostId(url: string): string | null {
  */
 export function useInstagram() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [handle, setHandle] = useState('');
   const [description, setDescription] = useState('');
   const [rssFeedUrl, setRssFeedUrl] = useState('');
@@ -245,6 +247,12 @@ export function useInstagram() {
   };
 
   const deletePost = async (slot: number) => {
+    const ok = await confirm({
+      message: `이 인스타그램 포스트를 삭제하시겠습니까? (슬롯 ${slot + 1})`,
+      tone: 'danger',
+      confirmText: '삭제',
+    });
+    if (!ok) return;
     const post = posts[slot];
     if (post.id) {
       try {
@@ -260,6 +268,7 @@ export function useInstagram() {
           if (error) throw error;
         }
         await revalidateHomepageData('instagram');
+        toast.show('포스트가 삭제되었습니다.', 'success');
       } catch (err) {
         console.error('[admin/instagram] post delete failed:', err);
         toast.show('포스트 삭제에 실패했습니다.', 'error');

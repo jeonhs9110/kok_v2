@@ -79,6 +79,7 @@ export default function MenusAdminPage() {
         onFormChange={m.setForm}
         onClose={m.closeModal}
         onSave={m.handleSave}
+        isSaving={m.isSaving}
       />
     </div>
   );

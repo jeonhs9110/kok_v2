@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { notFound } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import ProductActionButtons from '@/components/ProductActionButtons';
 import ProductReviewSection from '@/components/ProductReviewSection';
@@ -42,14 +43,13 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
   const productData = allProducts.find(p => p.id === id && p.is_active);
 
   if (!productData) {
-    return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
-        <p className="text-neutral-500 tracking-widest text-sm">{lb.notFound}</p>
-        <Link href={`/${lang}/products`} className="text-xs font-bold tracking-widest underline underline-offset-4 hover:text-black transition-colors">
-          ← {lb.shop}
-        </Link>
-      </div>
-    );
+    // Delegate to src/app/[lang]/products/[id]/not-found.tsx — that
+    // route has the branded 404 chrome + "browse all products" CTA
+    // AND returns HTTP 404 instead of 200. Prior inline render was
+    // returning 200 for missing products, which meant Google was
+    // indexing the "not found" body and Kakao previews rendered a
+    // "product page" card for stale links.
+    notFound();
   }
 
   // Auto-translate product fields with GPT-4o mini for non-Korean languages.

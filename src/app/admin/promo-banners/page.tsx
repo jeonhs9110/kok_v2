@@ -198,6 +198,7 @@ export default function PromoBannersAdminPage() {
       }
       setBanners(prev => prev.map(b => b.id === banner.id ? { ...b, id: `new-${b.sort_order}`, image_url: '', link_url: '' } : b));
       await revalidateHomepageData('promo_banners');
+      toast.show('배너가 삭제되었습니다.', 'success');
     } catch (err) {
       console.error('[admin/promo-banners] delete failed:', err);
       toast.show('삭제에 실패했습니다.', 'error');

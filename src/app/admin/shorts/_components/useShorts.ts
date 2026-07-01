@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getSupabaseBrowser } from '@/lib/supabase/browser';
 import { revalidateHomepageData } from '@/lib/cache/invalidate';
 import { useToast } from '@/components/admin/Toast';
+import { useConfirm } from '@/components/admin/ConfirmModal';
 import { USE_RDS_FROM_BROWSER } from '@/lib/admin/rdsFlag';
 import type { SectionBgValue } from '@/components/admin/SectionBackgroundPanel';
 
@@ -33,6 +34,7 @@ export interface Product {
  */
 export function useShorts() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [shorts, setShorts] = useState<Short[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [newUrl, setNewUrl] = useState('');
@@ -332,6 +334,12 @@ export function useShorts() {
   };
 
   const handleDelete = async (id: string) => {
+    const ok = await confirm({
+      message: '이 쇼츠를 삭제하시겠습니까?\n삭제된 쇼츠는 복구할 수 없습니다.',
+      tone: 'danger',
+      confirmText: '삭제',
+    });
+    if (!ok) return;
     setShorts(prev => prev.filter(s => s.id !== id));
     try {
       if (USE_RDS_FROM_BROWSER) {
@@ -340,6 +348,7 @@ export function useShorts() {
         await supabase.from('shorts').delete().eq('id', id);
       }
       await revalidateHomepageData('shorts');
+      toast.show('쇼츠가 삭제되었습니다.', 'success');
     } catch (err) {
       console.error('[admin/shorts] delete failed:', err);
       toast.show('삭제에 실패했습니다.', 'error');

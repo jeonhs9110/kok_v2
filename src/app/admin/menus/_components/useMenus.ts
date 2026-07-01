@@ -27,6 +27,9 @@ export function useMenus() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<MenuFormData>({ ...emptyForm });
   const [activeLang, setActiveLang] = useState<Lang>('kr');
+  // In-flight guard so a double-click on 저장 doesn't send two POSTs
+  // and create duplicate menu rows visible in the site header.
+  const [isSaving, setIsSaving] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setIsLoading(true);
@@ -72,6 +75,7 @@ export function useMenus() {
   };
 
   const handleSave = async () => {
+    if (isSaving) return;
     if (!form.slug.trim() || !form.title.kr?.trim()) {
       // Silently returning here hid the cause — operator clicks 저장,
       // nothing happens, no idea why. Spell it out.
@@ -94,6 +98,7 @@ export function useMenus() {
       title: form.title,
       content: form.page_type === 'page' ? form.content : {},
     };
+    setIsSaving(true);
     try {
       const res = editingId
         ? await fetch('/api/admin/crud/menus', {
@@ -113,6 +118,8 @@ export function useMenus() {
       toast.show(editingId ? '메뉴가 수정되었습니다.' : '메뉴가 추가되었습니다.', 'success');
     } catch (err: unknown) {
       toast.show(err instanceof Error ? err.message : '저장 실패', 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -137,6 +144,7 @@ export function useMenus() {
     modalOpen, editingId,
     form, setForm,
     activeLang, setActiveLang,
+    isSaving,
     openAdd, openEdit,
     closeModal: () => setModalOpen(false),
     handleSave, handleDelete,
