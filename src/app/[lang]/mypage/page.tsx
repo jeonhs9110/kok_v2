@@ -2,10 +2,13 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import MyPage from '@/components/pages/MyPage';
 
-export const metadata: Metadata = {
-  title: '마이페이지 · KOKKOK GARDEN',
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
+  const { lang } = await params;
+  return {
+    title: lang === 'kr' ? '마이페이지 · KOKKOK GARDEN' : 'My Page · KOKKOK GARDEN',
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function MyPageRoute({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;

@@ -125,7 +125,7 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
           setProfile(p);
           setEditForm(p);
           if (json.profile.email && !userEmail) setUserEmail(json.profile.email);
-          if (json.profile.created_at) setUserCreated(new Date(json.profile.created_at).toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul' }));
+          if (json.profile.created_at) setUserCreated(new Date(json.profile.created_at).toLocaleDateString(lang === 'kr' ? 'ko-KR' : 'en-US', { timeZone: 'Asia/Seoul' }));
         }
       }
       if (wishRes.ok) {
@@ -146,7 +146,7 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
     } finally {
       setIsLoading(false);
     }
-  }, [userEmail]);
+  }, [userEmail, lang]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

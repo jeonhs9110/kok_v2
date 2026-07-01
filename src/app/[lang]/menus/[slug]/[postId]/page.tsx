@@ -17,7 +17,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang, slug, postId } = await params;
   if (!UUID_RE.test(postId)) {
-    return { title: '게시글을 찾을 수 없습니다 · KOKKOK GARDEN', robots: { index: false, follow: true } };
+    return {
+      title: lang === 'kr' ? '게시글을 찾을 수 없습니다 · KOKKOK GARDEN' : 'Post Not Found · KOKKOK GARDEN',
+      robots: { index: false, follow: true },
+    };
   }
   // Wrap the fetch in try/catch — a throw inside generateMetadata is
   // NOT caught by error.tsx and drops the whole page to Next's
@@ -31,7 +34,10 @@ export async function generateMetadata({
     return {};
   }
   if (!post) {
-    return { title: '게시글을 찾을 수 없습니다 · KOKKOK GARDEN', robots: { index: false, follow: true } };
+    return {
+      title: lang === 'kr' ? '게시글을 찾을 수 없습니다 · KOKKOK GARDEN' : 'Post Not Found · KOKKOK GARDEN',
+      robots: { index: false, follow: true },
+    };
   }
   const menuTitle = menu?.title?.[lang] || menu?.title?.kr || menu?.title?.en || slug;
   const title = `${post.title} · ${menuTitle} · KOKKOK GARDEN`;

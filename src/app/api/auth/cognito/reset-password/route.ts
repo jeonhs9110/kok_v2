@@ -46,7 +46,24 @@ export async function POST(request: Request) {
   }
   const { resetPasswordWithCognito } = await import('@/lib/auth/cognito-server');
   const result = await resetPasswordWithCognito(email, code, newPassword);
-  if (result.ok) return NextResponse.json({ ok: true });
+  if (result.ok) {
+    // Invalidate every outstanding token for this user. Cognito's
+    // ConfirmForgotPassword sets a new password but does NOT rotate
+    // refresh tokens — so any attacker who exfiltrated a refresh
+    // token before the reset (browser XSS, session backup, etc.)
+    // could still mint fresh ID tokens for the full 30-day refresh
+    // window even after the customer changed their password. Global
+    // sign-out here forces re-auth everywhere. Fire-and-forget: on
+    // failure the password change still committed; user is prompted
+    // to sign in on the next request anyway.
+    try {
+      const { globalSignOutByEmail } = await import('@/lib/auth/cognito-admin');
+      await globalSignOutByEmail(email);
+    } catch (err) {
+      console.error('[reset-password] globalSignOutByEmail threw:', err);
+    }
+    return NextResponse.json({ ok: true });
+  }
   // Bubble the mapped Cognito failure so the form can render a
   // specific message instead of the generic "check your code" line —
   // a user who mistyped the code gets a different string than a user

@@ -13,7 +13,10 @@ export async function generateMetadata({
   const { lang, id } = await params;
   const review = await getReviewCard(id);
   if (!review || !review.is_active) {
-    return { title: '리뷰를 찾을 수 없습니다 · KOKKOK GARDEN', robots: { index: false, follow: true } };
+    return {
+      title: lang === 'kr' ? '리뷰를 찾을 수 없습니다 · KOKKOK GARDEN' : 'Review Not Found · KOKKOK GARDEN',
+      robots: { index: false, follow: true },
+    };
   }
   const title = `${review.title || 'Review'} · KOKKOK GARDEN`;
   const desc = (review.content_html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160) || review.title || '';
@@ -113,7 +116,7 @@ export default async function ReviewDetailPage({
             dangerouslySetInnerHTML={{ __html: sanitizeHtml(review.content_html) }}
           />
         ) : (
-          <p className="text-neutral-400 text-sm">내용이 없습니다.</p>
+          <p className="text-neutral-400 text-sm">{lang === 'kr' ? '내용이 없습니다.' : 'No content available.'}</p>
         )}
 
         {/* Back link */}

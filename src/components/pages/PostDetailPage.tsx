@@ -16,7 +16,7 @@ export default async function PostDetailPage({ slug, postId, lang }: Props) {
   const [menu, post] = await Promise.all([getMenuBySlug(slug), getPostById(postId)]);
   if (!menu || !post) notFound();
 
-  const menuTitle = menu.title?.[lang] || menu.title?.kr || menu.title?.en || '';
+  const menuTitle = menu.title?.[lang] || menu.title?.en || menu.title?.kr || '';
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-in fade-in duration-500">
@@ -31,7 +31,7 @@ export default async function PostDetailPage({ slug, postId, lang }: Props) {
       <article>
         <div className="border-b-2 border-[#111] pb-6 mb-8">
           <div className="flex items-center gap-2 mb-3">
-            {post.is_admin_post && <span className="px-2 py-0.5 text-[10px] font-bold bg-brand-ink text-white rounded">공지</span>}
+            {post.is_admin_post && <span className="px-2 py-0.5 text-[10px] font-bold bg-brand-ink text-white rounded">{lang === 'kr' ? '공지' : 'NOTICE'}</span>}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-brand-ink mb-4">{post.title}</h1>
           <div className="flex items-center justify-between">

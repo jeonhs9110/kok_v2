@@ -156,7 +156,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     ),
     'promo-banners': (
       <div data-builder-section="promo-banners">
-        <PromoBannersSection banners={promoBanners} />
+        <PromoBannersSection banners={promoBanners} lang={lang} />
       </div>
     ),
     'products': (
@@ -202,7 +202,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
       <SectionErrorBoundary label="InstagramFeed">
         <Suspense fallback={<InstagramFeedSkeleton />}>
           <div data-builder-section="instagram">
-            <InstagramFeedSection />
+            <InstagramFeedSection lang={lang} />
           </div>
         </Suspense>
       </SectionErrorBoundary>

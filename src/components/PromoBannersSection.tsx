@@ -14,9 +14,13 @@ export interface PromoBanner {
 
 interface Props {
   banners: PromoBanner[];
+  lang?: string;
 }
 
-export default function PromoBannersSection({ banners: serverBanners }: Props) {
+export default function PromoBannersSection({ banners: serverBanners, lang = 'kr' }: Props) {
+  const isKr = lang === 'kr';
+  const altLabel = isKr ? '프로모션 배너' : 'Promotion banner';
+  const emptyLabel = isKr ? '배너 이미지 없음' : 'No banner image';
   // Live preview overlay — /admin/promo-banners broadcasts the full
   // in-flight banners array. Each broadcast replaces the rendered set
   // wholesale so image uploads, link edits, and active toggles all
@@ -61,7 +65,7 @@ export default function PromoBannersSection({ banners: serverBanners }: Props) {
                 // change — no quality loss, ~60-80% smaller bytes.
                 <Image
                   src={banner.image_url}
-                  alt="프로모션 배너"
+                  alt={altLabel}
                   width={800}
                   height={800}
                   sizes="(min-width: 1024px) 600px, 50vw"
@@ -70,7 +74,7 @@ export default function PromoBannersSection({ banners: serverBanners }: Props) {
                 />
               ) : (
                 <div className="w-full h-full bg-neutral-100 flex items-center justify-center text-neutral-400 text-sm">
-                  배너 이미지 없음
+                  {emptyLabel}
                 </div>
               )}
               {/* Hover overlay */}

@@ -94,7 +94,16 @@ function LoginFormInner({ lang }: { lang: Lang }) {
         const res = await fetch('/api/auth/cognito/sign-in', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim(), password: password.trim() }),
+          // Trim email only. Passwords MUST NOT be trimmed —
+          // Cognito accepts leading/trailing spaces as valid
+          // password characters, so any user who copy-pasted a
+          // password that ends in a space (very common from
+          // password managers) was being locked out permanently:
+          // sign-up stored the trimmed variant, subsequent sign-ins
+          // also trimmed, and the user tried the "correct" pasted
+          // value with the space every time. Reset flow trims too,
+          // so their new password would also be silently rewritten.
+          body: JSON.stringify({ email: email.trim(), password }),
         });
         if (!res.ok) {
           setError(t.error);
@@ -115,7 +124,10 @@ function LoginFormInner({ lang }: { lang: Lang }) {
       const supabase = getSupabaseBrowser();
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
-        password: password.trim(),
+        // Same rationale as the Cognito branch above — don't trim
+        // the password, or a user with trailing-space password can
+        // never sign in.
+        password,
       });
 
       if (authError || !data.user) {

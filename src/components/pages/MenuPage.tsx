@@ -214,7 +214,7 @@ export default async function MenuPage({ slug, lang, page }: Props) {
   // instead of an empty board/page. Boss requested unifying contact UX here.
   if (CONTACT_SLUGS.has(slugLower)) {
     const menu = await getMenuBySlug(slug);
-    const displayTitle = menu?.title?.[lang] || menu?.title?.kr || menu?.title?.en || 'Contact';
+    const displayTitle = menu?.title?.[lang] || menu?.title?.en || menu?.title?.kr || 'Contact';
     return <ContactInfoView lang={lang} displayTitle={displayTitle} />;
   }
 
@@ -231,7 +231,7 @@ export default async function MenuPage({ slug, lang, page }: Props) {
       getMenuBySlug(slug),
       getActiveReviewCards(),
     ]);
-    const displayTitle = menu?.title?.[lang] || menu?.title?.kr || menu?.title?.en || 'Review & Community';
+    const displayTitle = menu?.title?.[lang] || menu?.title?.en || menu?.title?.kr || 'Review & Community';
     const lbEmpty = lang === 'kr' ? '등록된 리뷰가 없습니다.' : 'No reviews yet.';
 
     if (cards.length === 1) {
@@ -319,11 +319,11 @@ export default async function MenuPage({ slug, lang, page }: Props) {
   const menu = await getMenuBySlug(slug);
   if (!menu) notFound();
 
-  const title = menu.title?.[lang] || menu.title?.kr || menu.title?.en || '';
+  const title = menu.title?.[lang] || menu.title?.en || menu.title?.kr || '';
 
   // Page type: render HTML content
   if (menu.page_type === 'page') {
-    const content = menu.content?.[lang] || menu.content?.kr || menu.content?.en || '';
+    const content = menu.content?.[lang] || menu.content?.en || menu.content?.kr || '';
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-in fade-in duration-500">
         <div className="flex items-center text-[11px] font-semibold text-neutral-400 mb-8 tracking-widest">
@@ -335,7 +335,7 @@ export default async function MenuPage({ slug, lang, page }: Props) {
         {content ? (
           <div className="prose prose-neutral max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
         ) : (
-          <p className="text-neutral-400 text-sm">콘텐츠가 없습니다.</p>
+          <p className="text-neutral-400 text-sm">{lang === 'kr' ? '콘텐츠가 없습니다.' : 'No content yet.'}</p>
         )}
       </div>
     );
@@ -393,7 +393,7 @@ export default async function MenuPage({ slug, lang, page }: Props) {
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-neutral-300 font-mono w-6 hidden sm:inline-block">{totalCount - ((currentPage - 1) * PAGE_SIZE) - idx}</span>
                   <span className="text-[13px] font-semibold text-brand-ink line-clamp-1">{post.title}</span>
-                  {post.is_admin_post && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-brand-ink text-white rounded">공지</span>}
+                  {post.is_admin_post && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-brand-ink text-white rounded">{lang === 'kr' ? '공지' : 'NOTICE'}</span>}
                 </div>
                 <span className="text-xs text-neutral-500 text-center hidden sm:block">{post.author_name}</span>
                 <span className="text-xs text-neutral-400 text-right hidden sm:block">{new Date(post.created_at).toLocaleDateString(lang === 'kr' ? 'ko-KR' : 'en-US', { timeZone: 'Asia/Seoul' })}</span>
