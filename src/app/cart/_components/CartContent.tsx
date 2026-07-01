@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Trash2, Minus, Plus, ShoppingBag, ArrowLeft, X, ChevronRight } from 'lucide-react';
 import { useCart } from '@/lib/cart/CartContext';
@@ -54,6 +55,12 @@ export default function CartContent() {
   const homeHref = `/${lang}`;
   const productsHref = `/${lang}/products`;
   const productHref = (id: string) => `/${lang}/products/${id}`;
+  // Inline "checkout coming soon" notice — replaces the previous
+  // alert() popup, which felt out of place on a modern storefront and
+  // interrupted the flow with a modal dismissal step. The customer's
+  // click intent stays visible (the button + notice sit together)
+  // while the messaging matches the rest of the site's inline UX.
+  const [showCheckoutNotice, setShowCheckoutNotice] = useState(false);
 
   if (items.length === 0) {
     return (
@@ -238,11 +245,22 @@ export default function CartContent() {
             </div>
 
             <button
-              onClick={() => alert(lb.checkoutWip)}
+              onClick={() => setShowCheckoutNotice(true)}
               className="w-full py-4 bg-brand-ink text-white text-[13px] font-bold tracking-widest hover:bg-black transition-colors"
+              aria-describedby={showCheckoutNotice ? 'checkout-wip-notice' : undefined}
             >
               {lb.checkout}
             </button>
+            {showCheckoutNotice && (
+              <div
+                id="checkout-wip-notice"
+                role="status"
+                aria-live="polite"
+                className="rounded border border-neutral-200 bg-neutral-50 px-4 py-3 text-[12px] text-neutral-600 leading-relaxed"
+              >
+                {lb.checkoutWip}
+              </div>
+            )}
             <Link
               href={productsHref}
               className="block w-full text-center py-3.5 border border-neutral-200 text-neutral-600 text-[13px] font-semibold hover:bg-neutral-50 transition-colors"
