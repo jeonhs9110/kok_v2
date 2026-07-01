@@ -34,9 +34,24 @@
    flashes across every button / anchor / role=button and reads as a
    broken hover state on the brand-neutral surface. Neutralize with
    a subtle ink-tinted highlight that fits the palette; on desktop
-   this rule is a no-op. */
+   this rule is a no-op.
+
+   Round 28 additions:
+   - color-scheme: light — Samsung Internet's Dark Mode auto-invert
+     leaves the sm gradient underlays intact, producing white-on-white
+     text on hero slides. Declaring the site as light-only lets the
+     browser apply its own consistent inversion behaviour (which is
+     none) until we ship a real dark theme.
+   - touch-action: manipulation on interactive elements — Naver Whale
+     and KakaoTalk in-app on Android add a ~300ms double-tap-zoom
+     delay on every tap without this hint. Best-effort selector list
+     covers the storefront's tap surfaces without over-scoping. */
 html {
   -webkit-tap-highlight-color: rgba(17, 17, 17, 0.05);
+  color-scheme: light;
+}
+button, [role="button"], a, input[type="submit"], input[type="button"] {
+  touch-action: manipulation;
 }
 
 

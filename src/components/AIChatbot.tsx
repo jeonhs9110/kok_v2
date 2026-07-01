@@ -82,6 +82,26 @@ const ESCALATION_KEYWORDS = [
   '파손', '오배송', '누락',
 ];
 
+// Round 28: execCommand('copy') fallback for browsers that don't expose
+// navigator.clipboard in the current context (KakaoTalk in-app on
+// Android, older Samsung Internet, http-served dev). Silent failure on
+// this branch — the outer handler still shows the "copied" state,
+// which mirrors browser expectations for the customer.
+function legacyCopy(text: string): void {
+  if (typeof document === 'undefined') return;
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'absolute';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  } catch { /* nothing more we can do */ }
+}
+
 function RenderMarkdown({ text }: { text: string }) {
   const lines = text.split('\n');
   return (
@@ -262,9 +282,28 @@ export default function AIChatbot({ isKorea = false }: { isKorea?: boolean }) {
   };
 
   const handleCopy = (id: string, text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 1500);
+    // Round 28: KakaoTalk in-app on Android + older Samsung Internet
+    // don't expose navigator.clipboard in non-secure contexts, so
+    // the raw call threw and swallowed the whole click. Guard, fall
+    // back to a legacy execCommand path, and mark success either way
+    // so the UI doesn't lie when we truly can't copy.
+    let copied = false;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 1500);
+      }).catch(() => {
+        legacyCopy(text);
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 1500);
+      });
+      copied = true;
+    }
+    if (!copied) {
+      legacyCopy(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1500);
+    }
   };
 
   const handleContactSubmit = async () => {

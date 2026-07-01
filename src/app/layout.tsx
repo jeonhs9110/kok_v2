@@ -48,6 +48,14 @@ export const viewport: Viewport = {
   // of metadata 2026-06-30 — Next 16 logs a deprecation warning when
   // theme-color / appleWebApp.statusBarStyle live on `metadata`.
   themeColor: '#1f2937',
+  // Round 28: viewport-fit=cover so env(safe-area-inset-*) resolves
+  // to real values inside iOS KakaoTalk / Instagram in-app WebViews.
+  // Prior default of 'auto' left the insets at 0 in-app, and the
+  // AIChatbot FAB + CookieConsent Accept button rendered behind the
+  // iOS home indicator — un-tappable, so Kakao-arriving customers
+  // silently missed the consent banner (GA4 stayed denied for the
+  // whole session).
+  viewportFit: 'cover',
 };
 
 export const metadata: Metadata = {

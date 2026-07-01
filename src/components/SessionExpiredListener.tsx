@@ -27,7 +27,12 @@ export default function SessionExpiredListener() {
       // this listener doesn't have.
       const next = window.location.pathname + window.location.search;
       const url = `/login?next=${encodeURIComponent(next)}&reason=session_expired`;
-      window.location.href = url;
+      // Round 28: replace() instead of assign(). KakaoTalk in-app iOS
+      // mishandles history-stack entries pushed by a POST-response-
+      // triggered handler and can hang the WebView on a white-screen
+      // spinner. replace() avoids the extra history entry and
+      // consistently unwinds the JS context in the in-app WebView.
+      window.location.replace(url);
     };
     window.addEventListener('kokkok-session-expired', onExpired);
     return () => window.removeEventListener('kokkok-session-expired', onExpired);

@@ -130,7 +130,11 @@ export default async function ContactPage({ params }: { params: Promise<{ lang: 
   const rows: { label: string; value: string; href?: string }[] = [
     { label: lb.hours,   value: hours },
     { label: lb.address, value: address },
-    { label: lb.phone,   value: biz?.phone || '', href: biz?.phone ? `tel:${biz.phone.replace(/\s+/g, '')}` : undefined },
+    // Round 28: strip anything non-digit (and keep the leading +) from
+    // the tel: URI so Naver Whale on iOS still dials — its parser
+    // refuses tel: URIs containing parentheses. Display value keeps the
+    // operator's formatting intact.
+    { label: lb.phone,   value: biz?.phone || '', href: biz?.phone ? `tel:${biz.phone.replace(/[^\d+]/g, '')}` : undefined },
     { label: lb.email,   value: biz?.email || '', href: biz?.email ? `mailto:${biz.email}` : undefined },
   ].filter(r => r.value);
 

@@ -81,12 +81,16 @@ export async function POST(request: NextRequest) {
     httpOnly: true,
     sameSite: 'lax',
     secure: isProd,
-    // Scope to just the refresh + sign-out routes so this long-lived
-    // (30-day) cookie doesn't ride on every /api/track / storefront
-    // GET. httpOnly already blocks JS reads; path narrows the surface
-    // in case a future logging/proxy layer ever mirrors request
-    // headers somewhere they shouldn't be.
-    path: '/api/auth/cognito',
+    // Round 28: reverted to path=/ from R22's path=/api/auth/cognito.
+    // KakaoTalk + Instagram in-app WebViews filter path-scoped cookies
+    // on the very first navigation after a POST — customers signing
+    // in from a Kakao chat lost the refresh cookie immediately, so
+    // silent refresh couldn't recover the session after the ID token
+    // expired (1h later they got bounced to /login mid-cart). httpOnly
+    // + Secure + SameSite=Lax already lock down the surface; path
+    // scope was a marginal defense-in-depth not worth the in-app
+    // breakage.
+    path: '/',
     maxAge: 60 * 60 * 24 * 30, // 30 days (matches cognito.tf's refresh_token_validity)
   });
   // Non-httpOnly mirror cookies for the storefront header's client-side
