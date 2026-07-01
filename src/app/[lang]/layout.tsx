@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import AIChatbot from '@/components/AIChatbot';
 import CookieConsent from '@/components/CookieConsent';
 import PageTracker from '@/components/PageTracker';
+import SessionExpiredListener from '@/components/SessionExpiredListener';
 import { CartProvider } from '@/lib/cart/CartContext';
 import { WishlistProvider } from '@/lib/wishlist/WishlistContext';
 import { getCachedNavMenus, getCachedCategoriesTree, getCachedLogoUrl } from '@/lib/cache/header';
@@ -184,6 +185,7 @@ export default async function LangLayout({
           <AIChatbot isKorea={isKorea} />
           <CookieConsent />
           <PageTracker />
+          <SessionExpiredListener />
         </div>
         </WishlistProvider>
       </CartProvider>

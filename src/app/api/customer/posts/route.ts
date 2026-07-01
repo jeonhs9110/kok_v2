@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { requireCustomer } from '@/lib/auth/requireCustomer';
 import { deriveStoredAuthorName } from '@/lib/customer/maskAuthor';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -15,6 +16,8 @@ const MAX_CONTENT = 50_000;
  * Create a new community-board post as the signed-in customer.
  */
 export async function POST(req: Request) {
+  const csrf = assertSameOrigin(req);
+  if (csrf) return csrf;
   const auth = await requireCustomer();
   if (auth instanceof NextResponse) return auth;
 

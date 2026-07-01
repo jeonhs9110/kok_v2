@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * POST /api/auth/cognito/sign-in
@@ -28,6 +29,8 @@ const signInLimiter = createRateLimiter({
 });
 
 export async function POST(request: NextRequest) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   if (!signInLimiter.check(getRequestIp(request))) {
     return NextResponse.json({ error: 'too_many_requests' }, { status: 429 });
   }
@@ -78,7 +81,12 @@ export async function POST(request: NextRequest) {
     httpOnly: true,
     sameSite: 'lax',
     secure: isProd,
-    path: '/',
+    // Scope to just the refresh + sign-out routes so this long-lived
+    // (30-day) cookie doesn't ride on every /api/track / storefront
+    // GET. httpOnly already blocks JS reads; path narrows the surface
+    // in case a future logging/proxy layer ever mirrors request
+    // headers somewhere they shouldn't be.
+    path: '/api/auth/cognito',
     maxAge: 60 * 60 * 24 * 30, // 30 days (matches cognito.tf's refresh_token_validity)
   });
   // Non-httpOnly mirror cookies for the storefront header's client-side

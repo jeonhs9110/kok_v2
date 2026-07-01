@@ -1,6 +1,5 @@
 import type { MetadataRoute } from 'next';
 import { unstable_cache } from 'next/cache';
-import { createClient } from '@supabase/supabase-js';
 
 const SITE_URL = 'https://www.kokkokgarden.com';
 
@@ -49,39 +48,14 @@ const fetchSitemapDataCached = unstable_cache(
   { revalidate: 3600, tags: ['products', 'menus', 'pages', 'posts', 'reviews', 'homepage'] },
 );
 
+// Post-cutover this is a thin wrapper around the RDS-backed cache.
+// Round 22 removed the Supabase fallback branch (35 LOC) since
+// USE_RDS has been the live path since 2026-06-27 and the Supabase
+// project is on its way out. If the RDS read genuinely fails, the
+// cache returns null and the caller ships the 14 static routes only —
+// same fallback semantics as before, minus the dead code path.
 async function fetchSitemapData(): Promise<SitemapData | null> {
-  if (process.env.USE_RDS === 'true') {
-    return fetchSitemapDataCached();
-  }
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-  const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-  if (!supabase) return null;
-
-  const [productsRes, menusRes, pagesRes, postsRes, reviewsRes] = await Promise.all([
-    supabase.from('products').select('id, created_at').eq('is_active', true),
-    supabase.from('menus').select('id, slug, sort_order').eq('is_published', true),
-    supabase.from('pages').select('slug, created_at').eq('is_published', true),
-    supabase.from('posts').select('id, menu_id, updated_at').eq('is_published', true),
-    supabase.from('review_cards').select('id, updated_at').eq('is_active', true),
-  ]);
-
-  for (const [name, res] of [
-    ['products', productsRes], ['menus', menusRes], ['pages', pagesRes],
-    ['posts', postsRes], ['reviews', reviewsRes],
-  ] as const) {
-    if (res.error) {
-      console.error(`[sitemap] ${name} query failed; URLs omitted:`, res.error);
-    }
-  }
-
-  return {
-    products: (productsRes.data ?? []) as SitemapData['products'],
-    menus: (menusRes.data ?? []) as SitemapData['menus'],
-    pages: (pagesRes.data ?? []) as SitemapData['pages'],
-    posts: (postsRes.data ?? []) as SitemapData['posts'],
-    reviews: (reviewsRes.data ?? []) as SitemapData['reviews'],
-  };
+  return fetchSitemapDataCached();
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

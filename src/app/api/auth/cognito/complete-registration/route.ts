@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import { createRateLimiter, getRequestIp } from '@/lib/http/rateLimit';
+import { assertSameOrigin } from '@/lib/http/csrf';
 
 /**
  * POST /api/auth/cognito/complete-registration
@@ -46,6 +47,8 @@ interface RegistrationPayload {
 }
 
 export async function POST(request: Request) {
+  const csrf = assertSameOrigin(request);
+  if (csrf) return csrf;
   if (!completeLimiter.check(getRequestIp(request))) {
     return NextResponse.json(
       { error: 'Too many requests. Please wait a moment.' },

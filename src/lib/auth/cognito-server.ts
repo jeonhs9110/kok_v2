@@ -60,6 +60,55 @@ export interface SignInResult {
 }
 
 /**
+ * REFRESH_TOKEN_AUTH flow — mints new ID + access tokens from a valid
+ * refresh token WITHOUT re-prompting the customer for credentials.
+ * Called by /api/auth/cognito/refresh when the ID token cookie has
+ * expired (default 1h) but the refresh cookie (30-day) is still live.
+ *
+ * Returns null on any Cognito error — caller treats that as "refresh
+ * token no longer valid, force sign-out." Cognito's refresh response
+ * does NOT include a new RefreshToken unless the pool has token
+ * rotation enabled (opt-in via Terraform); the returned struct's
+ * `refreshToken` echoes the input in that case so the caller can
+ * unconditionally re-set the cookie.
+ */
+export async function refreshWithCognito(refreshToken: string): Promise<SignInResult | null> {
+  try {
+    const { clientId } = getEnv();
+    const cmd = new InitiateAuthCommand({
+      AuthFlow: 'REFRESH_TOKEN_AUTH',
+      ClientId: clientId,
+      AuthParameters: { REFRESH_TOKEN: refreshToken },
+    });
+    const res = await getClient().send(cmd);
+    const r = res.AuthenticationResult;
+    if (!r?.IdToken || !r.AccessToken) return null;
+    return {
+      idToken: r.IdToken,
+      accessToken: r.AccessToken,
+      // Rotation returns a fresh RefreshToken; without rotation, the
+      // input token stays valid and we echo it so the caller can
+      // uniformly reset the cookie.
+      refreshToken: r.RefreshToken ?? refreshToken,
+      expiresInSeconds: r.ExpiresIn ?? 3600,
+    };
+  } catch (err) {
+    // Same structured-warn shape as signIn — handoff engineer can key
+    // on event=auth.refresh.failed to distinguish "customer's 30-day
+    // refresh window elapsed" (NotAuthorizedException) from
+    // credential-stuffing during the refresh flow.
+    const name = err && typeof err === 'object' && 'name' in err
+      ? String((err as { name: unknown }).name)
+      : 'unknown';
+    console.warn(JSON.stringify({
+      event: 'auth.refresh.failed',
+      reason: name,
+    }));
+    return null;
+  }
+}
+
+/**
  * USER_PASSWORD_AUTH flow — the simplest of Cognito's auth flows and
  * the one the web app client is configured for in cognito.tf. SRP
  * would be incrementally more secure (password never leaves the
