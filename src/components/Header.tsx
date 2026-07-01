@@ -445,7 +445,7 @@ export default function Header({
               <button onClick={() => setSearchOpen(v => !v)} className="p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Search">
                 <Search className="w-[21px] h-[21px]" />
               </button>
-              <Link href={isLoggedIn ? `/${lang}/mypage` : '/login'} className="hidden sm:flex p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label={lang === 'en' ? 'Account' : '내 계정'}>
+              <Link href={isLoggedIn ? `/${lang}/mypage` : `/login?next=${encodeURIComponent(`/${lang}/mypage`)}`} className="hidden sm:flex p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label={lang === 'en' ? 'Account' : '내 계정'}>
                 <User className="w-[21px] h-[21px]" />
               </Link>
               {/* Wishlist deep-link — routes to MyPage's wishlist tab
@@ -455,7 +455,7 @@ export default function Header({
                   in one click. Only rendered on sm+ (mobile keeps the
                   icon row tight; wishlist is accessible from MyPage on
                   the mobile drawer). */}
-              <Link href={isLoggedIn ? `/${lang}/mypage?tab=wishlist` : '/login'} className="hidden sm:flex p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label={lang === 'en' ? 'Wishlist' : '위시리스트'}>
+              <Link href={isLoggedIn ? `/${lang}/mypage?tab=wishlist` : `/login?next=${encodeURIComponent(`/${lang}/mypage?tab=wishlist`)}`} className="hidden sm:flex p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label={lang === 'en' ? 'Wishlist' : '위시리스트'}>
                 <Heart className="w-[21px] h-[21px]" />
               </Link>
               {canPurchase && (

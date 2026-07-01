@@ -134,7 +134,14 @@ export default function PostWritePage({ menuId, menuSlug, menuTitle, postId }: P
         </div>
         <h2 className="text-xl font-bold text-brand-ink mb-2">{lang === 'kr' ? '로그인이 필요합니다' : 'Sign in required'}</h2>
         <p className="text-sm text-neutral-400 mb-6">{lang === 'kr' ? '게시글을 작성하려면 로그인해 주세요.' : 'Please sign in to write a post.'}</p>
-        <Link href="/login" className="inline-flex items-center gap-2 px-6 py-3 bg-brand-ink text-white text-sm font-bold tracking-wider hover:bg-black transition-colors">
+        {/* Round 25: preserve the write URL as ?next= so a customer
+            who signs in from this gate lands back on the write form,
+            not the storefront homepage. Same-origin only via
+            safeNext() on LoginForm's side. */}
+        <Link
+          href={`/login?next=${encodeURIComponent(`/${lang}/menus/${menuSlug}/write${postId ? `/${postId}` : ''}`)}`}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-brand-ink text-white text-sm font-bold tracking-wider hover:bg-black transition-colors"
+        >
           <LogIn className="w-4 h-4" /> {lang === 'kr' ? '로그인하기' : 'Sign In'}
         </Link>
       </div>

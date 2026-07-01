@@ -156,7 +156,7 @@ function LoginFormInner({ lang }: { lang: Lang }) {
   };
 
   return (
-    <main className="flex-1 w-full flex items-center justify-center px-4 py-16 animate-in fade-in duration-500">
+    <main id="main-content" className="flex-1 w-full flex items-center justify-center px-4 py-16 animate-in fade-in duration-500">
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <div className="w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mx-auto mb-6 bg-gray-50">

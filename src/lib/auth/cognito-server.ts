@@ -162,10 +162,40 @@ function toSignInResult(r: AuthenticationResultType | undefined): SignInResult |
   };
 }
 
+export type SignUpFailureCode =
+  | 'username_exists'
+  | 'weak_password'
+  | 'invalid_email'
+  | 'limit_exceeded'
+  | 'unknown';
+
+export type SignUpResult =
+  | { ok: true; codeDeliveryDetails?: { destination: string; medium: string } }
+  | { ok: false; code: SignUpFailureCode };
+
+function mapSignUpError(err: unknown): SignUpFailureCode {
+  const name = err && typeof err === 'object' && 'name' in err
+    ? String((err as { name: unknown }).name)
+    : '';
+  switch (name) {
+    case 'UsernameExistsException':
+      return 'username_exists';
+    case 'InvalidPasswordException':
+      return 'weak_password';
+    case 'InvalidParameterException':
+      return 'invalid_email';
+    case 'LimitExceededException':
+    case 'TooManyRequestsException':
+      return 'limit_exceeded';
+    default:
+      return 'unknown';
+  }
+}
+
 export async function signUpWithCognito(
   email: string,
   password: string,
-): Promise<{ ok: boolean; codeDeliveryDetails?: { destination: string; medium: string } }> {
+): Promise<SignUpResult> {
   try {
     const { clientId } = getEnv();
     const cmd = new SignUpCommand({
@@ -185,15 +215,61 @@ export async function signUpWithCognito(
         : undefined,
     };
   } catch (err) {
-    console.error('[auth/cognito-server] signUp failed:', err);
-    return { ok: false };
+    // Structured warn keyed on `.name` so a handoff engineer can
+    // distinguish enumeration attempts (repeated UsernameExists from
+    // one IP) from real signup failures. The email itself never
+    // enters the log line.
+    const name = err && typeof err === 'object' && 'name' in err
+      ? String((err as { name: unknown }).name)
+      : 'unknown';
+    console.warn(JSON.stringify({
+      event: 'auth.signup.failed',
+      reason: name,
+    }));
+    return { ok: false, code: mapSignUpError(err) };
+  }
+}
+
+export type ConfirmSignUpFailureCode =
+  | 'invalid_code'
+  | 'expired_code'
+  | 'already_confirmed'
+  | 'limit_exceeded'
+  | 'user_not_found'
+  | 'unknown';
+
+export type ConfirmSignUpResult =
+  | { ok: true }
+  | { ok: false; code: ConfirmSignUpFailureCode };
+
+function mapConfirmSignUpError(err: unknown): ConfirmSignUpFailureCode {
+  const name = err && typeof err === 'object' && 'name' in err
+    ? String((err as { name: unknown }).name)
+    : '';
+  switch (name) {
+    case 'CodeMismatchException':
+      return 'invalid_code';
+    case 'ExpiredCodeException':
+      return 'expired_code';
+    case 'NotAuthorizedException':
+      // Cognito returns NotAuthorized when the user is already
+      // confirmed and the caller tries to re-confirm.
+      return 'already_confirmed';
+    case 'LimitExceededException':
+    case 'TooManyRequestsException':
+    case 'TooManyFailedAttemptsException':
+      return 'limit_exceeded';
+    case 'UserNotFoundException':
+      return 'user_not_found';
+    default:
+      return 'unknown';
   }
 }
 
 export async function confirmSignUpWithCognito(
   email: string,
   code: string,
-): Promise<boolean> {
+): Promise<ConfirmSignUpResult> {
   try {
     const { clientId } = getEnv();
     const cmd = new ConfirmSignUpCommand({
@@ -202,10 +278,16 @@ export async function confirmSignUpWithCognito(
       ConfirmationCode: code,
     });
     await getClient().send(cmd);
-    return true;
+    return { ok: true };
   } catch (err) {
-    console.error('[auth/cognito-server] confirmSignUp failed:', err);
-    return false;
+    const name = err && typeof err === 'object' && 'name' in err
+      ? String((err as { name: unknown }).name)
+      : 'unknown';
+    console.warn(JSON.stringify({
+      event: 'auth.confirm.failed',
+      reason: name,
+    }));
+    return { ok: false, code: mapConfirmSignUpError(err) };
   }
 }
 

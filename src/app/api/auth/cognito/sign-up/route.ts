@@ -55,7 +55,14 @@ export async function POST(request: Request) {
   const { signUpWithCognito } = await import('@/lib/auth/cognito-server');
   const result = await signUpWithCognito(email, password);
   if (!result.ok) {
-    return NextResponse.json({ error: 'sign_up_failed' }, { status: 400 });
+    // Bubble the mapped Cognito failure code so the UI can render a
+    // specific message. Prior code collapsed every failure to
+    // `sign_up_failed`, so the RegisterForm's UsernameExists /
+    // InvalidPassword regex checks were dead — every returning
+    // customer trying to re-register saw "Registration failed" with
+    // no hint to log in instead.
+    const status = result.code === 'limit_exceeded' ? 429 : 400;
+    return NextResponse.json({ error: result.code }, { status });
   }
   return NextResponse.json({ ok: true, codeDeliveryDetails: result.codeDeliveryDetails });
 }
