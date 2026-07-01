@@ -35,6 +35,13 @@ interface ScrapeResult {
    * `.detail-body` typography as product detail.
    */
   body_html: string | null;
+  /**
+   * Structured failure reason when the fetch didn't return a body.
+   * Populated even on 200-shape responses so the admin UI can render
+   * a targeted message ("Naver가 요청을 차단했습니다" vs
+   * "URL이 만료되었습니다") instead of a generic "no data".
+   */
+  error?: NaverFetchFailure;
 }
 
 // Pull <meta property="og:NAME" content="VALUE"> OR
@@ -150,10 +157,23 @@ export async function POST(request: Request): Promise<NextResponse<ScrapeResult 
   }
 
   try {
-    const html = await fetchAndFollowNaverRedirects(url, 0);
-    if (html === null) {
-      return NextResponse.json({ title: null, image_url: null, description: null, body_html: null });
+    const result = await fetchAndFollowNaverRedirects(url, 0);
+    if (!result.ok) {
+      // Log the structured reason so the operator can triage from
+      // CloudWatch (`event=naver_scrape.failed reason=blocked`), and
+      // return the reason to the admin UI so it can render a targeted
+      // message ("Naver가 요청을 차단했습니다" vs "URL이 만료되었습니다").
+      console.warn(JSON.stringify({
+        event: 'naver_scrape.failed',
+        reason: result.reason,
+        url: url.slice(0, 200),
+      }));
+      return NextResponse.json({
+        title: null, image_url: null, description: null, body_html: null,
+        error: result.reason,
+      });
     }
+    const { html } = result;
 
     const title = readOg(html, 'title');
     const image_url = readOg(html, 'image');
@@ -243,32 +263,51 @@ function extractNaverPostBody(html: string): string | null {
 // stub).
 const NAVER_ALLOWED = /^https?:\/\/(?:www\.|m\.)?(?:blog\.naver\.com|post\.naver\.com)\b/i;
 
-async function fetchAndFollowNaverRedirects(url: string, hops: number): Promise<string | null> {
-  if (hops > 2) return null;
+// Structured reason so the admin UI can distinguish "Naver blocked us"
+// from "URL didn't exist" from "hit the redirect depth cap." Prior code
+// returned bare null for every failure and the admin had no way to tell
+// why the "자동 채우기" click did nothing.
+export type NaverFetchFailure = 'invalid_host' | 'redirect_loop' | 'blocked' | 'not_found' | 'timeout' | 'network';
+export type NaverFetchResult = { ok: true; html: string } | { ok: false; reason: NaverFetchFailure };
+
+async function fetchAndFollowNaverRedirects(url: string, hops: number): Promise<NaverFetchResult> {
+  if (hops > 2) return { ok: false, reason: 'redirect_loop' };
   // Re-validate at every hop. Prevents an attacker-controlled
   // top.location.replace stub from pivoting fetch() to 169.254.169.254
   // (AWS metadata) or any other internal-VPC host.
-  if (!NAVER_ALLOWED.test(url)) return null;
+  if (!NAVER_ALLOWED.test(url)) return { ok: false, reason: 'invalid_host' };
 
   // fetch follows 30x redirects by default. With naver.me removed from
   // the allow-list above the only inputs are blog/post.naver.com URLs,
   // which only ever redirect within naver.com themselves. The JS-stub
   // path (lines below) also re-checks the next URL against
   // NAVER_ALLOWED before re-fetching.
-  const res = await fetch(url, {
-    headers: {
-      // Mobile UA forces Naver to serve the m.blog.naver.com flavor that
-      // carries proper og:image meta tags. Desktop UA gets the same JS
-      // redirect dance plus an iframe-wrapped post body where the og:
-      // tags live in the wrapper page only.
-      'User-Agent':
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-      'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.5',
-    },
-    signal: AbortSignal.timeout(6000),
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      headers: {
+        // Mobile UA forces Naver to serve the m.blog.naver.com flavor that
+        // carries proper og:image meta tags. Desktop UA gets the same JS
+        // redirect dance plus an iframe-wrapped post body where the og:
+        // tags live in the wrapper page only.
+        'User-Agent':
+          'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+        'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.5',
+      },
+      signal: AbortSignal.timeout(6000),
+    });
+  } catch (err) {
+    // AbortSignal.timeout throws a TimeoutError (name === 'TimeoutError'
+    // in Node 20+). Other errors are network-level (DNS, TLS, RST).
+    const name = err && typeof err === 'object' && 'name' in err
+      ? String((err as { name: unknown }).name)
+      : '';
+    return { ok: false, reason: name === 'TimeoutError' ? 'timeout' : 'network' };
+  }
 
-  if (!res.ok) return null;
+  if (res.status === 403 || res.status === 429) return { ok: false, reason: 'blocked' };
+  if (res.status === 404 || res.status === 410) return { ok: false, reason: 'not_found' };
+  if (!res.ok) return { ok: false, reason: 'network' };
   const html = await res.text();
 
   // Detect the JS-redirect stub: short body + a top.location.replace call
@@ -287,5 +326,5 @@ async function fetchAndFollowNaverRedirects(url: string, hops: number): Promise<
     }
   }
 
-  return html;
+  return { ok: true, html };
 }

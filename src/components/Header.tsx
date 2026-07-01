@@ -333,6 +333,18 @@ export default function Header({
                 <img
                   src={logoUrl}
                   alt="KOKKOK GARDEN"
+                  // Explicit intrinsic dims reserve layout space so the
+                  // header height doesn't jump when the logo bytes
+                  // arrive (CLS +0.02-0.05 without them). CSS still
+                  // controls the actually-rendered size via
+                  // .kokkok-header-logo — width/height here are just
+                  // the ratio the browser uses to pre-allocate the
+                  // slot. fetchPriority=high mirrors LCP treatment
+                  // since the logo is above-the-fold.
+                  width={200}
+                  height={48}
+                  fetchPriority="high"
+                  decoding="async"
                   className="kokkok-header-logo"
                 />
               ) : (

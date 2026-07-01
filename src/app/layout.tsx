@@ -108,14 +108,24 @@ export default async function RootLayout({
         />
 
         {/* Adobe Fonts — Tablet Gothic (영문 브랜드 서체). preconnect first so
-            the TLS handshake overlaps the HTML stream, and use the
-            ?display=swap flag on the Typekit URL — without it, Typekit
-            defaults to display: block, which paints invisible text until
-            the font loads (FOIT). Combined this cuts perceived LCP by
-            ~150–300ms on cold visits. */}
+            the TLS handshake overlaps the HTML stream. Round 23: switch
+            the actual stylesheet to the print-then-swap non-blocking
+            pattern — Typekit CSS was blocking first paint even though
+            the font is Latin-only and only used on brand headlines that
+            paint after LCP. Trade-off: brief flash of fallback font for
+            the English brand copy, which is acceptable given the
+            LCP win (-150–350ms on cold visits). */}
         <link rel="preconnect" href="https://use.typekit.net" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://p.typekit.net" crossOrigin="anonymous" />
-        <link rel="stylesheet" href="https://use.typekit.net/czr4kvy.css?display=swap" />
+        <link
+          rel="stylesheet"
+          href="https://use.typekit.net/czr4kvy.css?display=swap"
+          media="print"
+          onLoad={"this.media='all'" as unknown as undefined}
+        />
+        <noscript>
+          <link rel="stylesheet" href="https://use.typekit.net/czr4kvy.css?display=swap" />
+        </noscript>
 
         {/* Optional admin-selectable fonts. Listed in src/lib/typography/options.ts
             and exposed to the admin via FONT_OPTIONS. Loaded with display=swap

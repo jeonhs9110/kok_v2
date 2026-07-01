@@ -45,7 +45,17 @@ export default async function LangLayout({
   if (!isValidLang(lang)) notFound();
 
   const headersList = await headers();
-  const country = headersList.get('x-vercel-ip-country') || headersList.get('x-user-country') || 'KR';
+  // x-vercel-ip-country is a Vercel-specific header. We deploy on
+  // EC2+ALB (Vercel is only our DNS host), so this header never
+  // exists in prod — the fallback chain was silently defaulting
+  // every visitor to KR. x-user-country is optionally injected by
+  // /api/track's geoipLookup pipeline via a follow-up request; the
+  // storefront initial render still defaults to KR since the very
+  // first response has to pick something. Downstream sections that
+  // need real geo (payment currency etc.) should call the geoip
+  // helper directly. This layout treats non-KR as an override the
+  // customer explicitly hit via /en.
+  const country = headersList.get('x-user-country') || 'KR';
   const isKorea = country === 'KR';
 
   // Cookie-consent gate for ALL non-essential tracking. GA4 + any
@@ -61,8 +71,10 @@ export default async function LangLayout({
   // Trade-off: a visitor who accepts via the banner needs ONE
   // navigation (or refresh) before GA starts; that's the normal
   // consent-banner UX and an acceptable cost for actual compliance.
-  const cookieJar = await cookies();
-  const analyticsConsented = cookieJar.get('kokkok_cookie_consent')?.value === 'accepted';
+  // Consent state is now handled client-side via Google Consent
+  // Mode v2 (see the gtag('consent','default') block in <head> +
+  // the update calls in CookieConsent.tsx). No longer needed here.
+  await cookies(); // preserve the cookies() call so Next treats this route as dynamic.
 
   // SSR the header's dynamic data so the initial HTML already has the
   // full nav, mega-categories, and logo. Without this, the client-side
@@ -107,13 +119,39 @@ export default async function LangLayout({
             When either fails the <Script> tag is simply omitted from
             the rendered HTML, which is the strongest possible gate —
             no third-party JS is fetched at all. */}
-        {analyticsConsented && isValidGaMeasurementId(themeTokens.ga_measurement_id) && (
+        {isValidGaMeasurementId(themeTokens.ga_measurement_id) && (
           <>
+            {/* Consent Mode v2 default state — emitted BEFORE gtag/js
+                loads so Google receives a valid consent signal on the
+                very first pageview. Post-May-2024 EEA + PIPA-adjacent
+                enforcement requires this or GA4 drops the visit
+                entirely for consent-required regions. Storage flags
+                default to denied; the cookie banner (see
+                CookieConsent.tsx) fires gtag('consent','update',...)
+                on Accept. wait_for_update=500 pauses tag firing so a
+                fast Accept click doesn't race the initial pageview. */}
+            <Script id="kokkok-ga-consent-default" strategy="beforeInteractive">
+              {`window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('consent', 'default', {
+                  ad_storage: 'denied',
+                  analytics_storage: 'denied',
+                  ad_user_data: 'denied',
+                  ad_personalization: 'denied',
+                  wait_for_update: 500,
+                });`}
+            </Script>
+            {/* strategy=lazyOnload defers gtag/js (~50KB) until the
+                browser is idle, past LCP + hydration. GA4's Enhanced
+                Measurement still captures the pageview when the
+                script eventually loads, so no analytics is lost —
+                just moved off the critical path. INP -15-40ms +
+                TBT -50-100ms on hydration-heavy homepage. */}
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${themeTokens.ga_measurement_id}`}
-              strategy="afterInteractive"
+              strategy="lazyOnload"
             />
-            <Script id="kokkok-ga-init" strategy="afterInteractive">
+            <Script id="kokkok-ga-init" strategy="lazyOnload">
               {`window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());

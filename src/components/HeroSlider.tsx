@@ -246,7 +246,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                     alt={slide.title.replace('\n', ' ') || ''}
                     fill
                     sizes={hasSeparateMobile ? '(max-width: 639px) 100vw, 1px' : '100vw'}
-                    quality={95}
+                    quality={82}
                     priority={isFirst}
                     className={`object-cover hero-image-focal ${hasSeparateMobile ? 'sm:hidden' : ''}`}
                     style={focalStyle}
@@ -257,7 +257,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                       alt={slide.title.replace('\n', ' ') || ''}
                       fill
                       sizes="(min-width: 640px) 100vw, 1px"
-                      quality={95}
+                      quality={82}
                       className="hidden sm:block object-cover hero-image-focal"
                       style={focalStyle}
                     />
@@ -433,7 +433,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                         alt={slide.title.replace('\n', ' ')}
                         fill
                         sizes="100vw"
-                        quality={95}
+                        quality={82}
                         priority={isFirst}
                         className="object-cover hero-image-focal"
                         style={focalStyle}
@@ -513,7 +513,7 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                             alt={slide.title.replace('\n', ' ')}
                             fill
                             sizes="(max-width: 1024px) 50vw, 40vw"
-                            quality={95}
+                            quality={82}
                             priority={isFirst}
                             className="object-cover"
                           />

@@ -33,6 +33,28 @@ function cookieAttrs(): string {
   return base;
 }
 
+// Google Consent Mode v2 update. Called from Accept/Decline handlers
+// after the persisted cookie flips. The default state (set in the
+// [lang]/layout.tsx `<Script>`) starts every visitor as 'denied' so
+// Google receives a valid consent signal on the first pageview;
+// this call flips the four v2 flags to match the customer's choice.
+// Without this update, GA4 drops the entire session for consent-
+// required regions (EEA + Korea PIPA-adjacent enforcement).
+type GtagFn = (command: 'consent', action: 'update', params: Record<string, string>) => void;
+function updateGtagConsent(state: 'granted' | 'denied'): void {
+  if (typeof window === 'undefined') return;
+  const w = window as unknown as { gtag?: GtagFn };
+  if (typeof w.gtag !== 'function') return;
+  try {
+    w.gtag('consent', 'update', {
+      ad_storage: state,
+      analytics_storage: state,
+      ad_user_data: state,
+      ad_personalization: state,
+    });
+  } catch { /* never let analytics break the banner */ }
+}
+
 // useSyncExternalStore inputs need stable identity. Reading document.cookie
 // has no subscription mechanism (cookies don't fire events) — we render the
 // snapshot once on mount and rely on the local `dismissed` state for
@@ -78,11 +100,13 @@ export default function CookieConsent() {
 
   const handleAccept = () => {
     document.cookie = `kokkok_cookie_consent=accepted; ${cookieAttrs()}`;
+    updateGtagConsent('granted');
     setDismissed(true);
   };
 
   const handleDecline = () => {
     document.cookie = `kokkok_cookie_consent=declined; ${cookieAttrs()}`;
+    updateGtagConsent('denied');
     setDismissed(true);
   };
 

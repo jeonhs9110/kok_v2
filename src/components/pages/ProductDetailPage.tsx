@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ChevronRight } from 'lucide-react';
 import ProductActionButtons from '@/components/ProductActionButtons';
+import KakaoShareButton from '@/components/KakaoShareButton';
 import ProductReviewSection from '@/components/ProductReviewSection';
 import RecentViewTracker from '@/components/RecentViewTracker';
 import { getProducts } from '@/lib/api/products';
@@ -158,7 +159,25 @@ export default async function ProductDetailPage({ lang, canPurchase, id }: Props
           )}
 
           {canPurchase ? (
-            <ProductActionButtons productId={id} productName={productData.name} price={productData.price} originalPrice={productData.originalPrice} imageUrl={productData.imageUrl} naverStoreUrl={productData.naver_store_url} showCartButton={productData.show_cart_button} showBuyButton={productData.show_buy_button} />
+            <>
+              <ProductActionButtons productId={id} productName={productData.name} price={productData.price} originalPrice={productData.originalPrice} imageUrl={productData.imageUrl} naverStoreUrl={productData.naver_store_url} showCartButton={productData.show_cart_button} showBuyButton={productData.show_buy_button} />
+              {/* KakaoTalk share — Korea's dominant messaging app. Prior
+                  to Round 23 there was NO share button anywhere on the
+                  storefront, so a customer who wanted to send a product
+                  to a KakaoTalk friend had to long-press the URL and
+                  copy-paste — the single largest KR social-share loss
+                  surface on the site. URL-based sharer keeps the JS
+                  bundle unaffected. */}
+              <div className="mt-4 flex justify-start">
+                <KakaoShareButton
+                  url={`https://www.kokkokgarden.com/${lang}/products/${id}`}
+                  title={translated.name}
+                  description={translated.summary || translated.description || undefined}
+                  imageUrl={productData.imageUrl || undefined}
+                  lang={lang}
+                />
+              </div>
+            </>
           ) : lb.unavailable ? (
             <div className="pt-8 mt-8 border-t border-neutral-100 space-y-4">
               <p className="text-sm text-neutral-500">{lb.unavailable}</p>
