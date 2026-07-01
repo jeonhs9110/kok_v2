@@ -77,6 +77,7 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
   const [editForm, setEditForm] = useState<CustomerProfile>(EMPTY_PROFILE);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
+  const [showPwNotice, setShowPwNotice] = useState(false);
   const [wishlist, setWishlist] = useState<WishItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -255,13 +256,33 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
                     <button onClick={() => { setEditForm(profile); setEditMode(true); }} className="px-6 py-3 border border-neutral-200 text-sm font-semibold text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors flex items-center gap-2">
                       <Pencil className="w-4 h-4" />{t.edit}
                     </button>
-                    <button onClick={() => alert(isKr ? '비밀번호 변경은 추후 지원됩니다.' : 'Password change coming soon.')} className="px-6 py-3 border border-neutral-200 text-sm font-semibold text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors">
+                    {/* Password-change is not yet wired to Cognito's
+                        change-password flow. Replaced the previous
+                        alert() with an inline notice (same shape as
+                        the cart's checkoutWip message from PR #355)
+                        so the customer's click doesn't get interrupted
+                        by a modal dismissal step. */}
+                    <button
+                      onClick={() => setShowPwNotice(true)}
+                      className="px-6 py-3 border border-neutral-200 text-sm font-semibold text-neutral-700 rounded-lg hover:bg-neutral-50 transition-colors"
+                      aria-describedby={showPwNotice ? 'pw-wip-notice' : undefined}
+                    >
                       {t.changePw}
                     </button>
                     <button onClick={handleLogout} className="px-6 py-3 bg-brand-ink text-white text-sm font-semibold rounded-lg hover:bg-black transition-colors flex items-center gap-2">
                       <LogOut className="w-4 h-4" />{t.logout}
                     </button>
                   </div>
+                  {showPwNotice && (
+                    <div
+                      id="pw-wip-notice"
+                      role="status"
+                      aria-live="polite"
+                      className="rounded border border-neutral-200 bg-neutral-50 px-4 py-3 text-[12px] text-neutral-600 leading-relaxed"
+                    >
+                      {isKr ? '비밀번호 변경은 추후 지원됩니다.' : 'Password change coming soon.'}
+                    </div>
+                  )}
                   <div className="border-t border-neutral-100 pt-4 mt-4">
                     <button
                       onClick={handleDeleteAccount}

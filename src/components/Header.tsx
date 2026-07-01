@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Search, ShoppingBag, User, Menu, X, Globe } from 'lucide-react';
+import { Search, ShoppingBag, User, Menu, X, Globe, Heart } from 'lucide-react';
 import { useI18n } from '@/lib/i18n/context';
 import LanguagePicker from '@/components/LanguagePicker';
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -412,11 +412,21 @@ export default function Header({
               <button onClick={() => setSearchOpen(v => !v)} className="p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Search">
                 <Search className="w-[21px] h-[21px]" />
               </button>
-              <Link href={isLoggedIn ? `/${lang}/mypage` : '/login'} className="hidden sm:flex p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label="Account">
+              <Link href={isLoggedIn ? `/${lang}/mypage` : '/login'} className="hidden sm:flex p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label={lang === 'en' ? 'Account' : '내 계정'}>
                 <User className="w-[21px] h-[21px]" />
               </Link>
+              {/* Wishlist deep-link — routes to MyPage's wishlist tab
+                  when signed in, otherwise to /login. Was previously
+                  reachable only from the profile page, so customers
+                  who bookmarked products couldn't find their wishlist
+                  in one click. Only rendered on sm+ (mobile keeps the
+                  icon row tight; wishlist is accessible from MyPage on
+                  the mobile drawer). */}
+              <Link href={isLoggedIn ? `/${lang}/mypage?tab=wishlist` : '/login'} className="hidden sm:flex p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity" aria-label={lang === 'en' ? 'Wishlist' : '위시리스트'}>
+                <Heart className="w-[21px] h-[21px]" />
+              </Link>
               {canPurchase && (
-                <Link href="/cart" className="relative p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity flex" aria-label="Cart">
+                <Link href="/cart" className="relative p-1.5 sm:p-2 text-neutral-900 hover:opacity-60 transition-opacity flex" aria-label={lang === 'en' ? 'Cart' : '장바구니'}>
                   <ShoppingBag className="w-[21px] h-[21px]" />
                   {totalCount > 0 && (
                     <span className="absolute -top-0.5 -right-0.5 w-[18px] h-[18px] bg-brand-ink text-white text-[10px] font-bold rounded-full flex items-center justify-center">

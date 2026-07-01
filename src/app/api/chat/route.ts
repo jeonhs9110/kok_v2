@@ -285,8 +285,16 @@ export async function POST(req: NextRequest) {
     });
 
     if (!res.ok) {
+      // Truncate the OpenAI error body before logging. Their 4xx/5xx
+      // envelopes have been observed echoing back excerpts of the
+      // caller's prompt in a couple of edge cases (moderation refusal,
+      // context-length errors), and the whole thing lands verbatim in
+      // whatever log aggregator ships EC2 stdout. First 200 chars is
+      // enough to name the failure mode (rate_limit, invalid_api_key,
+      // server_error) without capturing customer messages or a stray
+      // Authorization header repeat.
       const errText = await res.text().catch(() => '');
-      console.error(`[chat] OpenAI error ${res.status}: ${errText}`);
+      console.error(`[chat] OpenAI error ${res.status}: ${errText.slice(0, 200)}`);
       return NextResponse.json(
         { error: 'Sorry, I\'m having trouble right now. Please try again in a moment.' },
         { status: 502 }
