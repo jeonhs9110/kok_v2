@@ -13,7 +13,11 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     description: desc,
     alternates: {
       canonical: `https://www.kokkokgarden.com/${lang}/support`,
-      languages: { kr: 'https://www.kokkokgarden.com/kr/support', en: 'https://www.kokkokgarden.com/en/support' },
+      languages: {
+        'ko-KR': 'https://www.kokkokgarden.com/kr/support',
+        'en-US': 'https://www.kokkokgarden.com/en/support',
+        'x-default': 'https://www.kokkokgarden.com/en/support',
+      },
     },
     openGraph: { title, description: desc, type: 'website', locale: isKr ? 'ko_KR' : 'en_US', siteName: 'KOKKOK GARDEN' },
   };

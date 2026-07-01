@@ -27,13 +27,10 @@ export type TranslationKey =
   | 'product.addToCart'
   | 'product.buyNow'
   | 'product.unavailable'
-  | 'coupon.newMember'
   | 'chatbot.title'
   | 'chatbot.placeholder'
   | 'chatbot.send'
-  | 'chatbot.greeting'
-  | 'promo.message'
-  | 'promo.hideToday';
+  | 'chatbot.greeting';
 
 type Translations = Record<TranslationKey, string>;
 
@@ -65,13 +62,10 @@ export const translations: Record<Lang, Translations> = {
     'product.addToCart': '장바구니',
     'product.buyNow': '구매하기',
     'product.unavailable': '해외 구매 불가',
-    'coupon.newMember': '신규회원 5,000원 쿠폰',
     'chatbot.title': 'AI 어시스턴트',
     'chatbot.placeholder': '무엇이든 물어보세요...',
     'chatbot.send': '전송',
     'chatbot.greeting': '안녕하세요! 콕콕가든 AI 어시스턴트입니다. 무엇을 도와드릴까요?',
-    'promo.message': '지금 가입하고 첫구매 혜택 받아가세요!',
-    'promo.hideToday': '오늘 하루 보지 않기',
   },
   en: {
     'nav.type': 'By Type',
@@ -100,13 +94,10 @@ export const translations: Record<Lang, Translations> = {
     'product.addToCart': 'Add to Cart',
     'product.buyNow': 'Buy Now',
     'product.unavailable': 'Not available in your region',
-    'coupon.newMember': 'New Member 5,000 KRW Coupon',
     'chatbot.title': 'AI Assistant',
     'chatbot.placeholder': 'Ask anything...',
     'chatbot.send': 'Send',
     'chatbot.greeting': 'Hello! I\'m the Kokkok Garden AI Assistant. How can I help you today?',
-    'promo.message': 'Sign up now and get your first purchase benefit!',
-    'promo.hideToday': 'Don\'t show today',
   },
 };
 

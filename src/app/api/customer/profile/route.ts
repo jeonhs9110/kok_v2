@@ -147,8 +147,14 @@ export async function GET() {
 }
 
 /**
- * PATCH /api/customer/profile { display_name?, phone?, address_kr?, birth_year? }
- * Upserts allow-listed columns on the customer's own row.
+ * PATCH /api/customer/profile { name?, phone?, gender?, birthday?,
+ *   country?, skin_type?, marketing_consent? }
+ * Upserts the allow-listed columns on the customer's own row.
+ *
+ * Round 30: docstring was stale — referenced `display_name`,
+ * `address_kr`, `birth_year` fields from an earlier iteration
+ * that never shipped. `customer_profiles` has no address columns
+ * today; shipping-address schema is a phase-2 handoff item.
  */
 export async function PATCH(req: Request) {
   const csrf = assertSameOrigin(req);

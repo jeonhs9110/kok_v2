@@ -22,8 +22,9 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     alternates: {
       canonical: `https://www.kokkokgarden.com/${lang}/worldwide`,
       languages: {
-        kr: 'https://www.kokkokgarden.com/kr/worldwide',
-        en: 'https://www.kokkokgarden.com/en/worldwide',
+        'ko-KR': 'https://www.kokkokgarden.com/kr/worldwide',
+        'en-US': 'https://www.kokkokgarden.com/en/worldwide',
+        'x-default': 'https://www.kokkokgarden.com/en/worldwide',
       },
     },
     openGraph: {

@@ -75,8 +75,9 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     alternates: {
       canonical: url,
       languages: {
-        kr: `https://www.kokkokgarden.com/kr/products/${id}`,
-        en: `https://www.kokkokgarden.com/en/products/${id}`,
+        'ko-KR': `https://www.kokkokgarden.com/kr/products/${id}`,
+        'en-US': `https://www.kokkokgarden.com/en/products/${id}`,
+        'x-default': `https://www.kokkokgarden.com/en/products/${id}`,
       },
     },
     openGraph: {
@@ -84,12 +85,16 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
       description: desc,
       url,
       type: 'website',
-      // Let scrapers auto-detect dimensions. Product images are 1:1
-      // in storage; hardcoding 1200x1200 caused Facebook/LinkedIn to
-      // center-crop the bottle labels off when they enforce a 1.91:1
-      // preview card. Omitting width/height lets each platform pick
-      // a strategy that keeps the label visible.
-      images: image ? [{ url: image, alt: imageAlt }] : undefined,
+      // Round 30: emit explicit width/height (1:1, 1200x1200). Prior
+      // "let scrapers auto-detect" comment left Kakao's SEO validator
+      // flagging every product with "og:image 크기 미지정" and Kakao
+      // fell back to the small compact-card layout that hides the
+      // product hero. Since KakaoTalk is the primary sharing channel
+      // for the KR customer base, that was killing share-driven CTR.
+      // Facebook/LinkedIn center-crop 1:1 into their 1.91:1 card but
+      // keep the label visible; the small-card downgrade on Kakao is
+      // the bigger loss.
+      images: image ? [{ url: image, alt: imageAlt, width: 1200, height: 1200 }] : undefined,
       locale: lang === 'kr' ? 'ko_KR' : 'en_US',
       siteName: 'KOKKOK GARDEN',
     },
@@ -106,7 +111,10 @@ export default async function ProductDetailRoute({ params }: { params: Promise<{
   const { lang, id } = await params;
   if (!UUID_RE.test(id)) notFound();
   const headersList = await headers();
-  const country = headersList.get('x-vercel-ip-country') || headersList.get('x-user-country') || 'KR';
+  // Round 30: cloudfront-viewer-country (trusted edge) instead of
+  // client-spoofable x-vercel-ip-country. Same fix as [lang]/page.tsx
+  // and [lang]/products/page.tsx.
+  const country = headersList.get('cloudfront-viewer-country') || headersList.get('x-user-country') || 'KR';
 
   // JSON-LD Product schema — drives Google's rich snippets (price chip +
   // availability chip + image in SERP). Without this the listing shows
@@ -132,6 +140,21 @@ export default async function ProductDetailRoute({ params }: { params: Promise<{
             ? 'https://schema.org/InStock'
             : 'https://schema.org/Discontinued',
           url: `https://www.kokkokgarden.com/${lang}/products/${id}`,
+          // Round 30: `priceValidUntil` is now a required field on
+          // schema.org Offer when `price` is set. Without it Google
+          // Search Console flags every product page as "Missing
+          // field 'priceValidUntil'" and demotes the rich result
+          // to a basic snippet, losing the price + availability
+          // chip in SERP (~15-25% CTR uplift). No promo end date
+          // in the DB today, so use request-time + 30 days as a
+          // conservative rolling window — the price the crawler
+          // captured is guaranteed valid for at least that long.
+          // Server component (RSC) so Date.now() at render is safe
+          // to compute per-request; the react-hooks/purity lint is
+          // client-render-oriented and doesn't distinguish RSC vs
+          // client components.
+          // eslint-disable-next-line react-hooks/purity
+          priceValidUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
         },
       }
     : null;

@@ -60,11 +60,20 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://www.kokkokgarden.com'),
-  title: {
-    default: 'KOKKOK GARDEN',
-    template: '%s · KOKKOK GARDEN',
-  },
-  description: 'Premium K-Beauty skincare featuring Heartleaf, Jericho Rose, and Sedum.',
+  // Round 30: dropped the `template: '%s · KOKKOK GARDEN'` — every
+  // child page's `title` string already ends with `· KOKKOK GARDEN`,
+  // and Next.js's Metadata template WRAPS string titles, so the
+  // browser tab + SERP entry rendered as
+  // `전체 상품 · KOKKOK GARDEN · KOKKOK GARDEN` (double brand suffix,
+  // >60 chars, Google truncates + downranks the duplicated token).
+  // Simpler than editing every child: keep the child titles verbatim,
+  // and use a plain-string default title so no template is applied.
+  title: 'KOKKOK GARDEN',
+  // Round 30: description intentionally NOT set at the root. The
+  // English default here used to leak onto /kr pages whose child
+  // `generateMetadata` returned `{}` on error — Korean SERP snippet
+  // showed English gibberish under a Korean title. `[lang]/layout.tsx`
+  // already sets a language-branched default; that one wins.
   manifest: '/manifest.webmanifest',
   applicationName: 'KOKKOK GARDEN',
   appleWebApp: {

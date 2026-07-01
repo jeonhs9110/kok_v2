@@ -43,14 +43,21 @@ export async function generateMetadata({
   const title = `${post.title} · ${menuTitle} · KOKKOK GARDEN`;
   const desc = (post.content || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
   const url = `https://www.kokkokgarden.com/${lang}/menus/${slug}/${postId}`;
+  // Round 30: extract the first `<img>` from post.content so KakaoTalk
+  // / Facebook / Naver / Instagram DM previews carry the actual post
+  // hero instead of a generic brand card. Falls back to brand SVG
+  // when the post has no images.
+  const firstImg = (post.content || '').match(/<img[^>]+src=(?:"([^"]+)"|'([^']+)')/i);
+  const ogImage = (firstImg?.[1] ?? firstImg?.[2]) || 'https://www.kokkokgarden.com/kokkokgarden_primary.svg';
   return {
     title,
     description: desc || post.title,
     alternates: {
       canonical: url,
       languages: {
-        kr: `https://www.kokkokgarden.com/kr/menus/${slug}/${postId}`,
-        en: `https://www.kokkokgarden.com/en/menus/${slug}/${postId}`,
+        'ko-KR': `https://www.kokkokgarden.com/kr/menus/${slug}/${postId}`,
+        'en-US': `https://www.kokkokgarden.com/en/menus/${slug}/${postId}`,
+        'x-default': `https://www.kokkokgarden.com/en/menus/${slug}/${postId}`,
       },
     },
     openGraph: {
@@ -61,15 +68,13 @@ export async function generateMetadata({
       locale: lang === 'kr' ? 'ko_KR' : 'en_US',
       siteName: 'KOKKOK GARDEN',
       authors: post.author_name ? [post.author_name] : undefined,
-      // Same KakaoTalk/Naver fallback as menu listings — when posts
-      // start carrying a featured_image_url this can prefer that.
-      images: [{ url: 'https://www.kokkokgarden.com/kokkokgarden_primary.svg', alt: post.title }],
+      images: [{ url: ogImage, alt: post.title }],
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description: desc,
-      images: ['https://www.kokkokgarden.com/kokkokgarden_primary.svg'],
+      images: [ogImage],
     },
   };
 }
