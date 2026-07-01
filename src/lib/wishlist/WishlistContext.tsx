@@ -82,7 +82,13 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       });
       return json.wishlisted;
     } catch (err) {
-      console.error('위시리스트 토글 실패:', err);
+      // English + structured — Round 10 log-quality agent flagged the
+      // previous Korean-only message as unusable for a non-Korean
+      // operator triaging via CloudWatch Insights.
+      console.error('[wishlist] toggle failed', {
+        productId,
+        error: err instanceof Error ? err.message : String(err),
+      });
       setWishlist(prev => {
         const next = new Set(prev);
         if (optimisticNext) next.delete(productId);

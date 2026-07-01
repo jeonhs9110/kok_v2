@@ -21,6 +21,18 @@ const L: Record<string, { message: string; accept: string; decline: string; link
 
 const COOKIE_PATTERN = /kokkok_cookie_consent=\w+/;
 
+// The Secure attribute is a no-op over http (browsers reject the
+// cookie entirely), so we only append it when the page is served over
+// https. In prod (CloudFront → ALB → EC2) every page load is https;
+// this branch just keeps dev-over-http working.
+function cookieAttrs(): string {
+  const base = 'path=/; max-age=31536000; SameSite=Lax';
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    return `${base}; Secure`;
+  }
+  return base;
+}
+
 // useSyncExternalStore inputs need stable identity. Reading document.cookie
 // has no subscription mechanism (cookies don't fire events) — we render the
 // snapshot once on mount and rely on the local `dismissed` state for
@@ -54,7 +66,7 @@ export default function CookieConsent() {
     if (!visible) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        document.cookie = 'kokkok_cookie_consent=declined; path=/; max-age=31536000; SameSite=Lax';
+        document.cookie = `kokkok_cookie_consent=declined; ${cookieAttrs()}`;
         setDismissed(true);
       }
     };
@@ -65,12 +77,12 @@ export default function CookieConsent() {
   if (!visible) return null;
 
   const handleAccept = () => {
-    document.cookie = 'kokkok_cookie_consent=accepted; path=/; max-age=31536000; SameSite=Lax';
+    document.cookie = `kokkok_cookie_consent=accepted; ${cookieAttrs()}`;
     setDismissed(true);
   };
 
   const handleDecline = () => {
-    document.cookie = 'kokkok_cookie_consent=declined; path=/; max-age=31536000; SameSite=Lax';
+    document.cookie = `kokkok_cookie_consent=declined; ${cookieAttrs()}`;
     setDismissed(true);
   };
 

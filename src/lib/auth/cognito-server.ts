@@ -186,11 +186,47 @@ export async function forgotPasswordWithCognito(email: string): Promise<boolean>
   }
 }
 
+export type ResetPasswordFailureCode =
+  | 'invalid_code'
+  | 'expired_code'
+  | 'weak_password'
+  | 'limit_exceeded'
+  | 'unknown';
+
+export type ResetPasswordResult =
+  | { ok: true }
+  | { ok: false; code: ResetPasswordFailureCode };
+
+/**
+ * Map Cognito's `name` field on ConfirmForgotPassword failures to a
+ * closed set the UI can render. The default is `unknown` so a novel
+ * failure name still resolves to a safe "please try again" message.
+ */
+function mapResetPasswordError(err: unknown): ResetPasswordFailureCode {
+  const name = err && typeof err === 'object' && 'name' in err
+    ? String((err as { name: unknown }).name)
+    : '';
+  switch (name) {
+    case 'CodeMismatchException':
+      return 'invalid_code';
+    case 'ExpiredCodeException':
+      return 'expired_code';
+    case 'InvalidPasswordException':
+      return 'weak_password';
+    case 'LimitExceededException':
+    case 'TooManyRequestsException':
+    case 'TooManyFailedAttemptsException':
+      return 'limit_exceeded';
+    default:
+      return 'unknown';
+  }
+}
+
 export async function resetPasswordWithCognito(
   email: string,
   code: string,
   newPassword: string,
-): Promise<boolean> {
+): Promise<ResetPasswordResult> {
   try {
     const { clientId } = getEnv();
     const cmd = new ConfirmForgotPasswordCommand({
@@ -200,10 +236,10 @@ export async function resetPasswordWithCognito(
       Password: newPassword,
     });
     await getClient().send(cmd);
-    return true;
+    return { ok: true };
   } catch (err) {
     console.error('[auth/cognito-server] resetPassword failed:', err);
-    return false;
+    return { ok: false, code: mapResetPasswordError(err) };
   }
 }
 

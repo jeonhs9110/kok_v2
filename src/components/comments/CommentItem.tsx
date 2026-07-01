@@ -51,7 +51,7 @@ export default function CommentItem({ comment, replies, lang, postId, onRefresh,
           {comment.is_admin_comment && (
             <span className="px-1.5 py-0.5 text-[9px] font-bold bg-brand-ink text-white rounded">{l.admin}</span>
           )}
-          <span className="text-xs text-neutral-400">{new Date(comment.created_at).toLocaleDateString('ko-KR')}</span>
+          <span className="text-xs text-neutral-400">{new Date(comment.created_at).toLocaleDateString(lang === 'kr' ? 'ko-KR' : 'en-US', { timeZone: 'Asia/Seoul' })}</span>
         </div>
 
         {/* Content */}

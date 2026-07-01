@@ -20,6 +20,7 @@ const L: Record<Lang, {
   policyHeader: string;
   errPolicy: string; errMismatch: string; errMissingCodeOrEmail: string;
   errWeakPassword: string; errCode: string; errGeneric: string;
+  errCodeExpired: string; errLimitExceeded: string;
   successTitle: string; successRedirect: string;
   submit: string; submitting: string;
   mismatchInline: string;
@@ -36,8 +37,10 @@ const L: Record<Lang, {
     errMismatch: '비밀번호 확인이 일치하지 않습니다.',
     errMissingCodeOrEmail: '이메일과 인증번호를 모두 입력해주세요.',
     errWeakPassword: '비밀번호는 8자 이상, 소문자와 숫자를 포함해야 합니다.',
-    errCode: '비밀번호 변경에 실패했습니다. 인증번호가 정확한지 확인해주세요.',
+    errCode: '인증번호가 올바르지 않습니다. 이메일을 다시 확인해주세요.',
     errGeneric: '비밀번호 변경에 실패했습니다. 다시 시도해주세요.',
+    errCodeExpired: '인증번호가 만료되었습니다. 비밀번호 재설정을 다시 요청해주세요.',
+    errLimitExceeded: '시도 횟수가 너무 많습니다. 잠시 후 다시 시도해주세요.',
     successTitle: '비밀번호가 변경되었습니다.',
     successRedirect: '로그인 페이지로 이동합니다...',
     submit: '비밀번호 변경',
@@ -56,8 +59,10 @@ const L: Record<Lang, {
     errMismatch: 'The confirmation does not match.',
     errMissingCodeOrEmail: 'Enter both your email and the verification code.',
     errWeakPassword: 'Password must be at least 8 characters and include a lowercase letter and a number.',
-    errCode: "Reset failed. Please check that your code is correct.",
+    errCode: "The verification code is incorrect. Please double-check the code in your email.",
     errGeneric: 'Reset failed. Please try again.',
+    errCodeExpired: 'The verification code has expired. Request a new password reset email.',
+    errLimitExceeded: 'Too many attempts. Please wait a few minutes and try again.',
     successTitle: 'Password updated.',
     successRedirect: 'Redirecting to sign in...',
     submit: 'Reset password',
@@ -134,7 +139,13 @@ export default function ResetPasswordForm() {
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          setError(body.error === 'weak_password' ? t.errWeakPassword : t.errCode);
+          switch (body.error) {
+            case 'weak_password': setError(t.errWeakPassword); break;
+            case 'expired_code': setError(t.errCodeExpired); break;
+            case 'limit_exceeded': setError(t.errLimitExceeded); break;
+            case 'invalid_code': setError(t.errCode); break;
+            default: setError(t.errGeneric); break;
+          }
           return;
         }
         setSuccess(true);

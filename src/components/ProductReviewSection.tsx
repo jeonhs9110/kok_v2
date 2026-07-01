@@ -22,7 +22,7 @@ const LABELS: Record<string, {
   heading: string; empty: string; write: string;
   name: string; rating: string; title: string; content: string;
   submit: string; submitting: string; submitted: string; failed: string;
-  required: string;
+  required: string; loading: string;
 }> = {
   kr: {
     heading: '리뷰',
@@ -32,6 +32,7 @@ const LABELS: Record<string, {
     submit: '리뷰 등록', submitting: '등록 중...', submitted: '리뷰가 등록되었습니다.',
     failed: '등록에 실패했습니다. 잠시 후 다시 시도해주세요.',
     required: '이름과 리뷰 내용은 필수입니다.',
+    loading: '리뷰를 불러오는 중...',
   },
   en: {
     heading: 'Reviews',
@@ -41,6 +42,7 @@ const LABELS: Record<string, {
     submit: 'Submit Review', submitting: 'Submitting...', submitted: 'Your review has been posted.',
     failed: 'Submission failed. Please try again.',
     required: 'Name and review content are required.',
+    loading: 'Loading reviews...',
   },
 };
 
@@ -211,7 +213,7 @@ export default function ProductReviewSection({ productId, lang }: Props) {
         )}
 
         {loading ? (
-          <div className="py-12 text-center text-neutral-300 text-sm">...</div>
+          <div role="status" aria-live="polite" className="py-12 text-center text-neutral-300 text-sm">{lb.loading}</div>
         ) : reviews.length === 0 ? (
           <div className="py-12 text-center text-neutral-400 text-sm">{lb.empty}</div>
         ) : (
@@ -224,7 +226,7 @@ export default function ProductReviewSection({ productId, lang }: Props) {
                     <span className="text-sm font-semibold text-brand-ink">{r.author_name}</span>
                   </div>
                   <span className="text-[11px] text-neutral-400">
-                    {new Date(r.created_at).toLocaleDateString(lang === 'kr' ? 'ko-KR' : 'en-US')}
+                    {new Date(r.created_at).toLocaleDateString(lang === 'kr' ? 'ko-KR' : 'en-US', { timeZone: 'Asia/Seoul' })}
                   </span>
                 </div>
                 {r.title && <p className="text-sm font-bold text-brand-ink mb-1">{r.title}</p>}
