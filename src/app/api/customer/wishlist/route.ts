@@ -29,11 +29,18 @@ export async function GET(req: Request) {
         const { rows } = await pool.query<{
           wishlist_id: string; product_id: string; name: string; images: string[] | null; price: string;
         }>(
+          // Round 32: LIMIT 500. Prior unbounded state let a customer
+          // (or a bot spamming the "add to wishlist" endpoint) accumulate
+          // 10k+ wishlisted items that would then pin a pool connection
+          // through the whole LEFT JOIN + sort on every /my-page load.
+          // Matches the LIMIT 500 pattern used elsewhere for
+          // comments/reviews.
           `SELECT w.id AS wishlist_id, w.product_id, p.name, p.images, p.price::text
              FROM public.wishlist w
              LEFT JOIN public.products p ON p.id = w.product_id
             WHERE w.user_id = $1
-            ORDER BY w.created_at DESC`,
+            ORDER BY w.created_at DESC
+            LIMIT 500`,
           [auth.userId],
         );
         return NextResponse.json({
@@ -48,7 +55,8 @@ export async function GET(req: Request) {
         });
       }
       const { rows } = await pool.query<{ product_id: string }>(
-        `SELECT product_id FROM public.wishlist WHERE user_id = $1`,
+        // Round 32: same LIMIT 500 rationale as the details branch above.
+        `SELECT product_id FROM public.wishlist WHERE user_id = $1 LIMIT 500`,
         [auth.userId],
       );
       return NextResponse.json({ productIds: rows.map(r => r.product_id) });

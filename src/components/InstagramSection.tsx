@@ -102,10 +102,20 @@ export default function InstagramSection({ data, lang = 'kr' }: Props) {
           <p className="mt-2 text-sm text-neutral-400">{description}</p>
         </div>
 
-        {/* Feed grid — 6 slots; if any post has post_url, use 2-3 col layout for embed height */}
+        {/* Feed grid — 6 slots. Round 32: prefer the operator-uploaded
+            image_url (linked to post_url) over the Instagram embed
+            iframe. Prior state fired up to 6 concurrent iframe loads to
+            `instagram.com/p/{id}/embed/`, each pulling ~300-500KB of
+            Instagram runtime + external CSS/JS + tracking scripts —
+            1.8-3MB bandwidth + TBT +500-1500ms as soon as the section
+            entered the viewport. Now we render a static thumbnail with
+            a link to the post; visitors who want the full embed click
+            through to instagram.com. Falls back to the iframe ONLY when
+            the operator hasn't uploaded an image but did paste a
+            post_url — rare edge case. */}
         {(() => {
-          const hasAnyEmbed = posts.some(p => p.post_url && extractPostId(p.post_url));
-          const gridClass = hasAnyEmbed
+          const hasIframeFallback = slots.some(p => p?.post_url && !p?.image_url && extractPostId(p.post_url));
+          const gridClass = hasIframeFallback
             ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'
             : 'grid grid-cols-3 md:grid-cols-6 gap-1.5';
 
@@ -114,7 +124,39 @@ export default function InstagramSection({ data, lang = 'kr' }: Props) {
               {slots.map((post, i) => {
                 const postId = post?.post_url ? extractPostId(post.post_url) : null;
 
-                // Option 1: Instagram official embed iframe
+                // Preferred path: static thumbnail linked to the post
+                // (either the operator's own post_url or the profile
+                // URL). Zero third-party runtime.
+                if (post?.image_url) {
+                  const href = safeUrl(post.post_url || post.link_url || profileUrl);
+                  return (
+                    <a
+                      key={i}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="aspect-square block overflow-hidden group relative bg-neutral-100"
+                    >
+                      <Image
+                        src={post.image_url}
+                        alt={`@${handle} Instagram post`}
+                        width={600}
+                        height={600}
+                        sizes="(min-width: 1024px) 300px, 33vw"
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
+                        <IgIcon className="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </a>
+                  );
+                }
+
+                // Fallback: no image_url uploaded but a post_url exists —
+                // use the Instagram embed iframe so the slot doesn't
+                // render empty. Operator can suppress this by uploading
+                // a thumbnail.
                 if (postId) {
                   return (
                     <div key={i} className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
@@ -129,7 +171,7 @@ export default function InstagramSection({ data, lang = 'kr' }: Props) {
                   );
                 }
 
-                // Option 2: Manual uploaded image (fallback)
+                // Empty slot placeholder.
                 const href = safeUrl(post?.link_url || profileUrl);
                 return (
                   <a
@@ -137,21 +179,9 @@ export default function InstagramSection({ data, lang = 'kr' }: Props) {
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={`${hasAnyEmbed ? 'aspect-[4/5]' : 'aspect-square'} block overflow-hidden group relative bg-neutral-100`}
+                    className="aspect-square block overflow-hidden group relative bg-neutral-100"
                   >
-                    {post?.image_url ? (
-                      <Image
-                        src={post.image_url}
-                        alt={`@${handle} Instagram post`}
-                        width={600}
-                        height={600}
-                        sizes="(min-width: 1024px) 300px, 33vw"
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-neutral-100" />
-                    )}
+                    <div className="w-full h-full bg-neutral-100" />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-colors duration-300 flex items-center justify-center">
                       <IgIcon className="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>

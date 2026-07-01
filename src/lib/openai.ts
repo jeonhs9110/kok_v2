@@ -187,16 +187,22 @@ ${JSON.stringify(
   }
 }
 
-// Cached batch translation – key: lang + all product ids joined
+// Cached batch translation – key: lang + all product ids joined.
+//
+// Round 32: extended TTL to 30 days matching the individual-product
+// cache (was 24h). Admin saves emit a 'products' cache tag so operator
+// edits still flush within a minute — the 24h ceiling was pounding
+// OpenAI every dawn for identical inputs. Also stringified the products
+// array into the unstable_cache key so a content edit (new product,
+// renamed SKU) still misses cleanly instead of returning stale
+// translations from a hash-collision window.
 export const translateProductsBatch = unstable_cache(
   async (
     lang: string,
     products: Array<{ id: string; name: string; summary: string }>
   ): Promise<Record<string, { name: string; summary: string }>> => {
-    // See translateProduct comment — same log removed for the same
-    // CloudWatch-noise + key-leak reason.
     return callOpenAIBatch(products, lang);
   },
-  ['openai-products-batch-translation-v2'], // Version 2 cache bust
-  { revalidate: 60 * 60 * 24 } // 24-hour cache
+  ['openai-products-batch-translation-v3'],
+  { revalidate: 60 * 60 * 24 * 30, tags: ['products'] },
 );

@@ -86,11 +86,27 @@ export async function genericSetActiveInPg(
   isActive: boolean,
 ): Promise<boolean> {
   const pool = getPgPool();
+  // Round 32: `IS DISTINCT FROM` guard so a redundant toggle (admin
+  // clicks the active switch, then clicks it back within a session)
+  // doesn't dead-tuple the row or fire downstream cache invalidations
+  // for a no-op. rowCount will still be 0 in the no-op case; callers
+  // use the return value as "row exists AND was touched" so a false
+  // here means "nothing changed" which is the intended semantic.
   const { rowCount } = await pool.query(
-    `UPDATE public.${quoteIdent(table)} SET is_active = $2 WHERE id = $1`,
+    `UPDATE public.${quoteIdent(table)} SET is_active = $2
+      WHERE id = $1 AND is_active IS DISTINCT FROM $2`,
     [id, isActive],
   );
-  return (rowCount ?? 0) > 0;
+  // Row exists but was already at the target value — still a success
+  // for the caller's purpose (list refresh shows the intended state).
+  if ((rowCount ?? 0) === 0) {
+    const check = await pool.query<{ id: string }>(
+      `SELECT id FROM public.${quoteIdent(table)} WHERE id = $1 LIMIT 1`,
+      [id],
+    );
+    return (check.rowCount ?? 0) > 0;
+  }
+  return true;
 }
 
 // Hard ceiling for the generic admin CRUD list endpoint. Used by every
@@ -229,12 +245,18 @@ export async function deletePostInPg(postId: string): Promise<boolean> {
 // rather than a SQL text literal, matching Supabase's PostgREST shape.
 export async function setSiteSettingInPg(key: string, value: unknown): Promise<boolean> {
   const pool = getPgPool();
+  // Round 32: `WHERE site_settings.value IS DISTINCT FROM EXCLUDED.value`
+  // on the UPDATE branch so identical writes (page-builder autosaves
+  // that re-serialize the same JSON) don't dead-tuple the table +
+  // don't bump updated_at (which downstream caches use as a change
+  // signal). The INSERT branch is unchanged — new rows always land.
   const { rowCount } = await pool.query(
     `INSERT INTO public.site_settings (key, value, updated_at)
      VALUES ($1, $2::jsonb, NOW())
      ON CONFLICT (key) DO UPDATE
        SET value = EXCLUDED.value,
-           updated_at = NOW()`,
+           updated_at = NOW()
+       WHERE public.site_settings.value IS DISTINCT FROM EXCLUDED.value`,
     [key, JSON.stringify(value)],
   );
   return (rowCount ?? 0) > 0;
@@ -395,11 +417,23 @@ export async function updateProductInPg(
 
 export async function setProductActiveInPg(productId: string, isActive: boolean): Promise<boolean> {
   const pool = getPgPool();
+  // Round 32: same `IS DISTINCT FROM` no-op guard as
+  // genericSetActiveInPg above. Products get toggled from CSV imports
+  // and bulk-admin scripts that may re-set the same value; this stops
+  // WAL churn on those.
   const { rowCount } = await pool.query(
-    `UPDATE public.products SET is_active = $2 WHERE id = $1`,
+    `UPDATE public.products SET is_active = $2
+      WHERE id = $1 AND is_active IS DISTINCT FROM $2`,
     [productId, isActive],
   );
-  return (rowCount ?? 0) > 0;
+  if ((rowCount ?? 0) === 0) {
+    const check = await pool.query<{ id: string }>(
+      `SELECT id FROM public.products WHERE id = $1 LIMIT 1`,
+      [productId],
+    );
+    return (check.rowCount ?? 0) > 0;
+  }
+  return true;
 }
 
 export async function deleteProductInPg(productId: string): Promise<boolean> {

@@ -101,7 +101,14 @@ export async function GET(req: Request, { params }: Ctx) {
       const pool = getPgPool();
       const where = filter ? `WHERE ${quoteIdent(filter.col)} = $1` : '';
       const params = filter ? [filter.val] : [];
-      const sql = `SELECT * FROM public.${quoteIdent(table)} ${where} ORDER BY ${quoteIdent(orderBy)} ${direction}`;
+      // Round 32: cap at 5000 rows. Prior state was unbounded — a
+      // tables that accumulates over time (chatbot_leads has no
+      // retention job) would eventually hit the 15s statement_timeout,
+      // pin a pool connection through the whole wait, and cascade
+      // into pool exhaustion + /api/health timeouts + ALB
+      // deregistration. Matches the GENERIC_LIST_HARD_CAP already
+      // enforced by genericListInPg in admin-writes.ts.
+      const sql = `SELECT * FROM public.${quoteIdent(table)} ${where} ORDER BY ${quoteIdent(orderBy)} ${direction} LIMIT 5000`;
       const { rows } = await pool.query(sql, params);
       return NextResponse.json({ rows });
     } catch (err) {

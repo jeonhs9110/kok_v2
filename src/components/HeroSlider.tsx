@@ -248,6 +248,10 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                     sizes={hasSeparateMobile ? '(max-width: 639px) 100vw, 1px' : '100vw'}
                     quality={82}
                     priority={isFirst}
+                    // Round 32: non-first slides deferred so slide 2..N
+                    // images don't compete with the LCP hero for
+                    // bandwidth on cold visits.
+                    loading={isFirst ? undefined : 'lazy'}
                     className={`object-cover hero-image-focal ${hasSeparateMobile ? 'sm:hidden' : ''}`}
                     style={focalStyle}
                   />
@@ -258,6 +262,14 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                       fill
                       sizes="(min-width: 640px) 100vw, 1px"
                       quality={82}
+                      // Round 32: mobile visitors are the primary
+                      // audience; the desktop-only twin was firing
+                      // eagerly and competing with the LCP mobile
+                      // image on the preload scanner even though
+                      // the `hidden sm:block` class hides it visually.
+                      // Explicit `loading="lazy"` keeps it out of the
+                      // preload queue.
+                      loading="lazy"
                       className="hidden sm:block object-cover hero-image-focal"
                       style={focalStyle}
                     />
@@ -514,7 +526,13 @@ export default function HeroSlider({ lang = 'kr', slides: dbSlides }: HeroSlider
                             fill
                             sizes="(max-width: 1024px) 50vw, 40vw"
                             quality={82}
-                            priority={isFirst}
+                            // Round 32: this default-mode desktop-framed
+                            // image is inside a `hidden sm:flex` wrapper —
+                            // only rendered on desktop. Mobile is the
+                            // primary audience, so the priority hint
+                            // stays on the mobile bg image higher up.
+                            // Non-first slides always defer.
+                            loading={isFirst ? undefined : 'lazy'}
                             className="object-cover"
                           />
                         )

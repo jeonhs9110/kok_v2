@@ -55,3 +55,27 @@ export async function getProductsFromPg(): Promise<Product[]> {
   );
   return rows.map(rowToProduct);
 }
+
+/**
+ * Round 32: single-product read. Product-detail is the hottest RSC
+ * surface (every SEO landing, Naver deep-link, share-URL click) and
+ * was doing `getProducts().find(p => p.id === id)` — a full table
+ * scan + Node-side filter every time the outer `unstable_cache` had
+ * a cold node. This path pulls only the matching row, and the caller
+ * still enforces `is_active` (mirrors the storefront-visible gate)
+ * without pulling every inactive draft into memory.
+ */
+export async function getProductByIdFromPg(id: string): Promise<Product | null> {
+  const pool = getPgPool();
+  const { rows } = await pool.query<ProductRow>(
+    `SELECT id, name, summary, ingredient, description, detail_body,
+            detail_components, price, original_price, images, is_active,
+            is_best_seller, naver_store_url, category_id, subcategory_id,
+            show_cart_button, show_buy_button, seo, created_at
+       FROM public.products
+      WHERE id = $1 AND is_active = true
+      LIMIT 1`,
+    [id],
+  );
+  return rows[0] ? rowToProduct(rows[0]) : null;
+}

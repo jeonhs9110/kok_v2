@@ -117,6 +117,28 @@ export const MOCK_PRODUCTS: Product[] = [
 // route customers to product IDs that 404 on click. Mocks are dev-only now.
 const IS_DEV = process.env.NODE_ENV === 'development';
 
+/**
+ * Round 32: single-product read dispatcher. Product-detail (the hottest
+ * RSC surface) previously ran `getProducts().find(p => p.id === id)` —
+ * a full-table pull + Node-side filter on every cache miss. Callers who
+ * need a specific product should reach for this instead.
+ */
+export async function getProductById(id: string): Promise<Product | null> {
+  if (process.env.USE_RDS === 'true') {
+    try {
+      const { getProductByIdFromPg } = await import('@/lib/db/products');
+      return await getProductByIdFromPg(id);
+    } catch (err) {
+      console.error('[products] RDS single-product fetch failed:', err);
+      return null;
+    }
+  }
+  // Supabase fallback (dev only). Mirror the .find() semantics so
+  // legacy dev environments keep working during the wind-down.
+  const all = await getProducts();
+  return all.find(p => p.id === id && p.is_active) ?? null;
+}
+
 export async function getProducts(): Promise<Product[]> {
   // Phase C1 of the RDS migration: dispatch to the pg implementation
   // when USE_RDS=true. Until cutover (Phase F), USE_RDS stays false in

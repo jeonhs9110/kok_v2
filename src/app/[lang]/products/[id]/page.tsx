@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import ProductDetailPage from '@/components/pages/ProductDetailPage';
-import { getProducts } from '@/lib/api/products';
+import { getProductById } from '@/lib/api/products';
 
 // UUID v4 (or general lowercase-hex UUID) shape. Guards `[id]` from
 // bot scans that guess random strings — without this, every
@@ -31,20 +31,21 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   // drops the page with a bare 500 and no branded chrome. Fall
   // back to the layout-default metadata so the page body (which
   // reads the same cached fetch) can still render.
-  let products;
+  //
+  // Round 32: switched to `getProductById(id)` — was doing
+  // `getProducts().find(p => p.id === id && p.is_active)`, which
+  // materialized every product row (including inactive drafts) +
+  // every rich column (detail_body, detail_components, seo) just
+  // to pick one. `getProductById` returns null on inactive too
+  // (mirrors the `.find(... && p.is_active)` predicate), so
+  // downstream branches are unchanged.
+  let product;
   try {
-    products = await getProducts();
+    product = await getProductById(id);
   } catch (err) {
-    console.error('[products/[id]] generateMetadata getProducts threw', err);
+    console.error('[products/[id]] generateMetadata getProductById threw', err);
     return {};
   }
-  // Mirror the page-body filter: an inactive product is "gone" for the
-  // storefront, including its OG metadata. Without this Google etc.
-  // keep the rich snippet (price/availability) alive after admin marks
-  // a product is_active=false — a customer clicking a SERP result lands
-  // on the not-found body but the search result still advertises the
-  // product as in-stock until the next crawl.
-  const product = products.find(p => p.id === id && p.is_active);
   if (!product) {
     return {
       title: lang === 'kr' ? '상품을 찾을 수 없습니다 · KOKKOK GARDEN' : 'Product Not Found · KOKKOK GARDEN',
@@ -121,8 +122,9 @@ export default async function ProductDetailRoute({ params }: { params: Promise<{
   // only the title + meta description even when the product page is rich.
   // Skip inactive products here too so SERP rich-snippet data doesn't
   // outlive the operator's "비공개" toggle.
-  const products = await getProducts();
-  const product = products.find(p => p.id === id && p.is_active);
+  // Round 32: same helper as generateMetadata above — single-row fetch
+  // instead of the previous full-table `.find(...)`.
+  const product = await getProductById(id);
   const ld = product
     ? {
         '@context': 'https://schema.org',
