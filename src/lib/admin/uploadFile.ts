@@ -40,10 +40,15 @@ export async function uploadFileToS3(file: File, opts: UploadOptions): Promise<U
   const key = `${opts.keyPrefix.replace(/^\/+|\/+$/g, '')}/${stamp}-${rand}.${ext}`;
   const contentType = opts.contentType ?? file.type ?? 'application/octet-stream';
 
+  // Pass file.size so the server can sign it into the presigned URL
+  // as Content-Length + reject sizes that would blow the AWS budget.
+  // The browser's fetch(PUT, body:File) auto-emits Content-Length =
+  // file.size, so a matching signed value means S3 accepts; any
+  // curl-style bypass with a different size gets a 403.
   const presignRes = await fetch('/api/admin/storage/presigned-put', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ key, contentType }),
+    body: JSON.stringify({ key, contentType, size: file.size }),
   });
   if (!presignRes.ok) {
     throw new Error(`presigned-put_${presignRes.status}`);
@@ -52,7 +57,12 @@ export async function uploadFileToS3(file: File, opts: UploadOptions): Promise<U
 
   const putRes = await fetch(uploadUrl, {
     method: 'PUT',
-    headers: { 'Content-Type': contentType },
+    headers: {
+      'Content-Type': contentType,
+      // Match the signed CacheControl so S3 accepts the PUT; the
+      // header stays on the stored object and drives CloudFront TTL.
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    },
     body: file,
   });
   if (!putRes.ok) {

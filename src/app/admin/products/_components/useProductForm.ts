@@ -200,12 +200,12 @@ export function useProductForm(
     try {
       let finalImageUrl = formData.imageUrl;
       if (formData.imageFile) {
-        try {
-          finalImageUrl = await uploadImage(formData.imageFile);
-        } catch (uploadErr) {
-          console.warn('[ProductDetailModal] image upload failed, saving without it:', uploadErr);
-          finalImageUrl = '';
-        }
+        // Re-throw upload failures so the outer catch shows a real
+        // error toast. Prior code swallowed the error and saved the
+        // product with an empty imageUrl — operator saw "저장 완료"
+        // and had no idea their hero image never made it, then the
+        // storefront rendered the placeholder for that product.
+        finalImageUrl = await uploadImage(formData.imageFile);
       }
 
       const normalizedComponents: DetailComponent[] = formData.detailComponents.map((c, i) => ({

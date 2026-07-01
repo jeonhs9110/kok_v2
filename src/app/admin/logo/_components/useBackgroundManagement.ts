@@ -212,15 +212,27 @@ export function useBackgroundManagement({ supabase, toast, confirm, onIframeRelo
     if (!ok) return;
     setBgBusyId(bg.id);
     try {
-      // Object removal stays on supabase until S3-side delete lands —
-      // the bucket itself is supabase-controlled. Phase F's storage
-      // mirror will repoint this when the cutover happens.
-      if (supabase) {
-        const marker = `/${BUCKET}/`;
-        const idx = bg.file_url.indexOf(marker);
-        if (idx >= 0) {
-          const objPath = bg.file_url.slice(idx + marker.length);
-          await supabase.storage.from(BUCKET).remove([objPath]);
+      // S3-side object cleanup. Post-cutover the file lives on S3
+      // (CloudFront-fronted), so the previous supabase.storage.remove
+      // call was a no-op against a decommissioned bucket — every
+      // deleted background (often a 20-50MB video) was leaking as
+      // an orphan indefinitely. Best-effort: log but don't fail the
+      // whole delete if S3 removal returns non-ok, so the DB row
+      // still gets removed and the operator isn't stuck.
+      const marker = `/${BUCKET}/`;
+      const idx = bg.file_url.indexOf(marker);
+      if (idx >= 0) {
+        const objPath = bg.file_url.slice(idx + marker.length);
+        try {
+          const storageRes = await fetch(
+            `/api/admin/storage/delete?bucket=${encodeURIComponent(BUCKET)}&key=${encodeURIComponent(objPath)}`,
+            { method: 'DELETE' },
+          );
+          if (!storageRes.ok) {
+            console.warn(`[admin/logo/bg] S3 delete non-ok for ${objPath}: ${storageRes.status}`);
+          }
+        } catch (err) {
+          console.warn('[admin/logo/bg] S3 delete threw:', err);
         }
       }
       if (USE_RDS_FROM_BROWSER) {

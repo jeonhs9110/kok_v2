@@ -92,7 +92,7 @@ export default function RetailerRowGrid({
         <FileUpload
           previewUrl={r.store_logo_url}
           previewClass="w-12 h-12 object-contain bg-white rounded border border-[#e5e7eb]"
-          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          accept="image/png,image/jpeg,image/webp"
           onPick={file => onUpload(file, 'store_logo_url')}
           onClear={() => onUpdate({ store_logo_url: '' })}
           isUploading={isUploadingLogo}
