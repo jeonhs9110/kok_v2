@@ -50,7 +50,20 @@ export type HomepageTag =
   // background for up to 60s (the unstable_cache TTL). Particularly
   // jarring for video backgrounds where the operator hits ▶️ Activate
   // and expects the live storefront preview to follow.
-  | 'site_background';
+  | 'site_background'
+  // Added 2026-07-01 (Round 19 cache sweep). The sitemap's
+  // unstable_cache is tagged with 'menus' / 'posts' / 'pages' /
+  // 'reviews', but the HomepageTag union didn't include the first
+  // three — meaning no admin save handler could evict them at the
+  // type level. New menu / post / page publishes were invisible to
+  // Google / Naver / Bing for up to 1 hour (the sitemap TTL). Adding
+  // them here lets useMenus, useMenus/[menuId]/posts, and usePages
+  // fire revalidateHomepageData('menus'|'posts'|'pages') alongside
+  // their existing header-memo evictions so sitemap.xml reflects the
+  // change within one revalidate cycle.
+  | 'menus'
+  | 'posts'
+  | 'pages';
 
 export async function revalidateHomepageData(tag: HomepageTag): Promise<void> {
   updateTag(tag);

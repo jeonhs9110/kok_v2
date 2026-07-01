@@ -157,7 +157,14 @@ export function useProducts() {
         const { error } = await supabase.from('products').update({ is_active: !currentStatus }).eq('id', id);
         if (error) throw error;
       }
+      // Products tag evicts the storefront listings. Also evict
+      // 'analytics' so the top-viewed section drops the just-hidden
+      // product on the next storefront render — without this the
+      // trending strip keeps promoting a "비공개" product for up to
+      // 5 minutes (the top_viewed unstable_cache TTL), and clicking
+      // it lands on the branded 404.
       await revalidateHomepageData('products');
+      await revalidateHomepageData('analytics');
       toast.show(currentStatus ? '비공개로 변경되었습니다.' : '공개로 변경되었습니다.', 'success');
     } catch (err) {
       console.warn('[admin/products] 토글 DB 동기화 실패:', err);
@@ -190,6 +197,7 @@ export function useProducts() {
         if (error) throw error;
       }
       await revalidateHomepageData('products');
+      await revalidateHomepageData('analytics');
       toast.show('상품이 삭제되었습니다.', 'success');
     } catch (err) {
       console.warn('[admin/products] 삭제 DB 동기화 실패:', err);

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useToast } from '@/components/admin/Toast';
 import { useConfirm } from '@/components/admin/ConfirmModal';
-import { revalidateHeaderData } from '@/lib/cache/invalidate';
+import { revalidateHeaderData, revalidateHomepageData } from '@/lib/cache/invalidate';
 import type { Menu } from '@/lib/api/menus';
 import type { Lang } from '@/lib/i18n/types';
 import type { MenuFormData } from './MenuModal';
@@ -113,6 +113,10 @@ export function useMenus() {
           });
       if (!res.ok) throw new Error('http_' + res.status);
       await revalidateHeaderData();
+      // Also evict the 'menus' tag so sitemap.xml drops any deleted
+      // slug and picks up a new one within its 1-hour ISR cycle
+      // instead of waiting for the full TTL to roll.
+      await revalidateHomepageData('menus');
       setModalOpen(false);
       fetchAll();
       toast.show(editingId ? '메뉴가 수정되었습니다.' : '메뉴가 추가되었습니다.', 'success');

@@ -79,6 +79,13 @@ export function publicUrl(key: string): string {
   return `https://${bucket()}.s3.${region}.amazonaws.com/${encodeURI(key)}`;
 }
 
+// Long-cache header for immutable uploads. Every admin browser
+// upload lands under a `{timestamp}-{rand}.{ext}` key that we never
+// re-write, so declaring the object immutable + a 1-year max-age
+// lets CloudFront and every downstream browser cache aggressively
+// instead of falling back to the default 1-day TTL.
+const IMMUTABLE_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+
 /**
  * Server-side upload. Use for small payloads originating server-side
  * (e.g. import scripts, ingest jobs). For admin browser uploads,
@@ -96,6 +103,7 @@ export async function putObject(
     Key: key,
     Body: body,
     ContentType: contentType,
+    CacheControl: IMMUTABLE_CACHE_CONTROL,
   }));
   return { key, publicUrl: publicUrl(key) };
 }
@@ -170,17 +178,44 @@ export async function objectExists(key: string): Promise<boolean> {
  * directly. Keeps large files off the Next.js process and out of the
  * Lambda/EC2 request budget.
  *
+ * When `contentLength` is provided, it's signed into the URL — the
+ * browser's fetch(PUT, body:File) auto-sets Content-Length to
+ * file.size, and S3 rejects the request if it doesn't match the
+ * signed value. That's the actual DoS/budget guard: a compromised
+ * admin session can no longer PUT a 5GB file through this URL, even
+ * though the client-side MAX_FILE_SIZE check is trivially bypassable.
+ *
+ * CacheControl is signed too so a client can't override it — every
+ * public.kokkokgarden.com/media/{key} response carries the immutable
+ * hint on the first cold fetch.
+ *
  * Pair with publicUrl(key) for the read URL after upload succeeds.
  */
 export async function presignedPutUrl(
   key: string,
   contentType: string,
+  contentLength?: number,
   expiresInSeconds: number = DEFAULT_PRESIGN_EXPIRES_SECONDS,
 ): Promise<string> {
   const cmd = new PutObjectCommand({
     Bucket: bucket(),
     Key: key,
     ContentType: contentType,
+    ContentLength: contentLength,
+    CacheControl: IMMUTABLE_CACHE_CONTROL,
   });
-  return await getSignedUrl(getClient(), cmd, { expiresIn: expiresInSeconds });
+  // Signed headers that browsers set implicitly (Content-Length,
+  // Content-Type) need to stay in the signed request, not hoisted
+  // to the query string, so S3 can validate them against what the
+  // browser sends. Cache-Control is signed too — the client echoes
+  // it back in the PUT header (see uploadFile.ts) so the stored
+  // object carries the immutable directive.
+  return await getSignedUrl(getClient(), cmd, {
+    expiresIn: expiresInSeconds,
+    unhoistableHeaders: new Set(
+      contentLength !== undefined
+        ? ['content-length', 'cache-control']
+        : ['cache-control'],
+    ),
+  });
 }

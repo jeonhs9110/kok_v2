@@ -54,6 +54,35 @@ const putLimiter = createRateLimiter({
   windowMs: 60 * 1000,
 });
 
+// Per-file upload ceiling. 60 MB covers hero video backgrounds (the
+// biggest legitimate file class); everything else — product photos,
+// carousel slides, promo banners — is well under 10 MB. Signed into
+// the presigned URL as Content-Length so S3 rejects any PUT that
+// exceeds it, closing the DoS/budget hole where the client's local
+// MAX_FILE_SIZE check was trivially bypassable via curl.
+const MAX_UPLOAD_BYTES = 60 * 1024 * 1024;
+
+// Strict allow-list of top-level prefixes the admin can write to.
+// Prevents a compromised session from overwriting known keys under
+// unintended prefixes (site-assets/logo/logo.png, etc.). Bucket
+// versioning is on server-side so an overwrite is recoverable, but
+// CloudFront caches the new bytes at the same URL immediately —
+// defense in depth stops the defacement before it lands.
+const ALLOWED_KEY_PREFIXES = [
+  'products/',
+  'carousel/',
+  'logo/',
+  'promo-banners/',
+  'reviews/',
+  'instagram/',
+  'sub-hero/',
+  'worldwide/',
+  'detail-components/',
+  'backgrounds/',
+  'top-stripe/',
+  'assets/',
+];
+
 export async function POST(request: NextRequest) {
   const denied = await requireAdmin();
   if (denied) return denied;
@@ -61,7 +90,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'too_many_requests' }, { status: 429 });
   }
 
-  let body: { key?: unknown; contentType?: unknown };
+  let body: { key?: unknown; contentType?: unknown; size?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -70,6 +99,7 @@ export async function POST(request: NextRequest) {
 
   const rawKey = typeof body.key === 'string' ? body.key.trim() : '';
   const contentType = typeof body.contentType === 'string' ? body.contentType.trim().toLowerCase() : '';
+  const size = typeof body.size === 'number' && Number.isFinite(body.size) ? Math.floor(body.size) : null;
   if (!rawKey || !contentType) {
     return NextResponse.json({ error: 'key_and_contentType_required' }, { status: 400 });
   }
@@ -79,14 +109,23 @@ export async function POST(request: NextRequest) {
   if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
     return NextResponse.json({ error: 'unsupported_content_type' }, { status: 400 });
   }
+  if (size === null || size <= 0) {
+    return NextResponse.json({ error: 'size_required' }, { status: 400 });
+  }
+  if (size > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: 'file_too_large', maxBytes: MAX_UPLOAD_BYTES }, { status: 413 });
+  }
   const key = sanitizeStorageKey(rawKey);
   if (!key) {
     return NextResponse.json({ error: 'invalid_key' }, { status: 400 });
   }
+  if (!ALLOWED_KEY_PREFIXES.some(p => key.startsWith(p))) {
+    return NextResponse.json({ error: 'invalid_key_prefix' }, { status: 400 });
+  }
 
   try {
     const { presignedPutUrl, publicUrl } = await import('@/lib/storage/s3');
-    const uploadUrl = await presignedPutUrl(key, contentType);
+    const uploadUrl = await presignedPutUrl(key, contentType, size);
     return NextResponse.json({ uploadUrl, publicUrl: publicUrl(key) });
   } catch (err) {
     console.error('[api/admin/storage/presigned-put] failed:', err);

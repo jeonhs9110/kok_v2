@@ -38,10 +38,15 @@ const fetchSitemapDataCached = unstable_cache(
   },
   ['sitemap-fan-out'],
   // 1-hour TTL is generous for crawl cadence; admin saves on
-  // products / menus / pages / posts / review_cards all evict via the
+  // products / menus / pages / posts / reviews all evict via the
   // tag list below, so operator changes are reflected on the next
   // crawler hit instead of waiting an hour.
-  { revalidate: 3600, tags: ['products', 'menus', 'pages', 'posts', 'review_cards', 'homepage'] },
+  //
+  // Tag names MUST match the HomepageTag union in lib/cache/invalidate.ts.
+  // Prior to Round 19 this list included 'review_cards' (a table name),
+  // but the invalidate helper only emits 'reviews' — so every review
+  // edit left the sitemap stale until the natural 1h TTL rolled.
+  { revalidate: 3600, tags: ['products', 'menus', 'pages', 'posts', 'reviews', 'homepage'] },
 );
 
 async function fetchSitemapData(): Promise<SitemapData | null> {
