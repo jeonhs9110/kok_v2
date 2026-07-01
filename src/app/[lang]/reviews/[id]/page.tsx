@@ -27,8 +27,9 @@ export async function generateMetadata({
     alternates: {
       canonical: url,
       languages: {
-        kr: `https://www.kokkokgarden.com/kr/reviews/${id}`,
-        en: `https://www.kokkokgarden.com/en/reviews/${id}`,
+        'ko-KR': `https://www.kokkokgarden.com/kr/reviews/${id}`,
+        'en-US': `https://www.kokkokgarden.com/en/reviews/${id}`,
+        'x-default': `https://www.kokkokgarden.com/en/reviews/${id}`,
       },
     },
     openGraph: {

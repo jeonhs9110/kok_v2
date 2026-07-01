@@ -24,7 +24,13 @@ const LABELS: Record<Lang, {
     productInfo: '상품 정보', qty: '수량', amount: '금액', del: '삭제',
     removeConfirm: name => `"${name}" 을(를) 삭제하시겠습니까?`,
     summary: '주문 요약', subtotal: '상품 금액', discount: '할인 금액',
-    shipping: '배송비', free: '무료', grandTotal: '총 결제금액',
+    // Round 30: "배송비 무료" hardcode was misleading — the chatbot
+    // (and eventually the checkout provider) has a ₩50k threshold,
+    // so the cart's "free" line will suddenly become "₩3,000" the
+    // moment phase-2 lands and contradict what the pre-launch cart
+    // promised. Neutral "결제 시 계산" copy sets the expectation
+    // honestly until the shipping calculator ships.
+    shipping: '배송비', free: '결제 시 계산', grandTotal: '총 결제금액',
     checkout: '결제하기', checkoutWip: '결제 기능은 준비 중입니다.',
     continueShopping: '쇼핑 계속하기', currency: '원',
   },
@@ -36,7 +42,7 @@ const LABELS: Record<Lang, {
     productInfo: 'Product', qty: 'Qty', amount: 'Total', del: 'Remove',
     removeConfirm: name => `Remove "${name}" from cart?`,
     summary: 'Order Summary', subtotal: 'Subtotal', discount: 'Discount',
-    shipping: 'Shipping', free: 'Free', grandTotal: 'Total',
+    shipping: 'Shipping', free: 'Calculated at checkout', grandTotal: 'Total',
     checkout: 'Checkout', checkoutWip: 'Checkout coming soon.',
     continueShopping: 'Continue shopping', currency: 'KRW',
   },

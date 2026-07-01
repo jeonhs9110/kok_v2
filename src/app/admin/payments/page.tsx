@@ -75,7 +75,16 @@ export default function PaymentsAdminPage() {
         <div className="bg-white rounded border border-[#e5e7eb] p-8 text-center text-[#9ca3af]">
           <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p className="text-sm font-semibold">결제 제공자가 설정되지 않았습니다</p>
-          <p className="text-xs mt-1">아래 SQL을 Supabase에서 실행하세요.</p>
+          {/* Round 30: prior copy said "아래 SQL을 Supabase에서
+              실행하세요." — Supabase was decommissioned 2026-06-27
+              and there is no SQL shown "below". Operator was
+              silently stuck. Points at the real handoff path
+              (Dynamic Solution infra) without prescribing a
+              stack they may not have access to. */}
+          <p className="text-xs mt-1 leading-relaxed">
+            결제 시스템은 아직 연결되지 않았습니다. 인프라 담당자에게
+            RDS에 <code className="font-mono">payment_providers_config</code> 테이블 생성을 요청해주세요.
+          </p>
         </div>
       ) : (
         providers.map(p => (

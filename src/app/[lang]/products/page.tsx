@@ -34,8 +34,9 @@ export async function generateMetadata({
     alternates: {
       canonical: `https://www.kokkokgarden.com/${lang}/products`,
       languages: {
-        kr: 'https://www.kokkokgarden.com/kr/products',
-        en: 'https://www.kokkokgarden.com/en/products',
+        'ko-KR': 'https://www.kokkokgarden.com/kr/products',
+        'en-US': 'https://www.kokkokgarden.com/en/products',
+        'x-default': 'https://www.kokkokgarden.com/en/products',
       },
     },
     openGraph: {
@@ -59,6 +60,11 @@ export default async function ProductsRoute({
   const { lang } = await params;
   const { q, category, sub } = await searchParams;
   const headersList = await headers();
-  const country = headersList.get('x-vercel-ip-country') || headersList.get('x-user-country') || 'KR';
+  // Round 30: matches the [lang]/page.tsx fix — `x-vercel-ip-country`
+  // is client-spoofable on EC2+ALB+CloudFront (Vercel only hosts
+  // DNS). CloudFront injects `cloudfront-viewer-country` at the edge
+  // and is the only trusted geo source; `x-user-country` remains an
+  // optional server-side override.
+  const country = headersList.get('cloudfront-viewer-country') || headersList.get('x-user-country') || 'KR';
   return <ProductsPage lang={lang} canPurchase={country === 'KR'} searchQuery={q} categorySlug={category} subSlug={sub} />;
 }

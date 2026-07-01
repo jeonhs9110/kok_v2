@@ -34,6 +34,12 @@ export async function generateMetadata({
   const raw = pickLang(menu.content, lang, '');
   const desc = raw.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
   const url = `https://www.kokkokgarden.com/${lang}/menus/${slug}`;
+  // Round 30: extract first `<img>` from the menu body — same pattern
+  // as pages/[slug]. Falls back to the brand SVG only when the menu
+  // has no image content (Kakao's SVG rejection means these menus
+  // get text-only cards until a dedicated 1200x630 png ships).
+  const firstImg = raw.match(/<img[^>]+src=(?:"([^"]+)"|'([^']+)')/i);
+  const ogImage = (firstImg?.[1] ?? firstImg?.[2]) || 'https://www.kokkokgarden.com/kokkokgarden_primary.svg';
   return {
     title,
     description: desc || `${pickLang(menu.title, lang, slug)} — KOKKOK GARDEN`,
@@ -41,8 +47,9 @@ export async function generateMetadata({
     alternates: {
       canonical: url,
       languages: {
-        kr: `https://www.kokkokgarden.com/kr/menus/${slug}`,
-        en: `https://www.kokkokgarden.com/en/menus/${slug}`,
+        'ko-KR': `https://www.kokkokgarden.com/kr/menus/${slug}`,
+        'en-US': `https://www.kokkokgarden.com/en/menus/${slug}`,
+        'x-default': `https://www.kokkokgarden.com/en/menus/${slug}`,
       },
     },
     openGraph: {
@@ -52,18 +59,13 @@ export async function generateMetadata({
       type: 'article',
       locale: lang === 'kr' ? 'ko_KR' : 'en_US',
       siteName: 'KOKKOK GARDEN',
-      // KakaoTalk + Naver post sharing show a text-only card when
-      // og:image is missing. Fall back to the brand SVG so every menu
-      // page gets at least a logo card. When the operator uploads a
-      // dedicated 1200x630 og-default.png, this fallback picks it up
-      // automatically (placeholder file checked into /public).
-      images: [{ url: 'https://www.kokkokgarden.com/kokkokgarden_primary.svg', alt: 'KOKKOK GARDEN' }],
+      images: [{ url: ogImage, alt: pickLang(menu.title, lang, slug) }],
     },
     twitter: {
       card: 'summary_large_image',
       title,
       description: desc,
-      images: ['https://www.kokkokgarden.com/kokkokgarden_primary.svg'],
+      images: [ogImage],
     },
   };
 }

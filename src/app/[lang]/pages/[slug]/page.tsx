@@ -69,14 +69,22 @@ export async function generateMetadata({
   const contentText = pickLangString(page.content, lang);
   const desc = contentText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
   const url = `https://www.kokkokgarden.com/${lang}/pages/${slug}`;
+  // Round 30: extract the first `<img src=...>` from the body HTML so
+  // Kakao / Facebook / Naver / Instagram DM previews show the CMS
+  // page's own hero instead of the generic brand SVG (which Kakao
+  // rejects entirely — SVG is not a supported OG-image format).
+  // Falls back to the brand SVG only when the page has no images.
+  const firstImg = contentText.match(/<img[^>]+src=(?:"([^"]+)"|'([^']+)')/i);
+  const ogImage = (firstImg?.[1] ?? firstImg?.[2]) || 'https://www.kokkokgarden.com/kokkokgarden_primary.svg';
   return {
     title: `${titleText} · KOKKOK GARDEN`,
     description: desc || titleText,
     alternates: {
       canonical: url,
       languages: {
-        kr: `https://www.kokkokgarden.com/kr/pages/${slug}`,
-        en: `https://www.kokkokgarden.com/en/pages/${slug}`,
+        'ko-KR': `https://www.kokkokgarden.com/kr/pages/${slug}`,
+        'en-US': `https://www.kokkokgarden.com/en/pages/${slug}`,
+        'x-default': `https://www.kokkokgarden.com/en/pages/${slug}`,
       },
     },
     openGraph: {
@@ -86,13 +94,13 @@ export async function generateMetadata({
       type: 'article',
       locale: lang === 'kr' ? 'ko_KR' : 'en_US',
       siteName: 'KOKKOK GARDEN',
-      images: [{ url: 'https://www.kokkokgarden.com/kokkokgarden_primary.svg', alt: 'KOKKOK GARDEN' }],
+      images: [{ url: ogImage, alt: titleText }],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${titleText} · KOKKOK GARDEN`,
       description: desc,
-      images: ['https://www.kokkokgarden.com/kokkokgarden_primary.svg'],
+      images: [ogImage],
     },
   };
 }

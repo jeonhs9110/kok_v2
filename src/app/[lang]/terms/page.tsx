@@ -37,7 +37,11 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     description: desc,
     alternates: {
       canonical: `https://www.kokkokgarden.com/${lang}/terms`,
-      languages: { kr: 'https://www.kokkokgarden.com/kr/terms', en: 'https://www.kokkokgarden.com/en/terms' },
+      languages: {
+        'ko-KR': 'https://www.kokkokgarden.com/kr/terms',
+        'en-US': 'https://www.kokkokgarden.com/en/terms',
+        'x-default': 'https://www.kokkokgarden.com/en/terms',
+      },
     },
     openGraph: { title, description: desc, type: 'article', locale: isKr ? 'ko_KR' : 'en_US', siteName: 'KOKKOK GARDEN' },
   };

@@ -43,7 +43,14 @@ export function I18nProvider({ children, isKorea, lang: langProp }: {
     // /kr/homepage (a route that doesn't exist).
     if (segments.length >= 1 && isValidLang(segments[0])) {
       segments[0] = newLang;
-      router.push('/' + segments.join('/'));
+      // Round 30: preserve `?q=`, `?category=`, `?page=`, etc. across
+      // the language swap. Previously the picker dropped the query
+      // string — a visitor filtering `/kr/products?category=serum` who
+      // clicked EN landed on `/en/products` (filter gone). Google + Naver
+      // don't follow the picker but the UX hit was real, and lower
+      // dwell time / higher bounce indirectly damages search rank.
+      const search = typeof window !== 'undefined' ? window.location.search : '';
+      router.push('/' + segments.join('/') + search);
       return;
     }
     // Non-lang route: keep the customer on the same page and just let
