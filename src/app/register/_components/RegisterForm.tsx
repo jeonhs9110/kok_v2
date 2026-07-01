@@ -45,6 +45,8 @@ const L: Record<Lang, {
   orSocialLogin: string; agreeAll: string;
   passwordConfirmLabel: string; passwordConfirmPlaceholder: string;
   passwordsDontMatch: string; passwordPolicyHeader: string;
+  expiredCodeMsg: string; alreadyConfirmedMsg: string; limitExceededMsg: string;
+  startShopping: string;
 }> = {
   kr: {
     title: '회원가입', subtitle: '콕콕가든 계정을 만드세요.',
@@ -63,6 +65,10 @@ const L: Record<Lang, {
     passwordConfirmPlaceholder: '비밀번호를 한 번 더 입력하세요',
     passwordsDontMatch: '비밀번호가 일치하지 않습니다.',
     passwordPolicyHeader: '비밀번호 조건',
+    expiredCodeMsg: '인증번호가 만료되었습니다. 아래 "인증번호 재전송" 버튼을 눌러 새 인증번호를 받아주세요.',
+    alreadyConfirmedMsg: '이미 인증된 계정입니다. 로그인 페이지에서 로그인해주세요.',
+    limitExceededMsg: '시도 횟수가 너무 많습니다. 잠시 후 다시 시도해주세요.',
+    startShopping: '쇼핑 시작하기',
   },
   en: {
     title: 'Create Account', subtitle: 'Register for Kokkok Garden.',
@@ -81,6 +87,10 @@ const L: Record<Lang, {
     passwordConfirmPlaceholder: 'Re-enter your password',
     passwordsDontMatch: 'Passwords do not match.',
     passwordPolicyHeader: 'Password requirements',
+    expiredCodeMsg: 'The verification code has expired. Use the "Resend verification code" button below to request a new one.',
+    alreadyConfirmedMsg: 'This account is already verified. Please sign in on the login page.',
+    limitExceededMsg: 'Too many attempts. Please wait a few minutes and try again.',
+    startShopping: 'START SHOPPING',
   },
 };
 
@@ -197,20 +207,34 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: formData.email?.trim(),
-            password: formData.password?.trim(),
+            // Round 25: STOP trimming password. Cognito accepts
+            // leading/trailing spaces as valid password characters,
+            // and R20 already fixed this on LoginForm — but the
+            // sign-up path still trimmed. Effect: any customer who
+            // pastes a manager-generated password ending in a space
+            // was signed up with the trimmed variant, then on a
+            // future sign-in LoginForm sent the untrimmed value and
+            // Cognito rejected → permanent lockout. Mirror the R20
+            // fix here.
+            password: formData.password,
           }),
         });
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          // Map the server-side Cognito error name to a friendlier
-          // Korean/English message. Default falls back to t.failMsg.
+          // Map the server's typed failure code to a friendly message.
+          // Round 25 refactored the server side to return specific
+          // codes (`username_exists` / `weak_password` /
+          // `invalid_email` / `limit_exceeded`) — before this the
+          // server collapsed everything to `sign_up_failed` and the
+          // client's regex tests below were dead. Now the returning-
+          // customer path (`username_exists`) actually surfaces the
+          // "already registered, please sign in" message.
           const code = String(body.error ?? '');
-          if (code === 'weak_password' || /InvalidPassword/i.test(code)) {
-            setError(t.weakPasswordMsg);
-          } else if (/UsernameExists|UserExists|already.*exist/i.test(code)) {
-            setError(t.emailExistsMsg);
-          } else {
-            setError(t.failMsg);
+          switch (code) {
+            case 'weak_password': setError(t.weakPasswordMsg); break;
+            case 'username_exists': setError(t.emailExistsMsg); break;
+            case 'limit_exceeded': setError(t.limitExceededMsg); break;
+            default: setError(t.failMsg); break;
           }
           return;
         }
@@ -220,7 +244,8 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
       const emailRedirectTo = `${window.location.origin}/auth/callback?next=/`;
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email?.trim(),
-        password: formData.password?.trim(),
+        // Same no-trim rationale as the Cognito branch above.
+        password: formData.password,
         options: { emailRedirectTo },
       });
       if (authError) { setError(authError.message); setIsLoading(false); return; }
@@ -277,7 +302,27 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         }),
       });
       if (!confirmRes.ok) {
-        setError(lang === 'kr' ? '인증번호가 올바르지 않습니다.' : 'Invalid verification code.');
+        const body = await confirmRes.json().catch(() => ({}));
+        const code = String(body.error ?? '');
+        // Round 25: distinguish the specific Cognito failures so the
+        // customer knows what to do next. Expired-code was previously
+        // indistinguishable from typo-code and stranded every
+        // customer whose email sat unopened for >24h.
+        switch (code) {
+          case 'expired_code':
+            setError(t.expiredCodeMsg);
+            break;
+          case 'already_confirmed':
+            setError(t.alreadyConfirmedMsg);
+            break;
+          case 'limit_exceeded':
+            setError(t.limitExceededMsg);
+            break;
+          case 'invalid_code':
+          default:
+            setError(lang === 'kr' ? '인증번호가 올바르지 않습니다.' : 'Invalid verification code.');
+            break;
+        }
         return;
       }
       // Step 3: Auto-sign-in so the cognito_id_token cookie is set and
@@ -287,7 +332,8 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: formData.email?.trim(),
-          password: formData.password?.trim(),
+          // Round 25: no-trim, same rationale as sign-up above.
+          password: formData.password,
         }),
       });
       if (!signInRes.ok) {
@@ -322,14 +368,20 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         }),
       });
       if (!completeRes.ok) {
-        // Previously we also called setSuccess(true) here on the theory
-        // that the account existed and the user could re-fill their
-        // profile on My Page. In practice the success screen hides the
-        // error entirely — customer clicked "Go to Login" without ever
-        // seeing the failure notice and had no idea their profile row
-        // was blank. Now we stop on failure and render the error line
-        // where they'll actually see it; they can retry the profile
-        // save or contact support.
+        const completeBody = await completeRes.json().catch(() => ({}));
+        // Round 25: 409 already_registered means the customer_profiles
+        // row was already written on a prior attempt (network hiccup +
+        // retry sequence). From the customer's perspective they are
+        // done — showing an error would tell them to re-fill their
+        // profile from My Page, which would overwrite the row they
+        // already have. Treat 409 as success.
+        if (completeRes.status === 409 && completeBody.error === 'already_registered') {
+          setSuccess(true);
+          return;
+        }
+        // R20 kept the "Account created but profile save failed" copy
+        // for real 5xx failures so the customer knows to complete
+        // their profile from My Page later.
         setError(lang === 'kr'
           ? '계정은 생성됐지만 프로필 저장에 실패했습니다. 로그인 후 마이페이지에서 정보를 다시 입력해주세요.'
           : 'Account created but profile save failed. Please complete your profile from My Page after signing in.');
@@ -412,7 +464,19 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600 font-extrabold text-2xl">✓</div>
         <h1 className="text-2xl font-extrabold tracking-tight text-brand-ink mb-4">{t.successTitle}</h1>
         <p className="text-sm text-gray-500 mb-8">{t.successMsg}</p>
-        <Link href="/login" className="px-8 py-3 bg-brand-ink text-white tracking-widest text-xs font-bold w-full block">{t.backToLogin}</Link>
+        {/* Round 25: send the customer to the storefront, not /login.
+            The auto-sign-in in handleConfirm already set the auth
+            cookies (cognito_id_token + kokkok_auth mirror), so the
+            customer is authenticated. Prior link dumped them on
+            /login and forced them to re-type credentials — visible
+            double-friction at the highest-drop-off moment of the
+            signup funnel. */}
+        <Link
+          href={`/${lang}`}
+          className="px-8 py-3 bg-brand-ink text-white tracking-widest text-xs font-bold w-full block"
+        >
+          {t.startShopping}
+        </Link>
       </div>
     );
   }
@@ -437,8 +501,14 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
           <input
             type="text"
             inputMode="numeric"
+            pattern="\d{6}"
+            maxLength={6}
             value={confirmCode}
-            onChange={e => setConfirmCode(e.target.value)}
+            // Strip everything that isn't a digit + cap at 6 so
+            // iOS smart-paste of "인증번호: 123456" from the email
+            // resolves to just "123456" instead of failing at the
+            // server with a generic "Invalid verification code."
+            onChange={e => setConfirmCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder={lang === 'kr' ? '인증번호' : 'Verification code'}
             autoComplete="one-time-code"
             required
@@ -480,7 +550,15 @@ export default function RegisterForm({ lang }: { lang: Lang }) {
         <p className="text-sm text-gray-500">{t.subtitle}</p>
       </div>
 
-      {socialProviders.length > 0 && (
+      {/* Round 25: hide social login buttons entirely in Cognito
+          mode (i.e., prod). handleSocialLogin returns a hard
+          "coming soon" error in this branch — displaying the
+          buttons is a misleading UX (전자상거래법 unavailable-
+          service advertisement) and loses the KR customer's
+          highest-value acquisition path (Kakao) to confused clicks.
+          When the operator wires Cognito Hosted UI IdPs later,
+          drop the USE_COGNITO_FROM_BROWSER guard. */}
+      {socialProviders.length > 0 && !USE_COGNITO_FROM_BROWSER && (
         <>
           <div className="space-y-2.5 mb-6">
             {socialProviders.map(sp => {

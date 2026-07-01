@@ -278,11 +278,16 @@ export default function ShopWorldwide({ labels, retailers }: ShopWorldwideProps)
         <p className="text-sm text-neutral-500 max-w-md mx-auto mb-6">
           {labels.partner_body}
         </p>
+        {/* Round 25: brand domain is kokkokgarden.com, not
+            kokkok.garden. Prior hardcoded email bounced on every
+            B2B lead click. Ideally this address moves to
+            business_info.email so the operator controls it, but
+            the immediate fix is the correct domain. */}
         <a
-          href="mailto:global@kokkok.garden"
+          href="mailto:global@kokkokgarden.com"
           className="inline-flex items-center gap-2 bg-brand-ink text-white px-8 py-3 text-xs font-bold tracking-widest hover:bg-black transition-colors rounded-none"
         >
-          global@kokkok.garden
+          global@kokkokgarden.com
         </a>
       </div>
     </div>

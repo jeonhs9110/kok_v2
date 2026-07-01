@@ -25,7 +25,7 @@ export default async function ForgotPasswordPage() {
           initialMegaCategories={megaCategories}
           initialLogoUrl={logoUrl}
         />
-        <main className="flex-1 w-full flex items-center justify-center px-4 py-16 animate-in fade-in duration-500">
+        <main id="main-content" className="flex-1 w-full flex items-center justify-center px-4 py-16 animate-in fade-in duration-500">
           <ForgotPasswordForm />
         </main>
         <Footer lang={lang} />

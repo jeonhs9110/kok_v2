@@ -198,7 +198,12 @@ export default async function Footer({ lang }: { lang: Lang }) {
               <p className="mt-4 pt-4 border-t border-neutral-100">© {BRAND} All Rights Reserved.</p>
             </div>
             <div className="flex space-x-4 mt-6 text-[12px] font-semibold flex-wrap gap-y-2">
-              <Link href={`/${lang}/menus/about`} className="hover:underline">{t(lang, 'footer.about')}</Link>
+              {/* Round 25: point About at /contact (canonical route
+                  emitted in sitemap.ts) instead of the DB-driven
+                  /menus/about slug that requires an admin to hand-
+                  create the menu row. Prior link 404'd on every
+                  deploy where the operator hadn't seeded that slug. */}
+              <Link href={`/${lang}/contact`} className="hover:underline">{t(lang, 'footer.about')}</Link>
               <Link href={`/${lang}/terms`} className="hover:underline">{t(lang, 'footer.terms')}</Link>
               <Link href={`/${lang}/privacy`} className="hover:underline text-brand-ink font-bold">{t(lang, 'footer.privacy')}</Link>
             </div>

@@ -44,7 +44,7 @@ export default async function CartPage() {
             initialMegaCategories={megaCategories}
             initialLogoUrl={logoUrl}
           />
-          <main className="flex-1 bg-white">
+          <main id="main-content" className="flex-1 bg-white">
             <CartContent />
           </main>
           <Footer lang={lang} />

@@ -53,7 +53,16 @@ export default function ProductCard({ id, name, summary, price, originalPrice, d
     try {
       const result = await wishlistCtx.toggle(id);
       if (result === null && !wishlistCtx.loading) {
-        router.push('/login');
+        // Round 25: preserve the current pathname as ?next= so the
+        // customer lands back on the product listing after signing
+        // in. Prior code sent them to the storefront homepage with
+        // no wishlist added — felt like the heart click was
+        // ignored. safeNext() on the receiving end validates the
+        // path is same-origin before honouring it.
+        const next = typeof window !== 'undefined'
+          ? window.location.pathname + window.location.search
+          : '/';
+        router.push(`/login?next=${encodeURIComponent(next)}`);
       }
     } finally {
       setWishPending(false);

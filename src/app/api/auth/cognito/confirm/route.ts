@@ -41,7 +41,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'email_and_code_required' }, { status: 400 });
   }
   const { confirmSignUpWithCognito } = await import('@/lib/auth/cognito-server');
-  const ok = await confirmSignUpWithCognito(email, code);
-  if (!ok) return NextResponse.json({ error: 'confirm_failed' }, { status: 400 });
-  return NextResponse.json({ ok: true });
+  const result = await confirmSignUpWithCognito(email, code);
+  if (result.ok) return NextResponse.json({ ok: true });
+  // Distinguish `expired_code` / `invalid_code` / `already_confirmed`
+  // / `limit_exceeded` / `user_not_found`. Prior code collapsed all
+  // to `confirm_failed` — a customer whose code aged past 24h saw
+  // "Invalid verification code" and never learned they needed to
+  // request a fresh one, so they gave up.
+  const status = result.code === 'limit_exceeded' ? 429 : 400;
+  return NextResponse.json({ error: result.code }, { status });
 }
