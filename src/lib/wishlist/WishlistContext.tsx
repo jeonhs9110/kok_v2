@@ -19,13 +19,28 @@ interface WishlistContextValue {
 
 const WishlistContext = createContext<WishlistContextValue | null>(null);
 
-async function fetchWishlist(): Promise<{ productIds: string[] } | null> {
+type FetchResult =
+  | { kind: 'ok'; productIds: string[] }
+  | { kind: 'unauthenticated' }
+  | { kind: 'error' };
+
+/**
+ * Distinguish "no session" (401) from a transient read failure (5xx /
+ * network). Previously both fell into `null` and the provider treated
+ * every failure as "signed out" — a transient GET failure then made
+ * every subsequent toggle return `null`, which `ProductCard` reads as
+ * "not signed in" and redirects the customer to /login. Confusing:
+ * their session was fine; the read blipped.
+ */
+async function fetchWishlist(): Promise<FetchResult> {
   try {
     const res = await fetch('/api/customer/wishlist', { cache: 'no-store' });
-    if (!res.ok) return null;
-    return (await res.json()) as { productIds: string[] };
+    if (res.status === 401) return { kind: 'unauthenticated' };
+    if (!res.ok) return { kind: 'error' };
+    const json = (await res.json()) as { productIds: string[] };
+    return { kind: 'ok', productIds: json.productIds };
   } catch {
-    return null;
+    return { kind: 'error' };
   }
 }
 
@@ -40,10 +55,18 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     (async () => {
       const result = await fetchWishlist();
       if (cancelled) return;
-      if (result) {
+      if (result.kind === 'ok') {
         setSignedIn(true);
         setWishlist(new Set(result.productIds));
+      } else if (result.kind === 'error') {
+        // Assume the customer is signed in on a transient read failure
+        // so `toggle` still runs its POST — which does its own auth
+        // check server-side. The optimistic UI is empty (we couldn't
+        // read the initial set) but a toggle click still works.
+        setSignedIn(true);
       }
+      // 'unauthenticated' → keep signedIn=false, which correctly gates
+      // toggle() and lets ProductCard redirect to /login.
       setLoading(false);
     })();
     return () => { cancelled = true; };

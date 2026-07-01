@@ -23,10 +23,10 @@ const L: Record<string, {
   remove: string; viewProduct: string; edit: string; save: string; saved: string;
   name: string; phone: string; gender: string; birthday: string; country: string;
   skinType: string; marketingConsent: string; cancel: string;
-  loading: string;
+  loading: string; loadFailed: string; retry: string;
 }> = {
-  kr: { title: '마이페이지', profile: '프로필', orders: '주문내역', wishlist: '위시리스트', email: '이메일', joined: '가입일', changePw: '비밀번호 변경', logout: '로그아웃', ordersEmpty: '주문 내역이 없습니다', ordersPhase2: '결제 연동 후 주문 내역이 표시됩니다.', wishEmpty: '위시리스트가 비어 있습니다', remove: '삭제', viewProduct: '상품 보기', edit: '수정', save: '저장', saved: '저장 완료', name: '이름', phone: '전화번호', gender: '성별', birthday: '생년월일', country: '국가', skinType: '피부 타입', marketingConsent: '마케팅 수신 동의', cancel: '취소', loading: '불러오는 중...' },
-  en: { title: 'My Page', profile: 'Profile', orders: 'Orders', wishlist: 'Wishlist', email: 'Email', joined: 'Joined', changePw: 'Change Password', logout: 'Logout', ordersEmpty: 'No orders yet', ordersPhase2: 'Orders will be shown after payment integration.', wishEmpty: 'Your wishlist is empty', remove: 'Remove', viewProduct: 'View Product', edit: 'Edit', save: 'Save', saved: 'Saved', name: 'Name', phone: 'Phone', gender: 'Gender', birthday: 'Birthday', country: 'Country', skinType: 'Skin Type', marketingConsent: 'Marketing Consent', cancel: 'Cancel', loading: 'Loading...' },
+  kr: { title: '마이페이지', profile: '프로필', orders: '주문내역', wishlist: '위시리스트', email: '이메일', joined: '가입일', changePw: '비밀번호 변경', logout: '로그아웃', ordersEmpty: '주문 내역이 없습니다', ordersPhase2: '결제 연동 후 주문 내역이 표시됩니다.', wishEmpty: '위시리스트가 비어 있습니다', remove: '삭제', viewProduct: '상품 보기', edit: '수정', save: '저장', saved: '저장 완료', name: '이름', phone: '전화번호', gender: '성별', birthday: '생년월일', country: '국가', skinType: '피부 타입', marketingConsent: '마케팅 수신 동의', cancel: '취소', loading: '불러오는 중...', loadFailed: '계정 정보를 불러오지 못했습니다.', retry: '다시 시도' },
+  en: { title: 'My Page', profile: 'Profile', orders: 'Orders', wishlist: 'Wishlist', email: 'Email', joined: 'Joined', changePw: 'Change Password', logout: 'Logout', ordersEmpty: 'No orders yet', ordersPhase2: 'Orders will be shown after payment integration.', wishEmpty: 'Your wishlist is empty', remove: 'Remove', viewProduct: 'View Product', edit: 'Edit', save: 'Save', saved: 'Saved', name: 'Name', phone: 'Phone', gender: 'Gender', birthday: 'Birthday', country: 'Country', skinType: 'Skin Type', marketingConsent: 'Marketing Consent', cancel: 'Cancel', loading: 'Loading...', loadFailed: "Couldn't load your account.", retry: 'Retry' },
 };
 
 interface CustomerProfile {
@@ -81,15 +81,29 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
   const [showPwNotice, setShowPwNotice] = useState(false);
   const [wishlist, setWishlist] = useState<WishItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Distinguish a total load failure from "customer has no data yet".
+  // Before this, a Promise.all throw or all three fetches returning
+  // !ok left the tabs rendering their empty states ("No orders",
+  // "Wishlist is empty", blank profile fields) — indistinguishable
+  // from a genuinely new customer, and no retry path.
+  const [loadError, setLoadError] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
+    setLoadError(false);
     try {
       const [meRes, profileRes, wishRes] = await Promise.all([
         fetch('/api/customer/me', { cache: 'no-store' }),
         fetch('/api/customer/profile', { cache: 'no-store' }),
         fetch('/api/customer/wishlist?details=1', { cache: 'no-store' }),
       ]);
+      if (!meRes.ok && !profileRes.ok && !wishRes.ok) {
+        // All three endpoints down — treat as a load failure and
+        // surface a retry so the customer can't misread the tabs as
+        // "your account is empty".
+        setLoadError(true);
+        return;
+      }
       if (meRes.ok) {
         const me = (await meRes.json()) as { email: string | null };
         setUserEmail(me.email ?? '');
@@ -126,8 +140,9 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
           product_price: it.price,
         })));
       }
-    } catch {
-      console.warn('마이페이지 데이터 로딩 실패');
+    } catch (err) {
+      console.error('[mypage] load failed', err);
+      setLoadError(true);
     } finally {
       setIsLoading(false);
     }
@@ -168,8 +183,12 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
       const res = await fetch(`/api/customer/wishlist/${id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('http_' + res.status);
       setWishlist(prev => prev.filter(w => w.id !== id));
-    } catch {
-      // leave the row visible if the delete failed
+    } catch (err) {
+      // Previously silent — customer clicked Remove, row stayed put,
+      // no explanation. Match the pattern used by handleSaveProfile
+      // above so the failure is visible.
+      console.error('[mypage] removeWish failed', err);
+      alert(isKr ? '삭제에 실패했습니다. 잠시 후 다시 시도해주세요.' : 'Delete failed. Please try again.');
     }
   };
 
@@ -232,6 +251,17 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
 
       {isLoading ? (
         <div role="status" aria-live="polite" className="py-20 text-center text-neutral-400 text-sm font-bold tracking-widest">{t.loading}</div>
+      ) : loadError ? (
+        <div className="py-20 text-center">
+          <p className="text-sm text-neutral-500 mb-4">{t.loadFailed}</p>
+          <button
+            type="button"
+            onClick={() => fetchData()}
+            className="px-6 py-2 text-xs font-bold tracking-widest text-white bg-brand-ink hover:bg-black transition-colors"
+          >
+            {t.retry}
+          </button>
+        </div>
       ) : (
         <>
           {tab === 'profile' && (

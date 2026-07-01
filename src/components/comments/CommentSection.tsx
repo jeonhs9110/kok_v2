@@ -11,27 +11,34 @@ interface CommentSectionProps {
   lang: string;
 }
 
-const lb: Record<string, { comments: string; empty: string; write: string }> = {
-  kr: { comments: '댓글', empty: '댓글이 없습니다.', write: '댓글 작성' },
-  en: { comments: 'Comments', empty: 'No comments yet.', write: 'Write a comment' },
+const lb: Record<string, { comments: string; empty: string; write: string; loadFailed: string; retry: string }> = {
+  kr: { comments: '댓글', empty: '댓글이 없습니다.', write: '댓글 작성', loadFailed: '댓글을 불러오지 못했습니다.', retry: '다시 시도' },
+  en: { comments: 'Comments', empty: 'No comments yet.', write: 'Write a comment', loadFailed: "Couldn't load comments.", retry: 'Retry' },
 };
 
 export default function CommentSection({ postId, lang }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
+  // Track load failure so we don't render the empty-state text ("no
+  // comments yet") when the fetch actually errored — that lie made
+  // active threads look dead during transient outages.
+  const [loadError, setLoadError] = useState(false);
   const l = lb[lang] ?? lb['en'];
 
   const fetchComments = useCallback(async () => {
+    setLoadError(false);
     try {
       const res = await fetch(`/api/customer/comments?postId=${encodeURIComponent(postId)}`, { cache: 'no-store' });
       if (!res.ok) {
         setComments([]);
+        setLoadError(true);
         return;
       }
       const json = (await res.json()) as { comments?: Comment[] };
       setComments(json.comments ?? []);
     } catch {
       setComments([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -66,7 +73,18 @@ export default function CommentSection({ postId, lang }: CommentSectionProps) {
 
       {/* Comment List */}
       {loading ? (
-        <div className="py-12 text-center text-neutral-300 text-sm">...</div>
+        <div role="status" aria-live="polite" className="py-12 text-center text-neutral-300 text-sm">...</div>
+      ) : loadError ? (
+        <div className="py-12 text-center text-neutral-400 text-sm">
+          <p>{l.loadFailed}</p>
+          <button
+            type="button"
+            onClick={() => fetchComments()}
+            className="mt-3 px-4 py-1.5 text-xs font-semibold text-brand-ink border border-neutral-200 hover:bg-neutral-50 transition-colors"
+          >
+            {l.retry}
+          </button>
+        </div>
       ) : topLevel.length === 0 ? (
         <div className="py-12 text-center text-neutral-400 text-sm">{l.empty}</div>
       ) : (

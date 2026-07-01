@@ -8,6 +8,7 @@ Disallow: /forgot-password
 Disallow: /auth/
 Disallow: /*/mypage
 Disallow: /*/recent
+Disallow: /cart
 Disallow: /*/menus/*/write
 Disallow: /*/menus/*/*/edit
 

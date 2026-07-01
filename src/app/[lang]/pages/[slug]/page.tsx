@@ -83,6 +83,13 @@ export async function generateMetadata({
       type: 'article',
       locale: lang === 'kr' ? 'ko_KR' : 'en_US',
       siteName: 'KOKKOK GARDEN',
+      images: [{ url: 'https://www.kokkokgarden.com/kokkokgarden_primary.svg', alt: 'KOKKOK GARDEN' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${titleText} · KOKKOK GARDEN`,
+      description: desc,
+      images: ['https://www.kokkokgarden.com/kokkokgarden_primary.svg'],
     },
   };
 }

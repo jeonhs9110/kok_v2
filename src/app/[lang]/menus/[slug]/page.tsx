@@ -23,6 +23,12 @@ export async function generateMetadata({
       robots: { index: false, follow: true },
     };
   }
+  // /[lang]/support is the canonical URL for the support content — the
+  // same slug also renders under /[lang]/menus/support because every
+  // published menu lives at that route. Noindex the /menus/support
+  // variant so Google doesn't split ranking between two URLs with
+  // identical HTML.
+  const isAliasedElsewhere = slug === 'support';
   const title = `${pickLang(menu.title, lang, slug)} · KOKKOK GARDEN`;
   // content is HTML; strip tags + clamp to 160 chars for description.
   const raw = pickLang(menu.content, lang, '');
@@ -31,6 +37,7 @@ export async function generateMetadata({
   return {
     title,
     description: desc || `${pickLang(menu.title, lang, slug)} — KOKKOK GARDEN`,
+    robots: isAliasedElsewhere ? { index: false, follow: true } : undefined,
     alternates: {
       canonical: url,
       languages: {

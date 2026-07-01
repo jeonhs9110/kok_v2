@@ -73,6 +73,10 @@ export default function ProductReviewSection({ productId, lang }: Props) {
   const lb = LABELS[lang] ?? LABELS['en'];
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [loading, setLoading] = useState(true);
+  // Track load failure separately so a fetch error doesn't render as
+  // "no reviews yet" — that empty-state lie made a top-selling product
+  // look unreviewed during transient outages.
+  const [loadError, setLoadError] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
@@ -80,16 +84,19 @@ export default function ProductReviewSection({ productId, lang }: Props) {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(false);
     try {
       const res = await fetch(`/api/products/${productId}/reviews`, { cache: 'no-store' });
       if (!res.ok) {
         setReviews([]);
+        setLoadError(true);
         return;
       }
       const json = (await res.json()) as { reviews?: ProductReview[] };
       setReviews(json.reviews ?? []);
     } catch {
       setReviews([]);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
@@ -122,10 +129,21 @@ export default function ProductReviewSection({ productId, lang }: Props) {
         setFeedback({ kind: 'error', text: lb.failed });
         return;
       }
+      // Keep the form open just long enough for the success banner to
+      // register — closing it immediately (as before) unmounted the
+      // <p feedback> element inside the form and the "your review has
+      // been posted" line was invisible. Wait 1.2s, then close.
       setFeedback({ kind: 'success', text: lb.submitted });
       setForm({ author_name: '', rating: 5, title: '', content: '' });
-      setShowForm(false);
       load();
+      setTimeout(() => { setShowForm(false); setFeedback(null); }, 1200);
+    } catch (err) {
+      // Network / DNS throws land here. Previously the try/finally
+      // swallowed the rejection, spinner stopped, no message ever
+      // shown — customer sat looking at an unresponsive Submit
+      // button.
+      console.error('[reviews] submit threw', err);
+      setFeedback({ kind: 'error', text: lb.failed });
     } finally {
       setSubmitting(false);
     }
@@ -214,6 +232,17 @@ export default function ProductReviewSection({ productId, lang }: Props) {
 
         {loading ? (
           <div role="status" aria-live="polite" className="py-12 text-center text-neutral-300 text-sm">{lb.loading}</div>
+        ) : loadError ? (
+          <div className="py-12 text-center text-neutral-400 text-sm">
+            <p>{lang === 'kr' ? '리뷰를 불러오지 못했습니다.' : "Couldn't load reviews."}</p>
+            <button
+              type="button"
+              onClick={() => load()}
+              className="mt-3 px-4 py-1.5 text-xs font-semibold text-brand-ink border border-neutral-200 hover:bg-neutral-50 transition-colors"
+            >
+              {lang === 'kr' ? '다시 시도' : 'Retry'}
+            </button>
+          </div>
         ) : reviews.length === 0 ? (
           <div className="py-12 text-center text-neutral-400 text-sm">{lb.empty}</div>
         ) : (
