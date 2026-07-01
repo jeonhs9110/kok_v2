@@ -396,10 +396,10 @@ export default async function MenuPage({ slug, lang, page }: Props) {
                   {post.is_admin_post && <span className="px-1.5 py-0.5 text-[9px] font-bold bg-brand-ink text-white rounded">공지</span>}
                 </div>
                 <span className="text-xs text-neutral-500 text-center hidden sm:block">{post.author_name}</span>
-                <span className="text-xs text-neutral-400 text-right hidden sm:block">{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
+                <span className="text-xs text-neutral-400 text-right hidden sm:block">{new Date(post.created_at).toLocaleDateString(lang === 'kr' ? 'ko-KR' : 'en-US', { timeZone: 'Asia/Seoul' })}</span>
                 <div className="sm:hidden flex gap-3 mt-1 text-xs text-neutral-400">
                   <span>{post.author_name}</span>
-                  <span>{new Date(post.created_at).toLocaleDateString('ko-KR')}</span>
+                  <span>{new Date(post.created_at).toLocaleDateString(lang === 'kr' ? 'ko-KR' : 'en-US', { timeZone: 'Asia/Seoul' })}</span>
                 </div>
               </Link>
             ))}

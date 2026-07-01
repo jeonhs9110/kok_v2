@@ -45,7 +45,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'weak_password' }, { status: 400 });
   }
   const { resetPasswordWithCognito } = await import('@/lib/auth/cognito-server');
-  const ok = await resetPasswordWithCognito(email, code, newPassword);
-  if (!ok) return NextResponse.json({ error: 'reset_failed' }, { status: 400 });
-  return NextResponse.json({ ok: true });
+  const result = await resetPasswordWithCognito(email, code, newPassword);
+  if (result.ok) return NextResponse.json({ ok: true });
+  // Bubble the mapped Cognito failure so the form can render a
+  // specific message instead of the generic "check your code" line —
+  // a user who mistyped the code gets a different string than a user
+  // whose code has already expired.
+  const status = result.code === 'limit_exceeded' ? 429 : 400;
+  return NextResponse.json({ error: result.code }, { status });
 }

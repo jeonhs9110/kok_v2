@@ -176,10 +176,14 @@ export default async function Footer({ lang }: { lang: Lang }) {
               )}
               {/* If business_info is fully empty, surface a single
                   visible notice so operators don't ship a footer that
-                  silently violates 전자상거래법 §13. */}
-              {!hasAnyBusinessInfo && isKr && (
+                  silently violates 전자상거래법 §13. Rendered in both
+                  languages so a non-Korean operator visiting the /en
+                  storefront doesn't miss the disclosure gap. */}
+              {!hasAnyBusinessInfo && (
                 <p className="text-amber-700 bg-amber-50 px-2 py-1 rounded text-[11px]">
-                  ⚠ 사업자 정보가 등록되지 않았습니다. 관리자 → 법적 페이지에서 입력해주세요.
+                  {isKr
+                    ? '⚠ 사업자 정보가 등록되지 않았습니다. 관리자 → 법적 페이지에서 입력해주세요.'
+                    : '⚠ Business info not configured. Set it via Admin → Legal pages.'}
                 </p>
               )}
               <p className="mt-4 pt-4 border-t border-neutral-100">© {BRAND} All Rights Reserved.</p>

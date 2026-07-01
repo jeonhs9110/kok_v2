@@ -23,9 +23,10 @@ const L: Record<string, {
   remove: string; viewProduct: string; edit: string; save: string; saved: string;
   name: string; phone: string; gender: string; birthday: string; country: string;
   skinType: string; marketingConsent: string; cancel: string;
+  loading: string;
 }> = {
-  kr: { title: '마이페이지', profile: '프로필', orders: '주문내역', wishlist: '위시리스트', email: '이메일', joined: '가입일', changePw: '비밀번호 변경', logout: '로그아웃', ordersEmpty: '주문 내역이 없습니다', ordersPhase2: '결제 연동 후 주문 내역이 표시됩니다.', wishEmpty: '위시리스트가 비어 있습니다', remove: '삭제', viewProduct: '상품 보기', edit: '수정', save: '저장', saved: '저장 완료', name: '이름', phone: '전화번호', gender: '성별', birthday: '생년월일', country: '국가', skinType: '피부 타입', marketingConsent: '마케팅 수신 동의', cancel: '취소' },
-  en: { title: 'My Page', profile: 'Profile', orders: 'Orders', wishlist: 'Wishlist', email: 'Email', joined: 'Joined', changePw: 'Change Password', logout: 'Logout', ordersEmpty: 'No orders yet', ordersPhase2: 'Orders will be shown after payment integration.', wishEmpty: 'Your wishlist is empty', remove: 'Remove', viewProduct: 'View Product', edit: 'Edit', save: 'Save', saved: 'Saved', name: 'Name', phone: 'Phone', gender: 'Gender', birthday: 'Birthday', country: 'Country', skinType: 'Skin Type', marketingConsent: 'Marketing Consent', cancel: 'Cancel' },
+  kr: { title: '마이페이지', profile: '프로필', orders: '주문내역', wishlist: '위시리스트', email: '이메일', joined: '가입일', changePw: '비밀번호 변경', logout: '로그아웃', ordersEmpty: '주문 내역이 없습니다', ordersPhase2: '결제 연동 후 주문 내역이 표시됩니다.', wishEmpty: '위시리스트가 비어 있습니다', remove: '삭제', viewProduct: '상품 보기', edit: '수정', save: '저장', saved: '저장 완료', name: '이름', phone: '전화번호', gender: '성별', birthday: '생년월일', country: '국가', skinType: '피부 타입', marketingConsent: '마케팅 수신 동의', cancel: '취소', loading: '불러오는 중...' },
+  en: { title: 'My Page', profile: 'Profile', orders: 'Orders', wishlist: 'Wishlist', email: 'Email', joined: 'Joined', changePw: 'Change Password', logout: 'Logout', ordersEmpty: 'No orders yet', ordersPhase2: 'Orders will be shown after payment integration.', wishEmpty: 'Your wishlist is empty', remove: 'Remove', viewProduct: 'View Product', edit: 'Edit', save: 'Save', saved: 'Saved', name: 'Name', phone: 'Phone', gender: 'Gender', birthday: 'Birthday', country: 'Country', skinType: 'Skin Type', marketingConsent: 'Marketing Consent', cancel: 'Cancel', loading: 'Loading...' },
 };
 
 interface CustomerProfile {
@@ -230,7 +231,7 @@ export default function MyPage({ lang }: { lang: 'kr' | 'en' }) {
       </div>
 
       {isLoading ? (
-        <div className="py-20 text-center text-neutral-400 text-sm font-bold tracking-widest">Loading...</div>
+        <div role="status" aria-live="polite" className="py-20 text-center text-neutral-400 text-sm font-bold tracking-widest">{t.loading}</div>
       ) : (
         <>
           {tab === 'profile' && (
