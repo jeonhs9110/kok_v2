@@ -32,10 +32,29 @@ type FetchResult =
  * every subsequent toggle return `null`, which `ProductCard` reads as
  * "not signed in" and redirects the customer to /login. Confusing:
  * their session was fine; the read blipped.
+ *
+ * HOTFIX 2026-07-02: use plain `fetch` here, NOT `authedFetch`. This
+ * function is a "is the customer signed in?" probe fired on every
+ * storefront page mount via WishlistProvider (in the root layout).
+ * `authedFetch` treats every 401 as "session expired" — tries a silent
+ * refresh, and when the refresh fails (which it does for anonymous
+ * visitors with no refresh cookie), dispatches `kokkok-session-expired`,
+ * which SessionExpiredListener catches and bounces to
+ * `/login?next=<current>`. Result: every anonymous visitor to any
+ * storefront page got instantly bounced to /login. Plain fetch here
+ * makes the 401 flow through to the caller which correctly interprets
+ * it as `unauthenticated` and sets signedIn=false — no bounce, no
+ * refresh, no event dispatch. The POST toggle below stays on
+ * authedFetch — that path IS for a signed-in customer performing an
+ * action and legitimately benefits from silent refresh on session
+ * expiry.
  */
 async function fetchWishlist(): Promise<FetchResult> {
   try {
-    const res = await authedFetch('/api/customer/wishlist', { cache: 'no-store' });
+    const res = await fetch('/api/customer/wishlist', {
+      cache: 'no-store',
+      credentials: 'same-origin',
+    });
     if (res.status === 401) return { kind: 'unauthenticated' };
     if (!res.ok) return { kind: 'error' };
     const json = (await res.json()) as { productIds: string[] };

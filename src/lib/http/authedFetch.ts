@@ -69,9 +69,33 @@ function dispatchSessionExpired(): void {
   } catch { /* older browsers — noop */ }
 }
 
+/**
+ * HOTFIX 2026-07-02: check whether the caller was ever signed in
+ * before treating a 401 as an expired session. Prior code dispatched
+ * `kokkok-session-expired` on any 401 whose silent refresh failed —
+ * which for an anonymous visitor (no cookies to refresh from)
+ * happened on every authed-fetch call. Callers that fired authed
+ * requests on mount (WishlistProvider in the root layout) then
+ * bounced every anonymous visitor to /login. `kokkok_auth=true` is
+ * set by sign-in (non-httpOnly so this client check can read it) and
+ * cleared by sign-out; absence means the caller never had a session
+ * to expire.
+ */
+function wasEverSignedIn(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie.includes('kokkok_auth=true');
+}
+
 export async function authedFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const first = await fetch(input, init);
   if (first.status !== 401) return first;
+
+  // If the caller was never signed in, don't try to refresh (there's
+  // nothing to refresh) and don't dispatch session_expired (there's no
+  // session that expired). Just return the 401 to the caller — the
+  // caller's own logic decides what to do with an unauthenticated
+  // response (usually: gate a UI action behind a login prompt).
+  if (!wasEverSignedIn()) return first;
 
   // Try to refresh silently. On success, retry the original once.
   const refreshed = await refreshOnce();
